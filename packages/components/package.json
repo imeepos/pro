@@ -1,0 +1,25 @@
+{
+  "name": "@pro/components",
+  "version": "1.0.0",
+  "description": "Shared Angular UI components",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "ng-packagr -p ng-package.json",
+    "dev": "ng-packagr -p ng-package.json --watch",
+    "lint": "eslint src/**/*.ts",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": ["angular", "components", "ui"],
+  "license": "UNLICENSED",
+  "peerDependencies": {
+    "@angular/common": "^17.0.0",
+    "@angular/core": "^17.0.0"
+  },
+  "devDependencies": {
+    "@angular/common": "^17.3.0",
+    "@angular/core": "^17.3.0",
+    "ng-packagr": "^17.3.0",
+    "typescript": "~5.3.3"
+  }
+}
