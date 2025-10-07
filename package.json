@@ -14,7 +14,8 @@
     "test": "turbo test",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "clean": "turbo clean && rm -rf node_modules"
+    "clean": "turbo clean && rm -rf node_modules",
+    "claude": "claude --dangerously-skip-permissions"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

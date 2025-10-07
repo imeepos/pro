@@ -6,8 +6,8 @@ export interface RabbitMQConfig {
 }
 
 export class RabbitMQClient {
-  private connection?: amqp.Connection;
-  private channel?: amqp.Channel;
+  private connection: any;
+  private channel: any;
 
   constructor(private config: RabbitMQConfig) {}
 
@@ -28,7 +28,7 @@ export class RabbitMQClient {
   async consume(queue: string, callback: (msg: any) => void): Promise<void> {
     if (!this.channel) throw new Error('Channel not initialized');
     await this.channel.assertQueue(queue);
-    this.channel.consume(queue, (msg) => {
+    this.channel.consume(queue, (msg: any) => {
       if (msg) {
         callback(JSON.parse(msg.content.toString()));
         this.channel?.ack(msg);
@@ -37,7 +37,7 @@ export class RabbitMQClient {
   }
 
   async close(): Promise<void> {
-    await this.channel?.close();
-    await this.connection?.close();
+    if (this.channel) await this.channel.close();
+    if (this.connection) await this.connection.close();
   }
 }

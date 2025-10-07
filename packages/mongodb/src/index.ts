@@ -25,18 +25,18 @@ export class MongoDBClient {
 
   async insertOne<T extends Document>(collectionName: string, doc: OptionalId<T>): Promise<string> {
     const collection = this.getCollection<T>(collectionName);
-    const result = await collection.insertOne(doc);
+    const result = await collection.insertOne(doc as any);
     return result.insertedId.toString();
   }
 
   async findOne<T extends Document>(collectionName: string, filter: Filter<T>): Promise<T | null> {
     const collection = this.getCollection<T>(collectionName);
-    return collection.findOne(filter);
+    return collection.findOne(filter) as Promise<T | null>;
   }
 
   async find<T extends Document>(collectionName: string, filter: Filter<T>): Promise<T[]> {
     const collection = this.getCollection<T>(collectionName);
-    return collection.find(filter).toArray();
+    return collection.find(filter).toArray() as Promise<T[]>;
   }
 
   async updateOne<T extends Document>(
