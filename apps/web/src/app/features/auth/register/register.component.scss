@@ -1,0 +1,14 @@
+@import '../login/login.component.scss';
+
+.register-container {
+  @extend .login-container;
+}
+
+.register-card {
+  @extend .login-card;
+  max-width: 520px;
+}
+
+.register-form {
+  @extend .login-form;
+}

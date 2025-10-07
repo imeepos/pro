@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { AuthStateService } from './core/state/auth-state.service';
 
 @Component({
   selector: 'app-root',
@@ -8,6 +9,10 @@ import { RouterOutlet } from '@angular/router';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent {
-  title = 'web';
+export class AppComponent implements OnInit {
+  constructor(private authStateService: AuthStateService) {}
+
+  ngOnInit(): void {
+    this.authStateService.checkAuth();
+  }
 }

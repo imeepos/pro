@@ -1,0 +1,73 @@
+<div class="login-container">
+  <div class="tech-background">
+    <div class="grid-pattern"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+  </div>
+
+  <div class="login-card">
+    <div class="card-header">
+      <h1 class="title">数据大屏登录</h1>
+      <p class="subtitle">欢迎回来</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="usernameOrEmail" class="form-label">
+          <span class="label-icon">👤</span>
+          用户名或邮箱
+        </label>
+        <input
+          type="text"
+          id="usernameOrEmail"
+          formControlName="usernameOrEmail"
+          class="form-input"
+          placeholder="请输入用户名或邮箱"
+          [class.error]="usernameOrEmail?.invalid && usernameOrEmail?.touched"
+        />
+        <div class="error-message" *ngIf="usernameOrEmail?.invalid && usernameOrEmail?.touched">
+          <span *ngIf="usernameOrEmail?.errors?.['required']">请输入用户名或邮箱</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">
+          <span class="label-icon">🔒</span>
+          密码
+        </label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          class="form-input"
+          placeholder="请输入密码"
+          [class.error]="password?.invalid && password?.touched"
+        />
+        <div class="error-message" *ngIf="password?.invalid && password?.touched">
+          <span *ngIf="password?.errors?.['required']">请输入密码</span>
+          <span *ngIf="password?.errors?.['minlength']">密码至少6位</span>
+        </div>
+      </div>
+
+      <div class="error-message global-error" *ngIf="error$ | async as error">
+        {{ error }}
+      </div>
+
+      <button
+        type="submit"
+        class="submit-button"
+        [disabled]="loginForm.invalid || (loading$ | async)"
+      >
+        <span *ngIf="!(loading$ | async)">登录</span>
+        <span *ngIf="loading$ | async" class="loading-spinner">
+          <span class="spinner"></span> 登录中...
+        </span>
+      </button>
+
+      <div class="form-footer">
+        <p>还没有账号？ <a routerLink="/register" class="link">立即注册</a></p>
+      </div>
+    </form>
+  </div>
+</div>

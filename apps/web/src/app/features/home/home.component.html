@@ -1,0 +1,20 @@
+<div class="home-container">
+  <div class="tech-background">
+    <div class="grid-pattern"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+  </div>
+
+  <div class="content">
+    <div class="header">
+      <h1 class="title">数据大屏</h1>
+      <button class="logout-button" (click)="logout()">退出登录</button>
+    </div>
+
+    <div class="welcome-card" *ngIf="currentUser$ | async as user">
+      <h2>欢迎回来</h2>
+      <p>用户ID: {{ user.id }}</p>
+      <p class="info">这是大屏幕应用主页，您已成功登录。</p>
+    </div>
+  </div>
+</div>
