@@ -80,3 +80,4 @@ if ! mc anonymous set download "${alias_name}/${MINIO_BUCKET_NAME}" >/dev/null 2
 fi
 
 echo "Anonymous download policy applied to bucket ${MINIO_BUCKET_NAME}"
+

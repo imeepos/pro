@@ -3,7 +3,7 @@ import Redis, { RedisOptions } from 'ioredis';
 export class RedisClient {
   private client: Redis;
 
-  constructor(options: RedisOptions) {
+  constructor(options: RedisOptions | string) {
     this.client = new Redis(options);
   }
 

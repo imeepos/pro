@@ -1,0 +1,56 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build artifacts
+dist
+**/dist
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Development
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage
+**/__tests__
+**/__mocks__
+**/*.spec.ts
+**/*.test.ts
+
+# Git
+.git
+.gitignore
+**/.git
+**/.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Documentation
+*.md
+!README.md
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Misc
+.DS_Store
+*.local

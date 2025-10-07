@@ -152,7 +152,7 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-    entrypoint: ["/bin/sh", "/config/create-buckets.sh"]
+    entrypoint: ["/bin/sh", "/bootstrap/minio/create-buckets.sh"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -160,7 +160,7 @@ services:
       MINIO_REGION: ${MINIO_REGION}
       MINIO_INTERNAL_ENDPOINT: http://minio:9000
     volumes:
-      - ./config/minio/create-buckets.sh:/config/create-buckets.sh:ro
+      - ./config/minio/scripts:/bootstrap/minio:ro
     networks:
       - backend
     restart: "no"
@@ -201,9 +201,156 @@ services:
       timeout: ${NGINX_HEALTHCHECK_TIMEOUT}
       retries: ${NGINX_HEALTHCHECK_RETRIES}
 
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: pro-api
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/pro?authSource=admin
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_USE_SSL: false
+      MINIO_BUCKET: pro-storage
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+      - mongo
+      - minio
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  crawler:
+    build:
+      context: .
+      dockerfile: apps/crawler/Dockerfile
+    container_name: pro-crawler
+    ports:
+      - "${CRAWLER_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3001
+      API_URL: http://api:3000
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      RABBITMQ_QUEUE: crawler-queue
+      MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/pro?authSource=admin
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_USE_SSL: false
+      MINIO_BUCKET: pro-storage
+      CRAWLER_CONCURRENCY: ${CRAWLER_CONCURRENCY:-5}
+      CRAWLER_TIMEOUT: ${CRAWLER_TIMEOUT:-30000}
+    depends_on:
+      - api
+      - rabbitmq
+      - mongo
+      - minio
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  cleaner:
+    build:
+      context: .
+      dockerfile: apps/cleaner/Dockerfile
+    container_name: pro-cleaner
+    ports:
+      - "${CLEANER_PORT:-3002}:3002"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3002
+      API_URL: http://api:3000
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      RABBITMQ_QUEUE: cleaner-queue
+      MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/pro?authSource=admin
+      CLEANER_SCHEDULE: ${CLEANER_SCHEDULE:-0 2 * * *}
+      CLEANER_RETENTION_DAYS: ${CLEANER_RETENTION_DAYS:-30}
+      CLEANER_BATCH_SIZE: ${CLEANER_BATCH_SIZE:-100}
+    depends_on:
+      - api
+      - rabbitmq
+      - mongo
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: pro-web
+    ports:
+      - "${WEB_PORT:-4200}:80"
+    depends_on:
+      - api
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    container_name: pro-admin
+    ports:
+      - "${ADMIN_PORT:-4201}:80"
+    depends_on:
+      - api
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 networks:
   backend:
     name: ${COMPOSE_PROJECT_NAME}_backend
+    driver: bridge
+  frontend:
+    name: ${COMPOSE_PROJECT_NAME}_frontend
     driver: bridge
 
 volumes:
