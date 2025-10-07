@@ -20,10 +20,12 @@
     "@angular/platform-browser": "^17.3.0",
     "@angular/platform-browser-dynamic": "^17.3.0",
     "@angular/router": "^17.3.0",
+    "@datorama/akita": "^7.1.1",
     "@pro/types": "workspace:*",
     "@pro/components": "workspace:*",
     "@pro/utils": "workspace:*",
     "@pro/config": "workspace:*",
+    "@pro/sdk": "workspace:*",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.3"

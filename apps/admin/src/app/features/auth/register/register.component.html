@@ -1,0 +1,86 @@
+<div class="register-container">
+  <div class="register-card">
+    <h1 class="register-title">后台管理系统</h1>
+    <h2 class="register-subtitle">注册</h2>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+      <div class="form-group">
+        <label for="username">用户名</label>
+        <input
+          id="username"
+          type="text"
+          formControlName="username"
+          class="form-control"
+          [class.error]="registerForm.get('username')?.touched && registerForm.get('username')?.invalid"
+          placeholder="请输入用户名 (3-20位)"
+        />
+        <span class="error-message" *ngIf="getFieldError('username')">
+          {{ getFieldError('username') }}
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="email">邮箱</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          class="form-control"
+          [class.error]="registerForm.get('email')?.touched && registerForm.get('email')?.invalid"
+          placeholder="请输入邮箱"
+        />
+        <span class="error-message" *ngIf="getFieldError('email')">
+          {{ getFieldError('email') }}
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="password">密码</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          class="form-control"
+          [class.error]="registerForm.get('password')?.touched && registerForm.get('password')?.invalid"
+          placeholder="请输入密码 (至少6位)"
+        />
+        <span class="error-message" *ngIf="getFieldError('password')">
+          {{ getFieldError('password') }}
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">确认密码</label>
+        <input
+          id="confirmPassword"
+          type="password"
+          formControlName="confirmPassword"
+          class="form-control"
+          [class.error]="registerForm.get('confirmPassword')?.touched && (registerForm.get('confirmPassword')?.invalid || getPasswordMismatchError())"
+          placeholder="请再次输入密码"
+        />
+        <span class="error-message" *ngIf="getFieldError('confirmPassword') || getPasswordMismatchError()">
+          {{ getFieldError('confirmPassword') || getPasswordMismatchError() }}
+        </span>
+      </div>
+
+      <div class="error-message global-error" *ngIf="error$ | async as error">
+        {{ error }}
+      </div>
+
+      <button
+        type="submit"
+        class="btn-submit"
+        [disabled]="(loading$ | async) || registerForm.invalid"
+      >
+        <span *ngIf="!(loading$ | async)">注册</span>
+        <span *ngIf="loading$ | async">注册中...</span>
+      </button>
+
+      <div class="form-footer">
+        <span>已有账号？</span>
+        <a routerLink="/login">立即登录</a>
+      </div>
+    </form>
+  </div>
+</div>
