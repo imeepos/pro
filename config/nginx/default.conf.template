@@ -1,0 +1,49 @@
+log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                '$status $body_bytes_sent "$http_referer" '
+                '"$http_user_agent" "$http_x_forwarded_for"';
+
+access_log /var/log/nginx/access.log main;
+
+resolver 127.0.0.11 valid=30s;
+resolver_timeout 5s;
+
+client_max_body_size 100m;
+
+upstream minio_api {
+    server minio:9000;
+}
+
+upstream minio_console {
+    server minio:9001;
+}
+
+server {
+    listen 80 default_server;
+    listen 443;
+    server_name _;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+
+    location = /healthz {
+        access_log off;
+        return 200 'ok';
+    }
+
+    location /minio/ {
+        proxy_redirect off;
+        proxy_buffering off;
+        proxy_pass http://minio_api/;
+    }
+
+    location /minio-console/ {
+        proxy_redirect off;
+        proxy_pass http://minio_console/;
+    }
+}
+
