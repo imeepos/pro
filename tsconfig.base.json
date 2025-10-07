@@ -28,6 +28,8 @@
     "paths": {
       "@pro/types": ["./packages/types/src"],
       "@pro/types/*": ["./packages/types/src/*"],
+      "@pro/sdk": ["./packages/sdk/src"],
+      "@pro/sdk/*": ["./packages/sdk/src/*"],
       "@pro/utils": ["./packages/utils/src"],
       "@pro/utils/*": ["./packages/utils/src/*"],
       "@pro/config": ["./packages/config/src"],

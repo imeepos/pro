@@ -1,0 +1,22 @@
+{
+  "name": "@pro/sdk",
+  "version": "1.0.0",
+  "description": "SDK interface definitions for Pro platform",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src/**/*.ts",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": ["sdk", "api", "interfaces"],
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@pro/types": "workspace:*",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "typescript": "~5.3.3"
+  }
+}
