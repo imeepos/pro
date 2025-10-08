@@ -1,0 +1,138 @@
+<div class="container mx-auto p-6 max-w-7xl">
+  <!-- 头部 -->
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-800">大屏页面管理</h2>
+      <p class="text-sm text-gray-500 mt-1">管理和编辑大屏展示页面</p>
+    </div>
+    <button
+      (click)="createScreen()"
+      class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium
+             hover:bg-blue-700 active:bg-blue-800
+             transition-colors duration-200 shadow-sm hover:shadow">
+      + 创建页面
+    </button>
+  </div>
+
+  <!-- 错误提示 -->
+  <div *ngIf="error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+    <div class="flex items-start space-x-3">
+      <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <p class="text-sm text-red-800">{{ error }}</p>
+    </div>
+  </div>
+
+  <!-- 加载状态 -->
+  <div *ngIf="loading" class="flex justify-center items-center py-12">
+    <div class="flex space-x-2">
+      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
+      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+    </div>
+  </div>
+
+  <!-- 页面列表 -->
+  <div *ngIf="!loading && screens.length > 0" class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            页面名称
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            描述
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            状态
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            创建时间
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            操作
+          </th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <tr *ngFor="let screen of screens" class="hover:bg-gray-50 transition-colors duration-150">
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="flex items-center">
+              <div class="text-sm font-medium text-gray-900">
+                {{ screen.name }}
+              </div>
+              <span *ngIf="screen.isDefault"
+                    class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                默认
+              </span>
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="text-sm text-gray-500 max-w-xs truncate">
+              {{ screen.description || '-' }}
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  [ngClass]="getStatusClass(screen.status)">
+              {{ getStatusText(screen.status) }}
+            </span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            {{ formatDate(screen.createdAt) }}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+            <div class="flex items-center space-x-2">
+              <button
+                (click)="editScreen(screen)"
+                class="text-blue-600 hover:text-blue-900 transition-colors duration-150">
+                编辑
+              </button>
+              <button
+                (click)="copyScreen(screen)"
+                class="text-indigo-600 hover:text-indigo-900 transition-colors duration-150">
+                复制
+              </button>
+              <button
+                (click)="toggleStatus(screen)"
+                class="transition-colors duration-150"
+                [ngClass]="screen.status === 'draft' ? 'text-green-600 hover:text-green-900' : 'text-yellow-600 hover:text-yellow-900'">
+                {{ screen.status === 'draft' ? '发布' : '草稿' }}
+              </button>
+              <button
+                *ngIf="!screen.isDefault"
+                (click)="setDefault(screen)"
+                class="text-purple-600 hover:text-purple-900 transition-colors duration-150">
+                设为默认
+              </button>
+              <button
+                (click)="deleteScreen(screen)"
+                class="text-red-600 hover:text-red-900 transition-colors duration-150">
+                删除
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 空状态 -->
+  <div *ngIf="!loading && screens.length === 0"
+       class="text-center py-12">
+    <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+    </svg>
+    <h3 class="mt-4 text-lg font-medium text-gray-900">暂无大屏页面</h3>
+    <p class="mt-2 text-sm text-gray-500">点击"创建页面"按钮开始创建您的第一个大屏展示页面</p>
+    <button
+      (click)="createScreen()"
+      class="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg font-medium
+             hover:bg-blue-700 active:bg-blue-800
+             transition-colors duration-200 shadow-sm hover:shadow">
+      立即创建
+    </button>
+  </div>
+</div>

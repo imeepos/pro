@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, loginGuard } from './core/guards/auth.guard';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -9,12 +9,10 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    canActivate: [loginGuard],
     loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
   },
   {
     path: 'register',
-    canActivate: [loginGuard],
     loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
   {
@@ -26,6 +24,11 @@ export const routes: Routes = [
     path: 'weibo/accounts',
     canActivate: [authGuard],
     loadComponent: () => import('./features/weibo/weibo-accounts.component').then(m => m.WeiboAccountsComponent)
+  },
+  {
+    path: 'screens',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/screens/screens-list.component').then(m => m.ScreensListComponent)
   },
   {
     path: '**',

@@ -16,6 +16,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
   {
+    path: 'screen/:id',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/screen/screen-display.component').then(m => m.ScreenDisplayComponent)
+  },
+  {
     path: '**',
     redirectTo: ''
   }
