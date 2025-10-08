@@ -1,0 +1,46 @@
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.toast-container {
+  @apply flex items-center justify-between gap-3 px-4 py-3 rounded-lg shadow-lg min-w-[300px] max-w-[500px];
+  animation: fadeInRight 300ms ease-out;
+}
+
+.toast-container.closing {
+  animation: fadeOutRight 300ms ease-in;
+}
+
+.toast-content {
+  @apply flex items-center gap-2 flex-1;
+}
+
+.toast-icon {
+  @apply text-xl font-bold;
+}
+
+.toast-message {
+  @apply text-sm font-medium;
+}
+
+.toast-close {
+  @apply text-2xl font-bold leading-none opacity-70 hover:opacity-100 transition-opacity cursor-pointer bg-transparent border-0;
+}
