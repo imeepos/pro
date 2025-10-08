@@ -10,7 +10,6 @@ import { ScreensService } from '../../../state/screens.service';
 import { ScreensQuery } from '../../../state/screens.query';
 import { ScreenPage, UpdateScreenDto } from '../../../core/services/screen-api.service';
 import { ComponentRegistryService } from '../../../core/services/component-registry.service';
-import { DebugService } from '../../../core/services/debug.service';
 import { ComponentHostDirective } from './component-host.directive';
 
 interface ScreenGridsterItem extends GridsterItem {
@@ -81,7 +80,18 @@ realPreviewMode = false;
   selectedComponentType = '';
   searchQuery = '';
   selectedCategory = '全部';
-  showGridLines = true;
+  private _showGridLines = true;
+
+  get showGridLines(): boolean {
+    return this._showGridLines;
+  }
+
+  set showGridLines(value: boolean) {
+    if (this._showGridLines !== value) {
+      this._showGridLines = value;
+      this.updateGridDisplay();
+    }
+  }
 
   // 历史记录（撤销重做）
   private history: Array<Array<ScreenGridsterItem>> = [];
@@ -104,9 +114,11 @@ realPreviewMode = false;
     private screensService: ScreensService,
     private screensQuery: ScreensQuery,
     private componentRegistry: ComponentRegistryService,
-    private debugService: DebugService,
     private environmentInjector: EnvironmentInjector
-  ) {}
+  ) {
+    console.log('ScreenEditorComponent 构造函数执行成功');
+    console.log('所有依赖注入完成');
+  }
 
   ngOnInit(): void {
     this.screenId = this.route.snapshot.paramMap.get('id') || '';
@@ -243,7 +255,7 @@ realPreviewMode = false;
 
     this.gridsterOptions = {
       gridType: 'fixed',
-      displayGrid: this.showGridLines ? 'always' : 'none',
+      displayGrid: this._showGridLines ? 'always' : 'none',
       pushItems: true,
       draggable: {
         enabled: !this.previewMode
@@ -569,10 +581,7 @@ realPreviewMode = false;
 
     try {
       viewContainerRef.clear();
-
-      // 获取调试信息
-      const debugInfo = this.debugService.getDebugInfo(componentClass);
-      console.log(`开始创建组件 ${item.type}`, debugInfo);
+      console.log(`开始创建组件 ${item.type}`);
 
       // 使用environmentInjector确保依赖正确注入
       const componentRef = viewContainerRef.createComponent(
@@ -595,24 +604,13 @@ realPreviewMode = false;
     } catch (error) {
       console.error(`创建组件 ${item.type} 失败:`, error);
 
-      // 获取详细的依赖信息
-      const debugInfo = this.debugService.getDebugInfo(componentClass);
-      console.error('组件调试信息:', debugInfo);
-
       // 提供更详细的错误信息
       if (error instanceof Error) {
         console.error('错误堆栈:', error.stack);
 
-        // 如果是依赖注入错误，提供更友好的提示和调试信息
+        // 如果是依赖注入错误，提供更友好的提示
         if (error.message.includes('NullInjectorError') || error.message.includes('No provider')) {
-          let errorMessage = `组件 ${item.type} 缺少必要的依赖项。`;
-
-          if (debugInfo.dependencies.length > 0) {
-            errorMessage += `\n\n依赖项列表:\n${debugInfo.dependencies.map((dep: any) => `- ${dep.name}: ${dep.type}`).join('\n')}`;
-            errorMessage += '\n\n请确保这些依赖项已在 app.config.ts 中正确配置为 providers。';
-          }
-
-          this.showErrorToast('依赖注入错误', errorMessage);
+          this.showErrorToast('依赖注入错误', `组件 ${item.type} 缺少必要的依赖项。请检查组件的构造函数参数。`);
         } else {
           this.showErrorToast('组件创建失败', `${item.type}: ${error.message}`);
         }
@@ -680,6 +678,9 @@ realPreviewMode = false;
 
   toggleGridLines(): void {
     this.showGridLines = !this.showGridLines;
+  }
+
+  private updateGridDisplay(): void {
     this.gridsterOptions.displayGrid = this.showGridLines ? 'always' : 'none';
     if (this.gridsterOptions.api) {
       this.gridsterOptions.api.optionsChanged!();

@@ -69,7 +69,7 @@
         <div class="flex items-center bg-gray-100 rounded-lg p-1" *ngIf="previewMode">
           <button
             *ngFor="let device of previewDevices"
-            (click)="setPreviewDevice(device.id as 'desktop' | 'tablet' | 'mobile')"
+            (click)="setPreviewDevice(device.id)"
             class="px-3 py-1.5 text-xs rounded transition-colors flex items-center space-x-1.5"
             [class.bg-white]="previewDevice === device.id"
             [class.text-gray-700]="previewDevice === device.id"
@@ -152,7 +152,7 @@
           <input
             type="text"
             [(ngModel)]="searchQuery"
-            (input)="onSearchChange($event.target.value)"
+            (input)="onSearchChange($any($event.target).value)"
             placeholder="搜索组件..."
             class="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           <svg class="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,7 +179,7 @@
       </div>
 
       <!-- 组件列表 -->
-      <div class="components-list space-y-3" cdkDropListGroup>
+      <div class="components-list space-y-3" cdkDropListGroup id="component-list">
         <div
           *ngFor="let comp of filteredComponents"
           class="component-item p-3 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-blue-300 transition-all cursor-move group"
@@ -230,8 +230,10 @@
       class="canvas-wrapper mx-auto relative transition-all duration-300"
       [class.bg-gray-900]="!previewMode"
       [class.bg-white]="previewMode && realPreviewMode"
-      [ngStyle]="getPreviewDeviceStyle()"
+      [class.shadow-lg]="!previewMode"
+      [ngStyle]="getCanvasStyle()"
       cdkDropList
+      cdkDropListConnectedTo="component-list"
       (cdkDropListDropped)="onComponentDrop($event)">
 
       <!-- 设备预览模式下的状态栏 -->
@@ -378,24 +380,29 @@
             <label class="block text-xs font-medium text-gray-700 mb-1.5">快速预设</label>
             <div class="grid grid-cols-2 gap-2">
               <button
-                (click)="canvasCols = 12; canvasRows = 12; updateCanvasGrid()"
+                (click)="applyGridPreset(8, 6)"
                 class="px-3 py-2 text-xs bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors">
-                12×12
+                8×6 <span class="text-gray-400">(小)</span>
               </button>
               <button
-                (click)="canvasCols = 24; canvasRows = 24; updateCanvasGrid()"
+                (click)="applyGridPreset(12, 8)"
                 class="px-3 py-2 text-xs bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors">
-                24×24
+                12×8 <span class="text-gray-400">(中)</span>
               </button>
               <button
-                (click)="canvasCols = 32; canvasRows = 20; updateCanvasGrid()"
+                (click)="applyGridPreset(16, 12)"
                 class="px-3 py-2 text-xs bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors">
-                32×20
+                16×12 <span class="text-gray-400">(大)</span>
               </button>
               <button
-                (click)="canvasCols = 48; canvasRows = 32; updateCanvasGrid()"
+                (click)="applyGridPreset(24, 18)"
                 class="px-3 py-2 text-xs bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors">
-                48×32
+                24×18 <span class="text-gray-400">(超大)</span>
+              </button>
+              <button
+                (click)="autoAdjustGrid()"
+                class="px-3 py-2 text-xs bg-blue-50 border border-blue-200 text-blue-700 rounded hover:bg-blue-100 transition-colors col-span-2">
+                🎯 自适应屏幕
               </button>
             </div>
           </div>
@@ -419,7 +426,6 @@
               <input
                 type="checkbox"
                 [(ngModel)]="showGridLines"
-                (change)="toggleGridLines()"
                 class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
               <span class="text-sm text-gray-700">显示网格线</span>
             </label>
