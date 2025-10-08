@@ -17,6 +17,7 @@
 .left-panel,
 .right-panel {
   flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .canvas-container {
@@ -26,6 +27,8 @@
 .canvas-wrapper {
   position: relative;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 gridster {
@@ -35,24 +38,39 @@ gridster {
 
 .gridster-item-content {
   background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.gridster-item-content:hover {
+  transform: scale(1.01);
+}
+
+.gridster-item-content.selected {
+  transform: scale(1.02);
 }
 
 ::ng-deep gridster-item {
   background: transparent;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
 ::ng-deep gridster-preview {
   background: rgba(59, 130, 246, 0.3) !important;
   border: 2px dashed #3b82f6 !important;
+  border-radius: 6px !important;
 }
 
 .component-drag-preview {
   min-width: 200px;
+  border-radius: 8px;
 }
 
 .cdk-drag-preview {
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  opacity: 0.8;
+  box-shadow: 0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  opacity: 0.9;
+  border-radius: 8px;
 }
 
 .cdk-drag-animating {
@@ -61,4 +79,198 @@ gridster {
 
 .component-wrapper {
   overflow: hidden;
+  border-radius: 4px;
+}
+
+// 组件面板样式
+.component-item {
+  user-select: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.component-item:hover {
+  transform: translateY(-1px);
+}
+
+.component-item:active {
+  transform: translateY(0);
+}
+
+// 设置面板样式
+.settings-section {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.settings-section h4 {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+// 画布响应式
+.canvas-wrapper {
+  min-width: 800px;
+  min-height: 600px;
+}
+
+@media (max-width: 1280px) {
+  .left-panel:not(.w-16) {
+    width: 16rem !important;
+  }
+
+  .right-panel:not(.w-0) {
+    width: 20rem !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .canvas-wrapper {
+    min-width: 600px;
+    min-height: 450px;
+  }
+}
+
+// 加载状态
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+// 动画效果
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.left-panel {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.right-panel {
+  animation: slideInRight 0.3s ease-out;
+}
+
+// 滚动条样式
+.left-panel::-webkit-scrollbar,
+.right-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.left-panel::-webkit-scrollbar-track,
+.right-panel::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.left-panel::-webkit-scrollbar-thumb,
+.right-panel::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.left-panel::-webkit-scrollbar-thumb:hover,
+.right-panel::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+// Toast通知样式
+.toast-container {
+  pointer-events: none;
+}
+
+.toast-notification {
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+}
+
+// Toast动画状态
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%) scale(0.8);
+  }
+}
+
+// 预览模式样式
+.preview-mode {
+  .canvas-container {
+    background: white;
+  }
+
+  .canvas-wrapper {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  // 设备预览样式
+  &.device-preview {
+    .canvas-wrapper {
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    }
+  }
+
+  // 真实预览模式
+  &.real-preview {
+    .canvas-wrapper {
+      box-shadow: none;
+      border: none;
+      border-radius: 0;
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .toast-container {
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+  }
+
+  .toast-notification {
+    max-width: none;
+  }
 }
