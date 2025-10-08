@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { createWeiboAuthSDK, WeiboLoginEvent, WeiboAuthSDK } from '@pro/sdk';
 import { getApiUrl } from '@pro/config';
@@ -30,7 +30,10 @@ export class WeiboLoginComponent implements OnDestroy {
   private weiboSDK: WeiboAuthSDK;
   private eventSource?: EventSource;
 
-  constructor(private tokenStorage: TokenStorageService) {
+  constructor(
+    private tokenStorage: TokenStorageService,
+    private ngZone: NgZone
+  ) {
     this.weiboSDK = createWeiboAuthSDK(this.getBaseUrl());
   }
 
@@ -71,41 +74,40 @@ export class WeiboLoginComponent implements OnDestroy {
    * 处理登录事件
    */
   private handleLoginEvent(event: WeiboLoginEvent): void {
-    switch (event.type) {
-      case 'qrcode':
-        this.qrcodeUrl = event.data.image;
-        this.status = '请使用微博扫描二维码';
-        break;
+    this.ngZone.run(() => {
+      switch (event.type) {
+        case 'qrcode':
+          this.qrcodeUrl = event.data.image;
+          this.status = '请使用微博扫描二维码';
+          break;
 
-      case 'scanned':
-        this.status = '已扫码,请在手机上确认登录';
-        break;
+        case 'scanned':
+          this.status = '已扫码,请在手机上确认登录';
+          break;
 
-      case 'success':
-        this.status = '登录成功!';
-        this.showSuccess = true;
-        this.accountInfo = event.data;
-        this.isLoading = false;
-        this.onLoginSuccess(event.data);
-        break;
+        case 'success':
+          this.status = '登录成功!';
+          this.showSuccess = true;
+          this.accountInfo = event.data;
+          this.isLoading = false;
+          this.onLoginSuccess(event.data);
+          break;
 
-      case 'expired':
-        this.status = '二维码已过期,请重新获取';
-        this.isLoading = false;
-        break;
+        case 'expired':
+          this.status = '二维码已过期,请重新获取';
+          this.isLoading = false;
+          break;
 
-      case 'error':
-        this.status = `错误: ${event.data.message}`;
-        this.isLoading = false;
-        break;
-    }
+        case 'error':
+          this.status = `错误: ${event.data.message}`;
+          this.isLoading = false;
+          break;
+      }
+    });
   }
 
-  /**
-   * 登录成功回调
-   */
   private onLoginSuccess(data: any): void {
-    console.log('微博账号绑定成功:', data);
+    // 登录成功处理
   }
 
   /**

@@ -1,8 +1,12 @@
 <div class="notification-container relative">
   <button
     (click)="toggleDropdown()"
+    (keydown.escape)="isDropdownOpen && toggleDropdown()"
     class="notification-button relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+    [attr.aria-expanded]="isDropdownOpen"
     aria-label="通知"
+    aria-haspopup="true"
+    type="button"
   >
     <svg
       class="w-6 h-6 text-gray-600 dark:text-gray-300"
@@ -44,7 +48,7 @@
       <button
         *ngIf="hasUnread"
         (click)="markAllAsRead()"
-        class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+        class="text-sm text-primary hover:text-primary-hover"
       >
         全部已读
       </button>
@@ -71,15 +75,20 @@
       </div>
 
       <div
-        *ngFor="let notification of notifications"
+        *ngFor="let notification of notifications; trackBy: trackById"
         (click)="markAsRead(notification)"
+        (keydown.enter)="markAsRead(notification)"
+        (keydown.space)="$event.preventDefault(); markAsRead(notification)"
         class="notification-item border-b border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50"
         [class.unread]="!notification.read"
+        tabindex="0"
+        role="button"
+        [attr.aria-label]="notification.title + ': ' + notification.message"
       >
         <div class="flex items-start gap-3">
           <div
             *ngIf="!notification.read"
-            class="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"
+            class="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary"
           ></div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-gray-900 dark:text-white">

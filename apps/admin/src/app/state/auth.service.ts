@@ -23,7 +23,8 @@ export class AuthService {
 
     return this.authApi.login(dto).pipe(
       tap(response => {
-        this.handleAuthSuccess(response);
+        const actualResponse = (response as any).data || response;
+        this.handleAuthSuccess(actualResponse);
       }),
       catchError(error => {
         this.setError(error.message);

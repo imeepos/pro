@@ -1,9 +1,20 @@
-<div class="toast-container" [ngClass]="colorClasses">
+<div
+  class="toast-container"
+  [ngClass]="colorClasses"
+  role="alert"
+  [attr.aria-live]="type === 'error' ? 'assertive' : 'polite'"
+  aria-atomic="true"
+>
   <div class="toast-content">
-    <span class="toast-icon">{{ icon }}</span>
+    <span class="toast-icon" aria-hidden="true">{{ icon }}</span>
     <span class="toast-message">{{ message }}</span>
   </div>
-  <button class="toast-close" (click)="close()" aria-label="关闭">
+  <button
+    class="toast-close"
+    (click)="close()"
+    aria-label="关闭通知"
+    type="button"
+  >
     ×
   </button>
 </div>

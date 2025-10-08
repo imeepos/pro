@@ -1,55 +1,55 @@
-<div class="login-container">
-  <div class="login-card">
-    <h1 class="login-title">后台管理系统</h1>
-    <h2 class="login-subtitle">登录</h2>
+<div class="flex justify-center items-center min-h-screen bg-gradient-to-br from-primary to-primary-dark">
+  <div class="bg-white rounded-lg shadow-xl p-10 w-full max-w-md">
+    <h1 class="text-center text-2xl font-semibold text-gray-800 mb-2">后台管理系统</h1>
+    <h2 class="text-center text-lg font-medium text-gray-600 mb-8">登录</h2>
 
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-      <div class="form-group">
-        <label for="usernameOrEmail">用户名或邮箱</label>
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-5">
+      <div class="flex flex-col gap-2">
+        <label for="usernameOrEmail" class="text-sm font-medium text-gray-800">用户名或邮箱</label>
         <input
           id="usernameOrEmail"
           type="text"
           formControlName="usernameOrEmail"
-          class="form-control"
-          [class.error]="loginForm.get('usernameOrEmail')?.touched && loginForm.get('usernameOrEmail')?.invalid"
+          class="px-4 py-3 border border-gray-300 rounded transition-all duration-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+          [class.border-error]="loginForm.get('usernameOrEmail')?.touched && loginForm.get('usernameOrEmail')?.invalid"
           placeholder="请输入用户名或邮箱"
         />
-        <span class="error-message" *ngIf="getFieldError('usernameOrEmail')">
+        <span class="text-xs text-error min-h-[18px]" *ngIf="getFieldError('usernameOrEmail')">
           {{ getFieldError('usernameOrEmail') }}
         </span>
       </div>
 
-      <div class="form-group">
-        <label for="password">密码</label>
+      <div class="flex flex-col gap-2">
+        <label for="password" class="text-sm font-medium text-gray-800">密码</label>
         <input
           id="password"
           type="password"
           formControlName="password"
-          class="form-control"
-          [class.error]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid"
+          class="px-4 py-3 border border-gray-300 rounded transition-all duration-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+          [class.border-error]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid"
           placeholder="请输入密码"
         />
-        <span class="error-message" *ngIf="getFieldError('password')">
+        <span class="text-xs text-error min-h-[18px]" *ngIf="getFieldError('password')">
           {{ getFieldError('password') }}
         </span>
       </div>
 
-      <div class="error-message global-error" *ngIf="error$ | async as error">
+      <div class="px-3 py-3 bg-error/10 border border-error/20 rounded text-error text-center" *ngIf="error$ | async as error">
         {{ error }}
       </div>
 
       <button
         type="submit"
-        class="btn-submit"
+        class="px-6 py-3 bg-gradient-to-br from-primary to-primary-dark text-white border-none rounded text-base font-medium cursor-pointer transition-all duration-300 hover:enabled:-translate-y-0.5 hover:enabled:shadow-lg hover:enabled:shadow-primary/40 disabled:opacity-60 disabled:cursor-not-allowed"
         [disabled]="(loading$ | async) || loginForm.invalid"
       >
         <span *ngIf="!(loading$ | async)">登录</span>
         <span *ngIf="loading$ | async">登录中...</span>
       </button>
 
-      <div class="form-footer">
+      <div class="text-center text-sm text-gray-600">
         <span>还没有账号？</span>
-        <a routerLink="/register">立即注册</a>
+        <a routerLink="/register" class="text-primary no-underline font-medium ml-1 hover:underline">立即注册</a>
       </div>
     </form>
   </div>

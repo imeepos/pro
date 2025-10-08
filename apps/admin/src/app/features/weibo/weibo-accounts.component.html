@@ -7,29 +7,29 @@
     </div>
     <button
       (click)="showAddAccountDialog()"
-      class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium
-             hover:bg-blue-700 active:bg-blue-800
+      class="px-4 py-2 bg-primary text-white rounded-lg font-medium
+             hover:bg-primary-hover active:bg-primary-600
              transition-colors duration-200 shadow-sm hover:shadow">
       + 添加账号
     </button>
   </div>
 
   <!-- 错误提示 -->
-  <div *ngIf="error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+  <div *ngIf="error" class="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg">
     <div class="flex items-start space-x-3">
-      <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg class="w-5 h-5 text-error flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <p class="text-sm text-red-800">{{ error }}</p>
+      <p class="text-sm text-error">{{ error }}</p>
     </div>
   </div>
 
   <!-- 加载状态 -->
   <div *ngIf="isLoading" class="flex justify-center items-center py-12">
     <div class="flex space-x-2">
-      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
-      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+      <div class="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
+      <div class="w-3 h-3 bg-primary rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+      <div class="w-3 h-3 bg-primary rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
     </div>
   </div>
 
@@ -55,8 +55,9 @@
         <div class="mb-4">
           <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                 [ngClass]="{
-                  'bg-green-100 text-green-800': account.status === 'active',
-                  'bg-red-100 text-red-800': account.status === 'expired',
+                  'bg-success/10 text-success': account.status === 'active',
+                  'bg-error/10 text-error': account.status === 'expired',
+                  'bg-warning/10 text-warning': account.status === 'restricted',
                   'bg-gray-100 text-gray-800': account.status === 'banned'
                 }">
             {{ getStatusText(account.status) }}
@@ -80,15 +81,26 @@
       <div class="flex border-t border-gray-100">
         <button
           (click)="deleteAccount(account)"
-          class="flex-1 px-4 py-3 text-center text-sm font-medium text-red-600
-                 hover:bg-red-50 active:bg-red-100 transition-colors duration-200">
+          class="flex-1 px-4 py-3 text-center text-sm font-medium text-error
+                 hover:bg-error/5 active:bg-error/10 transition-colors duration-200">
           删除
         </button>
         <div class="w-px bg-gray-100"></div>
         <button
-          class="flex-1 px-4 py-3 text-center text-sm font-medium text-gray-600
-                 hover:bg-gray-50 active:bg-gray-100 transition-colors duration-200">
-          测试
+          (click)="checkAccount(account)"
+          [disabled]="isChecking(account.id)"
+          [class.opacity-50]="isChecking(account.id)"
+          [class.cursor-not-allowed]="isChecking(account.id)"
+          class="flex-1 px-4 py-3 text-center text-sm font-medium text-primary
+                 hover:bg-primary/5 active:bg-primary/10 transition-colors duration-200
+                 disabled:hover:bg-white">
+          <span *ngIf="!isChecking(account.id)">检查</span>
+          <span *ngIf="isChecking(account.id)" class="flex items-center justify-center">
+            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </span>
         </button>
       </div>
     </div>
@@ -105,8 +117,8 @@
     <p class="mt-2 text-sm text-gray-500">点击"添加账号"按钮开始绑定您的第一个微博账号</p>
     <button
       (click)="showAddAccountDialog()"
-      class="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg font-medium
-             hover:bg-blue-700 active:bg-blue-800
+      class="mt-6 px-6 py-2 bg-primary text-white rounded-lg font-medium
+             hover:bg-primary-hover active:bg-primary-600
              transition-colors duration-200 shadow-sm hover:shadow">
       立即添加
     </button>

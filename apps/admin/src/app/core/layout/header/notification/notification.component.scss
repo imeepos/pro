@@ -3,30 +3,27 @@
 }
 
 .notification-button {
-  cursor: pointer;
-  outline: none;
-  border: none;
-  background: transparent;
+  @apply cursor-pointer outline-none border-none bg-transparent;
 
   &:focus-visible {
-    @apply ring-2 ring-blue-500 ring-offset-2;
+    @apply ring-2 ring-primary ring-offset-2;
   }
 }
 
 .notification-dropdown {
   z-index: 1000;
-  animation: slideDown 0.2s ease-out;
+  animation: slideDown 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .notification-item {
-  cursor: pointer;
+  @apply cursor-pointer;
 
   &.unread {
-    background-color: rgba(59, 130, 246, 0.05);
+    @apply bg-primary-lighter;
   }
 
   &:last-child {
-    border-bottom: none;
+    @apply border-b-0;
   }
 }
 
@@ -62,7 +59,7 @@
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;

@@ -43,4 +43,8 @@
 
 .toast-close {
   @apply text-2xl font-bold leading-none opacity-70 hover:opacity-100 transition-opacity cursor-pointer bg-transparent border-0;
+
+  &:focus-visible {
+    @apply outline-none ring-2 ring-white ring-offset-2 ring-offset-current;
+  }
 }

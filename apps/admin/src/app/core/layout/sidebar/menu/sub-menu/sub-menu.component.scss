@@ -7,8 +7,10 @@
 }
 
 .sub-menu-item {
-  @apply h-10 flex items-center pl-8 pr-3 cursor-pointer rounded-md transition-colors duration-200;
+  @apply h-10 flex items-center pl-8 pr-3 cursor-pointer rounded-md;
   @apply text-gray-600 hover:bg-gray-50;
+  transition: background-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              color 200ms cubic-bezier(0.4, 0, 0.2, 1);
 
   &.active {
     @apply bg-blue-500 text-white;

@@ -1,9 +1,10 @@
 .logo-container {
-  @apply h-16 flex items-center justify-center gap-3 px-4 transition-all duration-300;
+  @apply h-16 flex items-center justify-center gap-3 px-4;
+  transition: padding 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .logo-icon {
-  @apply w-10 h-10 flex items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0;
+  @apply w-10 h-10 flex items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-600 flex-shrink-0;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
@@ -12,7 +13,9 @@
 }
 
 .brand-name {
-  @apply text-lg font-semibold text-gray-800 dark:text-white whitespace-nowrap transition-opacity duration-300;
+  @apply text-lg font-semibold text-gray-800 dark:text-white whitespace-nowrap;
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              width 200ms cubic-bezier(0.4, 0, 0.2, 1);
 
   &.hidden {
     @apply opacity-0 w-0 overflow-hidden;

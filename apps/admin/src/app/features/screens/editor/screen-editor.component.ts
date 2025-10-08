@@ -279,9 +279,6 @@ export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     };
 
     this.screensService.updateScreen(this.screenId, dto).subscribe({
-      next: () => {
-        console.log('页面名称已更新');
-      },
       error: (error) => {
         alert(`更新页面名称失败: ${error.message}`);
       }
@@ -289,15 +286,15 @@ export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   updateCanvasSize(): void {
-    console.log('画布尺寸已更新');
+    // Canvas size updated
   }
 
   updateBackground(): void {
-    console.log('背景已更新');
+    // Background updated
   }
 
   updateGrid(): void {
-    console.log('网格配置已更新');
+    // Grid config updated
   }
 
   onComponentDrop(event: CdkDragDrop<any>): void {
@@ -360,6 +357,6 @@ export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private onGridsterItemChange(item: GridsterItem): void {
-    console.log('Gridster item changed:', item);
+    // Gridster item changed
   }
 }

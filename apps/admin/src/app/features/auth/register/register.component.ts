@@ -81,11 +81,7 @@ export class RegisterComponent implements OnInit {
 
     const { username, email, password } = this.registerForm.value;
 
-    this.authService.register({ username, email, password }).subscribe({
-      error: (error) => {
-        console.error('注册失败:', error);
-      }
-    });
+    this.authService.register({ username, email, password }).subscribe();
   }
 
   getFieldError(fieldName: string): string {

@@ -7,6 +7,9 @@
   z-index: 50;
   min-width: 12rem;
   transform-origin: top right;
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dropdown-closed {

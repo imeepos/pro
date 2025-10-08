@@ -22,7 +22,6 @@ export class WebSocketService {
 
     const token = this.tokenStorage.getToken();
     if (!token) {
-      console.error('无法连接 WebSocket：未找到认证令牌');
       return;
     }
 
@@ -31,18 +30,6 @@ export class WebSocketService {
         token
       },
       transports: ['websocket', 'polling']
-    });
-
-    this.socket.on('connect', () => {
-      console.log('WebSocket 已连接');
-    });
-
-    this.socket.on('disconnect', () => {
-      console.log('WebSocket 已断开');
-    });
-
-    this.socket.on('error', (error: any) => {
-      console.error('WebSocket 错误:', error);
     });
   }
 

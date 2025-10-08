@@ -54,6 +54,10 @@ export class NotificationComponent implements OnInit, OnDestroy {
     this.notifications.forEach(n => n.read = true);
   }
 
+  trackById(_index: number, notification: Notification): string {
+    return notification.id;
+  }
+
   getTimeAgo(timestamp: Date): string {
     const now = new Date();
     const diff = now.getTime() - new Date(timestamp).getTime();
