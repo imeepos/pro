@@ -1,7 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Observable } from 'rxjs';
-import { LogoComponent } from './logo/logo.component';
 import { MenuComponent } from './menu/menu.component';
 import { SidebarToggleComponent } from './sidebar-toggle/sidebar-toggle.component';
 import { LayoutStateService } from '../../services/layout-state.service';
@@ -9,7 +8,7 @@ import { LayoutStateService } from '../../services/layout-state.service';
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, LogoComponent, MenuComponent, SidebarToggleComponent],
+  imports: [CommonModule, MenuComponent, SidebarToggleComponent],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss']
 })
