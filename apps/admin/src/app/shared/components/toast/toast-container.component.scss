@@ -1,0 +1,7 @@
+.toast-container-wrapper {
+  @apply fixed top-4 right-4 z-50 flex flex-col gap-3 pointer-events-none;
+
+  app-toast {
+    @apply pointer-events-auto;
+  }
+}

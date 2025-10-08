@@ -1,0 +1,9 @@
+<div class="toast-container-wrapper">
+  <app-toast
+    *ngFor="let toast of toasts$ | async; trackBy: trackByToastId"
+    [type]="toast.type"
+    [message]="toast.message"
+    [duration]="toast.duration"
+    (closed)="onToastClosed(toast.id)"
+  />
+</div>

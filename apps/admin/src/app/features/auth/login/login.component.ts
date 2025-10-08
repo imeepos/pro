@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
 import { AuthService } from '../../../state/auth.service';
 import { AuthQuery } from '../../../state/auth.query';
 import { validateEmail, validatePassword } from '@pro/utils';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -22,7 +23,8 @@ export class LoginComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private authQuery: AuthQuery
+    private authQuery: AuthQuery,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -64,9 +66,20 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    console.log('=== 登录开始 ===');
+    console.log('表单值:', this.loginForm.value);
+
     this.authService.login(this.loginForm.value).subscribe({
+      next: (response) => {
+        console.log('登录成功 response:', response);
+        this.toastService.success('登录成功');
+      },
       error: (error) => {
-        console.error('登录失败:', error);
+        console.error('登录失败 error:', error);
+        this.toastService.error(error?.message || '登录失败');
+      },
+      complete: () => {
+        console.log('登录请求完成');
       }
     });
   }
