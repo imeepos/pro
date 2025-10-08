@@ -1,12 +1,9 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { LayoutComponent } from './core/layout/layout.component';
 
 export const routes: Routes = [
-  {
-    path: '',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/home/home.component').then(m => m.HomeComponent)
-  },
+  // 登录/注册页面 - 不使用布局
   {
     path: 'login',
     loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
@@ -15,28 +12,36 @@ export const routes: Routes = [
     path: 'register',
     loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
+
+  // 主应用 - 使用布局
   {
-    path: 'weibo/login',
+    path: '',
+    component: LayoutComponent,
     canActivate: [authGuard],
-    loadComponent: () => import('./features/weibo/weibo-login.component').then(m => m.WeiboLoginComponent)
+    children: [
+      { path: '', redirectTo: 'screens', pathMatch: 'full' },
+      {
+        path: 'screens',
+        loadComponent: () => import('./features/screens/screens-list.component').then(m => m.ScreensListComponent)
+      },
+      {
+        path: 'screens/editor/:id',
+        loadComponent: () => import('./features/screens/editor/screen-editor.component').then(m => m.ScreenEditorComponent)
+      },
+      {
+        path: 'weibo/login',
+        loadComponent: () => import('./features/weibo/weibo-login.component').then(m => m.WeiboLoginComponent)
+      },
+      {
+        path: 'weibo/accounts',
+        loadComponent: () => import('./features/weibo/weibo-accounts.component').then(m => m.WeiboAccountsComponent)
+      }
+    ]
   },
-  {
-    path: 'weibo/accounts',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/weibo/weibo-accounts.component').then(m => m.WeiboAccountsComponent)
-  },
-  {
-    path: 'screens',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/screens/screens-list.component').then(m => m.ScreensListComponent)
-  },
-  {
-    path: 'screens/editor/:id',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/screens/editor/screen-editor.component').then(m => m.ScreenEditorComponent)
-  },
+
+  // 404 重定向
   {
     path: '**',
-    redirectTo: ''
+    redirectTo: 'login'
   }
 ];

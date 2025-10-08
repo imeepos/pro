@@ -1,0 +1,13 @@
+<div class="h-screen w-screen overflow-hidden flex flex-col">
+  <!-- Header: 固定高度 64px -->
+  <app-header class="shrink-0" />
+
+  <!-- 下方区域: flex 水平布局，占满剩余高度 -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Sidebar: 固定宽度（由组件自身管理 256px/64px） -->
+    <app-sidebar class="shrink-0" />
+
+    <!-- MainContent: 占满剩余空间，支持垂直滚动 -->
+    <app-main-content class="flex-1 overflow-y-auto" />
+  </div>
+</div>
