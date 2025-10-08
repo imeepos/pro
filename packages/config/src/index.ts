@@ -29,8 +29,20 @@ const configs: Record<Environment, IEnvironmentConfig> = {
 };
 
 const currentEnv = (): Environment => {
-  const env = process.env['NODE_ENV'] as Environment;
-  return env && env in configs ? env : 'development';
+  // 在浏览器环境中，process.env 可能未定义
+  // 检查是否在浏览器环境且 process.env 可用
+  if (typeof process !== 'undefined' && process.env) {
+    const env = process.env['NODE_ENV'] as Environment;
+    return env && env in configs ? env : 'development';
+  }
+
+  // 在浏览器环境中，检查是否有其他方式确定环境
+  // 默认使用 development，除非明确设置为 production
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'development';
+  }
+
+  return 'development';
 };
 
 export const getConfig = (): IEnvironmentConfig => configs[currentEnv()];

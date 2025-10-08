@@ -2,11 +2,13 @@ import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { ComponentRegistryService } from './core/services/component-registry.service';
 import { WeiboLoggedInUsersCardComponent } from './features/screens/components/weibo-logged-in-users-card.component';
+import { TestSimpleComponent } from './features/screens/components/test-simple.component';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
   return () => {
@@ -19,6 +21,17 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
       },
       WeiboLoggedInUsersCardComponent
     );
+
+    // 注册测试组件
+    registry.register(
+      {
+        type: 'test-simple',
+        name: '测试组件',
+        icon: 'test',
+        category: 'test'
+      },
+      TestSimpleComponent
+    );
   };
 }
 
@@ -29,6 +42,8 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([tokenInterceptor, errorInterceptor])
     ),
     provideAnimations(),
+    // FormBuilder 依赖 ReactiveFormsModule 中的 providers
+    ComponentRegistryService,
     {
       provide: APP_INITIALIZER,
       useFactory: initializeComponentRegistry,
