@@ -1,0 +1,104 @@
+<div class="container mx-auto p-6">
+  <!-- 页面头部 -->
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">我的微博账号</h2>
+    <button
+      (click)="goToAddAccount()"
+      class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium">
+      添加账号
+    </button>
+  </div>
+
+  <!-- 错误提示 -->
+  <div
+    *ngIf="error"
+    class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+    <p class="text-red-800 text-sm">{{ error }}</p>
+  </div>
+
+  <!-- 加载状态 -->
+  <div
+    *ngIf="loading"
+    class="flex items-center justify-center py-12">
+    <div class="flex items-center space-x-2">
+      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
+      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+    </div>
+  </div>
+
+  <!-- 账号列表 -->
+  <div
+    *ngIf="!loading && accounts.length > 0"
+    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div
+      *ngFor="let account of accounts"
+      class="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow duration-200">
+
+      <!-- 账号头部 -->
+      <div class="flex items-center space-x-4 mb-4">
+        <img
+          [src]="account.weiboAvatar"
+          [alt]="account.weiboNickname"
+          class="w-16 h-16 rounded-full object-cover border-2 border-gray-200">
+        <div class="flex-1 min-w-0">
+          <h3 class="font-semibold text-gray-800 truncate">{{ account.weiboNickname }}</h3>
+          <p class="text-sm text-gray-500 truncate">UID: {{ account.weiboUid }}</p>
+        </div>
+      </div>
+
+      <!-- 账号状态 -->
+      <div class="mb-4">
+        <span
+          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+          [ngClass]="getStatusClass(account.status)">
+          {{ getStatusText(account.status) }}
+        </span>
+      </div>
+
+      <!-- 账号信息 -->
+      <div class="mb-4 text-xs text-gray-500">
+        <p *ngIf="account.lastCheckAt">最后检查: {{ account.lastCheckAt | date:'yyyy-MM-dd HH:mm' }}</p>
+        <p>创建时间: {{ account.createdAt | date:'yyyy-MM-dd HH:mm' }}</p>
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="flex space-x-2">
+        <button
+          (click)="deleteAccount(account.id)"
+          class="flex-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors duration-200 text-sm font-medium">
+          删除
+        </button>
+        <button
+          class="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors duration-200 text-sm font-medium"
+          title="测试账号功能(待实现)">
+          测试
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 空状态 -->
+  <div
+    *ngIf="!loading && accounts.length === 0 && !error"
+    class="text-center py-12">
+    <svg
+      class="mx-auto h-12 w-12 text-gray-400"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor">
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+    </svg>
+    <h3 class="mt-4 text-lg font-medium text-gray-900">暂无微博账号</h3>
+    <p class="mt-2 text-sm text-gray-500">点击"添加账号"按钮开始添加您的第一个微博账号</p>
+    <button
+      (click)="goToAddAccount()"
+      class="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium">
+      立即添加
+    </button>
+  </div>
+</div>

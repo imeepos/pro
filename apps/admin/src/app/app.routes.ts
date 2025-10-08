@@ -18,6 +18,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
   {
+    path: 'weibo/accounts',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/weibo/weibo-accounts.component').then(m => m.WeiboAccountsComponent)
+  },
+  {
     path: '**',
     redirectTo: ''
   }

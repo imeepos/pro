@@ -1,9 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Observable } from 'rxjs';
-import { AuthQuery } from '../../state/auth.query';
+import { Router } from '@angular/router';
 import { AuthService } from '../../state/auth.service';
-import { User } from '@pro/types';
 
 @Component({
   selector: 'app-home',
@@ -12,15 +10,10 @@ import { User } from '@pro/types';
   template: `
     <div class="home-container">
       <div class="home-header">
-        <h1>后台管理系统</h1>
-        <button (click)="logout()" class="btn-logout">退出登录</button>
-      </div>
-      <div class="home-content">
-        <div class="user-info" *ngIf="currentUser$ | async as user">
-          <h2>欢迎, {{ user.username }}!</h2>
-          <p>邮箱: {{ user.email }}</p>
-          <p>状态: {{ user.status }}</p>
-          <p>注册时间: {{ user.createdAt | date:'yyyy-MM-dd HH:mm' }}</p>
+        <h1>欢迎</h1>
+        <div class="header-actions">
+          <button (click)="goToWeiboAccounts()" class="btn-weibo">微博账号管理</button>
+          <button (click)="logout()" class="btn-logout">退出登录</button>
         </div>
       </div>
     </div>
@@ -46,6 +39,27 @@ import { User } from '@pro/types';
         color: #333;
       }
 
+      .header-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .btn-weibo {
+        padding: 10px 20px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s;
+
+        &:hover {
+          background: #2563eb;
+        }
+      }
+
       .btn-logout {
         padding: 10px 20px;
         background: #f56565;
@@ -63,39 +77,19 @@ import { User } from '@pro/types';
       }
     }
 
-    .home-content {
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-      .user-info {
-        h2 {
-          margin: 0 0 16px 0;
-          color: #333;
-          font-size: 20px;
-        }
-
-        p {
-          margin: 8px 0;
-          color: #666;
-          font-size: 14px;
-        }
-      }
-    }
   `]
 })
 export class HomeComponent {
-  currentUser$: Observable<User | null>;
-
   constructor(
-    private authQuery: AuthQuery,
-    private authService: AuthService
-  ) {
-    this.currentUser$ = this.authQuery.currentUser$;
-  }
+    private authService: AuthService,
+    private router: Router
+  ) {}
 
   logout(): void {
     this.authService.logout();
+  }
+
+  goToWeiboAccounts(): void {
+    this.router.navigate(['/weibo/accounts']);
   }
 }
