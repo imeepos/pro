@@ -1,18 +1,17 @@
-import { Component, OnInit, OnDestroy, ViewContainerRef } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Subject, takeUntil, take } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { ScreensService } from '../../state/screens.service';
 import { ScreensQuery } from '../../state/screens.query';
 import { ScreenPage, CreateScreenDto } from '../../core/services/screen-api.service';
-import { ModalService } from '../../core/services/modal.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { CreateScreenDialogComponent } from './components/create-screen-dialog.component';
 
 @Component({
   selector: 'app-screens-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CreateScreenDialogComponent],
   templateUrl: './screens-list.component.html',
   styleUrls: ['./screens-list.component.scss']
 })
@@ -20,20 +19,17 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   screens: ScreenPage[] = [];
   loading = false;
   error: string | null = null;
+  showCreateDialog = false;
   private destroy$ = new Subject<void>();
 
   constructor(
     private screensService: ScreensService,
     private screensQuery: ScreensQuery,
     private router: Router,
-    private modalService: ModalService,
-    private toastService: ToastService,
-    private viewContainerRef: ViewContainerRef
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
-    this.modalService.setContainer(this.viewContainerRef);
-
     this.screensQuery.screens$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(screens => {
@@ -69,20 +65,22 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   }
 
   createScreen(): void {
-    const modalRef = this.modalService.open<void, CreateScreenDto>(CreateScreenDialogComponent);
+    this.showCreateDialog = true;
+  }
 
-    modalRef.afterClosed$.pipe(take(1)).subscribe(dto => {
-      if (!dto) return;
+  closeCreateDialog(dto?: CreateScreenDto): void {
+    this.showCreateDialog = false;
 
-      this.screensService.createScreen(dto).subscribe({
-        next: (screen) => {
-          this.toastService.success('大屏页面创建成功');
-          this.router.navigate(['/screens/editor', screen.id]);
-        },
-        error: (error) => {
-          this.toastService.error(`创建失败: ${error.message}`);
-        }
-      });
+    if (!dto) return;
+
+    this.screensService.createScreen(dto).subscribe({
+      next: (screen) => {
+        this.toastService.success('大屏页面创建成功');
+        this.router.navigate(['/screens/editor', screen.id]);
+      },
+      error: (error) => {
+        this.toastService.error(`创建失败: ${error.message}`);
+      }
     });
   }
 

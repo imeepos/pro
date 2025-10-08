@@ -34,11 +34,8 @@ export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   previewMode = false;
 
   pageName = '';
-  canvasWidth = 1920;
-  canvasHeight = 1080;
-  canvasBackground = '#0f1419';
-  gridEnabled = true;
-  gridSize = 10;
+  canvasCols = 24;
+  canvasRows = 24;
 
   gridsterOptions: GridsterConfig = {};
   gridsterItems: Array<ScreenGridsterItem> = [];
@@ -106,10 +103,10 @@ export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
       resizable: {
         enabled: !this.previewMode
       },
-      minCols: 24,
-      maxCols: 24,
-      minRows: 18,
-      maxRows: 18,
+      minCols: this.canvasCols,
+      maxCols: this.canvasCols,
+      minRows: this.canvasRows,
+      maxRows: this.canvasRows,
       fixedColWidth: 80,
       fixedRowHeight: 60,
       margin: 10,
@@ -127,11 +124,8 @@ export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
         if (screen) {
           this.screen = screen;
           this.pageName = screen.name;
-          this.canvasWidth = screen.layout.width;
-          this.canvasHeight = screen.layout.height;
-          this.canvasBackground = screen.layout.background;
-          this.gridEnabled = screen.layout.grid?.enabled ?? true;
-          this.gridSize = screen.layout.grid?.size ?? 10;
+          this.canvasCols = screen.layout.cols;
+          this.canvasRows = screen.layout.rows;
 
           this.gridsterItems = screen.components.map(comp => ({
             x: comp.position.x,
@@ -181,13 +175,8 @@ export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     const dto: UpdateScreenDto = {
       name: this.pageName,
       layout: {
-        width: this.canvasWidth,
-        height: this.canvasHeight,
-        background: this.canvasBackground,
-        grid: {
-          enabled: this.gridEnabled,
-          size: this.gridSize
-        }
+        cols: this.canvasCols,
+        rows: this.canvasRows
       },
       components: this.gridsterItems.map(item => ({
         id: item.id || '',
@@ -221,13 +210,8 @@ export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     this.autoSaving = true;
     const dto: UpdateScreenDto = {
       layout: {
-        width: this.canvasWidth,
-        height: this.canvasHeight,
-        background: this.canvasBackground,
-        grid: {
-          enabled: this.gridEnabled,
-          size: this.gridSize
-        }
+        cols: this.canvasCols,
+        rows: this.canvasRows
       },
       components: this.gridsterItems.map(item => ({
         id: item.id || '',
@@ -285,16 +269,14 @@ export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  updateCanvasSize(): void {
-    // Canvas size updated
-  }
-
-  updateBackground(): void {
-    // Background updated
-  }
-
-  updateGrid(): void {
-    // Grid config updated
+  updateCanvasGrid(): void {
+    if (this.gridsterOptions.api) {
+      this.gridsterOptions.minCols = this.canvasCols;
+      this.gridsterOptions.maxCols = this.canvasCols;
+      this.gridsterOptions.minRows = this.canvasRows;
+      this.gridsterOptions.maxRows = this.canvasRows;
+      this.gridsterOptions.api.optionsChanged!();
+    }
   }
 
   onComponentDrop(event: CdkDragDrop<any>): void {

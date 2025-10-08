@@ -16,7 +16,7 @@ export interface ModalRef<T = any, R = any> {
 export class ModalService {
   private container?: ViewContainerRef;
   private activeModal?: ComponentRef<any>;
-  private readonly closeSubject = new Subject<any>();
+  private activeCloseSubject?: Subject<any>;
 
   setContainer(container: ViewContainerRef): void {
     this.container = container;
@@ -32,17 +32,22 @@ export class ModalService {
     const componentRef = this.container.createComponent(component);
     this.activeModal = componentRef;
 
+    const closeSubject = new Subject<R | undefined>();
+    this.activeCloseSubject = closeSubject;
+
     const modalRef: ModalRef<T, R> = {
       data: config?.data,
       close: (result?: R) => {
-        this.closeSubject.next(result);
+        closeSubject.next(result);
+        closeSubject.complete();
         this.destroy();
       },
       dismiss: () => {
-        this.closeSubject.next(undefined);
+        closeSubject.next(undefined);
+        closeSubject.complete();
         this.destroy();
       },
-      afterClosed$: this.closeSubject.asObservable()
+      afterClosed$: closeSubject.asObservable()
     };
 
     if (componentRef.instance.modalRef !== undefined) {
@@ -57,12 +62,20 @@ export class ModalService {
       this.activeModal.destroy();
       this.activeModal = undefined;
     }
+    if (this.activeCloseSubject) {
+      this.activeCloseSubject.complete();
+      this.activeCloseSubject = undefined;
+    }
   }
 
   private destroy(): void {
     if (this.activeModal) {
       this.activeModal.destroy();
       this.activeModal = undefined;
+    }
+    if (this.activeCloseSubject) {
+      this.activeCloseSubject.complete();
+      this.activeCloseSubject = undefined;
     }
   }
 }

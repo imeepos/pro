@@ -1,7 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { ModalRef } from '../../../core/services/modal.service';
 import { CreateScreenDto } from '../../../core/services/screen-api.service';
 
 @Component({
@@ -12,7 +11,9 @@ import { CreateScreenDto } from '../../../core/services/screen-api.service';
   styleUrls: ['./create-screen-dialog.component.scss']
 })
 export class CreateScreenDialogComponent implements OnInit {
-  modalRef!: ModalRef<void, CreateScreenDto>;
+  @Output() close = new EventEmitter<CreateScreenDto>();
+  @Output() cancelDialog = new EventEmitter<void>();
+
   form!: FormGroup;
   submitting = false;
 
@@ -22,11 +23,8 @@ export class CreateScreenDialogComponent implements OnInit {
     this.form = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(50)]],
       description: ['', [Validators.maxLength(200)]],
-      width: [1920, [Validators.required, Validators.min(100), Validators.max(7680)]],
-      height: [1080, [Validators.required, Validators.min(100), Validators.max(7680)]],
-      background: ['#0f1419', [Validators.required]],
-      gridEnabled: [true],
-      gridSize: [10, [Validators.required, Validators.min(1), Validators.max(100)]]
+      cols: [24, [Validators.required, Validators.min(6), Validators.max(48)]],
+      rows: [24, [Validators.required, Validators.min(6), Validators.max(48)]]
     });
   }
 
@@ -38,16 +36,12 @@ export class CreateScreenDialogComponent implements OnInit {
     return this.form.get('description');
   }
 
-  get widthControl() {
-    return this.form.get('width');
+  get colsControl() {
+    return this.form.get('cols');
   }
 
-  get heightControl() {
-    return this.form.get('height');
-  }
-
-  get gridSizeControl() {
-    return this.form.get('gridSize');
+  get rowsControl() {
+    return this.form.get('rows');
   }
 
   submit(): void {
@@ -63,21 +57,16 @@ export class CreateScreenDialogComponent implements OnInit {
       name: formValue.name,
       description: formValue.description || undefined,
       layout: {
-        width: formValue.width,
-        height: formValue.height,
-        background: formValue.background,
-        grid: {
-          enabled: formValue.gridEnabled,
-          size: formValue.gridSize
-        }
+        cols: formValue.cols,
+        rows: formValue.rows
       },
       components: []
     };
 
-    this.modalRef.close(dto);
+    this.close.emit(dto);
   }
 
   cancel(): void {
-    this.modalRef.dismiss();
+    this.cancelDialog.emit();
   }
 }

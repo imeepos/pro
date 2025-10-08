@@ -18,12 +18,6 @@ export const MENU_ITEMS: MenuItem[] = [
         label: '大屏列表',
         icon: 'list',
         route: '/screens'
-      },
-      {
-        id: 'screens-editor',
-        label: '创建大屏',
-        icon: 'plus-circle',
-        route: '/screens/editor'
       }
     ]
   },
@@ -37,12 +31,6 @@ export const MENU_ITEMS: MenuItem[] = [
         label: '账号列表',
         icon: 'users',
         route: '/weibo/accounts'
-      },
-      {
-        id: 'weibo-login',
-        label: '账号授权',
-        icon: 'key',
-        route: '/weibo/login'
       }
     ]
   }

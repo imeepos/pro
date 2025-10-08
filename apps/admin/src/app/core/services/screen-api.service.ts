@@ -4,13 +4,8 @@ import { Observable } from 'rxjs';
 import { getApiUrl } from '@pro/config';
 
 export interface LayoutConfig {
-  width: number;
-  height: number;
-  background: string;
-  grid?: {
-    enabled: boolean;
-    size: number;
-  };
+  cols: number;
+  rows: number;
 }
 
 export interface Component {

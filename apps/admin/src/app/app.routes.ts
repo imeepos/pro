@@ -29,10 +29,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/screens/editor/screen-editor.component').then(m => m.ScreenEditorComponent)
       },
       {
-        path: 'weibo/login',
-        loadComponent: () => import('./features/weibo/weibo-login.component').then(m => m.WeiboLoginComponent)
-      },
-      {
         path: 'weibo/accounts',
         loadComponent: () => import('./features/weibo/weibo-accounts.component').then(m => m.WeiboAccountsComponent)
       }
