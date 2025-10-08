@@ -1,17 +1,20 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { ScreenApiService, ScreenPage } from '../../core/services/screen-api.service';
+import { ScreenApiService, ScreenPage, Component as ScreenComponent } from '../../core/services/screen-api.service';
 import { WebSocketService } from '../../core/services/websocket.service';
+import { ComponentRegistryService } from '../../core/services/component-registry.service';
+import { IScreenComponent } from '../../shared/interfaces/screen-component.interface';
 
 @Component({
   selector: 'app-screen-display',
   standalone: true,
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="screen-container" [style.width.px]="screenConfig?.layout.width" [style.height.px]="screenConfig?.layout.height">
+    <div class="screen-container" [style.width.px]="screenConfig?.layout?.width" [style.height.px]="screenConfig?.layout?.height">
       @if (loading) {
         <div class="loading-container">
           <div class="loading-spinner"></div>
@@ -23,22 +26,7 @@ import { WebSocketService } from '../../core/services/websocket.service';
         </div>
       } @else if (screenConfig) {
         <div class="screen-canvas" [style.background]="screenConfig.layout.background">
-          <div class="components-container">
-            @for (component of screenConfig.components; track component.id) {
-              <div
-                class="component-wrapper"
-                [style.left.px]="component.position.x"
-                [style.top.px]="component.position.y"
-                [style.width.px]="component.position.width"
-                [style.height.px]="component.position.height"
-                [style.z-index]="component.position.zIndex">
-                <div class="component-placeholder">
-                  <p>{{ component.type }}</p>
-                  <p class="text-sm text-gray-500">组件渲染待实现</p>
-                </div>
-              </div>
-            }
-          </div>
+          <div class="components-container" #componentsContainer></div>
         </div>
 
         <button
@@ -99,19 +87,6 @@ import { WebSocketService } from '../../core/services/websocket.service';
 
     .component-wrapper {
       position: absolute;
-      border: 1px dashed #cbd5e1;
-    }
-
-    .component-placeholder {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255, 255, 255, 0.8);
-      border: 2px dashed #94a3b8;
-      border-radius: 8px;
     }
 
     .fullscreen-button {
@@ -143,6 +118,8 @@ import { WebSocketService } from '../../core/services/websocket.service';
   `]
 })
 export class ScreenDisplayComponent implements OnInit, OnDestroy {
+  @ViewChild('componentsContainer', { read: ViewContainerRef }) componentsContainer!: ViewContainerRef;
+
   screenConfig: ScreenPage | null = null;
   loading = true;
   error: string | null = null;
@@ -150,11 +127,14 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
   private screenId: string | null = null;
+  private componentRefs: ComponentRef<any>[] = [];
 
   constructor(
     private route: ActivatedRoute,
     private screenApi: ScreenApiService,
-    private wsService: WebSocketService
+    private wsService: WebSocketService,
+    private componentRegistry: ComponentRegistryService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -171,6 +151,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearComponents();
     this.destroy$.next();
     this.destroy$.complete();
     this.wsService.disconnect();
@@ -186,10 +167,13 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         next: (config) => {
           this.screenConfig = config;
           this.loading = false;
+          this.cdr.markForCheck();
+          this.renderComponents();
         },
         error: (err) => {
           this.error = err.error?.message || '加载大屏配置失败';
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
   }
@@ -204,10 +188,13 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         next: (config) => {
           this.screenConfig = config;
           this.loading = false;
+          this.cdr.markForCheck();
+          this.renderComponents();
         },
         error: (err) => {
           this.error = err.error?.message || '加载默认大屏配置失败';
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
   }
@@ -224,5 +211,55 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     document.addEventListener('fullscreenchange', () => {
       this.isFullscreen = !!document.fullscreenElement;
     });
+  }
+
+  private renderComponents(): void {
+    if (!this.screenConfig?.components || !this.componentsContainer) {
+      return;
+    }
+
+    this.clearComponents();
+
+    this.screenConfig.components.forEach((componentConfig: ScreenComponent) => {
+      this.createComponent(componentConfig);
+    });
+
+    this.cdr.markForCheck();
+  }
+
+  private createComponent(componentConfig: ScreenComponent): void {
+    const componentType = this.componentRegistry.get(componentConfig.type);
+
+    if (!componentType) {
+      console.error(`组件类型未注册: ${componentConfig.type}`);
+      return;
+    }
+
+    const componentRef = this.componentsContainer.createComponent(componentType);
+
+    const wrapper = componentRef.location.nativeElement;
+    wrapper.classList.add('component-wrapper');
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = `${componentConfig.position.x}px`;
+    wrapper.style.top = `${componentConfig.position.y}px`;
+    wrapper.style.width = `${componentConfig.position.width}px`;
+    wrapper.style.height = `${componentConfig.position.height}px`;
+    wrapper.style.zIndex = `${componentConfig.position.zIndex}`;
+
+    const instance = componentRef.instance as IScreenComponent;
+    if (instance.onConfigChange && componentConfig.config) {
+      instance.onConfigChange(componentConfig.config);
+    }
+
+    this.componentRefs.push(componentRef);
+  }
+
+  private clearComponents(): void {
+    this.componentRefs.forEach(ref => ref.destroy());
+    this.componentRefs = [];
+
+    if (this.componentsContainer) {
+      this.componentsContainer.clear();
+    }
   }
 }

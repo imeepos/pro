@@ -1,0 +1,11 @@
+<div class="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+  <div class="flex flex-col">
+    <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+    @if (description) {
+      <p class="text-sm text-gray-500 mt-1">{{ description }}</p>
+    }
+  </div>
+  <div class="flex items-center gap-3">
+    <ng-content></ng-content>
+  </div>
+</div>

@@ -1,0 +1,35 @@
+.breadcrumb-container {
+  @apply py-3 px-4;
+}
+
+.breadcrumb-list {
+  @apply flex items-center space-x-2 text-sm;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.breadcrumb-item {
+  @apply flex items-center;
+}
+
+.breadcrumb-separator {
+  @apply text-gray-400 select-none;
+}
+
+.breadcrumb-link {
+  @apply text-gray-600 hover:text-blue-600 transition-colors duration-200 cursor-pointer;
+  text-decoration: none;
+
+  &:hover {
+    @apply underline;
+  }
+
+  &-active {
+    @apply text-gray-900 font-medium pointer-events-none;
+  }
+}
+
+.breadcrumb-current {
+  @apply text-gray-900 font-semibold;
+}

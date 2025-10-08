@@ -1,26 +1,31 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewContainerRef, ViewChild, ComponentRef, createComponent, EnvironmentInjector, QueryList, ViewChildren, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { GridsterModule, GridsterConfig, GridsterItem } from 'angular-gridster2';
 import { Subject, takeUntil } from 'rxjs';
 import { ScreensService } from '../../../state/screens.service';
 import { ScreensQuery } from '../../../state/screens.query';
 import { ScreenPage, UpdateScreenDto } from '../../../core/services/screen-api.service';
+import { ComponentRegistryService } from '../../../core/services/component-registry.service';
+import { ComponentHostDirective } from './component-host.directive';
 
 interface ScreenGridsterItem extends GridsterItem {
   id?: string;
   type?: string;
+  componentRef?: ComponentRef<any>;
 }
 
 @Component({
   selector: 'app-screen-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, GridsterModule],
+  imports: [CommonModule, FormsModule, GridsterModule, DragDropModule, ComponentHostDirective],
   templateUrl: './screen-editor.component.html',
   styleUrls: ['./screen-editor.component.scss']
 })
-export class ScreenEditorComponent implements OnInit, OnDestroy {
+export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChildren(ComponentHostDirective) componentHosts!: QueryList<ComponentHostDirective>;
   screenId: string = '';
   screen: ScreenPage | null = null;
   loading = false;
@@ -38,30 +43,56 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   gridsterOptions: GridsterConfig = {};
   gridsterItems: Array<ScreenGridsterItem> = [];
 
+  availableComponents: Array<{ type: string; name: string; icon: string; category: string }> = [];
+
   private destroy$ = new Subject<void>();
   private autoSaveTimer?: number;
+  private componentCounter = 0;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private screensService: ScreensService,
-    private screensQuery: ScreensQuery
+    private screensQuery: ScreensQuery,
+    private componentRegistry: ComponentRegistryService,
+    private environmentInjector: EnvironmentInjector
   ) {}
 
   ngOnInit(): void {
     this.screenId = this.route.snapshot.paramMap.get('id') || '';
 
+    this.loadAvailableComponents();
     this.initGridsterOptions();
     this.loadScreen();
     this.setupAutoSave();
   }
 
+  ngAfterViewInit(): void {
+    this.componentHosts.changes.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.renderAllComponents();
+    });
+  }
+
   ngOnDestroy(): void {
+    this.gridsterItems.forEach(item => {
+      if (item.componentRef) {
+        item.componentRef.destroy();
+      }
+    });
     this.destroy$.next();
     this.destroy$.complete();
     if (this.autoSaveTimer) {
       clearInterval(this.autoSaveTimer);
     }
+  }
+
+  private loadAvailableComponents(): void {
+    this.availableComponents = this.componentRegistry.getAll().map(item => ({
+      type: item.metadata.type,
+      name: item.metadata.name,
+      icon: item.metadata.icon,
+      category: item.metadata.category
+    }));
   }
 
   private initGridsterOptions(): void {
@@ -81,7 +112,10 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
       maxRows: 18,
       fixedColWidth: 80,
       fixedRowHeight: 60,
-      margin: 10
+      margin: 10,
+      itemChangeCallback: (item: GridsterItem) => {
+        this.onGridsterItemChange(item);
+      }
     };
   }
 
@@ -109,6 +143,10 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
           }));
 
           this.loading = false;
+
+          setTimeout(() => {
+            this.renderAllComponents();
+          }, 100);
         }
       });
 
@@ -260,5 +298,68 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
 
   updateGrid(): void {
     console.log('网格配置已更新');
+  }
+
+  onComponentDrop(event: CdkDragDrop<any>): void {
+    if (event.previousContainer === event.container) {
+      return;
+    }
+
+    const componentType = event.item.data;
+    this.addComponentToCanvas(componentType);
+  }
+
+  private addComponentToCanvas(componentType: string): void {
+    this.componentCounter++;
+    const newItem: ScreenGridsterItem = {
+      x: 0,
+      y: 0,
+      cols: 4,
+      rows: 3,
+      id: `comp-${Date.now()}-${this.componentCounter}`,
+      type: componentType
+    };
+
+    this.gridsterItems.push(newItem);
+  }
+
+  private renderAllComponents(): void {
+    const hostsArray = this.componentHosts.toArray();
+
+    this.gridsterItems.forEach((item, index) => {
+      if (index < hostsArray.length && !item.componentRef) {
+        const host = hostsArray[index];
+        this.renderComponentInHost(item, host.viewContainerRef);
+      }
+    });
+  }
+
+  private renderComponentInHost(item: ScreenGridsterItem, viewContainerRef: ViewContainerRef): void {
+    if (!item.type) return;
+
+    const componentClass = this.componentRegistry.get(item.type);
+    if (!componentClass) {
+      console.error(`组件类型未找到: ${item.type}`);
+      return;
+    }
+
+    viewContainerRef.clear();
+    const componentRef = viewContainerRef.createComponent(componentClass);
+    item.componentRef = componentRef;
+  }
+
+  removeComponent(item: ScreenGridsterItem): void {
+    if (item.componentRef) {
+      item.componentRef.destroy();
+    }
+
+    const index = this.gridsterItems.indexOf(item);
+    if (index > -1) {
+      this.gridsterItems.splice(index, 1);
+    }
+  }
+
+  private onGridsterItemChange(item: GridsterItem): void {
+    console.log('Gridster item changed:', item);
   }
 }
