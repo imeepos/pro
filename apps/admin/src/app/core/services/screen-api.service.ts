@@ -108,11 +108,18 @@ export interface UpdateScreenDto {
   components?: Component[];
 }
 
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  timestamp: string;
+}
+
 export interface ScreenListResponse {
   items: ScreenPage[];
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }
 
 @Injectable({
@@ -126,35 +133,56 @@ export class ScreenApiService {
   }
 
   getScreens(page = 1, limit = 20): Observable<ScreenListResponse> {
-    return this.http.get<ScreenListResponse>(`${this.baseUrl}`, {
+    return this.http.get<ApiResponse<ScreenListResponse>>(`${this.baseUrl}`, {
       params: { page: page.toString(), limit: limit.toString() }
     }).pipe(
-      // 标准化返回的数据
-      map(response => ({
-        ...response,
-        items: response.items.map(item => normalizeScreenPageData(item))
-      }))
+      // 处理API响应格式并标准化数据
+      map(response => {
+        if (!response.success || !response.data) {
+          throw new Error('API返回数据格式错误');
+        }
+
+        return {
+          ...response.data,
+          items: response.data.items.map(item => normalizeScreenPageData(item))
+        };
+      })
     );
   }
 
   getScreen(id: string): Observable<ScreenPage> {
-    return this.http.get<ScreenPage>(`${this.baseUrl}/${id}`).pipe(
-      // 标准化返回的数据
-      map(screen => normalizeScreenPageData(screen))
+    return this.http.get<ApiResponse<ScreenPage>>(`${this.baseUrl}/${id}`).pipe(
+      // 处理API响应格式并标准化数据
+      map(response => {
+        if (!response.success || !response.data) {
+          throw new Error('API返回数据格式错误');
+        }
+        return normalizeScreenPageData(response.data);
+      })
     );
   }
 
   createScreen(dto: CreateScreenDto): Observable<ScreenPage> {
-    return this.http.post<ScreenPage>(`${this.baseUrl}`, dto).pipe(
-      // 标准化返回的数据
-      map(screen => normalizeScreenPageData(screen))
+    return this.http.post<ApiResponse<ScreenPage>>(`${this.baseUrl}`, dto).pipe(
+      // 处理API响应格式并标准化数据
+      map(response => {
+        if (!response.success || !response.data) {
+          throw new Error('API返回数据格式错误');
+        }
+        return normalizeScreenPageData(response.data);
+      })
     );
   }
 
   updateScreen(id: string, dto: UpdateScreenDto): Observable<ScreenPage> {
-    return this.http.put<ScreenPage>(`${this.baseUrl}/${id}`, dto).pipe(
-      // 标准化返回的数据
-      map(screen => normalizeScreenPageData(screen))
+    return this.http.put<ApiResponse<ScreenPage>>(`${this.baseUrl}/${id}`, dto).pipe(
+      // 处理API响应格式并标准化数据
+      map(response => {
+        if (!response.success || !response.data) {
+          throw new Error('API返回数据格式错误');
+        }
+        return normalizeScreenPageData(response.data);
+      })
     );
   }
 
@@ -163,37 +191,62 @@ export class ScreenApiService {
   }
 
   copyScreen(id: string): Observable<ScreenPage> {
-    return this.http.post<ScreenPage>(`${this.baseUrl}/${id}/copy`, {}).pipe(
-      // 标准化返回的数据
-      map(screen => normalizeScreenPageData(screen))
+    return this.http.post<ApiResponse<ScreenPage>>(`${this.baseUrl}/${id}/copy`, {}).pipe(
+      // 处理API响应格式并标准化数据
+      map(response => {
+        if (!response.success || !response.data) {
+          throw new Error('API返回数据格式错误');
+        }
+        return normalizeScreenPageData(response.data);
+      })
     );
   }
 
   publishScreen(id: string): Observable<ScreenPage> {
-    return this.http.post<ScreenPage>(`${this.baseUrl}/${id}/publish`, {}).pipe(
-      // 标准化返回的数据
-      map(screen => normalizeScreenPageData(screen))
+    return this.http.post<ApiResponse<ScreenPage>>(`${this.baseUrl}/${id}/publish`, {}).pipe(
+      // 处理API响应格式并标准化数据
+      map(response => {
+        if (!response.success || !response.data) {
+          throw new Error('API返回数据格式错误');
+        }
+        return normalizeScreenPageData(response.data);
+      })
     );
   }
 
   draftScreen(id: string): Observable<ScreenPage> {
-    return this.http.post<ScreenPage>(`${this.baseUrl}/${id}/draft`, {}).pipe(
-      // 标准化返回的数据
-      map(screen => normalizeScreenPageData(screen))
+    return this.http.post<ApiResponse<ScreenPage>>(`${this.baseUrl}/${id}/draft`, {}).pipe(
+      // 处理API响应格式并标准化数据
+      map(response => {
+        if (!response.success || !response.data) {
+          throw new Error('API返回数据格式错误');
+        }
+        return normalizeScreenPageData(response.data);
+      })
     );
   }
 
   setDefaultScreen(id: string): Observable<ScreenPage> {
-    return this.http.put<ScreenPage>(`${this.baseUrl}/default/${id}`, {}).pipe(
-      // 标准化返回的数据
-      map(screen => normalizeScreenPageData(screen))
+    return this.http.put<ApiResponse<ScreenPage>>(`${this.baseUrl}/default/${id}`, {}).pipe(
+      // 处理API响应格式并标准化数据
+      map(response => {
+        if (!response.success || !response.data) {
+          throw new Error('API返回数据格式错误');
+        }
+        return normalizeScreenPageData(response.data);
+      })
     );
   }
 
   getDefaultScreen(): Observable<ScreenPage> {
-    return this.http.get<ScreenPage>(`${this.baseUrl}/default`).pipe(
-      // 标准化返回的数据
-      map(screen => normalizeScreenPageData(screen))
+    return this.http.get<ApiResponse<ScreenPage>>(`${this.baseUrl}/default`).pipe(
+      // 处理API响应格式并标准化数据
+      map(response => {
+        if (!response.success || !response.data) {
+          throw new Error('API返回数据格式错误');
+        }
+        return normalizeScreenPageData(response.data);
+      })
     );
   }
 }
