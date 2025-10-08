@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Delete,
+  Post,
   Param,
   UseGuards,
   Request,
@@ -11,7 +12,8 @@ import {
 import { Observable } from 'rxjs';
 import { WeiboAccountService } from './weibo-account.service';
 import { WeiboAuthService, WeiboLoginEvent } from './weibo-auth.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { WeiboHealthCheckService } from './weibo-health-check.service';
+import { JwtAuthGuard, JwtSseAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 /**
  * 微博控制器
@@ -22,14 +24,15 @@ export class WeiboController {
   constructor(
     private readonly weiboAccountService: WeiboAccountService,
     private readonly weiboAuthService: WeiboAuthService,
+    private readonly healthCheckService: WeiboHealthCheckService,
   ) {}
 
   /**
    * 启动微博扫码登录
    * SSE 端点,实时推送登录状态变化
    *
-   * GET /api/weibo/login/start
-   * Headers: Authorization: Bearer <token>
+   * GET /api/weibo/login/start?token=<token>
+   * 注意: 由于 EventSource 不支持自定义 headers，token 通过 URL 参数传递
    *
    * SSE 事件类型:
    * - qrcode: 二维码生成
@@ -39,10 +42,10 @@ export class WeiboController {
    * - error: 错误
    */
   @Get('login/start')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtSseAuthGuard)
   @Sse()
   async startLogin(@Request() req): Promise<Observable<WeiboLoginEvent>> {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     return this.weiboAuthService.startLogin(userId);
   }
 
@@ -53,7 +56,7 @@ export class WeiboController {
   @Get('accounts')
   @UseGuards(JwtAuthGuard)
   async getAccounts(@Request() req) {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     return this.weiboAccountService.getAccounts(userId);
   }
 
@@ -67,7 +70,37 @@ export class WeiboController {
     @Request() req,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     return this.weiboAccountService.deleteAccount(userId, id);
+  }
+
+  /**
+   * 手动检查单个微博账号
+   * POST /api/weibo/accounts/:id/check
+   */
+  @Post('accounts/:id/check')
+  @UseGuards(JwtAuthGuard)
+  async checkAccount(@Param('id', ParseIntPipe) id: number) {
+    return this.healthCheckService.checkAccount(id);
+  }
+
+  /**
+   * 批量检查所有活跃账号
+   * POST /api/weibo/accounts/check-all
+   */
+  @Post('accounts/check-all')
+  @UseGuards(JwtAuthGuard)
+  async checkAllAccounts() {
+    return this.healthCheckService.checkAllAccounts();
+  }
+
+  /**
+   * 获取微博已登录用户统计
+   * GET /api/weibo/logged-in-users/stats
+   */
+  @Get('logged-in-users/stats')
+  @UseGuards(JwtAuthGuard)
+  async getLoggedInUsersStats() {
+    return this.weiboAccountService.getLoggedInUsersStats();
   }
 }

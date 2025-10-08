@@ -4,8 +4,11 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { WeiboAccountEntity } from '../entities/weibo-account.entity';
+import { Repository, MoreThanOrEqual } from 'typeorm';
+import {
+  WeiboAccountEntity,
+  WeiboAccountStatus,
+} from '../entities/weibo-account.entity';
 
 /**
  * 微博账号管理服务
@@ -62,5 +65,37 @@ export class WeiboAccountService {
     await this.weiboAccountRepo.delete(accountId);
 
     return { success: true };
+  }
+
+  /**
+   * 获取微博已登录用户统计
+   * 返回总数、今日新增、在线用户数
+   */
+  async getLoggedInUsersStats() {
+    // 总用户数
+    const total = await this.weiboAccountRepo.count();
+
+    // 今日新增（今天 00:00:00 之后创建的）
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayNew = await this.weiboAccountRepo.count({
+      where: {
+        createdAt: MoreThanOrEqual(today),
+      },
+    });
+
+    // 在线用户数（状态为 ACTIVE 的账号）
+    const online = await this.weiboAccountRepo.count({
+      where: {
+        status: WeiboAccountStatus.ACTIVE,
+      },
+    });
+
+    return {
+      total,
+      todayNew,
+      online,
+    };
   }
 }

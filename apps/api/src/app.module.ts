@@ -7,6 +7,7 @@ import { HealthController } from './health.controller';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { WeiboModule } from './weibo/weibo.module';
+import { ScreensModule } from './screens/screens.module';
 import { getDatabaseConfig } from './config';
 
 @Module({
@@ -19,6 +20,7 @@ import { getDatabaseConfig } from './config';
     AuthModule,
     UserModule,
     WeiboModule,
+    ScreensModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
