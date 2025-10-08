@@ -7,11 +7,12 @@ import { ScreensQuery } from '../../state/screens.query';
 import { ScreenPage, CreateScreenDto } from '../../core/services/screen-api.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { CreateScreenDialogComponent } from './components/create-screen-dialog.component';
+import { DeleteConfirmDialogComponent } from './components/delete-confirm-dialog.component';
 
 @Component({
   selector: 'app-screens-list',
   standalone: true,
-  imports: [CommonModule, CreateScreenDialogComponent],
+  imports: [CommonModule, CreateScreenDialogComponent, DeleteConfirmDialogComponent],
   templateUrl: './screens-list.component.html',
   styleUrls: ['./screens-list.component.scss']
 })
@@ -20,6 +21,8 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   loading = false;
   error: string | null = null;
   showCreateDialog = false;
+  showDeleteDialog = false;
+  screenToDelete: ScreenPage | null = null;
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -88,17 +91,67 @@ export class ScreensListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/screens/editor', screen.id]);
   }
 
-  deleteScreen(screen: ScreenPage): void {
-    if (!window.confirm(`确定要删除页面 "${screen.name}" 吗？此操作不可恢复。`)) {
+  openDeleteDialog(screen: ScreenPage): void {
+    // 安全性检查
+    if (!screen || !screen.id) {
+      this.toastService.error('无效的页面信息');
       return;
     }
 
-    this.screensService.deleteScreen(screen.id).subscribe({
+    // 防止删除默认页面时的额外警告
+    if (screen.isDefault) {
+      this.toastService.warning('警告：此页面是默认页面，删除后需要重新设置默认页面');
+    }
+
+    this.screenToDelete = screen;
+    this.showDeleteDialog = true;
+  }
+
+  closeDeleteDialog(): void {
+    this.showDeleteDialog = false;
+    this.screenToDelete = null;
+  }
+
+  onConfirmDelete(): void {
+    if (!this.screenToDelete || !this.screenToDelete.id) {
+      this.toastService.error('删除失败：无效的页面信息');
+      this.closeDeleteDialog();
+      return;
+    }
+
+    const screenName = this.screenToDelete.name;
+    const isDefaultScreen = this.screenToDelete.isDefault;
+
+    this.screensService.deleteScreen(this.screenToDelete.id).subscribe({
       next: () => {
-        this.toastService.success('页面删除成功');
+        this.toastService.success(`页面 "${screenName}" 删除成功`);
+
+        // 如果删除的是默认页面，提示用户设置新的默认页面
+        if (isDefaultScreen) {
+          setTimeout(() => {
+            this.toastService.info('提示：请设置一个新的默认页面');
+          }, 1000);
+        }
+
+        this.closeDeleteDialog();
       },
       error: (error) => {
-        this.toastService.error(`删除失败: ${error.message}`);
+        console.error('删除页面失败:', error);
+
+        // 根据错误类型提供更具体的错误信息
+        let errorMessage = '删除失败';
+        if (error.status === 404) {
+          errorMessage = '页面不存在或已被删除';
+        } else if (error.status === 403) {
+          errorMessage = '没有权限删除此页面';
+        } else if (error.status === 409) {
+          errorMessage = '页面正在被使用，无法删除';
+        } else if (error.message) {
+          errorMessage = `删除失败: ${error.message}`;
+        }
+
+        this.toastService.error(errorMessage);
+        this.closeDeleteDialog();
       }
     });
   }

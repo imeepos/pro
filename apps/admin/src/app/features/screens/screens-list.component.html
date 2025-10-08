@@ -107,8 +107,12 @@
                 设为默认
               </button>
               <button
-                (click)="deleteScreen(screen)"
-                class="text-red-600 hover:text-red-900 transition-colors duration-150">
+                (click)="openDeleteDialog(screen)"
+                class="text-red-600 hover:text-red-900 transition-all duration-150 hover:bg-red-50 px-2 py-1 rounded"
+                title="删除页面 (此操作不可恢复)">
+                <svg class="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
                 删除
               </button>
             </div>
@@ -161,3 +165,12 @@
     </div>
   </div>
 </div>
+
+<!-- 删除确认对话框 -->
+<app-delete-confirm-dialog
+  [screen]="screenToDelete"
+  [isVisible]="showDeleteDialog"
+  (confirm)="onConfirmDelete()"
+  (cancel)="closeDeleteDialog()"
+  (visibleChange)="showDeleteDialog = $event">
+</app-delete-confirm-dialog>
