@@ -1,0 +1,24 @@
+.user-info-container {
+  position: relative;
+  user-select: none;
+}
+
+.dropdown-menu {
+  z-index: 50;
+  min-width: 12rem;
+  transform-origin: top right;
+}
+
+.dropdown-closed {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-0.5rem) scale(0.95);
+  pointer-events: none;
+}
+
+.dropdown-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}

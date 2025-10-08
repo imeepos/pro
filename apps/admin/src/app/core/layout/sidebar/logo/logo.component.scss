@@ -1,0 +1,20 @@
+.logo-container {
+  @apply h-16 flex items-center justify-center gap-3 px-4 transition-all duration-300;
+}
+
+.logo-icon {
+  @apply w-10 h-10 flex items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.logo-letter {
+  @apply text-white text-xl font-bold;
+}
+
+.brand-name {
+  @apply text-lg font-semibold text-gray-800 dark:text-white whitespace-nowrap transition-opacity duration-300;
+
+  &.hidden {
+    @apply opacity-0 w-0 overflow-hidden;
+  }
+}

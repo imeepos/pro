@@ -1,0 +1,29 @@
+.toggle-button {
+  @apply w-10 h-10;
+  @apply flex items-center justify-center;
+  @apply rounded-lg;
+  @apply bg-transparent;
+  @apply text-gray-600 dark:text-gray-300;
+  @apply transition-all duration-200;
+  @apply cursor-pointer;
+  @apply border-0;
+  @apply outline-none;
+
+  &:hover {
+    @apply bg-gray-100 dark:bg-gray-700;
+    @apply text-gray-900 dark:text-white;
+  }
+
+  &:active {
+    @apply scale-95;
+  }
+
+  &:focus-visible {
+    @apply ring-2 ring-blue-500 ring-offset-2;
+  }
+}
+
+.icon {
+  @apply w-6 h-6;
+  @apply transition-transform duration-300;
+}
