@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ViewContainerRef, ViewChild, ComponentRef, createComponent, EnvironmentInjector, QueryList, ViewChildren, AfterViewInit } from '@angular/core';
+import { CdkDragEnd, CdkDragStart } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -529,6 +530,16 @@ realPreviewMode = false;
     this.showSuccessToast('自动调整完成', `已根据屏幕尺寸调整到 ${recommendedCols}×${recommendedRows} 栅格`);
   }
 
+  onDragStarted(event: CdkDragStart): void {
+    // 拖拽开始时禁用画布的自动滚动
+    document.body.style.overflow = 'hidden';
+  }
+
+  onDragEnded(event: CdkDragEnd): void {
+    // 拖拽结束时恢复画布的自动滚动
+    document.body.style.overflow = '';
+  }
+
   onComponentDrop(event: CdkDragDrop<any>): void {
     if (event.previousContainer === event.container) {
       return;
@@ -536,6 +547,9 @@ realPreviewMode = false;
 
     const componentType = event.item.data;
     this.addComponentToCanvas(componentType);
+
+    // 显示成功提示
+    this.showSuccessToast('组件已添加', `已将组件添加到画布`);
   }
 
   private addComponentToCanvas(componentType: string): void {

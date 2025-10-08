@@ -4,6 +4,13 @@
   background: #f3f4f6;
 }
 
+// 主编辑器容器
+.screen-editor-container {
+  position: relative;
+  // 确保拖拽预览可以超出容器边界
+  overflow: visible;
+}
+
 .toolbar {
   position: sticky;
   top: 0;
@@ -18,6 +25,8 @@
 .right-panel {
   flex-shrink: 0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  // 确保拖拽元素可以超出面板边界
+  overflow: visible;
 }
 
 .canvas-container {
@@ -71,10 +80,26 @@ gridster {
   box-shadow: 0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   opacity: 0.9;
   border-radius: 8px;
+  // 确保预览元素不会被遮挡
+  z-index: 9999 !important;
+  pointer-events: none;
 }
 
 .cdk-drag-animating {
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// 拖拽时的占位符样式
+.cdk-drag-placeholder {
+  opacity: 0.4;
+  border: 2px dashed #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+// 确保拖拽预览可以超出容器
+::ng-deep .cdk-drag-preview {
+  position: fixed !important;
+  z-index: 9999 !important;
 }
 
 .component-wrapper {
@@ -87,6 +112,8 @@ gridster {
   user-select: none;
   transform: translateZ(0);
   backface-visibility: hidden;
+  // 确保拖拽时不会被其他元素遮挡
+  z-index: 10;
 }
 
 .component-item:hover {
@@ -95,6 +122,21 @@ gridster {
 
 .component-item:active {
   transform: translateY(0);
+}
+
+// 拖拽时的样式
+.component-item.cdk-drag-dragging {
+  opacity: 0.8;
+  z-index: 1000;
+  transform: rotate(2deg);
+}
+
+// 组件列表容器
+.components-list-container {
+  min-height: 200px;
+  // 确保拖拽元素可以自由移动
+  position: relative;
+  overflow: visible !important;
 }
 
 // 设置面板样式
