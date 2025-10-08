@@ -87,7 +87,7 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   }
 
   editScreen(screen: ScreenPage): void {
-    this.router.navigate(['/screens']);
+    this.router.navigate(['/screens/editor', screen.id]);
   }
 
   deleteScreen(screen: ScreenPage): void {

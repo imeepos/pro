@@ -31,6 +31,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/screens/screens-list.component').then(m => m.ScreensListComponent)
   },
   {
+    path: 'screens/editor/:id',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/screens/editor/screen-editor.component').then(m => m.ScreenEditorComponent)
+  },
+  {
     path: '**',
     redirectTo: ''
   }
