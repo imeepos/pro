@@ -3,8 +3,10 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { HealthController } from './health.controller';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { WeiboModule } from './weibo/weibo.module';
 import { getDatabaseConfig } from './config';
 
 @Module({
@@ -16,8 +18,9 @@ import { getDatabaseConfig } from './config';
     TypeOrmModule.forRoot(getDatabaseConfig()),
     AuthModule,
     UserModule,
+    WeiboModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {}
