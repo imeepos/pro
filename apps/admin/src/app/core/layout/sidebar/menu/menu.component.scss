@@ -1,0 +1,15 @@
+.menu-container {
+  @apply p-3 overflow-y-auto;
+}
+
+.menu-list {
+  @apply flex flex-col gap-1;
+}
+
+.menu-item {
+  @apply list-none;
+}
+
+.placeholder {
+  @apply p-2 text-gray-400 text-sm;
+}
