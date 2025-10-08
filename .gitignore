@@ -13,6 +13,15 @@ build/
 .next/
 out/
 
+# TypeScript compilation artifacts
+*.d.ts
+*.d.ts.map
+*.js
+*.js.map
+*.tsbuildinfo
+!*.config.js
+!*.config.mjs
+
 # Misc
 .DS_Store
 *.pem

@@ -4,7 +4,9 @@ export class RedisClient {
   private client: Redis;
 
   constructor(options: RedisOptions | string) {
-    this.client = new Redis(options);
+    this.client = typeof options === 'string'
+      ? new Redis(options)
+      : new Redis(options);
   }
 
   async get<T = string>(key: string): Promise<T | null> {

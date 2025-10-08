@@ -1,10 +1,13 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewContainerRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, take } from 'rxjs';
 import { ScreensService } from '../../state/screens.service';
 import { ScreensQuery } from '../../state/screens.query';
 import { ScreenPage, CreateScreenDto } from '../../core/services/screen-api.service';
+import { ModalService } from '../../core/services/modal.service';
+import { ToastService } from '../../shared/services/toast.service';
+import { CreateScreenDialogComponent } from './components/create-screen-dialog.component';
 
 @Component({
   selector: 'app-screens-list',
@@ -22,10 +25,15 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   constructor(
     private screensService: ScreensService,
     private screensQuery: ScreensQuery,
-    private router: Router
+    private router: Router,
+    private modalService: ModalService,
+    private toastService: ToastService,
+    private viewContainerRef: ViewContainerRef
   ) {}
 
   ngOnInit(): void {
+    this.modalService.setContainer(this.viewContainerRef);
+
     this.screensQuery.screens$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(screens => {
@@ -61,28 +69,20 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   }
 
   createScreen(): void {
-    const name = prompt('请输入页面名称:');
-    if (!name) return;
+    const modalRef = this.modalService.open<void, CreateScreenDto>(CreateScreenDialogComponent);
 
-    const dto: CreateScreenDto = {
-      name,
-      layout: {
-        width: 1920,
-        height: 1080,
-        background: '#0f1419',
-        grid: { enabled: true, size: 10 }
-      },
-      components: []
-    };
+    modalRef.afterClosed$.pipe(take(1)).subscribe(dto => {
+      if (!dto) return;
 
-    this.screensService.createScreen(dto).subscribe({
-      next: (screen) => {
-        alert('创建成功');
-        this.router.navigate(['/screens/editor', screen.id]);
-      },
-      error: (error) => {
-        alert(`创建失败: ${error.message}`);
-      }
+      this.screensService.createScreen(dto).subscribe({
+        next: (screen) => {
+          this.toastService.success('大屏页面创建成功');
+          this.router.navigate(['/screens/editor', screen.id]);
+        },
+        error: (error) => {
+          this.toastService.error(`创建失败: ${error.message}`);
+        }
+      });
     });
   }
 
@@ -91,16 +91,16 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   }
 
   deleteScreen(screen: ScreenPage): void {
-    if (!confirm(`确定要删除页面 "${screen.name}" 吗？`)) {
+    if (!window.confirm(`确定要删除页面 "${screen.name}" 吗？此操作不可恢复。`)) {
       return;
     }
 
     this.screensService.deleteScreen(screen.id).subscribe({
       next: () => {
-        alert('删除成功');
+        this.toastService.success('页面删除成功');
       },
       error: (error) => {
-        alert(`删除失败: ${error.message}`);
+        this.toastService.error(`删除失败: ${error.message}`);
       }
     });
   }
@@ -108,10 +108,10 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   copyScreen(screen: ScreenPage): void {
     this.screensService.copyScreen(screen.id).subscribe({
       next: () => {
-        alert('复制成功');
+        this.toastService.success('页面复制成功');
       },
       error: (error) => {
-        alert(`复制失败: ${error.message}`);
+        this.toastService.error(`复制失败: ${error.message}`);
       }
     });
   }
@@ -120,19 +120,19 @@ export class ScreensListComponent implements OnInit, OnDestroy {
     if (screen.status === 'draft') {
       this.screensService.publishScreen(screen.id).subscribe({
         next: () => {
-          alert('发布成功');
+          this.toastService.success('页面发布成功');
         },
         error: (error) => {
-          alert(`发布失败: ${error.message}`);
+          this.toastService.error(`发布失败: ${error.message}`);
         }
       });
     } else {
       this.screensService.draftScreen(screen.id).subscribe({
         next: () => {
-          alert('设为草稿成功');
+          this.toastService.success('已设为草稿');
         },
         error: (error) => {
-          alert(`设为草稿失败: ${error.message}`);
+          this.toastService.error(`操作失败: ${error.message}`);
         }
       });
     }
@@ -141,10 +141,10 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   setDefault(screen: ScreenPage): void {
     this.screensService.setDefaultScreen(screen.id).subscribe({
       next: () => {
-        alert('设置默认页面成功');
+        this.toastService.success('默认页面设置成功');
       },
       error: (error) => {
-        alert(`设置默认页面失败: ${error.message}`);
+        this.toastService.error(`设置失败: ${error.message}`);
       }
     });
   }

@@ -3,7 +3,16 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/app",
-    "types": []
+    "types": [],
+    "paths": {
+      "@angular/*": ["../../node_modules/@angular/*"],
+      "@pro/types": ["../../packages/types/src"],
+      "@pro/types/*": ["../../packages/types/src/*"],
+      "@pro/sdk": ["../../packages/sdk/src"],
+      "@pro/sdk/*": ["../../packages/sdk/src/*"],
+      "@pro/components": ["../../packages/components/src"],
+      "@pro/components/*": ["../../packages/components/src/*"]
+    }
   },
   "files": [
     "src/main.ts"

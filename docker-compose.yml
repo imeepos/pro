@@ -3,8 +3,8 @@ name: ${COMPOSE_PROJECT_NAME}
 services:
   postgres:
     build:
-      context: ./docker/postgres
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/postgres/Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME}_postgres
     restart: unless-stopped
     environment:
@@ -15,7 +15,6 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./config/postgres/init:/docker-entrypoint-initdb.d:ro
     networks:
       - backend
     deploy:
@@ -204,7 +203,8 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: apps/api/Dockerfile.playwright
+      target: production
     container_name: pro-api
     ports:
       - "${API_PORT:-3000}:3000"
@@ -313,7 +313,7 @@ services:
       dockerfile: apps/web/Dockerfile
     container_name: pro-web
     ports:
-      - "${WEB_PORT:-4200}:80"
+      - "${WEB_PORT:-8080}:80"
     depends_on:
       - api
     networks:
@@ -321,7 +321,7 @@ services:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD-SHELL", "wget --spider --quiet http://localhost || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -332,7 +332,7 @@ services:
       dockerfile: apps/admin/Dockerfile
     container_name: pro-admin
     ports:
-      - "${ADMIN_PORT:-4201}:80"
+      - "${ADMIN_PORT:-8081}:80"
     depends_on:
       - api
     networks:
@@ -340,7 +340,7 @@ services:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD-SHELL", "wget --spider --quiet http://localhost || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

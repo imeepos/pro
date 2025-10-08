@@ -1,9 +1,8 @@
 <nav class="menu-container">
   <ul class="menu-list">
     @for (menuItem of menuItems; track trackByMenuId($index, menuItem)) {
-      <li class="menu-item">
-        <!-- 菜单项组件将在 B1.1 中创建 -->
-        <div class="placeholder">{{ menuItem.label }}</div>
+      <li class="menu-list-item">
+        <app-menu-item [item]="menuItem" [collapsed]="collapsed" />
       </li>
     }
   </ul>

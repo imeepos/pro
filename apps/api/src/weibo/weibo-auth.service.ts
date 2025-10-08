@@ -73,8 +73,8 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       });
       this.logger.log('Playwright 浏览器启动成功');
     } catch (error) {
-      this.logger.error('Playwright 浏览器启动失败', error);
-      throw error;
+      this.logger.warn('Playwright 浏览器启动失败，微博登录功能将不可用', error.message);
+      this.browser = null;
     }
   }
 
@@ -105,6 +105,17 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     const sessionId = `${userId}_${Date.now()}`;
     this.logger.log(`启动微博登录会话: ${sessionId}`);
 
+    // 检查浏览器是否可用
+    if (!this.browser) {
+      const subject = new Subject<WeiboLoginEvent>();
+      subject.next({
+        type: 'error',
+        data: { message: 'Playwright浏览器未就绪，微博登录功能暂时不可用' },
+      });
+      subject.complete();
+      return subject.asObservable();
+    }
+
     // 创建新的浏览器上下文
     const context = await this.browser.newContext({
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -127,25 +138,34 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     // 保存会话
     this.loginSessions.set(sessionId, { context, page, subject, timer });
 
-    // 设置 Response 监听器
+    // 先设置监听器
     this.setupResponseListeners(page, subject, sessionId, userId);
-
-    // 设置页面导航监听器
     this.setupNavigationListeners(page, context, subject, sessionId, userId);
 
-    try {
-      // 导航到微博登录页面
-      await page.goto(this.WEIBO_LOGIN_URL, { waitUntil: 'networkidle' });
-      this.logger.log(`已打开微博登录页面: ${sessionId}`);
-    } catch (error) {
-      this.logger.error(`打开微博登录页面失败: ${sessionId}`, error);
-      subject.next({
-        type: 'error',
-        data: { message: '打开登录页面失败' },
-      });
-      subject.complete();
-      await this.cleanupSession(sessionId);
-    }
+    // 异步启动页面导航（在 SSE 连接建立后执行）
+    setImmediate(async () => {
+      try {
+        // 导航到微博登录页面
+        await page.goto(this.WEIBO_LOGIN_URL, { waitUntil: 'networkidle' });
+        this.logger.log(`已打开微博登录页面: ${sessionId}`);
+
+        // 等待二维码元素出现（确保页面完全加载）
+        try {
+          await page.waitForSelector('img[src*="qrcode"]', { timeout: 10000 });
+          this.logger.log(`二维码元素已加载: ${sessionId}`);
+        } catch (e) {
+          this.logger.warn(`等待二维码元素超时: ${sessionId}`);
+        }
+      } catch (error) {
+        this.logger.error(`打开微博登录页面失败: ${sessionId}`, error);
+        subject.next({
+          type: 'error',
+          data: { message: '打开登录页面失败' },
+        });
+        subject.complete();
+        await this.cleanupSession(sessionId);
+      }
+    });
 
     return subject.asObservable();
   }
@@ -167,15 +187,20 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
         // 监听二维码生成接口
         if (url.includes('qrcode/image')) {
           const data = await response.json();
-          this.logger.log(`二维码已生成: ${sessionId}, qrid: ${data.data?.qrid}`);
+          this.logger.log(`[二维码接口] 响应数据: ${JSON.stringify(data)}, session: ${sessionId}`);
 
-          subject.next({
-            type: 'qrcode',
-            data: {
-              qrid: data.data.qrid,
-              image: data.data.image,
-            },
-          });
+          if (data.data?.image) {
+            subject.next({
+              type: 'qrcode',
+              data: {
+                qrid: data.data.qrid,
+                image: data.data.image,
+              },
+            });
+            this.logger.log(`[二维码] 已推送给前端: ${data.data.image}`);
+          } else {
+            this.logger.error(`[二维码接口] 缺少 image 字段: ${JSON.stringify(data)}`);
+          }
         }
 
         // 监听状态检查接口
@@ -294,18 +319,83 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
   private async extractUserInfo(page: Page): Promise<WeiboUserInfo> {
     this.logger.debug('正在提取微博用户信息...');
 
+    // 等待页面完全加载
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {
+      this.logger.warn('等待页面 networkidle 超时');
+    });
+
+    // 等待一小段时间让 JS 执行
+    await page.waitForTimeout(2000);
+
+    // 尝试多种方式获取用户信息
     const userInfo = await page.evaluate(() => {
+      // 方式1: window.$CONFIG
       const config = (window as any).$CONFIG;
+      if (config?.user?.id) {
+        return {
+          id: config.user.id,
+          idstr: config.user.idstr,
+          screen_name: config.user.screen_name,
+          avatar_hd: config.user.avatar_hd,
+          source: '$CONFIG'
+        };
+      }
+
+      // 方式2: window.$render_data
+      const renderData = (window as any).$render_data;
+      if (renderData?.user?.id) {
+        return {
+          id: renderData.user.id,
+          idstr: renderData.user.idstr,
+          screen_name: renderData.user.screen_name,
+          avatar_hd: renderData.user.avatar_hd,
+          source: '$render_data'
+        };
+      }
+
+      // 方式3: localStorage
+      try {
+        const storageUser = localStorage.getItem('weiboUserInfo');
+        if (storageUser) {
+          const user = JSON.parse(storageUser);
+          if (user.id) {
+            return {
+              id: user.id,
+              idstr: user.idstr,
+              screen_name: user.screen_name,
+              avatar_hd: user.avatar_hd,
+              source: 'localStorage'
+            };
+          }
+        }
+      } catch (e) {}
+
+      // 方式4: 从页面元素提取
+      const avatarImg = document.querySelector('[class*="AvatarImg"]') as HTMLImageElement;
+      const nicknameEl = document.querySelector('[class*="nick_name"]');
+
       return {
-        id: config?.user?.id,
-        idstr: config?.user?.idstr,
-        screen_name: config?.user?.screen_name,
-        avatar_hd: config?.user?.avatar_hd,
+        id: null,
+        idstr: null,
+        screen_name: nicknameEl?.textContent || null,
+        avatar_hd: avatarImg?.src || null,
+        source: 'dom',
+        debug: {
+          hasConfig: !!(window as any).$CONFIG,
+          hasRenderData: !!(window as any).$render_data,
+          configKeys: (window as any).$CONFIG ? Object.keys((window as any).$CONFIG) : [],
+          renderDataKeys: (window as any).$render_data ? Object.keys((window as any).$render_data) : []
+        }
       };
     });
 
+    this.logger.log(`用户信息提取结果: ${JSON.stringify(userInfo)}`);
+
     if (!userInfo.id) {
-      throw new Error('无法从 window.$CONFIG.user 提取用户信息');
+      // 记录页面 HTML 用于调试
+      const html = await page.content();
+      this.logger.debug(`页面HTML前1000字符: ${html.substring(0, 1000)}`);
+      throw new Error(`无法提取用户信息，调试信息: ${JSON.stringify(userInfo.debug || {})}`);
     }
 
     return {

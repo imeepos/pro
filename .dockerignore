@@ -1,0 +1,76 @@
+# 依赖目录
+node_modules
+**/node_modules
+
+# 构建产物
+# dist  # 注释掉，因为 Playwright Dockerfile 需要复制 dist
+# **/dist
+.turbo
+**/.turbo
+build
+**/build
+
+# TypeScript 构建信息
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# 日志文件
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+
+# 编辑器和 IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 测试覆盖率
+coverage
+**/coverage
+.nyc_output
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# 文档和说明
+*.md
+!README.md
+docs
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# 临时文件
+tmp
+temp
+*.tmp
+
+# 缓存
+.cache
+.eslintcache
+.stylelintcache
+
+# Angular 特定
+**/.angular
+.angular
+
+# 其他
+*.orig
+*.bak

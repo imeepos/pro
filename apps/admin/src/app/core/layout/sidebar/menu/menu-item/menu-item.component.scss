@@ -1,106 +1,55 @@
+$transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
 .menu-item-container {
   width: 100%;
 }
 
 .menu-item {
   @apply flex items-center h-12 px-4 rounded-lg cursor-pointer relative;
-  transition: background-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
-              color 200ms cubic-bezier(0.4, 0, 0.2, 1),
-              padding 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color $transition, color $transition, padding 300ms $transition;
 
-  &:hover {
-    @apply bg-primary-light;
-  }
-
-  &.active {
-    @apply bg-primary text-white;
-
-    .menu-icon svg {
-      @apply text-white;
-    }
-  }
-
-  &.collapsed {
-    @apply px-0 justify-center;
-  }
+  &:hover { @apply bg-primary-light dark:bg-gray-700; }
+  &.active { @apply bg-primary text-white; .menu-icon svg { @apply text-white; } }
+  &.collapsed { @apply px-0 justify-center; }
 }
 
 .menu-icon {
   @apply flex items-center justify-center w-5 h-5 flex-shrink-0;
-
-  svg {
-    @apply w-5 h-5 text-gray-500;
-    transition: color 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .menu-item.active & svg {
-    @apply text-white;
-  }
+  svg { @apply w-5 h-5 text-gray-500 dark:text-gray-400; transition: color $transition; }
+  .menu-item.active & svg { @apply text-white; }
 }
 
 .menu-label {
-  @apply ml-3 text-sm font-medium text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis flex-1;
-  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
-              color 200ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  .menu-item.active & {
-    @apply text-white;
-  }
+  @apply ml-3 text-sm font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap overflow-hidden text-ellipsis flex-1;
+  transition: opacity $transition, color $transition;
+  .menu-item.active & { @apply text-white; }
 }
 
 .expand-icon {
-  @apply w-4 h-4 ml-auto text-gray-500;
-  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
-              color 200ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  &.expanded {
-    @apply rotate-180;
-  }
-
-  .menu-item.active & {
-    @apply text-white;
-  }
+  @apply w-4 h-4 ml-auto text-gray-500 dark:text-gray-400;
+  transition: transform $transition, color $transition;
+  &.expanded { @apply rotate-180; }
+  .menu-item.active & { @apply text-white; }
 }
 
 .submenu {
-  @apply mt-1 ml-3 pl-5 border-l-2 border-primary/20;
+  @apply mt-1 ml-3 pl-5 border-l-2 border-primary/20 dark:border-primary/30;
 }
 
 .submenu-item {
   @apply flex items-center h-10 px-3 rounded-md cursor-pointer mb-0.5;
-  transition: background-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
-              color 200ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  &:hover {
-    @apply bg-primary-lighter;
-  }
-
-  &.active {
-    @apply bg-primary/15 text-primary;
-
-    .submenu-icon svg {
-      @apply text-primary;
-    }
-  }
+  transition: background-color $transition, color $transition;
+  &:hover { @apply bg-primary-lighter dark:bg-gray-700/50; }
+  &.active { @apply bg-primary/15 dark:bg-primary/20 text-primary dark:text-primary-300; .submenu-icon svg { @apply text-primary dark:text-primary-300; } }
 }
 
 .submenu-icon {
   @apply flex items-center justify-center w-4 h-4 flex-shrink-0;
-
-  svg {
-    @apply w-4 h-4 text-gray-400;
-    transition: color 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .submenu-item.active & svg {
-    @apply text-primary;
-  }
+  svg { @apply w-4 h-4 text-gray-400 dark:text-gray-500; transition: color $transition; }
+  .submenu-item.active & svg { @apply text-primary dark:text-primary-300; }
 }
 
 .submenu-label {
-  @apply ml-2.5 text-[13px] font-normal text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis;
-
-  .submenu-item.active & {
-    @apply text-primary font-medium;
-  }
+  @apply ml-2.5 text-[13px] font-normal text-gray-600 dark:text-gray-300 whitespace-nowrap overflow-hidden text-ellipsis;
+  .submenu-item.active & { @apply text-primary dark:text-primary-300 font-medium; }
 }

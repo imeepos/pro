@@ -11,6 +11,7 @@
     "composite": true,
     "removeComments": true,
     "incremental": true,
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "skipLibCheck": true,
     "strict": true,
     "noUnusedLocals": true,

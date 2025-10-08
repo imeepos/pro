@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { Observable } from 'rxjs';
 import { MENU_ITEMS, MenuItem } from '../../../config/menu.config';
 import { LayoutStateService } from '../../../services/layout-state.service';
+import { MenuItemComponent } from './menu-item/menu-item.component';
 
 @Component({
   selector: 'app-menu',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MenuItemComponent],
   templateUrl: './menu.component.html',
   styleUrls: ['./menu.component.scss']
 })

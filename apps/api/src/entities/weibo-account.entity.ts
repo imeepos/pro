@@ -14,9 +14,10 @@ import { UserEntity } from './user.entity';
  * 微博账号状态枚举
  */
 export enum WeiboAccountStatus {
-  ACTIVE = 'active',     // 正常可用
-  EXPIRED = 'expired',   // Cookie 已过期
-  BANNED = 'banned',     // 账号被封禁
+  ACTIVE = 'active',       // 正常可用
+  EXPIRED = 'expired',     // Cookie 已过期
+  BANNED = 'banned',       // 账号被封禁
+  RESTRICTED = 'restricted', // 风控受限
 }
 
 /**

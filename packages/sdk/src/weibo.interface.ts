@@ -6,9 +6,22 @@ export interface WeiboAccount {
   weiboUid: string;
   weiboNickname: string;
   weiboAvatar: string;
-  status: string;
+  status: 'active' | 'expired' | 'restricted' | 'banned';
   lastCheckAt?: string;
   createdAt: string;
+}
+
+/**
+ * 账号健康检查结果
+ */
+export interface WeiboAccountCheckResult {
+  accountId: number;
+  weiboUid: string;
+  oldStatus: string;
+  newStatus: string;
+  statusChanged: boolean;
+  message: string;
+  checkedAt: string;
 }
 
 /**
@@ -65,4 +78,9 @@ export interface WeiboAuthSDK {
    * 删除账号
    */
   deleteAccount(token: string, accountId: number): Promise<{ success: boolean }>;
+
+  /**
+   * 检查账号健康状态
+   */
+  checkAccount(token: string, accountId: number): Promise<WeiboAccountCheckResult>;
 }

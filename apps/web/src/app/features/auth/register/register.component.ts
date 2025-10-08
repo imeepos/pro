@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractContro
 import { RouterModule } from '@angular/router';
 import { AuthStateService } from '../../../core/state/auth-state.service';
 import { AuthQuery } from '../../../core/state/auth.query';
-import { validateEmail, validateUsername, validatePassword } from '@pro/utils';
+import { validateEmail, validateUsername, validatePassword } from '../../../core/utils/validation';
 
 @Component({
   selector: 'app-register',

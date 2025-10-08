@@ -12,7 +12,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   constructor() {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // 支持从 Authorization header 或 URL query 参数提取 token
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req: any) => req.query?.token || null
+      ]),
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET || 'your-jwt-secret-change-in-production',
       passReqToCallback: true,
@@ -21,7 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(req: any, payload: JwtPayload): Promise<JwtPayload> {
-    const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+    const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req) || req.query?.token;
 
     if (token) {
       const isBlacklisted = await this.redisClient.exists(

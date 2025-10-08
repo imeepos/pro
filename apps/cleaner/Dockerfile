@@ -1,93 +1,215 @@
-# Build stage
-FROM node:18-alpine AS builder
+# ========================================
+# 开发阶段
+# ========================================
+FROM node:18-alpine AS development
 
-# Install pnpm
+# 安装 pnpm
 RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
 
-# Set working directory
+# 设置工作目录
 WORKDIR /app
 
-# Copy workspace configuration
+# 复制 workspace 配置文件
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 
-# Copy all packages source code (required for workspace dependencies)
-COPY packages ./packages
+# 复制所有 packages 的 package.json
+COPY packages/types/package.json ./packages/types/
+COPY packages/config/package.json ./packages/config/
+COPY packages/utils/package.json ./packages/utils/
+COPY packages/redis/package.json ./packages/redis/
+COPY packages/mongodb/package.json ./packages/mongodb/
+COPY packages/rabbitmq/package.json ./packages/rabbitmq/
+COPY packages/minio/package.json ./packages/minio/
 
-# Copy cleaner app source code
-COPY apps/cleaner ./apps/cleaner
-
-# Install all dependencies (including devDependencies for build)
-RUN pnpm install --frozen-lockfile
-
-# Build all workspace packages first
-RUN pnpm --filter "@pro/types" build
-RUN pnpm --filter "@pro/config" build
-RUN pnpm --filter "@pro/utils" build
-RUN pnpm --filter "@pro/rabbitmq" build
-RUN pnpm --filter "@pro/redis" build
-RUN pnpm --filter "@pro/mongodb" build
-RUN pnpm --filter "@pro/minio" build
-
-# Build cleaner app
-RUN pnpm --filter "@pro/cleaner" build
-
-# Production stage
-FROM node:18-alpine AS production
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
-
-# Set working directory
-WORKDIR /app
-
-# Copy workspace configuration
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-
-# Copy all packages (needed for workspace structure)
-COPY packages ./packages
-
-# Copy cleaner app package.json
+# 复制 cleaner 应用的 package.json
 COPY apps/cleaner/package.json ./apps/cleaner/
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+# 安装依赖
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
-# Copy built artifacts from builder stage
-COPY --from=builder /app/packages/types/dist ./packages/types/dist
-COPY --from=builder /app/packages/types/package.json ./packages/types/
-COPY --from=builder /app/packages/config/dist ./packages/config/dist
-COPY --from=builder /app/packages/config/package.json ./packages/config/
-COPY --from=builder /app/packages/utils/dist ./packages/utils/dist
-COPY --from=builder /app/packages/utils/package.json ./packages/utils/
-COPY --from=builder /app/packages/rabbitmq/dist ./packages/rabbitmq/dist
-COPY --from=builder /app/packages/rabbitmq/package.json ./packages/rabbitmq/
-COPY --from=builder /app/packages/redis/dist ./packages/redis/dist
-COPY --from=builder /app/packages/redis/package.json ./packages/redis/
-COPY --from=builder /app/packages/mongodb/dist ./packages/mongodb/dist
-COPY --from=builder /app/packages/mongodb/package.json ./packages/mongodb/
-COPY --from=builder /app/packages/minio/dist ./packages/minio/dist
-COPY --from=builder /app/packages/minio/package.json ./packages/minio/
-
-# Copy cleaner app built artifacts
-COPY --from=builder /app/apps/cleaner/dist ./apps/cleaner/dist
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    chown -R nodejs:nodejs /app
-
-# Switch to non-root user
-USER nodejs
-
-# Set working directory to cleaner app
-WORKDIR /app/apps/cleaner
-
-# Expose port
+# 暴露端口
 EXPOSE 3002
 
-# Health check
+# 启动开发服务器
+CMD ["pnpm", "--filter", "@pro/cleaner", "start:dev"]
+
+# ============================================
+# 构建阶段：安装依赖并构建 NestJS 应用
+# ============================================
+FROM node:18-alpine AS builder
+
+# 安装 pnpm
+RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
+
+# 设置工作目录
+WORKDIR /app
+
+# ============================================
+# 第一层：复制 package.json 文件（依赖声明）
+# 目的：只有依赖变化时才重新安装，源代码变化不影响此层
+# ============================================
+
+# 复制 workspace 配置文件
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+
+# 复制所有 packages 的 package.json
+COPY packages/types/package.json ./packages/types/
+COPY packages/config/package.json ./packages/config/
+COPY packages/utils/package.json ./packages/utils/
+COPY packages/redis/package.json ./packages/redis/
+COPY packages/mongodb/package.json ./packages/mongodb/
+COPY packages/rabbitmq/package.json ./packages/rabbitmq/
+COPY packages/minio/package.json ./packages/minio/
+
+# 复制 cleaner 应用的 package.json
+COPY apps/cleaner/package.json ./apps/cleaner/
+
+# ============================================
+# 第二层：安装依赖
+# 使用 BuildKit cache mount 加速依赖下载
+# 只有 package.json 或 lockfile 变化时才会重新执行
+# ============================================
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ============================================
+# 第三层：复制基础 TypeScript 配置
+# ============================================
+COPY tsconfig.base.json* ./
+
+# ============================================
+# 第四层：构建 @pro/types
+# 目的：独立层，types 源码变化只影响此层及依赖它的后续层
+# ============================================
+COPY packages/types/tsconfig.json ./packages/types/
+COPY packages/types/src ./packages/types/src
+RUN pnpm --filter @pro/types build
+
+# ============================================
+# 第五层：构建 @pro/config
+# 目的：独立层，config 源码变化只影响此层及依赖它的后续层
+# 依赖：@pro/types
+# ============================================
+COPY packages/config/tsconfig.json ./packages/config/
+COPY packages/config/src ./packages/config/src
+RUN pnpm --filter @pro/config build
+
+# ============================================
+# 第六层：构建 @pro/utils
+# 目的：独立层，utils 源码变化只影响此层及依赖它的后续层
+# ============================================
+COPY packages/utils/tsconfig.json ./packages/utils/
+COPY packages/utils/src ./packages/utils/src
+RUN pnpm --filter @pro/utils build
+
+# ============================================
+# 第七层：构建 @pro/redis
+# 目的：独立层，redis 源码变化只影响此层及依赖它的后续层
+# 依赖：@pro/config
+# ============================================
+COPY packages/redis/tsconfig.json ./packages/redis/
+COPY packages/redis/src ./packages/redis/src
+RUN pnpm --filter @pro/redis build
+
+# ============================================
+# 第八层：构建 @pro/mongodb
+# 目的：独立层，mongodb 源码变化只影响此层及依赖它的后续层
+# 依赖：@pro/config
+# ============================================
+COPY packages/mongodb/tsconfig.json ./packages/mongodb/
+COPY packages/mongodb/src ./packages/mongodb/src
+RUN pnpm --filter @pro/mongodb build
+
+# ============================================
+# 第九层：构建 @pro/rabbitmq
+# 目的：独立层，rabbitmq 源码变化只影响此层及依赖它的后续层
+# 依赖：@pro/config
+# ============================================
+COPY packages/rabbitmq/tsconfig.json ./packages/rabbitmq/
+COPY packages/rabbitmq/src ./packages/rabbitmq/src
+RUN pnpm --filter @pro/rabbitmq build
+
+# ============================================
+# 第十层：构建 @pro/minio
+# 目的：独立层，minio 源码变化只影响此层及依赖它的后续层
+# 依赖：@pro/config
+# ============================================
+COPY packages/minio/tsconfig.json ./packages/minio/
+COPY packages/minio/src ./packages/minio/src
+RUN pnpm --filter @pro/minio build
+
+# ============================================
+# 第十一层：构建 @pro/cleaner 应用
+# 目的：独立层，cleaner 源码变化只影响此层
+# 依赖：所有前置 packages
+# ============================================
+COPY apps/cleaner/tsconfig.json ./apps/cleaner/
+COPY apps/cleaner/tsconfig.build.json* ./apps/cleaner/
+COPY apps/cleaner/nest-cli.json* ./apps/cleaner/
+COPY apps/cleaner/src ./apps/cleaner/src
+RUN pnpm --filter @pro/cleaner build
+
+# ========================================
+# 生产阶段
+# ========================================
+FROM node:18-alpine AS production
+
+# 安装 pnpm 和 dumb-init
+RUN corepack enable && corepack prepare pnpm@10.18.1 --activate && \
+    apk add --no-cache dumb-init
+
+# 创建非 root 用户
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制 workspace 配置文件
+COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+
+# 复制 packages 的 package.json
+COPY --chown=nestjs:nodejs packages/types/package.json ./packages/types/
+COPY --chown=nestjs:nodejs packages/config/package.json ./packages/config/
+COPY --chown=nestjs:nodejs packages/utils/package.json ./packages/utils/
+COPY --chown=nestjs:nodejs packages/redis/package.json ./packages/redis/
+COPY --chown=nestjs:nodejs packages/mongodb/package.json ./packages/mongodb/
+COPY --chown=nestjs:nodejs packages/rabbitmq/package.json ./packages/rabbitmq/
+COPY --chown=nestjs:nodejs packages/minio/package.json ./packages/minio/
+
+# 复制 apps/cleaner 的 package.json
+COPY --chown=nestjs:nodejs apps/cleaner/package.json ./apps/cleaner/
+
+# 安装生产依赖（使用 BuildKit cache mount）
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --prod --frozen-lockfile
+
+# 从构建阶段复制编译后的代码
+COPY --from=builder --chown=nestjs:nodejs /app/packages/types/dist ./packages/types/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/config/dist ./packages/config/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/utils/dist ./packages/utils/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/redis/dist ./packages/redis/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/mongodb/dist ./packages/mongodb/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/rabbitmq/dist ./packages/rabbitmq/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/minio/dist ./packages/minio/dist
+
+# 复制 apps/cleaner 的构建产物
+COPY --from=builder --chown=nestjs:nodejs /app/apps/cleaner/dist ./apps/cleaner/dist
+
+# 切换到非 root 用户
+USER nestjs
+
+# 暴露端口
+EXPOSE 3002
+
+# 设置环境变量
+ENV NODE_ENV=production
+
+# 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start application
-CMD ["node", "dist/main.js"]
+# 使用 dumb-init 启动应用
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "apps/cleaner/dist/main.js"]

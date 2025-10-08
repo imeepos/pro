@@ -1,13 +1,12 @@
 import { Injectable } from '@angular/core';
 import { ITokenStorage } from '@pro/sdk';
-import { getConfig } from '@pro/config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TokenStorageService implements ITokenStorage {
-  private readonly tokenKey = getConfig().tokenKey;
-  private readonly refreshTokenKey = getConfig().refreshTokenKey;
+  private readonly tokenKey = 'access_token';
+  private readonly refreshTokenKey = 'refresh_token';
 
   getToken(): string | null {
     return localStorage.getItem(this.tokenKey);

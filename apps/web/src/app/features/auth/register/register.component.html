@@ -1,113 +1,113 @@
-<div class="register-container">
-  <div class="tech-background">
-    <div class="grid-pattern"></div>
-    <div class="glow-orb orb-1"></div>
-    <div class="glow-orb orb-2"></div>
-    <div class="glow-orb orb-3"></div>
+<div class="relative w-screen h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary to-primary-dark">
+  <div class="absolute inset-0 overflow-hidden">
+    <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[length:50px_50px] animate-[gridMove_20s_linear_infinite]"></div>
+    <div class="absolute w-[400px] h-[400px] bg-primary/60 rounded-full blur-[80px] opacity-60 -top-[100px] -right-[100px] animate-[float_8s_ease-in-out_infinite]"></div>
+    <div class="absolute w-[350px] h-[350px] bg-primary-dark/60 rounded-full blur-[80px] opacity-60 -bottom-[100px] -left-[100px] animate-[float_8s_ease-in-out_infinite] [animation-delay:2s]"></div>
+    <div class="absolute w-[300px] h-[300px] bg-pink-400/50 rounded-full blur-[80px] opacity-60 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-[float_8s_ease-in-out_infinite] [animation-delay:4s]"></div>
   </div>
 
-  <div class="register-card">
-    <div class="card-header">
-      <h1 class="title">创建账号</h1>
-      <p class="subtitle">加入数据大屏</p>
+  <div class="relative z-10 w-full max-w-[520px] p-12 bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.2)] animate-[cardEntrance_0.6s_ease-out]">
+    <div class="text-center mb-10">
+      <h1 class="text-3xl font-bold bg-gradient-to-br from-primary to-primary-dark bg-clip-text text-transparent mb-3 tracking-tight">创建账号</h1>
+      <p class="text-base text-slate-500">加入数据大屏</p>
     </div>
 
-    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
-      <div class="form-group">
-        <label for="username" class="form-label">
-          <span class="label-icon">👤</span>
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-6">
+      <div class="flex flex-col gap-2">
+        <label for="username" class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <span class="text-lg">👤</span>
           用户名
         </label>
         <input
           type="text"
           id="username"
           formControlName="username"
-          class="form-input"
+          class="w-full px-[18px] py-3.5 text-[15px] border-2 border-slate-200 rounded-xl bg-white transition-all duration-300 outline-none text-slate-800 placeholder:text-slate-400 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]"
           placeholder="请输入用户名（3-20个字符）"
-          [class.error]="username?.invalid && username?.touched"
+          [class.border-red-500]="username?.invalid && username?.touched"
         />
-        <div class="error-message" *ngIf="username?.invalid && username?.touched">
+        <div class="text-[13px] text-red-500 flex items-center gap-1 min-h-[20px] animate-[errorShake_0.3s_ease]" *ngIf="username?.invalid && username?.touched">
           <span *ngIf="username?.errors?.['required']">请输入用户名</span>
           <span *ngIf="username?.errors?.['invalidUsername']">用户名格式不正确（3-20个字符，支持字母、数字、下划线、横线）</span>
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="email" class="form-label">
-          <span class="label-icon">📧</span>
+      <div class="flex flex-col gap-2">
+        <label for="email" class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <span class="text-lg">📧</span>
           邮箱
         </label>
         <input
           type="email"
           id="email"
           formControlName="email"
-          class="form-input"
+          class="w-full px-[18px] py-3.5 text-[15px] border-2 border-slate-200 rounded-xl bg-white transition-all duration-300 outline-none text-slate-800 placeholder:text-slate-400 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]"
           placeholder="请输入邮箱地址"
-          [class.error]="email?.invalid && email?.touched"
+          [class.border-red-500]="email?.invalid && email?.touched"
         />
-        <div class="error-message" *ngIf="email?.invalid && email?.touched">
+        <div class="text-[13px] text-red-500 flex items-center gap-1 min-h-[20px] animate-[errorShake_0.3s_ease]" *ngIf="email?.invalid && email?.touched">
           <span *ngIf="email?.errors?.['required']">请输入邮箱</span>
           <span *ngIf="email?.errors?.['invalidEmail']">邮箱格式不正确</span>
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="password" class="form-label">
-          <span class="label-icon">🔒</span>
+      <div class="flex flex-col gap-2">
+        <label for="password" class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <span class="text-lg">🔒</span>
           密码
         </label>
         <input
           type="password"
           id="password"
           formControlName="password"
-          class="form-input"
+          class="w-full px-[18px] py-3.5 text-[15px] border-2 border-slate-200 rounded-xl bg-white transition-all duration-300 outline-none text-slate-800 placeholder:text-slate-400 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]"
           placeholder="请输入密码（至少6位）"
-          [class.error]="password?.invalid && password?.touched"
+          [class.border-red-500]="password?.invalid && password?.touched"
         />
-        <div class="error-message" *ngIf="password?.invalid && password?.touched">
+        <div class="text-[13px] text-red-500 flex items-center gap-1 min-h-[20px] animate-[errorShake_0.3s_ease]" *ngIf="password?.invalid && password?.touched">
           <span *ngIf="password?.errors?.['required']">请输入密码</span>
           <span *ngIf="password?.errors?.['minlength']">密码至少6位</span>
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="confirmPassword" class="form-label">
-          <span class="label-icon">🔑</span>
+      <div class="flex flex-col gap-2">
+        <label for="confirmPassword" class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <span class="text-lg">🔑</span>
           确认密码
         </label>
         <input
           type="password"
           id="confirmPassword"
           formControlName="confirmPassword"
-          class="form-input"
+          class="w-full px-[18px] py-3.5 text-[15px] border-2 border-slate-200 rounded-xl bg-white transition-all duration-300 outline-none text-slate-800 placeholder:text-slate-400 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]"
           placeholder="请再次输入密码"
-          [class.error]="(confirmPassword?.invalid && confirmPassword?.touched) || passwordMismatch"
+          [class.border-red-500]="(confirmPassword?.invalid && confirmPassword?.touched) || passwordMismatch"
         />
-        <div class="error-message" *ngIf="confirmPassword?.invalid && confirmPassword?.touched">
+        <div class="text-[13px] text-red-500 flex items-center gap-1 min-h-[20px] animate-[errorShake_0.3s_ease]" *ngIf="confirmPassword?.invalid && confirmPassword?.touched">
           <span *ngIf="confirmPassword?.errors?.['required']">请确认密码</span>
         </div>
-        <div class="error-message" *ngIf="passwordMismatch">
+        <div class="text-[13px] text-red-500 flex items-center gap-1 min-h-[20px] animate-[errorShake_0.3s_ease]" *ngIf="passwordMismatch">
           <span>两次密码输入不一致</span>
         </div>
       </div>
 
-      <div class="error-message global-error" *ngIf="error$ | async as error">
+      <div class="bg-red-500/10 px-4 py-3 rounded-lg border-l-4 border-red-500" *ngIf="error$ | async as error">
         {{ error }}
       </div>
 
       <button
         type="submit"
-        class="submit-button"
+        class="w-full px-4 py-4 text-base font-semibold text-white bg-gradient-to-br from-primary to-primary-dark border-none rounded-xl cursor-pointer transition-all duration-300 shadow-[0_4px_12px_rgba(102,126,234,0.4)] hover:enabled:-translate-y-0.5 hover:enabled:shadow-[0_6px_20px_rgba(102,126,234,0.6)] active:enabled:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
         [disabled]="registerForm.invalid || (loading$ | async)"
       >
         <span *ngIf="!(loading$ | async)">注册</span>
-        <span *ngIf="loading$ | async" class="loading-spinner">
-          <span class="spinner"></span> 注册中...
+        <span *ngIf="loading$ | async" class="flex items-center justify-center gap-2">
+          <span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> 注册中...
         </span>
       </button>
 
-      <div class="form-footer">
-        <p>已有账号？ <a routerLink="/login" class="link">立即登录</a></p>
+      <div class="text-center mt-2">
+        <p class="text-sm text-slate-500">已有账号？ <a routerLink="/login" class="text-primary no-underline font-semibold transition-colors duration-300 hover:text-primary-dark">立即登录</a></p>
       </div>
     </form>
   </div>

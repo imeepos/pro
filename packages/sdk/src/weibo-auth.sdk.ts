@@ -1,4 +1,4 @@
-import { WeiboAuthSDK, WeiboLoginEventHandler, WeiboAccount } from './weibo.interface';
+import { WeiboAuthSDK, WeiboLoginEventHandler, WeiboAccount, WeiboAccountCheckResult } from './weibo.interface';
 
 /**
  * 微博认证 SDK 实现
@@ -8,15 +8,12 @@ export class WeiboAuthSDKImpl implements WeiboAuthSDK {
 
   /**
    * 启动微博登录（SSE）
+   * 注意: EventSource 不支持自定义 headers，所以通过 URL 参数传递 token
    */
   startLogin(token: string, onEvent: WeiboLoginEventHandler): EventSource {
+    // EventSource 不支持自定义 headers，通过 URL 参数传递 token
     const eventSource = new EventSource(
-      `${this.baseUrl}/api/weibo/login/start`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      } as any
+      `${this.baseUrl}/api/weibo/login/start?token=${encodeURIComponent(token)}`
     );
 
     eventSource.addEventListener('message', (event) => {
@@ -55,7 +52,9 @@ export class WeiboAuthSDKImpl implements WeiboAuthSDK {
       throw new Error('Failed to fetch accounts');
     }
 
-    return response.json() as Promise<{ accounts: WeiboAccount[] }>;
+    const result = await response.json() as any;
+    // 后端返回 {success: true, data: {accounts: []}} 格式，需要解包
+    return result.data || result;
   }
 
   /**
@@ -75,6 +74,27 @@ export class WeiboAuthSDKImpl implements WeiboAuthSDK {
     }
 
     return response.json() as Promise<{ success: boolean }>;
+  }
+
+  /**
+   * 检查账号健康状态
+   */
+  async checkAccount(token: string, accountId: number): Promise<WeiboAccountCheckResult> {
+    const response = await fetch(`${this.baseUrl}/api/weibo/accounts/${accountId}/check`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('检查账号失败');
+    }
+
+    const result = await response.json() as any;
+    // 后端返回 {success: true, data: {...}} 格式，需要解包
+    return result.data || result;
   }
 }
 
