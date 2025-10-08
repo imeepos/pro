@@ -128,11 +128,6 @@ realPreviewMode = false;
     this.loadScreen();
     this.setupAutoSave();
     this.setupResponsiveHandler();
-
-    // 延迟自动调整，确保 DOM 已渲染
-    setTimeout(() => {
-      this.autoAdjustGrid();
-    }, 500);
   }
 
   ngAfterViewInit(): void {
