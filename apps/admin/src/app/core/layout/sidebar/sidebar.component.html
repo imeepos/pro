@@ -1,0 +1,15 @@
+<aside
+  class="flex flex-col h-screen border-r border-gray-200 bg-white transition-all duration-300"
+  [ngClass]="(collapsed$ | async) ? 'w-16' : 'w-64'">
+
+  <!-- Logo 区域 -->
+  <app-logo [collapsed]="(collapsed$ | async) || false"></app-logo>
+
+  <!-- Menu 区域 (可滚动) -->
+  <div class="flex-1 overflow-y-auto">
+    <app-menu [collapsed]="(collapsed$ | async) || false"></app-menu>
+  </div>
+
+  <!-- Toggle 区域 -->
+  <app-sidebar-toggle></app-sidebar-toggle>
+</aside>
