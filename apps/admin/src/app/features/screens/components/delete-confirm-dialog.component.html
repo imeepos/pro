@@ -154,9 +154,9 @@
           <p class="text-xs text-gray-600">
             <strong>删除操作详情：</strong><br>
             • 页面ID: {{ screen.id }}<br>
-            • 创建时间: {{ formatDate(screen.createdAt) }}<br>
-            • 最后更新: {{ formatDate(screen.updatedAt) }}<br>
-            • 组件数量: {{ (screen.components && screen.components.length) || 0 }}
+            • 创建时间: {{ formatDate(screen.createdAt || '') }}<br>
+            • 最后更新: {{ formatDate(screen.updatedAt || '') }}<br>
+            • 组件数量: {{ screen.components.length || 0 }}
           </p>
         </div>
       </div>

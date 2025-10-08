@@ -1,40 +1,50 @@
-<button
-  type="button"
-  (click)="toggle()"
-  class="toggle-button"
-  [attr.aria-label]="(collapsed$ | async) ? '展开侧边栏' : '收起侧边栏'"
->
-  @if (collapsed$ | async) {
-    <!-- 展开图标 -->
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke-width="1.5"
-      stroke="currentColor"
-      class="icon"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-      />
-    </svg>
-  } @else {
-    <!-- 收起图标 -->
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke-width="1.5"
-      stroke="currentColor"
-      class="icon"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M6 18L18 6M6 6l12 12"
-      />
-    </svg>
+<div class="toggle-container">
+  <button
+    type="button"
+    (click)="toggle()"
+    class="toggle-button"
+    [attr.aria-label]="(collapsed$ | async) ? '展开侧边栏' : '收起侧边栏'"
+    [title]="(collapsed$ | async) ? '展开侧边栏 (Ctrl+B)' : '收起侧边栏 (Ctrl+B)'"
+  >
+    @if (collapsed$ | async) {
+      <!-- 展开图标 -->
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="icon"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+        />
+      </svg>
+    } @else {
+      <!-- 收起图标 -->
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="icon"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M6 18L18 6M6 6l12 12"
+        />
+      </svg>
+    }
+  </button>
+
+  <!-- 快捷键提示 -->
+  @if (!(collapsed$ | async)) {
+    <div class="shortcut-hint">
+      <kbd>Ctrl</kbd><kbd>B</kbd>
+    </div>
   }
-</button>
+</div>

@@ -9,4 +9,8 @@ import { NotificationComponent } from './notification/notification.component';
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss']
 })
-export class HeaderComponent {}
+export class HeaderComponent {
+  constructor() {
+    console.log('HeaderComponent 构造函数执行成功');
+  }
+}

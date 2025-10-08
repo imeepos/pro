@@ -17,4 +17,9 @@ export class SidebarComponent {
   private readonly layoutState = inject(LayoutStateService);
 
   readonly collapsed$: Observable<boolean> = this.layoutState.collapsed$;
+
+  constructor() {
+    console.log('SidebarComponent 构造函数执行成功');
+    console.log('LayoutStateService:', !!this.layoutState);
+  }
 }

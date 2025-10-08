@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { ScreensService } from '../../state/screens.service';
@@ -12,7 +13,7 @@ import { DeleteConfirmDialogComponent } from './components/delete-confirm-dialog
 @Component({
   selector: 'app-screens-list',
   standalone: true,
-  imports: [CommonModule, CreateScreenDialogComponent, DeleteConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, CreateScreenDialogComponent, DeleteConfirmDialogComponent],
   templateUrl: './screens-list.component.html',
   styleUrls: ['./screens-list.component.scss']
 })
@@ -30,12 +31,20 @@ export class ScreensListComponent implements OnInit, OnDestroy {
     private screensQuery: ScreensQuery,
     private router: Router,
     private toastService: ToastService
-  ) {}
+  ) {
+    console.log('ScreensListComponent 构造函数 - 所有依赖注入成功');
+    console.log('ScreensService:', !!screensService);
+    console.log('ScreensQuery:', !!screensQuery);
+    console.log('Router:', !!router);
+    console.log('ToastService:', !!toastService);
+  }
 
   ngOnInit(): void {
+    console.log('ScreensListComponent ngOnInit 开始执行');
     this.screensQuery.screens$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(screens => {
+      console.log('ScreensListComponent screens$ 订阅成功，屏幕数量:', screens.length);
       this.screens = screens;
     });
 
@@ -107,20 +116,25 @@ export class ScreensListComponent implements OnInit, OnDestroy {
     this.showDeleteDialog = true;
   }
 
+  // 为兼容HTML模板中的调用，添加别名方法
+  deleteScreen(screen: ScreenPage): void {
+    this.openDeleteDialog(screen);
+  }
+
   closeDeleteDialog(): void {
     this.showDeleteDialog = false;
     this.screenToDelete = null;
   }
 
   onConfirmDelete(): void {
-    if (!this.screenToDelete || !this.screenToDelete.id) {
+    if (!this.screenToDelete || !this.screenToDelete?.id) {
       this.toastService.error('删除失败：无效的页面信息');
       this.closeDeleteDialog();
       return;
     }
 
-    const screenName = this.screenToDelete.name;
-    const isDefaultScreen = this.screenToDelete.isDefault;
+    const screenName = this.screenToDelete?.name || '未知页面';
+    const isDefaultScreen = this.screenToDelete?.isDefault || false;
 
     this.screensService.deleteScreen(this.screenToDelete.id).subscribe({
       next: () => {

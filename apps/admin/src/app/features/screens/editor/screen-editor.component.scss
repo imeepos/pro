@@ -114,8 +114,12 @@ gridster {
 
 // 画布响应式
 .canvas-wrapper {
-  min-width: 800px;
-  min-height: 600px;
+  min-width: 600px;
+  min-height: 400px;
+  max-width: 90vw;
+  max-height: 80vh;
+  width: fit-content;
+  height: fit-content;
 }
 
 @media (max-width: 1280px) {
@@ -130,8 +134,18 @@ gridster {
 
 @media (max-width: 1024px) {
   .canvas-wrapper {
-    min-width: 600px;
-    min-height: 450px;
+    min-width: 500px;
+    min-height: 350px;
+    max-width: 95vw;
+    max-height: 85vh;
+  }
+
+  .left-panel:not(.w-16) {
+    width: 14rem !important;
+  }
+
+  .right-panel:not(.w-0) {
+    width: 18rem !important;
   }
 }
 
@@ -264,6 +278,21 @@ gridster {
 
 // 响应式设计
 @media (max-width: 768px) {
+  .canvas-wrapper {
+    min-width: 400px;
+    min-height: 300px;
+    max-width: 98vw;
+    max-height: 90vh;
+  }
+
+  .left-panel:not(.w-16) {
+    width: 12rem !important;
+  }
+
+  .right-panel:not(.w-0) {
+    width: 16rem !important;
+  }
+
   .toast-container {
     top: 1rem;
     right: 1rem;
@@ -272,5 +301,30 @@ gridster {
 
   .toast-notification {
     max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .canvas-wrapper {
+    min-width: 320px;
+    min-height: 280px;
+    max-width: 100vw;
+    max-height: 95vh;
+  }
+
+  .left-panel {
+    width: 3rem !important;
+  }
+
+  .right-panel {
+    width: 0 !important;
+  }
+
+  .main-layout {
+    flex-direction: column;
+  }
+
+  .canvas-container {
+    padding: 1rem !important;
   }
 }

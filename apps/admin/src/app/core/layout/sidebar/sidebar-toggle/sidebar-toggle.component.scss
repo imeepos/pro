@@ -1,3 +1,7 @@
+.toggle-container {
+  @apply flex flex-col items-center gap-2 p-3;
+}
+
 .toggle-button {
   @apply w-10 h-10;
   @apply flex items-center justify-center;
@@ -28,4 +32,25 @@
 .icon {
   @apply w-6 h-6;
   transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.shortcut-hint {
+  @apply flex flex-col gap-1;
+  @apply opacity-60;
+  @apply text-xs;
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    @apply opacity-100;
+  }
+
+  kbd {
+    @apply px-1.5 py-0.5;
+    @apply text-xs;
+    @apply font-mono;
+    @apply bg-gray-100 dark:bg-gray-700;
+    @apply border border-gray-300 dark:border-gray-600;
+    @apply rounded;
+    @apply shadow-sm;
+  }
 }

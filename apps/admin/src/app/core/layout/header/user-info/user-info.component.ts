@@ -22,6 +22,10 @@ export class UserInfoComponent {
     private authService: AuthService,
     private router: Router
   ) {
+    console.log('UserInfoComponent 构造函数执行成功');
+    console.log('AuthQuery:', !!authQuery);
+    console.log('AuthService:', !!authService);
+    console.log('Router:', !!router);
     this.currentUser$ = this.authQuery.currentUser$;
   }
 

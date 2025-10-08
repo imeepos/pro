@@ -1,6 +1,5 @@
 import { Injectable, EnvironmentInjector, Type, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { ComponentRegistryService } from './component-registry.service';
 
 @Injectable({
   providedIn: 'root'
@@ -19,23 +18,11 @@ export class DebugService {
     try {
       const dependencies: Array<{name: string, type: string}> = [];
 
-      // 获取组件的构造函数参数
-      const constructor = componentClass.prototype.constructor;
-      if (constructor && constructor.toString()) {
-        const constructorStr = constructor.toString();
-
-        // 尝试提取参数类型
-        const paramMatch = constructorStr.match(/constructor\(([^)]*)\)/);
-        if (paramMatch && paramMatch[1]) {
-          const params = paramMatch[1].split(',').map((p: string) => p.trim()).filter((p: string) => p);
-          params.forEach((param: string, index: number) => {
-            dependencies.push({
-              name: `param_${index}`,
-              type: param
-            });
-          });
-        }
-      }
+      // 简化版本，只返回基本信息
+      dependencies.push({
+        name: 'basic_info',
+        type: componentClass.name || 'Unknown'
+      });
 
       return dependencies;
     } catch (error) {
@@ -75,6 +62,11 @@ export class DebugService {
     try {
       console.log('依赖注入系统测试开始...');
       console.log('EnvironmentInjector 可用:', !!this.environmentInjector);
+
+      // 测试基本服务可用性
+      const httpClientAvailable = this.checkServiceAvailability(HttpClient);
+      console.log('HttpClient 可用:', httpClientAvailable);
+
       return true;
     } catch (error) {
       console.error('依赖注入系统测试失败:', error);

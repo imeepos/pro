@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter, HostListener, OnInit } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { trigger, transition, state, style, animate } from '@angular/animations';
 import { ScreenPage } from '../../../core/services/screen-api.service';
@@ -42,7 +42,7 @@ export class DeleteConfirmDialogComponent implements OnInit {
   isSubmitting = false;
   showAdvancedOptions = false;
 
-  constructor(private datePipe: DatePipe) {}
+  constructor() {}
 
   ngOnInit(): void {
     this.reset();
@@ -56,7 +56,7 @@ export class DeleteConfirmDialogComponent implements OnInit {
   }
 
   get isValidName(): boolean {
-    return this.confirmName.trim() === this.screen?.name;
+    return this.confirmName.trim() === (this.screen?.name || '');
   }
 
   get canDelete(): boolean {
@@ -64,10 +64,11 @@ export class DeleteConfirmDialogComponent implements OnInit {
   }
 
   get warningType(): string {
-    if (this.screen?.status === 'published') {
+    if (!this.screen) return 'normal';
+    if (this.screen.status === 'published') {
       return 'published';
     }
-    if (this.screen?.isDefault) {
+    if (this.screen.isDefault) {
       return 'default';
     }
     return 'normal';
@@ -85,10 +86,10 @@ export class DeleteConfirmDialogComponent implements OnInit {
   }
 
   onConfirm(): void {
-    if (!this.canDelete) return;
+    if (!this.canDelete || !this.screen) return;
 
     // 双重确认检查
-    if (!this.screen || this.confirmName.trim() !== this.screen.name) {
+    if (this.confirmName.trim() !== this.screen.name) {
       this.cancel.emit();
       return;
     }
@@ -113,7 +114,14 @@ export class DeleteConfirmDialogComponent implements OnInit {
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '-';
-    return this.datePipe.transform(dateStr, 'yyyy-MM-dd HH:mm') || '-';
+    const date = new Date(dateStr);
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   // 额外的安全性验证

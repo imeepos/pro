@@ -57,7 +57,12 @@
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": {
+                "scripts": true,
+                "styles": true,
+                "hidden": false,
+                "vendor": true
+              }
             }
           },
           "defaultConfiguration": "production"
@@ -96,7 +101,12 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [],
+            "sourceMap": {
+              "scripts": true,
+              "styles": true,
+              "vendor": true
+            }
           }
         }
       }
