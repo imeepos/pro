@@ -178,15 +178,7 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
       const horizontalStart = scrollLeft - canvasOffset.left;
       const verticalStart = scrollTop - canvasOffset.top;
 
-      console.log('更新标尺位置:', {
-        scrollLeft,
-        scrollTop,
-        scale,
-        canvasOffset,
-        horizontalStart,
-        verticalStart
-      });
-
+      
       if (this.horizontalRuler) {
         this.horizontalRuler.updateStartPos(horizontalStart, 0);
         this.horizontalRuler.updateScale(scale);
@@ -354,33 +346,7 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
       const finalOffsetLeft = Math.max(0, offsetLeft);
       const finalOffsetTop = Math.max(0, offsetTop);
 
-      console.log('偏移量计算:', {
-        scale,
-        canvasStyle,
-        containerRect: {
-          left: containerRect.left,
-          top: containerRect.top,
-          width: containerRect.width,
-          height: containerRect.height
-        },
-        scaledDimensions: {
-          width: scaledWidth,
-          height: scaledHeight
-        },
-        centerPoint: {
-          x: containerCenterX,
-          y: containerCenterY
-        },
-        calculatedOffset: {
-          left: offsetLeft,
-          top: offsetTop
-        },
-        finalOffset: {
-          left: finalOffsetLeft,
-          top: finalOffsetTop
-        }
-      });
-
+      
       return {
         left: finalOffsetLeft,
         top: finalOffsetTop
