@@ -45,12 +45,20 @@ export class NotificationComponent implements OnInit, OnDestroy {
     this.isDropdownOpen = !this.isDropdownOpen;
   }
 
+  closeDropdown(): void {
+    this.isDropdownOpen = false;
+  }
+
   markAsRead(notification: Notification): void {
-    notification.read = true;
+    if (!notification.read) {
+      notification.read = true;
+    }
   }
 
   markAllAsRead(): void {
-    this.notifications.forEach(n => n.read = true);
+    this.notifications.forEach(notification => {
+      notification.read = true;
+    });
   }
 
   trackById(_index: number, notification: Notification): string {
@@ -82,8 +90,10 @@ export class NotificationComponent implements OnInit, OnDestroy {
           read: false
         };
 
+        // Add new notification to the beginning
         this.notifications.unshift(notification);
 
+        // Keep only the latest 50 notifications
         if (this.notifications.length > 50) {
           this.notifications = this.notifications.slice(0, 50);
         }
@@ -96,7 +106,14 @@ export class NotificationComponent implements OnInit, OnDestroy {
     const clickedInside = target.closest('.notification-container');
 
     if (!clickedInside && this.isDropdownOpen) {
-      this.isDropdownOpen = false;
+      this.closeDropdown();
+    }
+  }
+
+  @HostListener('keydown.escape')
+  onEscapePress(): void {
+    if (this.isDropdownOpen) {
+      this.closeDropdown();
     }
   }
 }
