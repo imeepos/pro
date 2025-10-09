@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Observable, Subject, BehaviorSubject, fromEvent, takeUntil, combineLatest } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { SketchRulerComponent } from './sketch-ruler';
 import { RulerGridService, ReferenceLine } from '../../services/ruler-grid.service';
 import { CanvasQuery } from '../../services/canvas.query';
@@ -137,10 +138,10 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
     this.scrollLeft$ = new BehaviorSubject<number>(0).asObservable();
     this.scrollTop$ = new BehaviorSubject<number>(0).asObservable();
     this.horizontalLines$ = this.rulerGridService.referenceLines$.pipe(
-      map(lines => lines.filter(line => line.type === 'horizontal'))
+      map((lines: ReferenceLine[]) => lines.filter((line: ReferenceLine) => line.type === 'horizontal'))
     );
     this.verticalLines$ = this.rulerGridService.referenceLines$.pipe(
-      map(lines => lines.filter(line => line.type === 'vertical'))
+      map((lines: ReferenceLine[]) => lines.filter((line: ReferenceLine) => line.type === 'vertical'))
     );
 
     // 监听主题变化

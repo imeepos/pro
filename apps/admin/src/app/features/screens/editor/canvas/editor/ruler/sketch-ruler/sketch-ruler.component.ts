@@ -110,7 +110,7 @@ export class SketchRulerComponent implements AfterViewInit, OnDestroy {
   }
 
   private setupEventListeners(): void {
-    fromEvent<Window>('resize')
+    fromEvent<Window>(window, 'resize')
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.initCanvas();

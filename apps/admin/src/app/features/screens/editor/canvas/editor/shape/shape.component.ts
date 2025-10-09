@@ -241,7 +241,7 @@ export class ShapeComponent implements OnInit, OnDestroy {
       // 计算最终位置，先处理吸附，再统一更新
       let finalStyle = { left: newLeft, top: newTop };
 
-      if (this.editor && state.showMarkLine) {
+      if (this.editor) {
         // 创建包含新位置的临时组件对象，用于对齐计算
         const dragComponent = {
           ...this.component,

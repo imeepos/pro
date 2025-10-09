@@ -81,6 +81,31 @@ export class CanvasComponent {
         this.canvasService.batchDelete(selectedIds);
       }
     }
+
+    // 标尺网格快捷键
+    if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
+      event.preventDefault();
+      this.rulerGridService.toggleRuler();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key === 'g') {
+      event.preventDefault();
+      this.rulerGridService.toggleGrid();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key === ';') {
+      event.preventDefault();
+      this.rulerGridService.clearReferenceLines();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'G') {
+      event.preventDefault();
+      this.rulerGridService.toggleSnapToGrid();
+      return;
+    }
   }
 
   private isInputElement(element: HTMLElement): boolean {
@@ -110,31 +135,4 @@ export class CanvasComponent {
     // TODO: 实现设置面板
   }
 
-  @HostListener('window:keydown', ['$event'])
-  onKeyDown(event: KeyboardEvent): void {
-    // 标尺网格快捷键
-    if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
-      event.preventDefault();
-      this.rulerGridService.toggleRuler();
-      return;
-    }
-
-    if ((event.ctrlKey || event.metaKey) && event.key === 'g') {
-      event.preventDefault();
-      this.rulerGridService.toggleGrid();
-      return;
-    }
-
-    if ((event.ctrlKey || event.metaKey) && event.key === ';') {
-      event.preventDefault();
-      this.rulerGridService.clearReferenceLines();
-      return;
-    }
-
-    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'G') {
-      event.preventDefault();
-      this.rulerGridService.toggleSnapToGrid();
-      return;
-    }
   }
-}

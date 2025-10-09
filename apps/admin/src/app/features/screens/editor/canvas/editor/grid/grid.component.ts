@@ -39,7 +39,7 @@ export class GridComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.show) {
+    if (changes['show']) {
       // show 变化会通过状态管理处理
     }
   }

@@ -108,6 +108,10 @@ export const routes: Routes = [
       {
         path: 'media-type',
         loadChildren: () => import('./features/media-type/media-type.routes').then(m => m.mediaTypeRoutes)
+      },
+      {
+        path: 'flowbite-demo',
+        loadComponent: () => import('./features/flowbite-demo/flowbite-demo.component').then(m => m.FlowbiteDemoComponent)
       }
     ]
   },
