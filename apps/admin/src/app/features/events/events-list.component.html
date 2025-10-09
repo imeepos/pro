@@ -1,52 +1,43 @@
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
   <div class="h-full flex flex-col">
-  <!-- 头部搜索区域 -->
-  <div class="header-search-container">
-    <div class="header-content">
-      <div class="header-left">
-        <div class="header-title">
-          <div class="title-wrapper">
-            <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            <div>
-              <h1 class="text-2xl font-bold text-gray-900">事件管理</h1>
-              <p class="text-sm text-gray-600 mt-0.5">管理和查看所有事件信息</p>
-            </div>
-          </div>
-        </div>
+  <!-- 头部区域 -->
+  <div class="bg-white border-b px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">事件管理</h1>
+        <p class="text-sm text-gray-600 mt-1">管理和查看所有事件信息</p>
       </div>
-      <div class="header-right">
-        <button
-          (click)="createEvent()"
-          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-          创建事件
-        </button>
-      </div>
-    </div>
-
-    <!-- 搜索和视图切换 -->
-    <div class="search-controls">
-      <div class="search-input-wrapper">
-        <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      <button
+        (click)="createEvent()"
+        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
         </svg>
+        创建事件
+      </button>
+    </div>
+  </div>
+
+  <!-- 搜索区域 -->
+  <div class="bg-white border-b px-6 py-3">
+    <div class="flex items-center gap-4">
+      <div class="flex-1 relative">
         <input
           type="text"
           [(ngModel)]="filterParams.keyword"
           (keyup.enter)="onSearch(filterParams.keyword || '')"
           placeholder="搜索事件名称、描述..."
-          class="w-full px-4 py-2 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+          class="w-full pl-10 pr-10 py-2 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
         />
-        <div class="search-actions">
+        <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <div class="absolute right-2 top-1.5 flex items-center">
           <button
             *ngIf="filterParams.keyword"
             (click)="clearSearch()"
-            class="absolute inset-y-0 right-12 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
+            class="p-1 text-gray-400 hover:text-gray-600 transition-colors"
             type="button"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,7 +46,7 @@
           </button>
           <button
             (click)="onSearch(filterParams.keyword || '')"
-            class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
+            class="p-1 text-gray-400 hover:text-gray-600 transition-colors"
             type="button"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,43 +56,43 @@
         </div>
       </div>
 
-      <!-- 视图切换和快速筛选 -->
-      <div class="view-controls">
-        <div class="view-switcher">
-          <button
-            [class]="viewMode === 'list' ? 'inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors' : 'inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors'"
-            (click)="switchView('list')"
-            type="button"
-          >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-            列表
-          </button>
-          <button
-            [class]="viewMode === 'map' ? 'inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors' : 'inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors'"
-            (click)="switchView('map')"
-            type="button"
-          >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-            </svg>
-            地图
-          </button>
-        </div>
+      <!-- 视图切换 -->
+      <div class="flex items-center gap-2">
+        <button
+          [class]="viewMode === 'list' ? 'inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors' : 'inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors'"
+          (click)="switchView('list')"
+          type="button"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+          列表
+        </button>
+        <button
+          [class]="viewMode === 'map' ? 'inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors' : 'inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors'"
+          (click)="switchView('map')"
+          type="button"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+          </svg>
+          地图
+        </button>
+      </div>
+    </div>
 
-        <!-- 搜索历史提示 -->
-        <div class="search-hint" *ngIf="!filterParams.keyword && searchHistory.length > 0">
-          <span class="hint-text">最近搜索：</span>
-          <button
-            *ngFor="let term of searchHistory.slice(0, 3)"
-            (click)="onSearch(term)"
-            class="history-item"
-            type="button"
-          >
-            {{ term }}
-          </button>
-        </div>
+    <!-- 搜索历史提示 -->
+    <div class="flex items-center gap-2 mt-3" *ngIf="!filterParams.keyword && searchHistory.length > 0">
+      <span class="text-sm text-gray-500">最近搜索：</span>
+      <div class="flex gap-2">
+        <button
+          *ngFor="let term of searchHistory.slice(0, 3)"
+          (click)="onSearch(term)"
+          class="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+          type="button"
+        >
+          {{ term }}
+        </button>
       </div>
     </div>
   </div>
@@ -144,9 +135,9 @@
             *ngFor="let event of events"
             class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
           >
-            <div class="event-header">
-              <div class="event-title-section">
-                <h3 class="event-title">{{ event.eventName }}</h3>
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex-1 flex items-center gap-3">
+                <h3 class="text-lg font-semibold text-gray-900">{{ event.eventName }}</h3>
                 <span
                   [class]="'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' + getFlowbiteStatusClass(event.status)"
                 >
@@ -154,7 +145,7 @@
                 </span>
               </div>
 
-              <div class="event-actions">
+              <div class="flex items-center gap-2">
                 <button
                   (click)="viewDetail(event)"
                   class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
@@ -195,19 +186,19 @@
               </div>
             </div>
 
-            <p class="event-summary" *ngIf="event.summary">
+            <p class="text-gray-600 text-sm leading-relaxed mb-4" *ngIf="event.summary">
               {{ event.summary }}
             </p>
 
-            <div class="event-meta">
-              <div class="meta-item">
-                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center gap-6 text-gray-600 text-sm">
+              <div class="flex items-center gap-1">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                 </svg>
                 <span>{{ formatDate(event.occurTime) }}</span>
               </div>
-              <div class="meta-item">
-                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="flex items-center gap-1">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
