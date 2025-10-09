@@ -17,6 +17,7 @@ import { CanvasQuery } from './canvas/services/canvas.query';
 import { ComponentItem } from './models/component.model';
 import { KeyboardService } from './services/keyboard.service';
 import { FullscreenService } from './services/fullscreen.service';
+import { ImportExportService } from './canvas/services/import-export.service';
 
 interface ToastMessage {
   id: string;
@@ -104,7 +105,8 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
     private componentRegistry: ComponentRegistryService,
     private canvasService: CanvasService,
     private canvasQuery: CanvasQuery,
-    private fullscreenService: FullscreenService
+    private fullscreenService: FullscreenService,
+    private importExportService: ImportExportService
   ) {}
 
   ngOnInit(): void {
@@ -373,7 +375,7 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   }
 
   private setupKeyboardShortcuts(): void {
-    // 添加Ctrl+S 保存快捷键、F11 全屏快捷键和 Ctrl+Shift+C 坐标显示快捷键
+    // 添加Ctrl+S 保存快捷键、F11 全屏快捷键、Ctrl+Shift+C 坐标显示快捷键、Ctrl+Shift+E 导出、Ctrl+O 导入
     const keyboardShortcut = (event: KeyboardEvent) => {
       // Ctrl+S 保存
       if ((event.ctrlKey || event.metaKey) && event.key === 's') {
@@ -391,6 +393,18 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'c') {
         event.preventDefault();
         this.toggleCoordinates();
+      }
+
+      // Ctrl+Shift+E 导出
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'e') {
+        event.preventDefault();
+        this.exportCanvas();
+      }
+
+      // Ctrl+O 导入
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') {
+        event.preventDefault();
+        this.importCanvas();
       }
     };
 
@@ -605,5 +619,30 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.showErrorToast('全屏失败', '您的浏览器不支持全屏功能或已被禁用');
     }
+  }
+
+  exportCanvas(): void {
+    const screenName = this.getCurrentPageName();
+    this.importExportService.exportCanvas(screenName);
+    this.showSuccessToast('导出成功', `已导出项目：${screenName}`);
+  }
+
+  importCanvas(): void {
+    if (this.canvasQuery.getValue().isDirty) {
+      const confirmed = confirm('当前有未保存的更改，导入新项目将丢失这些更改。是否继续？');
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    this.importExportService.importCanvas(
+      () => {
+        this.showSuccessToast('导入成功', '项目已成功导入');
+        this.canvasService.recordSnapshot();
+      },
+      (error: string) => {
+        this.showErrorToast('导入失败', error);
+      }
+    );
   }
 }
