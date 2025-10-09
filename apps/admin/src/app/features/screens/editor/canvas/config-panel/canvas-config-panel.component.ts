@@ -44,7 +44,7 @@ export class CanvasConfigPanelComponent implements OnInit {
 
   constructor(
     private canvasService: CanvasService,
-    private query: CanvasQuery
+    protected query: CanvasQuery
   ) {}
 
   ngOnInit(): void {
