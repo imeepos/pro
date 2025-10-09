@@ -64,3 +64,5 @@ export interface ValidationResult {
   valid: boolean;
   errors: string[];
 }
+
+export * from './weibo-search-task';

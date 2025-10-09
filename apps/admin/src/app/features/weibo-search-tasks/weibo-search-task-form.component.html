@@ -1,0 +1,193 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>{{ isEditMode ? '编辑任务' : '创建任务' }}</h1>
+    <div class="header-actions">
+      <button class="btn" (click)="cancel()">取消</button>
+      <button class="btn btn-primary" (click)="submitForm()" [disabled]="!validateForm.valid">
+        {{ isEditMode ? '保存' : '创建' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="loading" *ngIf="loading">
+      处理中...
+    </div>
+
+    <form [formGroup]="validateForm" *ngIf="!loading">
+      <!-- 基本信息 -->
+      <div class="form-section">
+        <h3 class="section-title">基本信息</h3>
+
+        <!-- 搜索关键词 -->
+        <div class="form-field">
+          <label for="keyword" class="form-label required">搜索关键词</label>
+          <input
+            id="keyword"
+            type="text"
+            class="form-input"
+            formControlName="keyword"
+            placeholder="请输入要搜索的关键词，如：热点事件、科技新闻等"
+          />
+          <div class="form-help">
+            关键词将用于在微博搜索相关内容，支持中英文、数字和常见符号
+          </div>
+          <div class="form-error" *ngIf="validateForm.get('keyword')?.invalid && validateForm.get('keyword')?.touched">
+            {{ getFormErrorMessage('keyword') }}
+          </div>
+        </div>
+
+        <!-- 起始日期 -->
+        <div class="form-field">
+          <label for="startDate" class="form-label required">监控起始日期</label>
+          <input
+            id="startDate"
+            type="date"
+            class="form-input"
+            formControlName="startDate"
+            [max]="maxDate"
+          />
+          <div class="form-help">
+            系统将从这个日期开始回溯历史数据，然后进行持续监控
+          </div>
+          <div class="form-error" *ngIf="validateForm.get('startDate')?.invalid && validateForm.get('startDate')?.touched">
+            {{ getFormErrorMessage('startDate') }}
+          </div>
+        </div>
+
+        <!-- 抓取间隔 -->
+        <div class="form-field">
+          <label for="crawlInterval" class="form-label required">抓取间隔</label>
+          <select
+            id="crawlInterval"
+            class="form-select"
+            formControlName="crawlInterval"
+          >
+            <option
+              *ngFor="let option of crawlIntervalOptions"
+              [value]="option.value"
+            >{{ option.label }}</option>
+          </select>
+          <div class="form-help">
+            完成历史数据回溯后，系统将按照此间隔进行增量更新
+          </div>
+          <div class="form-error" *ngIf="validateForm.get('crawlInterval')?.invalid && validateForm.get('crawlInterval')?.touched">
+            {{ getFormErrorMessage('crawlInterval') }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 账号配置 -->
+      <div class="form-section">
+        <h3 class="section-title">账号配置</h3>
+
+        <!-- 指定微博账号 -->
+        <div class="form-field">
+          <label for="weiboAccountId" class="form-label">指定微博账号</label>
+          <select
+            id="weiboAccountId"
+            class="form-select"
+            formControlName="weiboAccountId"
+          >
+            <option value="">选择微博账号（可选）</option>
+            <option
+              *ngFor="let account of weiboAccounts"
+              [value]="account.id"
+            >{{ account.nickname }}</option>
+          </select>
+          <div class="form-help">
+            不选择时将随机使用可用账号，选择后将优先使用指定账号
+          </div>
+        </div>
+
+        <!-- 启用账号轮换 -->
+        <div class="form-field">
+          <label for="enableAccountRotation" class="form-label">账号轮换</label>
+          <div class="switch-container">
+            <input
+              id="enableAccountRotation"
+              type="checkbox"
+              class="form-checkbox"
+              formControlName="enableAccountRotation"
+            />
+            <label for="enableAccountRotation" class="switch-label">
+              {{ validateForm.get('enableAccountRotation')?.value ? '开启' : '关闭' }}
+            </label>
+          </div>
+          <div class="form-help">
+            开启后将自动轮换账号，降低单个账号的使用频率，减少被限制的风险
+          </div>
+        </div>
+      </div>
+
+      <!-- 任务设置（编辑模式） -->
+      <div class="form-section" *ngIf="isEditMode">
+        <h3 class="section-title">任务设置</h3>
+
+        <!-- 启用任务 -->
+        <div class="form-field">
+          <label for="enabled" class="form-label">启用状态</label>
+          <div class="switch-container">
+            <input
+              id="enabled"
+              type="checkbox"
+              class="form-checkbox"
+              formControlName="enabled"
+            />
+            <label for="enabled" class="switch-label">
+              {{ validateForm.get('enabled')?.value ? '启用' : '禁用' }}
+            </label>
+          </div>
+          <div class="form-help">
+            禁用后任务将暂停执行，但会保留历史数据和配置
+          </div>
+        </div>
+      </div>
+
+      <!-- 表单错误提示 -->
+      <div class="form-errors" *ngIf="error$ | async">
+        <div class="alert alert-error">
+          {{ error$ | async }}
+        </div>
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="form-actions">
+        <div class="action-group">
+          <button class="btn" type="button" (click)="resetForm()">重置</button>
+          <button class="btn" type="button" (click)="cancel()">取消</button>
+          <button
+            class="btn btn-primary"
+            type="submit"
+            (click)="submitForm()"
+            [disabled]="!validateForm.valid"
+          >
+            {{ isEditMode ? '保存修改' : '创建任务' }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- 提示信息 -->
+  <div class="info-card">
+    <h3>使用说明</h3>
+    <div class="info-content">
+      <h4>任务执行流程：</h4>
+      <ol>
+        <li><strong>历史数据回溯：</strong>系统将从起始日期开始，智能拆分时间段抓取历史微博数据</li>
+        <li><strong>增量更新：</strong>完成历史回溯后，按照设定的间隔定期抓取新的微博数据</li>
+        <li><strong>智能拆分：</strong>自动根据数据量调整时间段，确保抓取完整不遗漏</li>
+        <li><strong>状态监控：</strong>实时监控任务状态，支持暂停、恢复和立即执行</li>
+      </ol>
+
+      <h4>注意事项：</h4>
+      <ul>
+        <li>起始日期越早，历史数据回溯时间越长</li>
+        <li>建议首次创建时选择较近的日期进行测试</li>
+        <li>抓取间隔不宜过短，避免对微博服务器造成压力</li>
+        <li>账号轮换可以提高抓取成功率，建议开启</li>
+      </ul>
+    </div>
+  </div>
+</div>

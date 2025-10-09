@@ -1,0 +1,269 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>微博搜索任务管理</h1>
+    <button class="btn btn-primary" (click)="createTask()">
+      <span class="icon">+</span>
+      创建任务
+    </button>
+  </div>
+
+  <!-- 筛选条件 -->
+  <div class="filter-card">
+    <div class="filter-row">
+      <div class="filter-item">
+        <label>关键词搜索</label>
+        <div class="search-group">
+          <input
+            type="text"
+            class="form-input"
+            placeholder="输入任务关键词搜索"
+            [(ngModel)]="searchKeyword"
+            (keyup.enter)="applyFilters()"
+          />
+          <button class="btn btn-primary" (click)="applyFilters()">搜索</button>
+        </div>
+      </div>
+
+      <div class="filter-item">
+        <label>任务状态</label>
+        <select
+          class="form-select"
+          [(ngModel)]="selectedStatus"
+          (change)="applyFilters()"
+        >
+          <option value="">全部状态</option>
+          <option [value]="taskStatus.PENDING">等待中</option>
+          <option [value]="taskStatus.RUNNING">运行中</option>
+          <option [value]="taskStatus.PAUSED">已暂停</option>
+          <option [value]="taskStatus.FAILED">失败</option>
+          <option [value]="taskStatus.TIMEOUT">超时</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label>启用状态</label>
+        <select
+          class="form-select"
+          [(ngModel)]="selectedEnabled"
+          (change)="applyFilters()"
+        >
+          <option value="">全部</option>
+          <option [value]="true">启用</option>
+          <option [value]="false">禁用</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label>&nbsp;</label>
+        <button class="btn btn-secondary" (click)="resetFilters()">
+          重置
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 任务列表 -->
+  <div class="table-card">
+    <div class="loading-container" *ngIf="loading$ | async">
+      <div class="loading-spinner">加载中...</div>
+    </div>
+
+    <div class="error-message" *ngIf="error$ | async">
+      {{ error$ | async }}
+    </div>
+
+    <div class="table-container" *ngIf="!(loading$ | async)">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>关键词</th>
+            <th>状态</th>
+            <th>启用状态</th>
+            <th>进度</th>
+            <th>当前抓取时间</th>
+            <th>最新数据时间</th>
+            <th>下次执行时间</th>
+            <th>抓取间隔</th>
+            <th>错误信息</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let task of tasks$ | async; trackBy: trackByTaskId">
+            <td>
+              <div class="keyword-cell">
+                <strong>{{ task.keyword }}</strong>
+                <small class="text-muted">
+                  起始: {{ task.startDate | date:'yyyy-MM-dd' }}
+                </small>
+              </div>
+            </td>
+            <td>
+              <span class="status-tag status-{{ task.status }}">
+                {{ getStatusText(task.status) }}
+              </span>
+            </td>
+            <td>
+              <span class="status-tag" [class.enabled]="task.enabled" [class.disabled]="!task.enabled">
+                {{ task.enabled ? '启用' : '禁用' }}
+              </span>
+            </td>
+            <td>
+              <div class="progress-cell">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="getCompletionRate(task.progress, task.totalSegments)"></div>
+                </div>
+                <small>{{ task.progress }} / {{ task.totalSegments }}</small>
+              </div>
+            </td>
+            <td>
+              <div class="time-cell">
+                <div *ngIf="task.currentCrawlTime">
+                  {{ formatTime(task.currentCrawlTime) }}
+                </div>
+                <div *ngIf="task.currentCrawlTime" class="text-muted small">
+                  {{ formatDateTime(task.currentCrawlTime) }}
+                </div>
+                <div *ngIf="!task.currentCrawlTime" class="text-muted">
+                  未开始
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="time-cell">
+                <div *ngIf="task.latestCrawlTime">
+                  {{ formatTime(task.latestCrawlTime) }}
+                </div>
+                <div *ngIf="task.latestCrawlTime" class="text-muted small">
+                  {{ formatDateTime(task.latestCrawlTime) }}
+                </div>
+                <div *ngIf="!task.latestCrawlTime" class="text-muted">
+                  无数据
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="time-cell">
+                <div *ngIf="task.nextRunAt">
+                  {{ formatTime(task.nextRunAt) }}
+                </div>
+                <div *ngIf="task.nextRunAt" class="text-muted small">
+                  {{ formatDateTime(task.nextRunAt) }}
+                </div>
+                <div *ngIf="!task.nextRunAt" class="text-muted">
+                  -
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="interval-badge">{{ task.crawlInterval }}</span>
+            </td>
+            <td>
+              <div *ngIf="task.errorMessage" class="error-cell">
+                <span class="error-icon">⚠️</span>
+                <span class="error-text" [title]="task.errorMessage">
+                  {{ task.errorMessage.length > 20 ? task.errorMessage.substring(0, 20) + '...' : task.errorMessage }}
+                </span>
+              </div>
+              <span *ngIf="!task.errorMessage" class="text-muted">-</span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <!-- 查看详情 -->
+                <button
+                  class="btn btn-sm btn-text"
+                  title="查看详情"
+                  (click)="viewTask(task)"
+                >
+                  👁️
+                </button>
+
+                <!-- 编辑 -->
+                <button
+                  class="btn btn-sm btn-text"
+                  title="编辑"
+                  (click)="editTask(task)"
+                >
+                  ✏️
+                </button>
+
+                <!-- 暂停/恢复 -->
+                <button
+                  *ngIf="canPauseTask(task)"
+                  class="btn btn-sm btn-text"
+                  title="暂停"
+                  (click)="pauseTask(task)"
+                >
+                  ⏸️
+                </button>
+
+                <button
+                  *ngIf="canResumeTask(task)"
+                  class="btn btn-sm btn-text"
+                  title="恢复"
+                  (click)="resumeTask(task)"
+                >
+                  ▶️
+                </button>
+
+                <!-- 立即执行 -->
+                <button
+                  *ngIf="canRunNowTask(task)"
+                  class="btn btn-sm btn-text"
+                  title="立即执行"
+                  (click)="runTaskNow(task)"
+                >
+                  ⚡
+                </button>
+
+                <!-- 删除 -->
+                <button
+                  class="btn btn-sm btn-text btn-danger"
+                  title="删除"
+                  (click)="deleteTask(task)"
+                >
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 空状态 -->
+      <div class="empty-state" *ngIf="(tasks$ | async)?.length === 0 && !(loading$ | async)">
+        <div class="empty-icon">📋</div>
+        <div class="empty-text">暂无任务数据</div>
+        <button class="btn btn-primary" (click)="createTask()">创建第一个任务</button>
+      </div>
+    </div>
+
+    <!-- 分页 -->
+    <div class="pagination-wrapper" *ngIf="total > 0">
+      <div class="pagination-info">
+        显示 {{ page * limit - limit + 1 }} -
+        {{ min(page * limit, total) }}
+        共 {{ total }} 条
+      </div>
+      <div class="pagination-controls">
+        <button
+          class="btn btn-sm"
+          [disabled]="page <= 1"
+          (click)="onPageChange(page - 1)"
+        >
+          上一页
+        </button>
+
+        <span class="page-info">第 {{ page }} 页</span>
+
+        <button
+          class="btn btn-sm"
+          [disabled]="page >= totalPages"
+          (click)="onPageChange(page + 1)"
+        >
+          下一页
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

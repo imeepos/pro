@@ -1,0 +1,221 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left">
+      <button class="btn btn-text" (click)="goBack()">
+        ← 返回列表
+      </button>
+      <h1 *ngIf="task">{{ task.keyword }} - 任务详情</h1>
+    </div>
+    <div class="header-actions">
+      <div class="action-group">
+        <button class="btn" (click)="editTask()">
+          ✏️ 编辑
+        </button>
+
+        <!-- 暂停/恢复 -->
+        <button
+          *ngIf="canPauseTask()"
+          class="btn"
+          (click)="pauseTask()"
+        >
+          ⏸️ 暂停
+        </button>
+
+        <button
+          *ngIf="canResumeTask()"
+          class="btn"
+          (click)="resumeTask()"
+        >
+          ▶️ 恢复
+        </button>
+
+        <!-- 立即执行 -->
+        <button
+          *ngIf="canRunNowTask()"
+          class="btn btn-primary"
+          (click)="runNow()"
+        >
+          ⚡ 立即执行
+        </button>
+
+        <!-- 删除 -->
+        <button
+          class="btn btn-danger"
+          (click)="deleteTask()"
+        >
+          🗑️ 删除
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading" *ngIf="loading$ | async">
+    加载中...
+  </div>
+
+  <div class="content-container" *ngIf="task && !(loading$ | async)">
+    <!-- 警告信息 -->
+    <div class="alert alert-warning" *ngIf="shouldShowWarning()">
+      ⚠️ {{ getWarningMessage() }}
+    </div>
+
+    <!-- 任务概览 -->
+    <div class="overview-section">
+      <div class="stats-grid">
+        <!-- 任务状态 -->
+        <div class="stat-card">
+          <div class="stat-value status-{{ task.status }}">
+            {{ getStatusText(task.status) }}
+          </div>
+          <div class="stat-label">当前状态</div>
+        </div>
+
+        <!-- 完成进度 -->
+        <div class="stat-card">
+          <div class="stat-value">{{ getCompletionRate() }}%</div>
+          <div class="stat-label">完成进度</div>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="getCompletionRate()"></div>
+          </div>
+        </div>
+
+        <!-- 已完成段数 -->
+        <div class="stat-card">
+          <div class="stat-value">{{ task.progress }}</div>
+          <div class="stat-label">已完成段数</div>
+          <div class="stat-sub">总共 {{ task.totalSegments }} 段</div>
+        </div>
+
+        <!-- 抓取间隔 -->
+        <div class="stat-card">
+          <div class="stat-value">{{ task.crawlInterval }}</div>
+          <div class="stat-label">抓取间隔</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 详细信息 -->
+    <div class="details-section">
+      <div class="detail-cards">
+        <!-- 基本信息 -->
+        <div class="detail-card">
+          <h3>基本信息</h3>
+          <div class="detail-item">
+            <span class="label">搜索关键词</span>
+            <span class="value">{{ task.keyword }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">监控起始日期</span>
+            <span class="value">{{ task.startDate | date:'yyyy-MM-dd' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">启用状态</span>
+            <span class="value">
+              <span class="status-tag" [class.enabled]="task.enabled" [class.disabled]="!task.enabled">
+                {{ task.enabled ? '启用' : '禁用' }}
+              </span>
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="label">账号轮换</span>
+            <span class="value">
+              <span class="status-tag" [class.enabled]="task.enableAccountRotation" [class.disabled]="!task.enableAccountRotation">
+                {{ task.enableAccountRotation ? '开启' : '关闭' }}
+              </span>
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="label">指定账号</span>
+            <span class="value">{{ task.weiboAccountId ? '账号ID: ' + task.weiboAccountId : '随机选择' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">重试次数</span>
+            <span class="value">{{ task.retryCount }} / {{ task.maxRetries }}</span>
+          </div>
+        </div>
+
+        <!-- 时间信息 -->
+        <div class="detail-card">
+          <h3>时间信息</h3>
+          <div class="detail-item">
+            <span class="label">创建时间</span>
+            <span class="value">
+              {{ formatTime(task.createdAt) }}
+              <div class="relative-time">{{ formatRelativeTime(task.createdAt) }}</div>
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="label">更新时间</span>
+            <span class="value">
+              {{ formatTime(task.updatedAt) }}
+              <div class="relative-time">{{ formatRelativeTime(task.updatedAt) }}</div>
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="label">当前抓取时间</span>
+            <span class="value">
+              <span *ngIf="task.currentCrawlTime">
+                {{ formatTime(task.currentCrawlTime) }}
+                <div class="relative-time">{{ formatRelativeTime(task.currentCrawlTime) }}</div>
+              </span>
+              <span *ngIf="!task.currentCrawlTime" class="text-muted">未开始</span>
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="label">最新数据时间</span>
+            <span class="value">
+              <span *ngIf="task.latestCrawlTime">
+                {{ formatTime(task.latestCrawlTime) }}
+                <div class="relative-time">{{ formatRelativeTime(task.latestCrawlTime) }}</div>
+              </span>
+              <span *ngIf="!task.latestCrawlTime" class="text-muted">无数据</span>
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="label">下次执行时间</span>
+            <span class="value">
+              <span *ngIf="task.nextRunAt && task.enabled">
+                {{ formatTime(task.nextRunAt) }}
+                <div class="relative-time">{{ formatRelativeTime(task.nextRunAt) }}</div>
+              </span>
+              <span *ngIf="!task.nextRunAt || !task.enabled" class="text-muted">-</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 执行时间线 -->
+    <div class="timeline-section">
+      <h3>执行时间线</h3>
+      <div class="timeline">
+        <div
+          *ngFor="let item of timeline"
+          class="timeline-item timeline-{{ item.type }}"
+        >
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <span class="timeline-title">{{ item.title }}</span>
+              <span class="timeline-time">{{ formatTime(item.time) }}</span>
+            </div>
+            <div *ngIf="item.description" class="timeline-description">
+              {{ item.description }}
+            </div>
+            <div class="timeline-relative">{{ formatRelativeTime(item.time) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误信息 -->
+    <div class="error-section" *ngIf="task.errorMessage">
+      <h3>错误信息</h3>
+      <div class="alert alert-error">
+        🚫 {{ task.errorMessage }}
+      </div>
+      <div class="error-help">
+        请检查任务配置或网络连接，必要时联系管理员
+      </div>
+    </div>
+  </div>
+</div>

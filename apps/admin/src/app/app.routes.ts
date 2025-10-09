@@ -33,6 +33,27 @@ export const routes: Routes = [
         loadComponent: () => import('./features/weibo/weibo-accounts.component').then(m => m.WeiboAccountsComponent)
       },
       {
+        path: 'weibo-search-tasks',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/weibo-search-tasks/weibo-search-tasks-list.component').then(m => m.WeiboSearchTasksListComponent)
+          },
+          {
+            path: 'create',
+            loadComponent: () => import('./features/weibo-search-tasks/weibo-search-task-form.component').then(m => m.WeiboSearchTaskFormComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/weibo-search-tasks/weibo-search-task-detail.component').then(m => m.WeiboSearchTaskDetailComponent)
+          },
+          {
+            path: ':id/edit',
+            loadComponent: () => import('./features/weibo-search-tasks/weibo-search-task-form.component').then(m => m.WeiboSearchTaskFormComponent)
+          }
+        ]
+      },
+      {
         path: 'jd/accounts',
         loadComponent: () => import('./features/jd/jd-accounts.component').then(m => m.JdAccountsComponent)
       },
