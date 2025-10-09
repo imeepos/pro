@@ -123,7 +123,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnInit, OnDest
   // 点击外部处理
   private handleDocumentClick(event: Event): void {
     const target = event.target as Element;
-    if (!target.closest('.pro-date-picker')) {
+    if (!target.closest('.relative')) {
       this.closeCalendar();
     }
   }

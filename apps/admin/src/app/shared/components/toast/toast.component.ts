@@ -41,48 +41,31 @@ export class ToastComponent implements OnInit, OnDestroy {
   }
 
   get alertClasses(): string {
-    // 使用标准 Flowbite Alert 类
-    const baseClasses = 'transition-all duration-300 ease-in-out transform';
+    // 使用标准 Flowbite Alert 样式，添加进入和退出动画
+    const baseClasses = 'transition-all duration-300 ease-in-out transform animate-fade-in-up hover:shadow-xl border-l-4';
     const classes: Record<ToastType, string> = {
-      success: 'text-green-800 bg-green-50 border-green-200 dark:bg-gray-800 dark:text-green-400 dark:border-green-600',
-      error: 'text-red-800 bg-red-50 border-red-200 dark:bg-gray-800 dark:text-red-400 dark:border-red-600',
-      warning: 'text-yellow-800 bg-yellow-50 border-yellow-200 dark:bg-gray-800 dark:text-yellow-300 dark:border-yellow-600',
-      info: 'text-blue-800 bg-blue-50 border-blue-200 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-600'
+      success: 'text-green-800 bg-green-50 border-green-500 dark:bg-gray-800 dark:text-green-400 dark:border-green-600',
+      error: 'text-red-800 bg-red-50 border-red-500 dark:bg-gray-800 dark:text-red-400 dark:border-red-600',
+      warning: 'text-yellow-800 bg-yellow-50 border-yellow-500 dark:bg-gray-800 dark:text-yellow-300 dark:border-yellow-600',
+      info: 'text-blue-800 bg-blue-50 border-blue-500 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-600'
     };
     return `${baseClasses} ${classes[this.type]}`;
   }
 
-  get iconClasses(): string {
-    // 标准化图标颜色，增强对比度
+  get iconContainerClasses(): string {
+    // 图标容器样式，增强视觉效果
     const classes: Record<ToastType, string> = {
-      success: 'text-green-500 dark:text-green-400',
-      error: 'text-red-500 dark:text-red-400',
-      warning: 'text-yellow-500 dark:text-yellow-400',
-      info: 'text-blue-500 dark:text-blue-400'
+      success: 'bg-green-100 text-green-500 dark:bg-green-800 dark:text-green-200',
+      error: 'bg-red-100 text-red-500 dark:bg-red-800 dark:text-red-200',
+      warning: 'bg-yellow-100 text-yellow-500 dark:bg-yellow-800 dark:text-yellow-200',
+      info: 'bg-blue-100 text-blue-500 dark:bg-blue-800 dark:text-blue-200'
     };
     return classes[this.type];
   }
 
   get closeButtonClasses(): string {
-    // 简化关闭按钮样式
-    const baseClasses = 'inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-offset-2';
-    const classes: Record<ToastType, string> = {
-      success: 'text-green-500 hover:bg-green-200 focus:ring-green-400 dark:text-green-400 dark:hover:bg-gray-700',
-      error: 'text-red-500 hover:bg-red-200 focus:ring-red-400 dark:text-red-400 dark:hover:bg-gray-700',
-      warning: 'text-yellow-500 hover:bg-yellow-200 focus:ring-yellow-400 dark:text-yellow-400 dark:hover:bg-gray-700',
-      info: 'text-blue-500 hover:bg-blue-200 focus:ring-blue-400 dark:text-blue-400 dark:hover:bg-gray-700'
-    };
-    return `${baseClasses} ${classes[this.type]}`;
-  }
-
-  get iconPath(): string {
-    // 为不同类型使用合适的图标路径
-    const paths: Record<ToastType, string> = {
-      success: 'M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z',
-      error: 'M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm0 16a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm1-5a1 1 0 1 1-2 0V6a1 1 0 1 1 2 0v5.5Z',
-      warning: 'M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM10 16a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm1-5a1 1 0 1 1-2 0V6a1 1 0 1 1 2 0v5Z',
-      info: 'M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z'
-    };
-    return paths[this.type];
+    // 优化关闭按钮样式，添加悬停效果
+    const baseClasses = 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-300 rounded-lg dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 dark:focus:ring-gray-600';
+    return baseClasses;
   }
 }

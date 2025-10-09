@@ -1,9 +1,17 @@
-<div class="pro-date-picker" (click)="stopPropagation($event)">
-  <!-- 输入框 -->
-  <div class="date-picker-input" [class.disabled]="disabled">
+<div class="relative" (click)="stopPropagation($event)">
+  <!-- Flowbite Datepicker 输入框 -->
+  <div class="relative">
+    <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+      <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
+      </svg>
+    </div>
     <input
       type="text"
-      class="date-input"
+      class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+      [class.bg-gray-100]="disabled"
+      [class.cursor-not-allowed]="disabled"
+      [class.opacity-50]="disabled"
       [placeholder]="placeholder"
       [(ngModel)]="inputText"
       (input)="onInputChange($event)"
@@ -13,12 +21,11 @@
       [disabled]="disabled"
       [readonly]="disabled"
     />
-
     <!-- 清除按钮 -->
     <button
-      type="button"
-      class="clear-btn"
       *ngIf="selectedDate && !disabled"
+      type="button"
+      class="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
       (click)="clearSelection()"
       tabindex="-1"
     >
@@ -26,71 +33,80 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
-
-    <!-- 日历图标 -->
-    <button
-      type="button"
-      class="calendar-btn"
-      (click)="toggleCalendar()"
-      [disabled]="disabled"
-      tabindex="-1"
-    >
-      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    </button>
   </div>
 
-  <!-- 日历弹窗 -->
-  <div class="date-picker-calendar" *ngIf="isOpen" (click)="stopPropagation($event)">
-    <!-- 快捷预设 -->
-    <div class="quick-presets" *ngIf="showQuickPresets">
-      <div class="presets-title">快捷选择</div>
-      <div class="presets-grid">
+  <!-- Flowbite Datepicker 下拉面板 -->
+  <div
+    *ngIf="isOpen"
+    class="absolute z-50 p-3 mt-1 bg-white rounded-lg shadow-lg dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+    (click)="stopPropagation($event)"
+  >
+    <!-- 快捷预设区域 -->
+    <div *ngIf="showQuickPresets" class="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+      <p class="text-sm font-medium text-gray-900 dark:text-white mb-2">快捷选择</p>
+      <div class="grid grid-cols-3 gap-2">
         <button
           type="button"
-          class="preset-btn"
+          class="inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-center text-gray-900 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white"
           *ngFor="let preset of quickPresets"
           (click)="selectQuickPreset(preset.key)"
           [title]="getQuickPresetRange(preset.key)"
         >
-          <span class="preset-icon">{{ preset.icon }}</span>
-          <span class="preset-label">{{ preset.label }}</span>
+          <span class="mr-1">{{ preset.icon }}</span>
+          {{ preset.label }}
         </button>
       </div>
     </div>
 
-    <!-- 日历主体 -->
-    <div class="calendar-header">
-      <button type="button" class="nav-btn" (click)="previousMonth()">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    <!-- 日历导航头部 -->
+    <div class="flex items-center justify-between mb-2">
+      <button
+        type="button"
+        class="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-full hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+        (click)="previousMonth()"
+      >
+        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 1 1 5l4 4"/>
         </svg>
       </button>
-      <div class="month-title">{{ getMonthName() }}</div>
-      <button type="button" class="nav-btn" (click)="nextMonth()">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ getMonthName() }}</h3>
+      <button
+        type="button"
+        class="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-full hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+        (click)="nextMonth()"
+      >
+        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
         </svg>
       </button>
     </div>
 
     <!-- 星期标题 -->
-    <div class="weekdays">
-      <div class="weekday" *ngFor="let day of getWeekDays()">{{ day }}</div>
+    <div class="grid grid-cols-7 mb-1">
+      <div
+        class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1"
+        *ngFor="let day of getWeekDays()"
+      >
+        {{ day }}
+      </div>
     </div>
 
     <!-- 日期网格 -->
-    <div class="days-grid">
+    <div class="grid grid-cols-7 gap-1">
       <button
         type="button"
-        class="day-btn"
+        class="block w-full text-center text-sm leading-8 text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-600"
+        [class.text-gray-400]="day && !isCurrentMonth(day)"
+        [class.bg-blue-500]="day && isSelected(day)"
+        [class.text-white]="day && isSelected(day)"
+        [class.hover:bg-blue-600]="day && isSelected(day)"
+        [class.bg-blue-50]="day && isToday(day) && !isSelected(day)"
+        [class.text-blue-600]="day && isToday(day) && !isSelected(day)"
+        [class.hover:bg-blue-100]="day && isToday(day) && !isSelected(day)"
+        [class.cursor-not-allowed]="day && isDateDisabled(day)"
+        [class.opacity-50]="day && isDateDisabled(day)"
+        [class.hover:bg-transparent]="day && isDateDisabled(day)"
         *ngFor="let day of getCalendarDays()"
-        [class.other-month]="day && !isCurrentMonth(day)"
-        [class.today]="day && isToday(day)"
-        [class.selected]="day && isSelected(day)"
-        [class.hovered]="day && isHovered(day)"
-        [class.disabled]="day && isDateDisabled(day)"
         (click)="day && selectDate(day)"
         (mouseenter)="day && onDateHover(day)"
         (mouseleave)="onDateHover(undefined)"
@@ -100,12 +116,20 @@
       </button>
     </div>
 
-    <!-- 底部操作 -->
-    <div class="calendar-footer">
-      <button type="button" class="footer-btn today-btn" (click)="selectQuickPreset('today')">
+    <!-- 底部操作按钮 -->
+    <div class="flex justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+      <button
+        type="button"
+        class="inline-flex items-center px-3 py-2 text-xs font-medium text-center text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800"
+        (click)="selectQuickPreset('today')"
+      >
         今天
       </button>
-      <button type="button" class="footer-btn close-btn" (click)="closeCalendar()">
+      <button
+        type="button"
+        class="inline-flex items-center px-3 py-2 text-xs font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+        (click)="closeCalendar()"
+      >
         关闭
       </button>
     </div>

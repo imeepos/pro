@@ -1,85 +1,85 @@
 <div class="w-full flex justify-center items-center min-h-full bg-gradient-to-br from-primary to-primary-dark py-8">
-  <div class="bg-white rounded-lg shadow-xl p-10 w-full max-w-md">
-    <h1 class="text-center text-2xl font-semibold text-gray-800 mb-2">后台管理系统</h1>
-    <h2 class="text-center text-lg font-medium text-gray-600 mb-8">注册</h2>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
+    <h1 class="text-center text-2xl font-semibold text-gray-900 dark:text-white mb-2">后台管理系统</h1>
+    <h2 class="text-center text-lg font-medium text-gray-600 dark:text-gray-400 mb-8">注册</h2>
 
-    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-5">
-      <div class="flex flex-col gap-2">
-        <label for="username" class="text-sm font-medium text-gray-800">用户名</label>
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="space-y-6">
+      <div>
+        <label for="username" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">用户名</label>
         <input
           id="username"
           type="text"
           formControlName="username"
-          class="px-4 py-3 border border-gray-300 rounded transition-all duration-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-          [class.border-error]="registerForm.get('username')?.touched && registerForm.get('username')?.invalid"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          [class.border-red-500]="registerForm.get('username')?.touched && registerForm.get('username')?.invalid"
           placeholder="请输入用户名 (3-20位)"
         />
-        <span class="text-xs text-error min-h-[18px]" *ngIf="getFieldError('username')">
+        <p class="mt-2 text-sm text-red-600 dark:text-red-500" *ngIf="getFieldError('username')">
           {{ getFieldError('username') }}
-        </span>
+        </p>
       </div>
 
-      <div class="flex flex-col gap-2">
-        <label for="email" class="text-sm font-medium text-gray-800">邮箱</label>
+      <div>
+        <label for="email" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">邮箱</label>
         <input
           id="email"
           type="email"
           formControlName="email"
-          class="px-4 py-3 border border-gray-300 rounded transition-all duration-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-          [class.border-error]="registerForm.get('email')?.touched && registerForm.get('email')?.invalid"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          [class.border-red-500]="registerForm.get('email')?.touched && registerForm.get('email')?.invalid"
           placeholder="请输入邮箱"
         />
-        <span class="text-xs text-error min-h-[18px]" *ngIf="getFieldError('email')">
+        <p class="mt-2 text-sm text-red-600 dark:text-red-500" *ngIf="getFieldError('email')">
           {{ getFieldError('email') }}
-        </span>
+        </p>
       </div>
 
-      <div class="flex flex-col gap-2">
-        <label for="password" class="text-sm font-medium text-gray-800">密码</label>
+      <div>
+        <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">密码</label>
         <input
           id="password"
           type="password"
           formControlName="password"
-          class="px-4 py-3 border border-gray-300 rounded transition-all duration-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-          [class.border-error]="registerForm.get('password')?.touched && registerForm.get('password')?.invalid"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          [class.border-red-500]="registerForm.get('password')?.touched && registerForm.get('password')?.invalid"
           placeholder="请输入密码 (至少6位)"
         />
-        <span class="text-xs text-error min-h-[18px]" *ngIf="getFieldError('password')">
+        <p class="mt-2 text-sm text-red-600 dark:text-red-500" *ngIf="getFieldError('password')">
           {{ getFieldError('password') }}
-        </span>
+        </p>
       </div>
 
-      <div class="flex flex-col gap-2">
-        <label for="confirmPassword" class="text-sm font-medium text-gray-800">确认密码</label>
+      <div>
+        <label for="confirmPassword" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">确认密码</label>
         <input
           id="confirmPassword"
           type="password"
           formControlName="confirmPassword"
-          class="px-4 py-3 border border-gray-300 rounded transition-all duration-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-          [class.border-error]="registerForm.get('confirmPassword')?.touched && (registerForm.get('confirmPassword')?.invalid || getPasswordMismatchError())"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          [class.border-red-500]="registerForm.get('confirmPassword')?.touched && (registerForm.get('confirmPassword')?.invalid || getPasswordMismatchError())"
           placeholder="请再次输入密码"
         />
-        <span class="text-xs text-error min-h-[18px]" *ngIf="getFieldError('confirmPassword') || getPasswordMismatchError()">
+        <p class="mt-2 text-sm text-red-600 dark:text-red-500" *ngIf="getFieldError('confirmPassword') || getPasswordMismatchError()">
           {{ getFieldError('confirmPassword') || getPasswordMismatchError() }}
-        </span>
+        </p>
       </div>
 
-      <div class="px-3 py-3 bg-error/10 border border-error/20 rounded text-error text-center" *ngIf="error$ | async as error">
+      <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" *ngIf="error$ | async as error">
         {{ error }}
       </div>
 
       <button
         type="submit"
-        class="px-6 py-3 bg-gradient-to-br from-primary to-primary-dark text-white border-none rounded text-base font-medium cursor-pointer transition-all duration-300 hover:enabled:-translate-y-0.5 hover:enabled:shadow-lg hover:enabled:shadow-primary/40 disabled:opacity-60 disabled:cursor-not-allowed"
+        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-60 disabled:cursor-not-allowed"
         [disabled]="(loading$ | async) || registerForm.invalid"
       >
         <span *ngIf="!(loading$ | async)">注册</span>
         <span *ngIf="loading$ | async">注册中...</span>
       </button>
 
-      <div class="text-center text-sm text-gray-600">
+      <div class="text-center text-sm text-gray-600 dark:text-gray-400">
         <span>已有账号？</span>
-        <a routerLink="/login" class="text-primary no-underline font-medium ml-1 hover:underline">立即登录</a>
+        <a routerLink="/login" class="text-blue-600 hover:underline dark:text-blue-500 font-medium ml-1">立即登录</a>
       </div>
     </form>
   </div>
