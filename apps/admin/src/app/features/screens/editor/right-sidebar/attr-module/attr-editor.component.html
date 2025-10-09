@@ -1,0 +1,201 @@
+<div class="attr-editor">
+  <!-- 搜索框 -->
+  <div class="search-section mb-6" *ngIf="attrConfig.length > 0">
+    <div class="relative">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (input)="onSearchChange($event)"
+        placeholder="搜索属性..."
+        class="block w-full pr-10 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-600 dark:focus:border-blue-600 dark:placeholder-gray-400 text-sm px-4 py-2.5"
+      />
+      <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+        <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      </div>
+    </div>
+    <div *ngIf="searchTerm" class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+      找到 {{ getFilteredConfigLength() }} 个匹配项
+    </div>
+  </div>
+
+  <!-- 基础属性折叠区 -->
+  <div class="accordion-item mb-4" *ngIf="filteredAttrConfig.length > 0">
+    <button
+      (click)="toggleBasicSection()"
+      class="accordion-button flex items-center justify-between w-full px-4 py-3 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-200"
+    >
+      <div class="flex items-center">
+        <svg
+          [class]="{'rotate-180': !basicSectionCollapsed}"
+          class="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400 transition-transform duration-200"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+        <span class="font-medium text-gray-900 dark:text-white">基础属性</span>
+        <span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+          {{ getBasicPropertiesCount() }}
+        </span>
+      </div>
+    </button>
+
+    <div [class.hidden]="basicSectionCollapsed" class="accordion-content mt-2">
+      <div class="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <!-- 基础属性手动渲染以支持Flowbite组件和复制功能 -->
+        <div class="space-y-4">
+          <!-- 组件ID -->
+          <div class="form-item basic-property">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              组件ID
+              <span class="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help transition-colors duration-200" title="组件唯一标识符">
+                <svg class="w-4 h-4 inline" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+              </span>
+            </label>
+            <div class="relative">
+              <input
+                [value]="formData.common?.id || ''"
+                readonly
+                class="block w-full pr-10 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-default dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 px-4 py-2"
+                placeholder="无ID"
+              />
+              <button
+                (click)="copyToClipboard(formData.common?.id || '', $event)"
+                class="copy-button"
+                title="复制ID"
+              >
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 组件类型 -->
+          <div class="form-item basic-property">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              组件类型
+              <span class="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help transition-colors duration-200" title="组件类型名称">
+                <svg class="w-4 h-4 inline" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+              </span>
+            </label>
+            <div class="relative">
+              <input
+                [value]="formData.common?.type || ''"
+                readonly
+                class="block w-full pr-10 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-default dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 px-4 py-2"
+                placeholder="无类型"
+              />
+              <button
+                (click)="copyToClipboard(formData.common?.type || '', $event)"
+                class="copy-button"
+                title="复制类型"
+              >
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 组件名称 (可编辑) -->
+          <div class="form-item">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              组件名称
+              <span class="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help transition-colors duration-200" title="自定义组件名称">
+                <svg class="w-4 h-4 inline" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+              </span>
+            </label>
+            <input
+              [(ngModel)]="formData.common.name"
+              (ngModelChange)="onNameChange($event)"
+              placeholder="输入组件名称"
+              class="block w-full text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-600 dark:focus:border-blue-600 px-4 py-2"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 高级属性折叠区 -->
+  <div class="accordion-item mb-4" *ngIf="hasAdvancedProperties()">
+    <button
+      (click)="toggleAdvancedSection()"
+      class="accordion-button flex items-center justify-between w-full px-4 py-3 text-left bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-lg hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/30 dark:hover:to-orange-900/30 transition-all duration-200 shadow-sm hover:shadow-md"
+    >
+      <div class="flex items-center">
+        <svg
+          [class]="{'rotate-180': !advancedSectionCollapsed}"
+          class="w-4 h-4 mr-2 text-amber-600 dark:text-amber-400 transition-transform duration-200"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+        <svg class="w-5 h-5 mr-2 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"/>
+        </svg>
+        <span class="font-medium text-gray-900 dark:text-white">高级属性</span>
+        <span class="ml-2 px-2 py-1 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 rounded-full font-medium">
+          {{ getAdvancedPropertiesCount() }}
+        </span>
+      </div>
+    </button>
+
+    <div [class.hidden]="advancedSectionCollapsed" class="accordion-content mt-2">
+      <div class="p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-lg shadow-inner">
+        <!-- 高级属性提示 -->
+        <div class="mb-4 p-3 bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <p class="text-sm text-amber-800 dark:text-amber-200">
+              这些是高级配置选项，请谨慎修改。不确定时请保持默认值。
+            </p>
+          </div>
+        </div>
+
+        <app-form-container
+          [config]="getAdvancedConfig()"
+          [formData]="formData"
+          (change)="onAttrChange($event)"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- 无搜索结果 -->
+  <div *ngIf="searchTerm && getFilteredConfigLength() === 0" class="text-center py-8">
+    <svg class="mx-auto w-12 h-12 text-gray-400 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <p class="text-gray-500 dark:text-gray-400">没有找到匹配的属性</p>
+    <button
+      (click)="clearSearch()"
+      class="mt-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+    >
+      清除搜索
+    </button>
+  </div>
+
+  <!-- 空状态 -->
+  <div *ngIf="!searchTerm && attrConfig.length === 0" class="text-center py-8">
+    <svg class="mx-auto w-12 h-12 text-gray-400 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+    </svg>
+    <p class="text-gray-500 dark:text-gray-400">此组件暂无可配置属性</p>
+  </div>
+</div>
