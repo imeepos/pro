@@ -85,6 +85,11 @@ export class FlowbiteTextareaComponent implements ControlValueAccessor {
     return `${baseClasses} text-gray-500 dark:text-gray-400`;
   }
 
+  getTextareaId(): string {
+    if (!this.label) return '';
+    return 'textarea-' + this.label.replace(/\s+/g, '-').toLowerCase();
+  }
+
   onValueChange(newValue: string): void {
     this.value = newValue;
     this.onChange(newValue);

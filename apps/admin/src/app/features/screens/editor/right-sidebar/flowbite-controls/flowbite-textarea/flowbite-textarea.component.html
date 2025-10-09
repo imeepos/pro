@@ -1,7 +1,7 @@
 <div class="flowbite-textarea-wrapper">
   @if (label) {
     <label
-      for="textarea-{{ label.replace(/\s+/g, '-').toLowerCase() }}"
+      [for]="getTextareaId()"
       class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300"
       [class.text-red-600]="errorText"
     >
@@ -13,7 +13,7 @@
   }
 
   <textarea
-    [id]="label ? 'textarea-' + label.replace(/\s+/g, '-').toLowerCase() : null"
+    [id]="getTextareaId()"
     [value]="value"
     [placeholder]="placeholder"
     [disabled]="disabled"
@@ -41,7 +41,7 @@
     <p [class]="charCountClasses">
       {{ value?.length || 0 }} / {{ maxLength }}
       @if (isOverLimit) {
-        <span class="ml-1">(超出 {{ Math.abs(remainingChars) }} 字符)</span>
+        <span class="ml-1">(超出 {{ remainingChars * -1 }} 字符)</span>
       }
     </p>
   }

@@ -1,7 +1,7 @@
 <div class="flowbite-input-wrapper">
   @if (label) {
     <label
-      for="input-{{ label.replace(/\s+/g, '-').toLowerCase() }}"
+      [for]="getInputId()"
       class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300"
       [class.text-red-600]="errorText"
     >
@@ -13,7 +13,7 @@
   }
 
   <input
-    [id]="label ? 'input-' + label.replace(/\s+/g, '-').toLowerCase() : null"
+    [id]="getInputId()"
     [type]="type"
     [value]="value"
     [placeholder]="placeholder"

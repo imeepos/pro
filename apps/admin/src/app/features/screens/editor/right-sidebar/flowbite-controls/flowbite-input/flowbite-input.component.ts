@@ -54,6 +54,11 @@ export class FlowbiteInputComponent implements ControlValueAccessor {
     return `${baseClasses} ${sizeClasses[this.size]} ${stateClasses}${customClasses}`;
   }
 
+  getInputId(): string {
+    if (!this.label) return '';
+    return 'input-' + this.label.replace(/\s+/g, '-').toLowerCase();
+  }
+
   onValueChange(newValue: any): void {
     this.value = newValue;
     this.onChange(newValue);
