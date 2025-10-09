@@ -40,7 +40,6 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
 
   // 抓取间隔选项
   crawlIntervalOptions = [
-    { label: '30分钟', value: '30m' },
     { label: '1小时', value: '1h' },
     { label: '2小时', value: '2h' },
     { label: '6小时', value: '6h' },
@@ -137,6 +136,12 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
 
   // 提交表单
   submitForm(): void {
+    console.log('表单提交开始', {
+      valid: this.validateForm.valid,
+      value: this.validateForm.value,
+      errors: this.getFormErrors()
+    });
+
     if (this.validateForm.valid) {
       const formValue = this.validateForm.value;
 
@@ -146,6 +151,7 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
         this.createTask(formValue);
       }
     } else {
+      console.log('表单验证失败', this.validateForm);
       Object.values(this.validateForm.controls).forEach(control => {
         if (control.invalid) {
           control.markAsDirty();
@@ -155,11 +161,25 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
     }
   }
 
+  // 获取表单错误信息（调试用）
+  private getFormErrors(): any {
+    const errors: any = {};
+    Object.keys(this.validateForm.controls).forEach(key => {
+      const control = this.validateForm.get(key);
+      if (control && control.errors) {
+        errors[key] = control.errors;
+      }
+    });
+    return errors;
+  }
+
   // 创建任务
   private createTask(formValue: any): void {
     const dto: CreateWeiboSearchTaskDto = {
       keyword: formValue.keyword,
-      startDate: formValue.startDate.toISOString().split('T')[0],
+      startDate: formValue.startDate instanceof Date ?
+        formValue.startDate.toISOString().split('T')[0] :
+        formValue.startDate,
       crawlInterval: formValue.crawlInterval,
       weiboAccountId: formValue.weiboAccountId,
       enableAccountRotation: formValue.enableAccountRotation
@@ -179,7 +199,9 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
   private updateTask(id: number, formValue: any): void {
     const updates: UpdateWeiboSearchTaskDto = {
       keyword: formValue.keyword,
-      startDate: formValue.startDate.toISOString().split('T')[0],
+      startDate: formValue.startDate instanceof Date ?
+        formValue.startDate.toISOString().split('T')[0] :
+        formValue.startDate,
       crawlInterval: formValue.crawlInterval,
       weiboAccountId: formValue.weiboAccountId,
       enableAccountRotation: formValue.enableAccountRotation,

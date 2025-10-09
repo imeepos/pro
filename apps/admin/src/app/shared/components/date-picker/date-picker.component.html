@@ -86,15 +86,15 @@
         type="button"
         class="day-btn"
         *ngFor="let day of getCalendarDays()"
-        [class.other-month]="!isCurrentMonth(day)"
-        [class.today]="isToday(day)"
-        [class.selected]="isSelected(day)"
-        [class.hovered]="isHovered(day)"
-        [class.disabled]="isDateDisabled(day)"
-        (click)="selectDate(day)"
-        (mouseenter)="onDateHover(day)"
+        [class.other-month]="day && !isCurrentMonth(day)"
+        [class.today]="day && isToday(day)"
+        [class.selected]="day && isSelected(day)"
+        [class.hovered]="day && isHovered(day)"
+        [class.disabled]="day && isDateDisabled(day)"
+        (click)="day && selectDate(day)"
+        (mouseenter)="day && onDateHover(day)"
         (mouseleave)="onDateHover(undefined)"
-        [disabled]="isDateDisabled(day)"
+        [disabled]="day && isDateDisabled(day)"
       >
         {{ day?.getDate() }}
       </button>

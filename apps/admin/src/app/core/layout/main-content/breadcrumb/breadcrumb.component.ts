@@ -29,8 +29,10 @@ export class BreadcrumbComponent implements OnInit, OnDestroy {
     'screens': '大屏管理',
     'editor': '编辑大屏',
     'weibo': '微博管理',
+    'weibo-search-tasks': '微博搜索任务',
     'accounts': '账号列表',
-    'login': '微博登录'
+    'login': '微博登录',
+    'create': '创建'
   };
 
   ngOnInit(): void {
