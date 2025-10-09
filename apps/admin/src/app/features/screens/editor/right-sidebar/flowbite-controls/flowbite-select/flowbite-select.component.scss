@@ -1,0 +1,386 @@
+.flowbite-select-wrapper {
+  @apply w-full;
+}
+
+// Select trigger
+.select-trigger {
+  @apply relative;
+  @apply focus:outline-none;
+  @apply transition-all duration-200;
+
+  &:hover {
+    @apply border-gray-400;
+  }
+
+  &:focus {
+    @apply ring-2 ring-offset-2;
+  }
+
+  &.error {
+    @apply border-red-300;
+
+    &:hover {
+      @apply border-red-400;
+    }
+
+    &:focus {
+      @apply ring-red-500 ring-offset-red-50;
+    }
+  }
+
+  &.disabled {
+    @apply cursor-not-allowed;
+  }
+}
+
+// Dropdown menu
+.dropdown-menu {
+  @apply shadow-xl;
+  @apply border border-gray-200;
+  @apply rounded-lg;
+  @apply overflow-hidden;
+  @apply animate-in fade-in-0 zoom-in-95;
+  @apply duration-200;
+
+  // Custom scrollbar
+  .options-list {
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      @apply bg-gray-100;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      @apply bg-gray-300 rounded hover:bg-gray-400;
+    }
+  }
+}
+
+// Search input
+.search-input-container {
+  @apply border-b border-gray-200;
+  @apply bg-white;
+
+  input {
+    @apply border-0;
+    @apply focus:ring-2 focus:ring-blue-500 focus:ring-inset;
+  }
+}
+
+// Options
+.option {
+  @apply select-none;
+  @apply outline-none;
+  @apply transition-colors duration-150;
+
+  &:hover,
+  &:focus {
+    @apply bg-gray-50;
+  }
+
+  &.selected {
+    @apply bg-blue-50 text-blue-700;
+
+    &:hover,
+    &:focus {
+      @apply bg-blue-100;
+    }
+  }
+
+  &.highlighted {
+    @apply bg-gray-100;
+  }
+
+  &.disabled {
+    @apply opacity-50 cursor-not-allowed;
+
+    &:hover,
+    &:focus {
+      @apply bg-transparent;
+    }
+  }
+}
+
+// Group labels
+.group-label {
+  @apply font-semibold;
+  @apply uppercase;
+  @apply tracking-wider;
+  @apply text-xs;
+  @apply bg-gray-50;
+  @apply text-gray-500;
+  @apply border-b border-gray-200;
+
+  &.disabled {
+    @apply opacity-50;
+  }
+}
+
+// Multiple selection badges
+.selected-badges {
+  @apply flex flex-wrap gap-1;
+  @apply mt-1;
+
+  .badge {
+    @apply inline-flex items-center px-2 py-1;
+    @apply text-xs font-medium;
+    @apply bg-blue-100 text-blue-800;
+    @apply rounded-full;
+  }
+}
+
+// Size variations
+.size-sm {
+  .select-trigger {
+    @apply min-h-[2.5rem];
+  }
+
+  .option {
+    @apply px-3 py-2;
+    @apply text-sm;
+  }
+
+  .group-label {
+    @apply px-3 py-1.5;
+    @apply text-xs;
+  }
+
+  .search-input-container input {
+    @apply px-3 py-1.5;
+    @apply text-sm;
+  }
+}
+
+.size-md {
+  .select-trigger {
+    @apply min-h-[2.75rem];
+  }
+
+  .option {
+    @apply px-4 py-2;
+    @apply text-sm;
+  }
+
+  .group-label {
+    @apply px-4 py-2;
+    @apply text-xs;
+  }
+
+  .search-input-container input {
+    @apply px-4 py-2;
+    @apply text-sm;
+  }
+}
+
+.size-lg {
+  .select-trigger {
+    @apply min-h-[3rem];
+  }
+
+  .option {
+    @apply px-4 py-3;
+    @apply text-base;
+  }
+
+  .group-label {
+    @apply px-4 py-2.5;
+    @apply text-sm;
+  }
+
+  .search-input-container input {
+    @apply px-4 py-3;
+    @apply text-base;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .select-trigger {
+    @apply bg-gray-800 text-gray-100 border-gray-600;
+
+    &:hover {
+      @apply border-gray-500;
+    }
+
+    &:focus {
+      @apply ring-offset-gray-800;
+    }
+  }
+
+  .dropdown-menu {
+    @apply bg-gray-800 border-gray-600;
+  }
+
+  .search-input-container {
+    @apply border-gray-600;
+    @apply bg-gray-700;
+
+    input {
+      @apply bg-gray-700 text-gray-100;
+    }
+  }
+
+  .option {
+    @apply text-gray-100;
+
+    &:hover,
+    &:focus {
+      @apply bg-gray-700;
+    }
+
+    &.selected {
+      @apply bg-blue-900 text-blue-300;
+
+      &:hover,
+      &:focus {
+        @apply bg-blue-800;
+      }
+    }
+  }
+
+  .group-label {
+    @apply bg-gray-700 text-gray-400;
+    @apply border-gray-600;
+  }
+
+  .option-description {
+    @apply text-gray-400;
+  }
+}
+
+// Animations
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-enter {
+  animation: slideDown 0.2s ease-out;
+}
+
+.dropdown-exit {
+  animation: slideUp 0.2s ease-out;
+}
+
+// Focus styles
+.option:focus-visible {
+  @apply outline-none;
+  @apply ring-2 ring-inset ring-blue-500;
+}
+
+// Loading state
+.loading {
+  @apply pointer-events-none;
+  @apply opacity-50;
+
+  .select-trigger::after {
+    content: '';
+    @apply absolute right-10 top-1/2 transform -translate-y-1/2;
+    @apply w-4 h-4 border-2 border-blue-600 border-t-transparent;
+    @apply rounded-full;
+    @apply animate-spin;
+  }
+}
+
+// Empty state
+.empty-state {
+  @apply py-8;
+  @apply text-center;
+  @apply text-gray-500;
+}
+
+// Icon support
+.option-icon {
+  @apply flex-shrink-0;
+  @apply mr-3;
+  @apply text-gray-400;
+}
+
+// Checkbox for multiple selection
+.option-checkbox {
+  @apply w-4 h-4;
+  @apply text-blue-600;
+  @apply border-gray-300;
+  @apply rounded;
+  @apply focus:ring-blue-500;
+}
+
+// Description text
+.option-description {
+  @apply text-xs;
+  @apply text-gray-500;
+  @apply mt-0.5;
+}
+
+// Keyboard navigation highlight
+.keyboard-highlight {
+  @apply bg-gray-100;
+  @apply outline-none;
+}
+
+// Clear button
+.clear-button {
+  @apply p-1;
+  @apply hover:bg-gray-100;
+  @apply rounded;
+  @apply transition-colors duration-150;
+  @apply focus:outline-none;
+  @apply focus:ring-2;
+  @apply focus:ring-blue-500;
+
+  &:hover {
+    @apply text-gray-600;
+  }
+}
+
+// Arrow icon rotation
+.arrow-icon {
+  @apply transition-transform duration-200;
+
+  &.rotate {
+    @apply rotate-180;
+  }
+}
+
+// Custom scrollbar styling
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(209 213 219) rgb(243 244 246);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgb(243 244 246);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgb(209 213 219);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgb(156 163 175);
+    }
+  }
+}

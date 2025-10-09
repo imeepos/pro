@@ -1,0 +1,200 @@
+<div class="flowbite-select-wrapper" [class]="containerClasses" cdkOverlayOrigin>
+  @if (label) {
+    <label
+      [for]="selectId"
+      class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300"
+      [class.text-red-600]="errorText"
+    >
+      {{ label }}
+      @if (required) {
+        <span class="text-red-500 ml-1">*</span>
+      }
+    </label>
+  }
+
+  <div class="relative">
+    <!-- Select Trigger -->
+    <div
+      [id]="selectId"
+      [tabindex]="disabled ? -1 : 0"
+      [class]="triggerClasses"
+      (click)="onToggleDropdown()"
+      (keydown)="onKeydown($event)"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+      role="combobox"
+      [attr.aria-expanded]="isDropdownOpen"
+      [attr.aria-haspopup]="listbox"
+      [attr.aria-disabled]="disabled"
+      [attr.aria-readonly]="readonly"
+    >
+      <div class="flex-1 truncate">
+        <span class="block truncate" [class.text-gray-500]="!value">
+          {{ selectedLabel }}
+        </span>
+      </div>
+
+      <div class="flex items-center space-x-2 ml-2">
+        @if (clearable && value) {
+          <button
+            type="button"
+            class="p-1 hover:bg-gray-100 rounded transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            (click)="onClearValue($event)"
+            tabindex="-1"
+            aria-label="清除选择"
+          >
+            <svg class="w-4 h-4 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        }
+
+        <svg
+          class="w-5 h-5 text-gray-400 transform transition-transform duration-200"
+          [class.rotate-180]="isDropdownOpen"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Dropdown Menu -->
+    @if (isDropdownOpen) {
+      <div
+        [class]="dropdownClasses"
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="overlayOrigin"
+        [cdkConnectedOverlayOpen]="isDropdownOpen"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        (backdropClick)="onToggleDropdown()"
+        (detach)="isDropdownOpen = false"
+      >
+        <!-- Search Input -->
+        @if (searchable) {
+          <div class="search-input-container">
+            <input
+              [id]="selectId + '-search'"
+              type="text"
+              [placeholder]="'搜索...'"
+              [value]="searchQuery"
+              [class]="searchInputClasses"
+              (input)="onSearchChange($event)"
+              (keydown)="onKeydown($event)"
+            />
+          </div>
+        }
+
+        <!-- Options List -->
+        <div class="max-h-60 overflow-y-auto">
+          @for (item of filteredOptions; track $index) {
+            @if ('options' in item) {
+              <!-- Group Header -->
+              <div
+                [class]="groupLabelClasses"
+                [class.opacity-50]="item.disabled"
+              >
+                {{ item.label }}
+              </div>
+
+              <!-- Group Options -->
+              @for (option of item.options; track option.value; let optionIndex = $index) {
+                <div
+                  role="option"
+                  [tabindex]="-1"
+                  [class]="optionClasses"
+                  [class.selected-option]="isOptionSelected(option)"
+                  [class.disabled-option]="option.disabled"
+                  [class.highlighted]="isOptionHighlighted(optionIndex)"
+                  [attr.aria-selected]="isOptionSelected(option)"
+                  [attr.aria-disabled]="option.disabled"
+                  (click)="onOptionSelect(option)"
+                >
+                  <div class="flex items-center flex-1">
+                    @if (option.icon) {
+                      <span class="mr-3 text-gray-400">{{ option.icon }}</span>
+                    }
+
+                    <div class="flex-1">
+                      <div class="font-medium text-gray-900">{{ option.label }}</div>
+                      @if (option.description) {
+                        <div class="text-xs text-gray-500">{{ option.description }}</div>
+                      }
+                    </div>
+
+                    @if (multiple && isOptionSelected(option)) {
+                      <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                      </svg>
+                    } @else if (!multiple && isOptionSelected(option)) {
+                      <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                      </svg>
+                    }
+                  </div>
+                </div>
+              }
+            } @else {
+              <!-- Single Option -->
+              <div
+                role="option"
+                [tabindex]="-1"
+                [class]="optionClasses"
+                [class.selected-option]="isOptionSelected(item)"
+                [class.disabled-option]="item.disabled"
+                [class.highlighted]="isOptionHighlighted($index)"
+                [attr.aria-selected]="isOptionSelected(item)"
+                [attr.aria-disabled]="item.disabled"
+                (click)="onOptionSelect(item)"
+              >
+                <div class="flex items-center flex-1">
+                  @if (item.icon) {
+                    <span class="mr-3 text-gray-400">{{ item.icon }}</span>
+                  }
+
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-900">{{ item.label }}</div>
+                    @if (item.description) {
+                      <div class="text-xs text-gray-500">{{ item.description }}</div>
+                    }
+                  </div>
+
+                  @if (multiple && isOptionSelected(item)) {
+                    <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                  } @else if (!multiple && isOptionSelected(item)) {
+                    <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                  }
+                </div>
+              </div>
+            }
+          }
+
+          @if (filteredOptions.length === 0) {
+            <div class="px-4 py-8 text-center text-gray-500">
+              <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <p>没有找到匹配的选项</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Helper Text -->
+  @if (helperText && !errorText) {
+    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ helperText }}</p>
+  }
+
+  <!-- Error Text -->
+  @if (errorText) {
+    <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errorText }}</p>
+  }
+</div>
