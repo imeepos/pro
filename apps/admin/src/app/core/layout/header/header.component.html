@@ -1,14 +1,16 @@
-<header class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm transition-colors duration-200">
-  <!-- 左侧Logo区域：与Sidebar宽度保持一致 -->
-  <div
-    class="logo-area flex items-center justify-center border-r border-gray-200 dark:border-gray-700 transition-all duration-300"
-    [ngClass]="(collapsed$ | async) ? 'w-16' : 'w-64'">
-    <app-logo [collapsed]="(collapsed$ | async) || false"></app-logo>
-  </div>
+<nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-200">
+  <div class="h-16 flex items-center justify-between">
+    <!-- 左侧Logo区域：与Sidebar宽度保持一致 -->
+    <div
+      class="logo-area flex items-center justify-center border-r border-gray-200 dark:border-gray-700 transition-all duration-300"
+      [ngClass]="(collapsed$ | async) ? 'w-16' : 'w-64'">
+      <app-logo [collapsed]="(collapsed$ | async) || false" (toggleSidebar)="onToggleSidebar()"></app-logo>
+    </div>
 
-  <!-- 右侧功能区域 -->
-  <div class="flex items-center gap-4 px-6">
-    <app-notification />
-    <app-user-info />
+    <!-- 右侧功能区域 -->
+    <div class="flex items-center space-x-4 px-6">
+      <app-notification />
+      <app-user-info />
+    </div>
   </div>
-</header>
+</nav>

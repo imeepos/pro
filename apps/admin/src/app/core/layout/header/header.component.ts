@@ -20,4 +20,8 @@ export class HeaderComponent {
   constructor() {
     console.log('HeaderComponent 构造函数执行成功');
   }
+
+  onToggleSidebar(): void {
+    this.layoutState.toggleSidebar();
+  }
 }

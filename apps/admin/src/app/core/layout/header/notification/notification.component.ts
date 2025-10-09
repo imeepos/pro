@@ -43,6 +43,7 @@ export class NotificationComponent implements OnInit, OnDestroy {
 
   toggleDropdown(): void {
     this.isDropdownOpen = !this.isDropdownOpen;
+    console.log('Notification dropdown toggled. New state:', this.isDropdownOpen);
   }
 
   closeDropdown(): void {

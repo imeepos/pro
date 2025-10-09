@@ -209,6 +209,19 @@ export class EventsListComponent implements OnInit, OnDestroy {
     }
   }
 
+  getFlowbiteStatusClass(status: EventStatus): string {
+    switch (status) {
+      case EventStatus.DRAFT:
+        return 'bg-gray-100 text-gray-800';
+      case EventStatus.PUBLISHED:
+        return 'bg-green-100 text-green-800';
+      case EventStatus.ARCHIVED:
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  }
+
   formatDate(dateStr: string): string {
     if (!dateStr) return '-';
     const date = new Date(dateStr);

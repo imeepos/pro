@@ -1,3 +1,9 @@
-.breadcrumb-link-active {
-  @apply text-gray-900 dark:text-gray-100 font-medium pointer-events-none;
+// Flowbite Breadcrumb 样式增强
+:host {
+  display: block;
+}
+
+// 首页图标样式优化
+svg {
+  flex-shrink: 0;
 }

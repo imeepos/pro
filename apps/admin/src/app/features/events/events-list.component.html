@@ -19,7 +19,7 @@
       <div class="header-right">
         <button
           (click)="createEvent()"
-          class="create-event-btn"
+          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -46,7 +46,7 @@
           <button
             *ngIf="filterParams.keyword"
             (click)="clearSearch()"
-            class="clear-search-btn"
+            class="absolute inset-y-0 right-12 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
             type="button"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,7 +55,7 @@
           </button>
           <button
             (click)="onSearch(filterParams.keyword || '')"
-            class="search-btn"
+            class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
             type="button"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,23 +69,21 @@
       <div class="view-controls">
         <div class="view-switcher">
           <button
-            [class.active]="viewMode === 'list'"
+            [class]="viewMode === 'list' ? 'inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors' : 'inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors'"
             (click)="switchView('list')"
-            class="view-btn"
             type="button"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
             列表
           </button>
           <button
-            [class.active]="viewMode === 'map'"
+            [class]="viewMode === 'map' ? 'inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors' : 'inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors'"
             (click)="switchView('map')"
-            class="view-btn"
             type="button"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
             </svg>
             地图
@@ -144,13 +142,13 @@
         <div *ngIf="!loading && !error && events.length > 0" class="space-y-4">
           <div
             *ngFor="let event of events"
-            class="event-card"
+            class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
           >
             <div class="event-header">
               <div class="event-title-section">
                 <h3 class="event-title">{{ event.eventName }}</h3>
                 <span
-                  [class]="'event-status ' + getStatusClass(event.status)"
+                  [class]="'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' + getFlowbiteStatusClass(event.status)"
                 >
                   {{ getStatusText(event.status) }}
                 </span>
@@ -159,14 +157,14 @@
               <div class="event-actions">
                 <button
                   (click)="viewDetail(event)"
-                  class="action-btn primary"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
                   type="button"
                 >
                   查看
                 </button>
                 <button
                   (click)="editEvent(event)"
-                  class="action-btn secondary"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
                   type="button"
                 >
                   编辑
@@ -174,7 +172,7 @@
                 <button
                   *ngIf="event.status === 0"
                   (click)="publishEvent(event)"
-                  class="action-btn success"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
                   type="button"
                 >
                   发布
@@ -182,14 +180,14 @@
                 <button
                   *ngIf="event.status === 1"
                   (click)="archiveEvent(event)"
-                  class="action-btn secondary"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-yellow-600 bg-yellow-50 rounded-md hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-colors"
                   type="button"
                 >
                   归档
                 </button>
                 <button
                   (click)="openDeleteDialog(event)"
-                  class="action-btn danger"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
                   type="button"
                 >
                   删除
@@ -220,26 +218,26 @@
         </div>
 
         <!-- 分页 -->
-        <div *ngIf="!loading && events.length > 0" class="pagination">
-          <div class="pagination-info">
+        <div *ngIf="!loading && events.length > 0" class="flex items-center justify-between mt-6">
+          <div class="text-sm text-gray-700">
             共 {{ total }} 条记录
           </div>
-          <div class="pagination-controls">
+          <div class="flex items-center gap-2">
             <button
               [disabled]="filterParams.page === 1"
               (click)="onPageChange(filterParams.page! - 1)"
-              class="pagination-btn"
+              [class]="'px-3 py-2 text-sm font-medium rounded-lg transition-colors ' + (filterParams.page === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2')"
               type="button"
             >
               上一页
             </button>
-            <div class="pagination-current">
+            <div class="px-4 py-2 text-sm text-gray-700">
               第 {{ filterParams.page }} 页
             </div>
             <button
               [disabled]="filterParams.page! * filterParams.pageSize! >= total"
               (click)="onPageChange(filterParams.page! + 1)"
-              class="pagination-btn"
+              [class]="'px-3 py-2 text-sm font-medium rounded-lg transition-colors ' + (filterParams.page! * filterParams.pageSize! >= total ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2')"
               type="button"
             >
               下一页

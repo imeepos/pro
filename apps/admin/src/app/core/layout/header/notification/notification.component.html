@@ -38,9 +38,8 @@
 
   <!-- Flowbite Dropdown Menu -->
   <div
-    class="absolute right-0 mt-2 w-80 bg-white divide-y divide-gray-100 rounded-lg shadow-lg dark:bg-gray-700 dark:divide-gray-600 border border-gray-200 dark:border-gray-600 overflow-hidden z-50 dropdown-menu"
-    [class.dropdown-open]="isDropdownOpen"
-    [class.dropdown-closed]="!isDropdownOpen"
+    class="absolute right-0 mt-2 w-80 bg-white divide-y divide-gray-100 rounded-lg shadow-lg dark:bg-gray-700 dark:divide-gray-600 border border-gray-200 dark:border-gray-600 overflow-hidden z-50"
+    [style.display]="isDropdownOpen ? 'block' : 'none'"
   >
     <!-- Dropdown Header -->
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600">
