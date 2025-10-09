@@ -20,8 +20,7 @@ import { JdLoginComponent } from './jd-login.component';
   selector: 'app-jd-accounts',
   standalone: true,
   imports: [CommonModule, JdLoginComponent],
-  templateUrl: './jd-accounts.component.html',
-  styleUrls: ['./jd-accounts.component.scss']
+  templateUrl: './jd-accounts.component.html'
 })
 export class JdAccountsComponent implements OnInit {
   accounts: JdAccount[] = [];
@@ -188,14 +187,14 @@ export class JdAccountsComponent implements OnInit {
   /**
    * 获取状态对应的CSS类
    */
-  getStatusClass(status: string): string {
-    const classMap: Record<string, string> = {
-      'active': 'status-active',
-      'expired': 'status-expired',
-      'restricted': 'status-restricted',
-      'banned': 'status-banned'
+  getStatusClass(status: string): { [key: string]: boolean } {
+    const classMap: Record<string, { [key: string]: boolean }> = {
+      'active': { 'bg-success/10 text-success': true },
+      'expired': { 'bg-warning/10 text-warning': true },
+      'restricted': { 'bg-warning/10 text-warning': true },
+      'banned': { 'bg-error/10 text-error': true }
     };
-    return classMap[status] || '';
+    return classMap[status] || { 'bg-gray-100 text-gray-800': true };
   }
 
   /**

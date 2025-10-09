@@ -1,0 +1,17 @@
+:host {
+  display: block;
+  user-select: none;
+}
+
+canvas {
+  display: block;
+  outline: none;
+
+  &.cursor-col-resize {
+    cursor: col-resize;
+  }
+
+  &.cursor-row-resize {
+    cursor: row-resize;
+  }
+}

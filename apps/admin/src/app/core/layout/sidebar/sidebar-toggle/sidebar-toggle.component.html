@@ -1,8 +1,8 @@
-<div class="toggle-container">
+<div class="flex flex-col items-center gap-2 p-3">
   <button
     type="button"
     (click)="toggle()"
-    class="toggle-button"
+    class="toggle-button w-10 h-10 flex items-center justify-center rounded-lg bg-transparent text-gray-600 dark:text-gray-300 cursor-pointer border-0 outline-none hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white active:scale-95 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-[background-color_200ms_cubic-bezier(0.4,0,0.2,1),color_200ms_cubic-bezier(0.4,0,0.2,1),transform_200ms_cubic-bezier(0.4,0,0.2,1)]"
     [attr.aria-label]="(collapsed$ | async) ? '展开侧边栏' : '收起侧边栏'"
     [title]="(collapsed$ | async) ? '展开侧边栏 (Ctrl+B)' : '收起侧边栏 (Ctrl+B)'"
   >
@@ -14,7 +14,7 @@
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class="icon"
+        class="w-6 h-6 transition-[transform_200ms_cubic-bezier(0.4,0,0.2,1)]"
       >
         <path
           stroke-linecap="round"
@@ -30,7 +30,7 @@
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class="icon"
+        class="w-6 h-6 transition-[transform_200ms_cubic-bezier(0.4,0,0.2,1)]"
       >
         <path
           stroke-linecap="round"
@@ -43,8 +43,8 @@
 
   <!-- 快捷键提示 -->
   @if (!(collapsed$ | async)) {
-    <div class="shortcut-hint">
-      <kbd>Ctrl</kbd><kbd>B</kbd>
+    <div class="shortcut-hint flex flex-col gap-1 opacity-60 text-xs hover:opacity-100 transition-[opacity_200ms_cubic-bezier(0.4,0,0.2,1)]">
+      <kbd class="px-1.5 py-0.5 text-xs font-mono bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">Ctrl</kbd><kbd class="px-1.5 py-0.5 text-xs font-mono bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">B</kbd>
     </div>
   }
 </div>

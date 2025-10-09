@@ -1,12 +1,38 @@
-<svg *ngIf="show" class="grid" width="100%" height="100%">
-  <defs>
-    <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-      <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="0.5"/>
-    </pattern>
-    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-      <rect width="50" height="50" fill="url(#smallGrid)"/>
-      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>
-    </pattern>
-  </defs>
-  <rect width="100%" height="100%" fill="url(#grid)" />
-</svg>
+<ng-container *ngIf="showGrid$ | async">
+  <svg class="absolute top-0 left-0 w-full h-full [pointer-events:none] z-0" width="100%" height="100%">
+    <defs>
+      <!-- 动态小网格 -->
+      <pattern
+        *ngIf="gridConfig$ | async as gridConfig"
+        id="smallGrid"
+        [attr.width]="gridConfig.smallGrid"
+        [attr.height]="gridConfig.smallGrid"
+        patternUnits="userSpaceOnUse">
+        <path
+          [attr.d]="'M ' + gridConfig.smallGrid + ' 0 L 0 0 0 ' + gridConfig.smallGrid"
+          fill="none"
+          [attr.stroke]="(theme$ | async)?.smallGridColor || 'rgba(0,0,0,0.05)'"
+          [attr.stroke-width]="(theme$ | async)?.smallGridWidth || 0.5"/>
+      </pattern>
+
+      <!-- 动态大网格 -->
+      <pattern
+        *ngIf="gridConfig$ | async as gridConfig"
+        id="grid"
+        [attr.width]="gridConfig.largeGrid"
+        [attr.height]="gridConfig.largeGrid"
+        patternUnits="userSpaceOnUse">
+        <rect
+          [attr.width]="gridConfig.largeGrid"
+          [attr.height]="gridConfig.largeGrid"
+          fill="url(#smallGrid)"/>
+        <path
+          [attr.d]="'M ' + gridConfig.largeGrid + ' 0 L 0 0 0 ' + gridConfig.largeGrid"
+          fill="none"
+          [attr.stroke]="(theme$ | async)?.largeGridColor || 'rgba(0,0,0,0.1)'"
+          [attr.stroke-width]="(theme$ | async)?.largeGridWidth || 1"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#grid)" />
+  </svg>
+</ng-container>

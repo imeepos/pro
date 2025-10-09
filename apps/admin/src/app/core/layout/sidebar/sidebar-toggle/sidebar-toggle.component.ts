@@ -6,8 +6,7 @@ import { LayoutStateService } from '../../../services/layout-state.service';
   selector: 'app-sidebar-toggle',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './sidebar-toggle.component.html',
-  styleUrls: ['./sidebar-toggle.component.scss']
+  templateUrl: './sidebar-toggle.component.html'
 })
 export class SidebarToggleComponent {
   private readonly layoutState = inject(LayoutStateService);

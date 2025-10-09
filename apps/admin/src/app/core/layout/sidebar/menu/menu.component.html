@@ -1,7 +1,7 @@
-<nav class="menu-container">
-  <ul class="menu-list">
+<nav class="p-3 overflow-y-auto">
+  <ul class="flex flex-col gap-1">
     @for (menuItem of menuItems; track trackByMenuId($index, menuItem)) {
-      <li class="menu-list-item">
+      <li class="list-none">
         <app-menu-item [item]="menuItem" [collapsed]="collapsed" />
       </li>
     }

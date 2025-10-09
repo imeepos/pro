@@ -1,28 +1,28 @@
-<nav class="breadcrumb-container" aria-label="面包屑导航">
-  <ol class="breadcrumb-list">
-    <li class="breadcrumb-item">
+<nav class="py-3 px-4" aria-label="面包屑导航">
+  <ol class="breadcrumb-list flex items-center space-x-2 text-sm m-0 p-0 [list-style:none]">
+    <li class="flex items-center">
       <a
         routerLink="/"
-        class="breadcrumb-link"
+        class="breadcrumb-link [text-decoration:none] text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer hover:underline transition-[color_200ms_cubic-bezier(0.4,0,0.2,1)]"
         [class.breadcrumb-link-active]="getCurrentUrl() === '/' || getCurrentUrl() === ''">
         首页
       </a>
     </li>
 
     <ng-container *ngFor="let breadcrumb of breadcrumbs; let last = last">
-      <li class="breadcrumb-separator" aria-hidden="true">/</li>
+      <li class="text-gray-400 dark:text-gray-500 select-none" aria-hidden="true">/</li>
 
-      <li class="breadcrumb-item">
+      <li class="flex items-center">
         <a
           *ngIf="!last"
           [routerLink]="breadcrumb.url"
-          class="breadcrumb-link">
+          class="breadcrumb-link [text-decoration:none] text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer hover:underline transition-[color_200ms_cubic-bezier(0.4,0,0.2,1)]">
           {{ breadcrumb.label }}
         </a>
 
         <span
           *ngIf="last"
-          class="breadcrumb-current">
+          class="text-gray-900 dark:text-gray-100 font-semibold">
           {{ breadcrumb.label }}
         </span>
       </li>

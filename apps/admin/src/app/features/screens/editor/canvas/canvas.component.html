@@ -1,6 +1,6 @@
-<div class="canvas-container" (wheel)="onWheel($event)">
+<div class="w-full h-full flex items-center justify-center overflow-auto bg-gray-200" (wheel)="onWheel($event)">
   <div
-    class="canvas-wrapper"
+    class="canvas-wrapper relative flex-shrink-0 max-w-full max-h-full overflow-visible bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.1)]"
     [style.transform]="'scale(' + (scale$ | async) + ')'"
     [style.transform-origin]="'center center'"
     [style.width.px]="(canvasStyle$ | async)?.width"

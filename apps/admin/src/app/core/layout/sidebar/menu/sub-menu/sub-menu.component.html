@@ -1,11 +1,11 @@
-<div [@expandCollapse]="animationState" class="sub-menu-container">
-  <div *ngFor="let child of items" class="sub-menu-item-wrapper">
+<div [@expandCollapse]="animationState" class="w-full">
+  <div *ngFor="let child of items" class="w-full">
     <div
-      class="sub-menu-item"
+      class="sub-menu-item h-10 flex items-center pl-8 pr-3 cursor-pointer rounded-md text-gray-600 hover:bg-gray-50 transition-[background-color_200ms_cubic-bezier(0.4,0,0.2,1),color_200ms_cubic-bezier(0.4,0,0.2,1)]"
       [class.active]="isChildActive(child.route)"
       (click)="navigateToChild(child.route!)"
     >
-      <span class="sub-menu-text">{{ child.label }}</span>
+      <span class="text-[13px] font-medium truncate">{{ child.label }}</span>
     </div>
   </div>
 </div>

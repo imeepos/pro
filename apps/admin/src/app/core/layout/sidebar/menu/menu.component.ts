@@ -9,8 +9,7 @@ import { MenuItemComponent } from './menu-item/menu-item.component';
   selector: 'app-menu',
   standalone: true,
   imports: [CommonModule, MenuItemComponent],
-  templateUrl: './menu.component.html',
-  styleUrls: ['./menu.component.scss']
+  templateUrl: './menu.component.html'
 })
 export class MenuComponent {
   @Input() collapsed: boolean = false;

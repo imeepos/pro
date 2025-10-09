@@ -1,0 +1,92 @@
+<div class="select-container" [class.disabled]="disabled()">
+  <div
+    #trigger
+    class="select-trigger"
+    (click)="toggleDropdown()"
+    (keydown)="onKeydown($event)"
+    [tabindex]="disabled() ? -1 : 0"
+    role="combobox"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-disabled]="disabled()"
+  >
+    <span class="select-value" [class.placeholder]="!selectedOption">
+      {{ displayValue }}
+    </span>
+
+    <div class="select-actions">
+      <button
+        *ngIf="clearable() && selectedOption && !disabled()"
+        type="button"
+        class="select-clear"
+        (click)="clearSelection(); $event.stopPropagation()"
+        aria-label="清除选择"
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <svg class="select-arrow" [class.open]="isOpen()" width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <div
+    #dropdown
+    class="select-dropdown"
+    [class.show]="isOpen()"
+    role="listbox"
+  >
+    <!-- Search input -->
+    <div *ngIf="searchable()" class="select-search">
+      <input
+        type="text"
+        class="select-search-input"
+        [value]="searchTerm()"
+        (input)="onSearchChange($any($event.target).value)"
+        (keydown)="
+          $event.key === 'ArrowDown' ? highlightNext() :
+          $event.key === 'ArrowUp' ? highlightPrevious() :
+          $event.key === 'Enter' ? selectHighlighted() :
+          $event.key === 'Escape' ? closeDropdown() : null
+        "
+        placeholder="搜索..."
+        autocomplete="off"
+      >
+    </div>
+
+    <!-- Loading state -->
+    <div *ngIf="loading()" class="select-loading">
+      <div class="loading-spinner"></div>
+      <span>加载中...</span>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!loading() && filteredOptions.length === 0" class="select-empty">
+      <span>无数据</span>
+    </div>
+
+    <!-- Options list -->
+    <ul class="select-options">
+      <li
+        *ngFor="let option of filteredOptions; let i = index"
+        class="select-option"
+        [class.selected]="option.value === value()"
+        [class.highlighted]="i === highlightedIndex()"
+        [class.disabled]="option.disabled"
+        (click)="selectOption(option)"
+        (mouseenter)="highlightedIndex.set(i)"
+        role="option"
+        [attr.aria-selected]="option.value === value()"
+        [attr.aria-disabled]="option.disabled"
+      >
+        <span class="option-label">{{ option.label }}</span>
+
+        <svg *ngIf="option.value === value()" class="option-check" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </li>
+    </ul>
+  </div>
+</div>
