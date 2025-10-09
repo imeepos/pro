@@ -1,5 +1,8 @@
 <div *ngIf="isVisible && screen"
-     class="fixed inset-0 z-50 overflow-y-auto"
+     id="delete-confirm-modal"
+     tabindex="-1"
+     aria-hidden="true"
+     class="overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
      (click)="onBackdropClick($event)"
      role="dialog"
      aria-modal="true"
@@ -9,34 +12,45 @@
   <!-- 背景遮罩 -->
   <div class="fixed inset-0 bg-gray-900 bg-opacity-50 dark:bg-opacity-80 transition-opacity duration-300"></div>
 
-  <!-- 居中容器 -->
-  <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+  <!-- Flowbite Modal 容器 -->
+  <div class="relative p-4 w-full max-w-lg max-h-full">
+    <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
 
-    <!-- 居中技巧元素 -->
-    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-    <!-- 对话框主体 - Flowbite Modal 样式 -->
-    <div class="relative inline-block align-bottom bg-white dark:bg-gray-700 rounded-lg text-left overflow-hidden shadow-xl transform transition-all duration-300 ease-out sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-
-      <!-- 头部图标和标题 -->
-      <div class="px-6 pt-6 pb-4">
-        <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900">
-          <svg class="w-6 h-6 text-red-600 dark:text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
+      <!-- Flowbite Modal Header -->
+      <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+        <div class="flex items-center space-x-3">
+          <div class="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 dark:bg-red-900">
+            <svg class="w-6 h-6 text-red-600 dark:text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 id="delete-dialog-title" class="text-xl font-semibold text-gray-900 dark:text-white">
+              删除页面确认
+            </h3>
+            <p id="delete-dialog-description" class="text-sm text-gray-600 dark:text-gray-300">
+              确定要删除 <span class="font-medium text-gray-900 dark:text-white">"{{ screen.name }}"</span> 吗？
+            </p>
+          </div>
         </div>
 
-        <h3 id="delete-dialog-title" class="text-lg font-semibold text-center text-gray-900 dark:text-white mb-2">
-          删除页面确认
-        </h3>
+        <!-- 关闭按钮 -->
+        <button
+          type="button"
+          (click)="onCancel()"
+          [disabled]="isSubmitting"
+          class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+          </svg>
+          <span class="sr-only">关闭模态框</span>
+        </button>
+      </div>
 
-        <p id="delete-dialog-description" class="text-sm text-center text-gray-600 dark:text-gray-300">
-          您确定要删除页面 <span class="font-medium text-gray-900 dark:text-white">"{{ screen.name }}"</span> 吗？
-        </p>
-
-        <!-- 危险操作提示 -->
-        <div class="mt-3 flex items-center justify-center space-x-2">
+      <!-- 危险操作提示 -->
+      <div class="px-4 md:px-5 pt-2 pb-4">
+        <div class="flex items-center justify-center space-x-2">
           <svg class="w-4 h-4 text-red-500 dark:text-red-400 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
           </svg>
@@ -45,37 +59,35 @@
       </div>
 
       <!-- 警告信息 -->
-      <div class="mx-6 mb-4">
-        <div class="p-3 rounded-lg"
+      <div class="px-4 md:px-5 mb-4">
+        <div class="p-3 rounded-lg flex items-start space-x-2"
              [ngClass]="{
                'bg-red-100 border border-red-300 dark:bg-red-900/20 dark:border-red-800': warningType === 'published',
                'bg-yellow-100 border border-yellow-300 dark:bg-yellow-900/20 dark:border-yellow-800': warningType === 'default',
                'bg-orange-100 border border-orange-300 dark:bg-orange-900/20 dark:border-orange-800': warningType === 'normal'
              }">
-          <div class="flex items-start">
-            <svg class="w-4 h-4 mt-0.5 mr-2 flex-shrink-0"
-                 [ngClass]="{
-                   'text-red-700 dark:text-red-400': warningType === 'published',
-                   'text-yellow-700 dark:text-yellow-400': warningType === 'default',
-                   'text-orange-700 dark:text-orange-400': warningType === 'normal'
-                 }"
-                 fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-            </svg>
-            <p class="text-xs font-semibold"
+          <svg class="w-4 h-4 mt-0.5 flex-shrink-0"
                [ngClass]="{
-                 'text-red-900 dark:text-red-300': warningType === 'published',
-                 'text-yellow-900 dark:text-yellow-300': warningType === 'default',
-                 'text-orange-900 dark:text-orange-300': warningType === 'normal'
-               }">
-              {{ warningMessage }}
-            </p>
-          </div>
+                 'text-red-700 dark:text-red-400': warningType === 'published',
+                 'text-yellow-700 dark:text-yellow-400': warningType === 'default',
+                 'text-orange-700 dark:text-orange-400': warningType === 'normal'
+               }"
+               fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <p class="text-xs font-semibold"
+             [ngClass]="{
+               'text-red-900 dark:text-red-300': warningType === 'published',
+               'text-yellow-900 dark:text-yellow-300': warningType === 'default',
+               'text-orange-900 dark:text-orange-300': warningType === 'normal'
+             }">
+            {{ warningMessage }}
+          </p>
         </div>
       </div>
 
       <!-- 页面信息 -->
-      <div class="px-6 mb-4">
+      <div class="px-4 md:px-5 mb-4">
         <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 border border-gray-300 dark:border-gray-600">
           <div class="grid grid-cols-2 gap-2 text-xs">
             <div>
@@ -101,7 +113,7 @@
       </div>
 
       <!-- 安全确认输入 -->
-      <div class="px-6 mb-4">
+      <div class="px-4 md:px-5 mb-4">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           请输入页面名称以确认删除
         </label>
@@ -143,7 +155,7 @@
       </div>
 
       <!-- 高级选项 -->
-      <div class="px-6 mb-4">
+      <div class="px-4 md:px-5 mb-4">
         <button
           type="button"
           (click)="toggleAdvancedOptions()"
@@ -162,13 +174,13 @@
         </div>
       </div>
 
-      <!-- 操作按钮 - Flowbite Modal Footer -->
-      <div class="flex items-center justify-end p-4 md:p-5 border-t border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800">
+      <!-- Flowbite Modal Footer -->
+      <div class="flex items-center justify-end p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
         <button
           type="button"
           (click)="onCancel()"
           [disabled]="isSubmitting"
-          class="py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+          class="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
           取消
         </button>
 
@@ -176,7 +188,7 @@
           type="button"
           (click)="onConfirm()"
           [disabled]="!canDelete"
-          class="ms-3 text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+          class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
           <svg *ngIf="isSubmitting" class="w-4 h-4 me-2 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>

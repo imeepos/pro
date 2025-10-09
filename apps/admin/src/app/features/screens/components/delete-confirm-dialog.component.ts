@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, HostListener, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, HostListener, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ScreenPage } from '../../../core/services/screen-api.service';
@@ -9,7 +9,7 @@ import { ScreenPage } from '../../../core/services/screen-api.service';
   imports: [CommonModule, FormsModule],
   templateUrl: './delete-confirm-dialog.component.html'
 })
-export class DeleteConfirmDialogComponent implements OnInit {
+export class DeleteConfirmDialogComponent implements OnInit, OnChanges {
   @Input() screen: ScreenPage | null = null;
   @Input() isVisible = false;
   @Output() confirm = new EventEmitter<void>();
@@ -24,6 +24,15 @@ export class DeleteConfirmDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.reset();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['screen'] && !changes['screen'].firstChange) {
+      this.reset();
+    }
+    if (changes['isVisible'] && changes['isVisible'].currentValue === false) {
+      this.reset();
+    }
   }
 
   @HostListener('document:keydown.escape')
