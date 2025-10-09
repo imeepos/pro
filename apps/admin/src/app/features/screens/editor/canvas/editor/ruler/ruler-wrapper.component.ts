@@ -175,12 +175,24 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
     ]).pipe(
       takeUntil(this.destroy$)
     ).subscribe(([scrollLeft, scrollTop, scale, canvasOffset]) => {
+      const horizontalStart = scrollLeft - canvasOffset.left;
+      const verticalStart = scrollTop - canvasOffset.top;
+
+      console.log('更新标尺位置:', {
+        scrollLeft,
+        scrollTop,
+        scale,
+        canvasOffset,
+        horizontalStart,
+        verticalStart
+      });
+
       if (this.horizontalRuler) {
-        this.horizontalRuler.updateStartPos(scrollLeft - canvasOffset.left, 0);
+        this.horizontalRuler.updateStartPos(horizontalStart, 0);
         this.horizontalRuler.updateScale(scale);
       }
       if (this.verticalRuler) {
-        this.verticalRuler.updateStartPos(0, scrollTop - canvasOffset.top);
+        this.verticalRuler.updateStartPos(0, verticalStart);
         this.verticalRuler.updateScale(scale);
       }
     });
@@ -316,12 +328,46 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
     }
 
     try {
-      const rulerRect = this.elementRef.nativeElement.getBoundingClientRect();
+      // 获取父级容器（canvas-container）的位置
+      const canvasContainer = this.elementRef.nativeElement.closest('.canvas-container');
+      if (!canvasContainer) {
+        console.warn('未找到 canvas-container 元素');
+        return { left: 0, top: 0 };
+      }
+
+      const containerRect = canvasContainer.getBoundingClientRect();
       const canvasRect = this.canvasWrapperRef.getBoundingClientRect();
 
-      // 计算画布相对于标尺容器的偏移量
-      const offsetLeft = canvasRect.left - rulerRect.left;
-      const offsetTop = canvasRect.top - rulerRect.top;
+      // 计算画布在容器中的实际偏移量（考虑缩放）
+      const containerCenterX = containerRect.left + containerRect.width / 2;
+      const containerCenterY = containerRect.top + containerRect.height / 2;
+
+      // 计算画布左上角相对于容器中心的偏移（已考虑缩放）
+      const canvasLeft = containerCenterX - (canvasStyle.width * scale) / 2;
+      const canvasTop = containerCenterY - (canvasStyle.height * scale) / 2;
+
+      // 计算相对于容器左上角的偏移
+      const offsetLeft = canvasLeft - containerRect.left;
+      const offsetTop = canvasTop - containerRect.top;
+
+      console.log('偏移量计算:', {
+        scale,
+        canvasStyle,
+        containerRect: {
+          left: containerRect.left,
+          top: containerRect.top,
+          width: containerRect.width,
+          height: containerRect.height
+        },
+        canvasRect: {
+          left: canvasRect.left,
+          top: canvasRect.top,
+          width: canvasRect.width,
+          height: canvasRect.height
+        },
+        offsetLeft,
+        offsetTop
+      });
 
       return {
         left: offsetLeft,
