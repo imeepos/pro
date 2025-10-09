@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, debounceTime } from 'rxjs';
 import { ComponentItem, ComponentStyle } from '../../models/component.model';
 import { FormMetadata, FormChangeEvent } from '../../models/form-metadata.model';
@@ -9,14 +10,188 @@ import { CanvasService } from '../../canvas/services/canvas.service';
 @Component({
   selector: 'app-style-editor',
   standalone: true,
-  imports: [CommonModule, FormContainerComponent],
+  imports: [CommonModule, FormsModule, FormContainerComponent],
   template: `
-    <div class="style-editor p-4 overflow-y-auto">
-      <app-form-container
-        [config]="styleConfig"
-        [formData]="formData"
-        (change)="onStyleChange($event)"
-      />
+    <div class="style-editor p-4 overflow-y-auto space-y-6">
+      <!-- 位置设置 -->
+      <div class="style-group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="group-header px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+            </svg>
+            位置
+          </h3>
+          <button
+            type="button"
+            (click)="resetGroup('position')"
+            class="text-xs text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors duration-200 flex items-center"
+            title="重置位置设置"
+          >
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            重置
+          </button>
+        </div>
+        <div class="p-4 space-y-4">
+          <app-form-container
+            [config]="positionConfig"
+            [formData]="formData.position"
+            (change)="onPositionChange($event)"
+          />
+        </div>
+      </div>
+
+      <!-- 尺寸设置 -->
+      <div class="style-group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="group-header px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+            </svg>
+            尺寸
+          </h3>
+          <button
+            type="button"
+            (click)="resetGroup('size')"
+            class="text-xs text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors duration-200 flex items-center"
+            title="重置尺寸设置"
+          >
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            重置
+          </button>
+        </div>
+        <div class="p-4 space-y-4">
+          <app-form-container
+            [config]="sizeConfig"
+            [formData]="formData.size"
+            (change)="onSizeChange($event)"
+          />
+        </div>
+      </div>
+
+      <!-- 变换设置 -->
+      <div class="style-group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="group-header px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            变换
+          </h3>
+          <button
+            type="button"
+            (click)="resetGroup('transform')"
+            class="text-xs text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors duration-200 flex items-center"
+            title="重置变换设置"
+          >
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            重置
+          </button>
+        </div>
+        <div class="p-4 space-y-4">
+          <app-form-container
+            [config]="transformConfig"
+            [formData]="formData.transform"
+            (change)="onTransformChange($event)"
+          />
+        </div>
+      </div>
+
+      <!-- 边框设置 -->
+      <div class="style-group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="group-header px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            边框
+          </h3>
+          <button
+            type="button"
+            (click)="resetGroup('border')"
+            class="text-xs text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors duration-200 flex items-center"
+            title="重置边框设置"
+          >
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            重置
+          </button>
+        </div>
+        <div class="p-4 space-y-4">
+          <app-form-container
+            [config]="borderConfig"
+            [formData]="formData.border"
+            (change)="onBorderChange($event)"
+          />
+        </div>
+      </div>
+
+      <!-- 背景设置 -->
+      <div class="style-group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="group-header px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            背景
+          </h3>
+          <button
+            type="button"
+            (click)="resetGroup('background')"
+            class="text-xs text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors duration-200 flex items-center"
+            title="重置背景设置"
+          >
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            重置
+          </button>
+        </div>
+        <div class="p-4 space-y-4">
+          <app-form-container
+            [config]="backgroundConfig"
+            [formData]="formData.background"
+            (change)="onBackgroundChange($event)"
+          />
+        </div>
+      </div>
+
+      <!-- 层级设置 -->
+      <div class="style-group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="group-header px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            层级
+          </h3>
+          <button
+            type="button"
+            (click)="resetGroup('layer')"
+            class="text-xs text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors duration-200 flex items-center"
+            title="重置层级设置"
+          >
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            重置
+          </button>
+        </div>
+        <div class="p-4 space-y-4">
+          <app-form-container
+            [config]="layerConfig"
+            [formData]="formData.layer"
+            (change)="onLayerChange($event)"
+          />
+        </div>
+      </div>
     </div>
   `
 })
@@ -26,13 +201,22 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
   formData: any = {};
   styleConfig: FormMetadata[] = [];
 
+  // 分组配置
+  positionConfig: FormMetadata[] = [];
+  sizeConfig: FormMetadata[] = [];
+  transformConfig: FormMetadata[] = [];
+  borderConfig: FormMetadata[] = [];
+  backgroundConfig: FormMetadata[] = [];
+  layerConfig: FormMetadata[] = [];
+
+  
   private destroy$ = new Subject<void>();
   private changeSubject$ = new Subject<FormChangeEvent>();
 
   constructor(private canvasService: CanvasService) {}
 
   ngOnInit(): void {
-    this.buildStyleConfig();
+    this.buildStyleConfigs();
     this.buildFormData();
     this.setupChangeHandler();
   }
@@ -42,171 +226,158 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private buildStyleConfig(): void {
-    this.styleConfig = [
+  private buildStyleConfigs(): void {
+    // 位置配置
+    this.positionConfig = [
       {
-        type: 'group',
-        label: '位置',
-        key: 'position',
-        children: [
-          {
-            type: 'number',
-            label: 'X坐标',
-            key: ['position', 'left'],
-            min: 0,
-            step: 1,
-            tooltip: '组件在画布上的X坐标'
-          },
-          {
-            type: 'number',
-            label: 'Y坐标',
-            key: ['position', 'top'],
-            min: 0,
-            step: 1,
-            tooltip: '组件在画布上的Y坐标'
-          }
-        ]
+        type: 'number',
+        label: 'X坐标',
+        key: 'left',
+        min: 0,
+        step: 1,
+        tooltip: '组件在画布上的X坐标'
       },
       {
-        type: 'group',
-        label: '尺寸',
-        key: 'size',
-        children: [
-          {
-            type: 'number',
-            label: '宽度',
-            key: ['size', 'width'],
-            min: 1,
-            step: 1,
-            tooltip: '组件宽度'
-          },
-          {
-            type: 'number',
-            label: '高度',
-            key: ['size', 'height'],
-            min: 1,
-            step: 1,
-            tooltip: '组件高度'
-          }
-        ]
+        type: 'number',
+        label: 'Y坐标',
+        key: 'top',
+        min: 0,
+        step: 1,
+        tooltip: '组件在画布上的Y坐标'
+      }
+    ];
+
+    // 尺寸配置
+    this.sizeConfig = [
+      {
+        type: 'number',
+        label: '宽度',
+        key: 'width',
+        min: 1,
+        step: 1,
+        tooltip: '组件宽度'
       },
       {
-        type: 'group',
-        label: '变换',
-        key: 'transform',
-        children: [
-          {
-            type: 'slider',
-            label: '旋转角度',
-            key: ['transform', 'rotate'],
-            min: 0,
-            max: 360,
-            step: 1,
-            tooltip: '组件旋转角度（0-360度）'
-          },
-          {
-            type: 'slider',
-            label: '透明度',
-            key: ['transform', 'opacity'],
-            min: 0,
-            max: 1,
-            step: 0.01,
-            tooltip: '组件透明度（0-1）'
-          }
-        ]
+        type: 'number',
+        label: '高度',
+        key: 'height',
+        min: 1,
+        step: 1,
+        tooltip: '组件高度'
+      }
+    ];
+
+    // 变换配置
+    this.transformConfig = [
+      {
+        type: 'slider',
+        label: '旋转角度',
+        key: 'rotate',
+        min: 0,
+        max: 360,
+        step: 1,
+        tooltip: '组件旋转角度（0-360度）'
       },
       {
-        type: 'group',
-        label: '边框',
-        key: 'border',
-        children: [
-          {
-            type: 'number',
-            label: '边框宽度',
-            key: ['border', 'borderWidth'],
-            min: 0,
-            step: 1,
-            tooltip: '边框宽度（像素）'
-          },
-          {
-            type: 'select',
-            label: '边框样式',
-            key: ['border', 'borderStyle'],
-            options: [
-              { label: '无', value: 'none' },
-              { label: '实线', value: 'solid' },
-              { label: '虚线', value: 'dashed' },
-              { label: '点线', value: 'dotted' }
-            ],
-            tooltip: '边框线条样式'
-          },
-          {
-            type: 'color',
-            label: '边框颜色',
-            key: ['border', 'borderColor'],
-            tooltip: '边框颜色'
-          },
-          {
-            type: 'number',
-            label: '圆角',
-            key: ['border', 'borderRadius'],
-            min: 0,
-            step: 1,
-            tooltip: '边框圆角半径（像素）'
-          }
-        ]
+        type: 'slider',
+        label: '透明度',
+        key: 'opacity',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        tooltip: '组件透明度（0-1）'
+      }
+    ];
+
+    // 边框配置
+    this.borderConfig = [
+      {
+        type: 'number',
+        label: '边框宽度',
+        key: 'borderWidth',
+        min: 0,
+        step: 1,
+        tooltip: '边框宽度（像素）'
       },
       {
-        type: 'group',
-        label: '背景',
-        key: 'background',
-        children: [
-          {
-            type: 'color',
-            label: '背景颜色',
-            key: ['background', 'backgroundColor'],
-            tooltip: '组件背景颜色'
-          },
-          {
-            type: 'input',
-            label: '背景图片',
-            key: ['background', 'backgroundImage'],
-            placeholder: 'url(...) 或图片URL',
-            tooltip: '背景图片URL'
-          }
-        ]
+        type: 'select',
+        label: '边框样式',
+        key: 'borderStyle',
+        options: [
+          { label: '无', value: 'none' },
+          { label: '实线', value: 'solid' },
+          { label: '虚线', value: 'dashed' },
+          { label: '点线', value: 'dotted' },
+          { label: '双线', value: 'double' }
+        ],
+        tooltip: '边框线条样式'
       },
       {
-        type: 'group',
-        label: '层级',
-        key: 'layer',
-        children: [
-          {
-            type: 'number',
-            label: 'Z-Index',
-            key: ['layer', 'zIndex'],
-            min: 0,
-            step: 1,
-            tooltip: '组件层级，数值越大越靠前'
-          }
-        ]
+        type: 'color',
+        label: '边框颜色',
+        key: 'borderColor',
+        tooltip: '边框颜色'
+      },
+      {
+        type: 'number',
+        label: '圆角半径',
+        key: 'borderRadius',
+        min: 0,
+        step: 1,
+        tooltip: '边框圆角半径（像素）'
+      }
+    ];
+
+    // 背景配置
+    this.backgroundConfig = [
+      {
+        type: 'color',
+        label: '背景颜色',
+        key: 'backgroundColor',
+        tooltip: '组件背景颜色'
+      },
+      {
+        type: 'input',
+        label: '背景图片',
+        key: 'backgroundImage',
+        placeholder: 'url(...) 或图片URL',
+        tooltip: '背景图片URL'
+      }
+    ];
+
+    // 层级配置
+    this.layerConfig = [
+      {
+        type: 'number',
+        label: 'Z-Index',
+        key: 'zIndex',
+        min: 0,
+        step: 1,
+        tooltip: '组件层级，数值越大越靠前'
       }
     ];
   }
 
   private buildFormData(): void {
     const style = this.component.style;
+
+    // 处理背景图片，移除 url() 包装
+    const backgroundImageValue = style.backgroundImage || '';
+    const cleanBackgroundImage = backgroundImageValue.startsWith('url(') && backgroundImageValue.endsWith(')')
+      ? backgroundImageValue.slice(4, -1).trim()
+      : backgroundImageValue;
+
     this.formData = {
       position: {
-        left: style.left,
-        top: style.top
+        left: style.left || 0,
+        top: style.top || 0
       },
       size: {
-        width: style.width,
-        height: style.height
+        width: style.width || 100,
+        height: style.height || 100
       },
       transform: {
-        rotate: style.rotate,
+        rotate: style.rotate || 0,
         opacity: style.opacity ?? 1
       },
       border: {
@@ -216,8 +387,8 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         borderRadius: style.borderRadius ?? 0
       },
       background: {
-        backgroundColor: style.backgroundColor ?? '',
-        backgroundImage: style.backgroundImage ?? ''
+        backgroundColor: style.backgroundColor || '',
+        backgroundImage: cleanBackgroundImage
       },
       layer: {
         zIndex: style.zIndex ?? 1
@@ -236,6 +407,115 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
 
   onStyleChange(event: FormChangeEvent): void {
     this.changeSubject$.next(event);
+  }
+
+  // 分组处理方法
+  onPositionChange(event: FormChangeEvent): void {
+    const { keys, value } = event;
+    const property = keys[0] as keyof ComponentStyle;
+    const styleUpdates: Partial<ComponentStyle> = {};
+    if (property === 'left' || property === 'top') {
+      styleUpdates[property] = value;
+      this.canvasService.updateComponentStyle(this.component.id, styleUpdates);
+    }
+  }
+
+  onSizeChange(event: FormChangeEvent): void {
+    const { keys, value } = event;
+    const property = keys[0] as keyof ComponentStyle;
+    const styleUpdates: Partial<ComponentStyle> = {};
+    if (property === 'width' || property === 'height') {
+      styleUpdates[property] = value;
+      this.canvasService.updateComponentStyle(this.component.id, styleUpdates);
+    }
+  }
+
+  onTransformChange(event: FormChangeEvent): void {
+    const { keys, value } = event;
+    const property = keys[0];
+    const styleUpdates: Partial<ComponentStyle> = {};
+    if (property === 'rotate') {
+      styleUpdates.rotate = value;
+    } else if (property === 'opacity') {
+      styleUpdates.opacity = value;
+    }
+    this.canvasService.updateComponentStyle(this.component.id, styleUpdates);
+  }
+
+  onBorderChange(event: FormChangeEvent): void {
+    const { keys, value } = event;
+    const property = keys[0] as keyof ComponentStyle;
+    const styleUpdates: Partial<ComponentStyle> = {};
+    styleUpdates[property] = value as any;
+    this.canvasService.updateComponentStyle(this.component.id, styleUpdates);
+  }
+
+  onBackgroundChange(event: FormChangeEvent): void {
+    const { keys, value } = event;
+    const property = keys[0];
+    const styleUpdates: Partial<ComponentStyle> = {};
+    if (property === 'backgroundColor') {
+      styleUpdates.backgroundColor = value;
+    } else if (property === 'backgroundImage') {
+      styleUpdates.backgroundImage = value && !value.startsWith('url') ? `url(${value})` : value;
+    }
+    this.canvasService.updateComponentStyle(this.component.id, styleUpdates);
+  }
+
+  onLayerChange(event: FormChangeEvent): void {
+    const { keys, value } = event;
+    const property = keys[0];
+    const styleUpdates: Partial<ComponentStyle> = {};
+    if (property === 'zIndex') {
+      styleUpdates.zIndex = value;
+    }
+    this.canvasService.updateComponentStyle(this.component.id, styleUpdates);
+  }
+
+  
+  // 重置功能
+  resetGroup(groupName: string): void {
+    const defaultValues: { [key: string]: any } = {
+      position: { left: 0, top: 0 },
+      size: { width: 100, height: 100 },
+      transform: { rotate: 0, opacity: 1 },
+      border: { borderWidth: 0, borderStyle: 'none', borderColor: '#000000', borderRadius: 0 },
+      background: { backgroundColor: '', backgroundImage: '' },
+      layer: { zIndex: 1 }
+    };
+
+    const groupDefaults = defaultValues[groupName];
+    if (!groupDefaults) return;
+
+    const styleUpdates: Partial<ComponentStyle> = {};
+
+    Object.entries(groupDefaults).forEach(([key, value]) => {
+      if (groupName === 'position' || groupName === 'size') {
+        // 直接使用数值，因为ComponentStyle中定义的是number类型
+        if (key === 'left') styleUpdates.left = value as number;
+        if (key === 'top') styleUpdates.top = value as number;
+        if (key === 'width') styleUpdates.width = value as number;
+        if (key === 'height') styleUpdates.height = value as number;
+      } else if (groupName === 'transform') {
+        if (key === 'rotate') styleUpdates.rotate = value as number;
+        if (key === 'opacity') styleUpdates.opacity = value as number;
+      } else if (groupName === 'border') {
+        if (key === 'borderWidth') styleUpdates.borderWidth = value as number;
+        if (key === 'borderStyle') styleUpdates.borderStyle = value as 'solid' | 'dashed' | 'dotted' | 'none';
+        if (key === 'borderColor') styleUpdates.borderColor = value as string;
+        if (key === 'borderRadius') styleUpdates.borderRadius = value as number;
+      } else if (groupName === 'background') {
+        if (key === 'backgroundColor') styleUpdates.backgroundColor = value as string;
+        if (key === 'backgroundImage') styleUpdates.backgroundImage = value as string;
+      } else if (groupName === 'layer') {
+        styleUpdates.zIndex = value as number;
+      }
+    });
+
+    if (Object.keys(styleUpdates).length > 0) {
+      this.canvasService.updateComponentStyle(this.component.id, styleUpdates);
+      this.buildFormData(); // 重新构建表单数据
+    }
   }
 
   private applyStyleChange(event: FormChangeEvent): void {
