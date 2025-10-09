@@ -2,12 +2,14 @@ import { Component, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CanvasService } from './services/canvas.service';
 import { CanvasQuery } from './services/canvas.query';
+import { RulerGridService } from './services/ruler-grid.service';
 import { EditorComponent } from './editor/editor.component';
+import { RulerWrapperComponent } from './editor/ruler';
 
 @Component({
   selector: 'app-canvas',
   standalone: true,
-  imports: [CommonModule, EditorComponent],
+  imports: [CommonModule, EditorComponent, RulerWrapperComponent],
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.scss']
 })
@@ -17,7 +19,8 @@ export class CanvasComponent {
 
   constructor(
     private canvasService: CanvasService,
-    private query: CanvasQuery
+    private query: CanvasQuery,
+    private rulerGridService: RulerGridService
   ) {}
 
   onWheel(event: WheelEvent): void {
@@ -99,5 +102,39 @@ export class CanvasComponent {
 
   canRedo(): boolean {
     return this.canvasService.canRedo();
+  }
+
+  onRulerSettingsToggle(): void {
+    // 这里可以实现标尺设置面板的显示/隐藏
+    console.log('标尺设置面板切换');
+    // TODO: 实现设置面板
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent): void {
+    // 标尺网格快捷键
+    if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
+      event.preventDefault();
+      this.rulerGridService.toggleRuler();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key === 'g') {
+      event.preventDefault();
+      this.rulerGridService.toggleGrid();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key === ';') {
+      event.preventDefault();
+      this.rulerGridService.clearReferenceLines();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'G') {
+      event.preventDefault();
+      this.rulerGridService.toggleSnapToGrid();
+      return;
+    }
   }
 }

@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Observable, Subject, fromEvent, takeUntil, combineLatest } from 'rxjs';
+import { Observable, Subject, BehaviorSubject, fromEvent, takeUntil, combineLatest } from 'rxjs';
 import { SketchRulerComponent } from './sketch-ruler';
 import { RulerGridService, ReferenceLine } from '../../services/ruler-grid.service';
 import { CanvasQuery } from '../../services/canvas.query';
@@ -133,13 +133,12 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
     this.showGrid$ = this.rulerGridService.showGrid$;
     this.showReferenceLines$ = this.rulerGridService.showReferenceLines$;
     this.scale$ = this.canvasQuery.scale$;
-    this.scrollLeft$ = this.canvasQuery.scrollLeft$;
-    this.scrollTop$ = this.canvasQuery.scrollTop$;
-    this.horizontalLines$ = this.rulerGridService.getHorizontalReferenceLines() ?
-      this.rulerGridService.referenceLines$.pipe(
-        map(lines => lines.filter(line => line.type === 'horizontal'))
-      ) :
-      new Observable<ReferenceLine[]>(observer => observer.next([]));
+    // 简化实现：创建简单的滚动位置观察流
+    this.scrollLeft$ = new BehaviorSubject<number>(0).asObservable();
+    this.scrollTop$ = new BehaviorSubject<number>(0).asObservable();
+    this.horizontalLines$ = this.rulerGridService.referenceLines$.pipe(
+      map(lines => lines.filter(line => line.type === 'horizontal'))
+    );
     this.verticalLines$ = this.rulerGridService.referenceLines$.pipe(
       map(lines => lines.filter(line => line.type === 'vertical'))
     );
