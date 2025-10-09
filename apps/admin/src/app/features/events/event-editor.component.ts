@@ -5,6 +5,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { EventsService } from '../../state/events.service';
 import { TagsService } from '../../state/tags.service';
+import { IndustryTypesService } from '../../state/industry-types.service';
+import { IndustryTypesQuery } from '../../state/industry-types.query';
+import { EventTypesService } from '../../state/event-types.service';
+import { EventTypesQuery } from '../../state/event-types.query';
 import { CreateEventDto, UpdateEventDto, EventStatus, EventDetail } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
 import { SelectComponent } from '../../shared/components/select';
@@ -39,14 +43,8 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   selectedTagIds: string[] = [];
   attachments: any[] = [];
 
-  // 下拉选择选项（临时数据，实际应从服务获取）
-  industryTypeOptions: SelectOption[] = [
-    { value: '', label: '请选择行业类型' }
-  ];
-
-  eventTypeOptions: SelectOption[] = [
-    { value: '', label: '请选择事件类型' }
-  ];
+  industryTypeOptions: SelectOption[] = [];
+  eventTypeOptions: SelectOption[] = [];
 
   private destroy$ = new Subject<void>();
 
@@ -56,6 +54,10 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     private router: Router,
     private eventsService: EventsService,
     private tagsService: TagsService,
+    private industryTypesService: IndustryTypesService,
+    private industryTypesQuery: IndustryTypesQuery,
+    private eventTypesService: EventTypesService,
+    private eventTypesQuery: EventTypesQuery,
     private toastService: ToastService
   ) {
     this.eventForm = this.fb.group({
@@ -76,6 +78,9 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.loadIndustryTypes();
+    this.loadEventTypes();
+
     this.route.params.pipe(
       takeUntil(this.destroy$)
     ).subscribe(params => {
@@ -93,6 +98,32 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  loadIndustryTypes(): void {
+    this.industryTypesService.loadIndustryTypes().subscribe();
+
+    this.industryTypesQuery.industryTypes$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(types => {
+      this.industryTypeOptions = types.map(type => ({
+        value: String(type.id),
+        label: type.industryName
+      }));
+    });
+  }
+
+  loadEventTypes(): void {
+    this.eventTypesService.loadEventTypes().subscribe();
+
+    this.eventTypesQuery.eventTypes$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(types => {
+      this.eventTypeOptions = types.map(type => ({
+        value: String(type.id),
+        label: type.eventName
+      }));
+    });
   }
 
   loadEvent(): void {
