@@ -11,9 +11,9 @@ import { SaveError } from './services/canvas.store';
     <div class="canvas-error-handler" *ngIf="showErrorPanel$ | async">
       <!-- 网络状态提示 -->
       <div class="network-status"
-           [class.online]="(networkStatus$ | async)?.isOnline"
-           [class.offline]="!(networkStatus$ | async)?.isOnline">
-        <mat-icon>{{ (networkStatus$ | async)?.isOnline ? 'wifi' : 'wifi_off' }}</mat-icon>
+           [class.online]="(networkStatus$ | async) === 'online'"
+           [class.offline]="(networkStatus$ | async) === 'offline'">
+        <mat-icon>{{ (networkStatus$ | async) === 'online' ? 'wifi' : 'wifi_off' }}</mat-icon>
         <span>{{ getNetworkStatusMessage() }}</span>
       </div>
 
@@ -174,7 +174,7 @@ export class CanvasErrorHandlerComponent implements OnInit, OnDestroy {
   saveStatus$: Observable<string>;
   saveError$: Observable<SaveError | null>;
   retryCount$: Observable<number>;
-  networkStatus$: Observable<{ isOnline: boolean; status: string }>;
+  networkStatus$: Observable<string>;
   isRetrying$: Observable<boolean>;
   canRetry$: Observable<boolean>;
   showErrorPanel$: Observable<boolean>;
