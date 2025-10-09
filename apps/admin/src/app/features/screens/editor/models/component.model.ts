@@ -11,6 +11,8 @@ export interface ComponentItem {
   children?: ComponentItem[];
   hasError?: boolean;
   errorInfo?: ComponentErrorInfo;
+  dataSlotId?: string;
+  enableDataSource?: boolean;
 }
 
 export interface ComponentErrorInfo {
