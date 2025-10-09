@@ -26,7 +26,7 @@ COPY apps/crawler/package.json ./apps/crawler/
 
 # 安装依赖
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm install --no-frozen-lockfile
 
 # 暴露端口
 EXPOSE 3001
@@ -71,7 +71,7 @@ COPY apps/crawler/package.json ./apps/crawler/
 # 只有 package.json 或 lockfile 变化时才会重新执行
 # ============================================
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm install --no-frozen-lockfile
 
 # ============================================
 # 第三层：复制基础 TypeScript 配置
@@ -183,7 +183,7 @@ COPY --chown=nestjs:nodejs apps/crawler/package.json ./apps/crawler/
 
 # 安装生产依赖（使用 BuildKit cache mount）
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --prod --frozen-lockfile
+    pnpm install --prod --no-frozen-lockfile
 
 # 从构建阶段复制编译后的代码
 COPY --from=builder --chown=nestjs:nodejs /app/packages/types/dist ./packages/types/dist
