@@ -1,0 +1,212 @@
+.flowbite-color-wrapper {
+  @apply w-full;
+}
+
+// Color picker button
+.color-picker-button {
+  @apply relative overflow-hidden;
+  @apply transition-all duration-200;
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+
+  &:hover {
+    @apply transform scale-105;
+  }
+
+  &:active {
+    @apply transform scale-95;
+  }
+
+  &.disabled {
+    @apply opacity-50 cursor-not-allowed;
+
+    &:hover {
+      @apply transform scale-100;
+    }
+
+    &:active {
+      @apply transform scale-100;
+    }
+  }
+}
+
+// Color preview
+.color-preview {
+  @apply absolute inset-1 rounded;
+  @apply border border-white/20;
+  @apply shadow-inner;
+}
+
+// Transparent background pattern
+.transparent-pattern {
+  background-image:
+    linear-gradient(45deg, #ccc 25%, transparent 25%),
+    linear-gradient(-45deg, #ccc 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ccc 75%),
+    linear-gradient(-45deg, transparent 75%, #ccc 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+// Swatches grid
+.swatches-grid {
+  @apply grid gap-2;
+
+  &.cols-3 {
+    @apply grid-cols-3;
+  }
+
+  &.cols-4 {
+    @apply grid-cols-4;
+  }
+
+  &.cols-5 {
+    @apply grid-cols-5;
+  }
+
+  &.cols-6 {
+    @apply grid-cols-6;
+  }
+
+  &.cols-8 {
+    @apply grid-cols-8;
+  }
+}
+
+// Individual swatch
+.color-swatch {
+  @apply relative border-2 border-gray-200 rounded;
+  @apply transition-all duration-200;
+  @apply cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1;
+
+  &:hover {
+    @apply border-blue-400 transform scale-110;
+  }
+
+  &:focus-visible {
+    @apply border-blue-500;
+  }
+
+  &.selected {
+    @apply border-blue-500 ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  &.disabled {
+    @apply opacity-50 cursor-not-allowed;
+
+    &:hover {
+      @apply transform scale-100 border-gray-200;
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .color-swatch {
+    @apply border-gray-600;
+  }
+
+  .color-swatch:hover {
+    @apply border-blue-400;
+  }
+
+  .color-picker-button {
+    @apply focus:ring-offset-gray-800;
+  }
+
+  :host ::ng-deep input[type="text"] {
+    @apply bg-gray-800 text-gray-100 border-gray-600;
+  }
+
+  :host ::ng-deep input[type="text"]:focus {
+    @apply bg-gray-800 text-gray-100;
+  }
+
+  :host ::ng-deep input[type="text"]:disabled {
+    @apply bg-gray-700 text-gray-400;
+  }
+}
+
+// Size variations
+.size-sm {
+  .color-picker-button {
+    @apply w-8 h-8;
+  }
+
+  .color-swatch {
+    @apply w-6 h-6;
+  }
+}
+
+.size-md {
+  .color-picker-button {
+    @apply w-10 h-10;
+  }
+
+  .color-swatch {
+    @apply w-8 h-8;
+  }
+}
+
+.size-lg {
+  .color-picker-button {
+    @apply w-12 h-12;
+  }
+
+  .color-swatch {
+    @apply w-10 h-10;
+  }
+}
+
+// Input field styling
+.hex-input {
+  @apply font-mono text-sm;
+  @apply uppercase;
+}
+
+// Custom scrollbar for overflow swatches
+.swatches-container {
+  @apply max-h-32 overflow-y-auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    @apply bg-gray-100 rounded;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded hover:bg-gray-400;
+  }
+}
+
+// Animation for swatch selection
+.swatch-selection-indicator {
+  @apply absolute inset-0 flex items-center justify-center;
+  @apply bg-black/20 rounded;
+  @apply transition-opacity duration-200;
+}
+
+// Loading state
+.loading-state {
+  @apply animate-pulse;
+  @apply bg-gray-200;
+}
+
+// Error state
+.error-state {
+  @apply border-red-300;
+
+  &:focus {
+    @apply ring-red-500 border-red-500;
+  }
+}
+
+// Success state (for future use)
+.success-state {
+  @apply border-green-300;
+
+  &:focus {
+    @apply ring-green-500 border-green-500;
+  }
+}
