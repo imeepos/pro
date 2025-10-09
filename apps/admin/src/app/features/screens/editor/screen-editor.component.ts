@@ -10,7 +10,6 @@ import { ScreenPage, UpdateScreenDto } from '../../../core/services/screen-api.s
 import { ComponentRegistryService } from '../../../core/services/component-registry.service';
 import { CanvasComponent } from './canvas/canvas.component';
 import { LayerPanelComponent } from './canvas/layer-panel/layer-panel.component';
-import { CanvasConfigPanelComponent } from './canvas/config-panel/canvas-config-panel.component';
 import { RightSidebarComponent } from './right-sidebar/right-sidebar.component';
 import { CanvasService } from './canvas/services/canvas.service';
 import { CanvasQuery } from './canvas/services/canvas.query';
@@ -31,7 +30,7 @@ interface ToastMessage {
 @Component({
   selector: 'app-screen-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, CanvasComponent, LayerPanelComponent, CanvasConfigPanelComponent, RightSidebarComponent],
+  imports: [CommonModule, FormsModule, CanvasComponent, LayerPanelComponent, RightSidebarComponent],
   templateUrl: './screen-editor.component.html',
   styleUrls: ['./screen-editor.component.scss'],
   animations: [
