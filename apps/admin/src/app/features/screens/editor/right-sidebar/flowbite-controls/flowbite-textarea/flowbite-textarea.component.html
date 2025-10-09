@@ -39,7 +39,7 @@
 
   @if (showCharCount && maxLength) {
     <p [class]="charCountClasses">
-      {{ value?.length || 0 }} / {{ maxLength }}
+      {{ (value && value.length) || 0 }} / {{ maxLength }}
       @if (isOverLimit) {
         <span class="ml-1">(超出 {{ remainingChars * -1 }} 字符)</span>
       }
