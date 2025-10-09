@@ -142,11 +142,26 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* Improved animations and transitions */
+/* Ensure left alignment for select text */
 .trigger-button {
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
+  justify-content: space-between; /* 左右分布，文本左对齐，图标右对齐 */
+
+  .select-text {
+    text-align: left;
+    justify-content: flex-start;
+    flex: 1; /* 确保文本区域占据剩余空间 */
+  }
+
+  .right-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem; /* gap-1 */
+    margin-left: 0.5rem; /* ml-2 */
+    flex-shrink: 0; /* 防止压缩 */
+  }
 
   &:hover:not(:disabled) {
     transform: translateY(-0.5px);
@@ -157,6 +172,7 @@ button:focus-visible {
     transform: translateY(0);
   }
 }
+
 
 /* Search input enhancements */
 .search-input {
