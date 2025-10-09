@@ -1,10 +1,12 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, debounceTime } from 'rxjs';
 import { ComponentItem, ComponentStyle } from '../../models/component.model';
-import { FormMetadata, FormChangeEvent } from '../../models/form-metadata.model';
+import { FormMetadata, FormChangeEvent, ValidationResult } from '../../models/form-metadata.model';
 import { FormContainerComponent } from '../form-controls/form-container.component';
+import { FormItemComponent } from '../form-controls/form-item.component';
+import { ValidationService } from '../../services/validation.service';
 import { CanvasService } from '../../canvas/services/canvas.service';
 
 @Component({
@@ -13,6 +15,35 @@ import { CanvasService } from '../../canvas/services/canvas.service';
   imports: [CommonModule, FormsModule, FormContainerComponent],
   template: `
     <div class="style-editor p-4 overflow-y-auto space-y-6">
+      <!-- 验证摘要 -->
+      <div
+        *ngIf="showValidationSummary && !isFormValid"
+        class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+      >
+        <div class="flex items-start">
+          <svg class="w-5 h-5 text-red-400 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <div class="flex-1">
+            <h3 class="text-sm font-medium text-red-800 dark:text-red-200">验证失败</h3>
+            <div class="mt-1 text-sm text-red-700 dark:text-red-300">
+              <p>请修正以下问题后再继续操作：</p>
+              <ul class="mt-1 ml-4 list-disc space-y-1">
+                <li *ngFor="let error of getValidationErrors()">{{ error }}</li>
+              </ul>
+            </div>
+          </div>
+          <button
+            (click)="showValidationSummary = false"
+            class="ml-3 text-red-400 hover:text-red-600 dark:hover:text-red-300"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <!-- 位置设置 -->
       <div class="style-group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="group-header px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
@@ -209,16 +240,26 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
   backgroundConfig: FormMetadata[] = [];
   layerConfig: FormMetadata[] = [];
 
-  
+  // 验证相关
+  validationResults: { [key: string]: ValidationResult } = {};
+  isFormValid: boolean = true;
+  showValidationSummary: boolean = false;
+
+  @ViewChildren(FormItemComponent) formItems!: QueryList<FormItemComponent>;
+
   private destroy$ = new Subject<void>();
   private changeSubject$ = new Subject<FormChangeEvent>();
 
-  constructor(private canvasService: CanvasService) {}
+  constructor(
+    private canvasService: CanvasService,
+    private validationService: ValidationService
+  ) {}
 
   ngOnInit(): void {
     this.buildStyleConfigs();
     this.buildFormData();
     this.setupChangeHandler();
+    this.setupValidation();
   }
 
   ngOnDestroy(): void {
@@ -235,7 +276,13 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         key: 'left',
         min: 0,
         step: 1,
-        tooltip: '组件在画布上的X坐标'
+        tooltip: '组件在画布上的X坐标',
+        required: true,
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.min(0, 'X坐标不能小于0'),
+          ValidationService.createRules.required('X坐标为必填项')
+        ]
       },
       {
         type: 'number',
@@ -243,7 +290,13 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         key: 'top',
         min: 0,
         step: 1,
-        tooltip: '组件在画布上的Y坐标'
+        tooltip: '组件在画布上的Y坐标',
+        required: true,
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.min(0, 'Y坐标不能小于0'),
+          ValidationService.createRules.required('Y坐标为必填项')
+        ]
       }
     ];
 
@@ -255,7 +308,14 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         key: 'width',
         min: 1,
         step: 1,
-        tooltip: '组件宽度'
+        tooltip: '组件宽度',
+        required: true,
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.min(1, '宽度不能小于1像素'),
+          ValidationService.createRules.max(5000, '宽度不能超过5000像素'),
+          ValidationService.createRules.required('宽度为必填项')
+        ]
       },
       {
         type: 'number',
@@ -263,7 +323,14 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         key: 'height',
         min: 1,
         step: 1,
-        tooltip: '组件高度'
+        tooltip: '组件高度',
+        required: true,
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.min(1, '高度不能小于1像素'),
+          ValidationService.createRules.max(5000, '高度不能超过5000像素'),
+          ValidationService.createRules.required('高度为必填项')
+        ]
       }
     ];
 
@@ -276,7 +343,11 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         min: 0,
         max: 360,
         step: 1,
-        tooltip: '组件旋转角度（0-360度）'
+        tooltip: '组件旋转角度（0-360度）',
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.range(0, 360, '旋转角度必须在0-360度之间')
+        ]
       },
       {
         type: 'slider',
@@ -285,7 +356,11 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         min: 0,
         max: 1,
         step: 0.01,
-        tooltip: '组件透明度（0-1）'
+        tooltip: '组件透明度（0-1）',
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.range(0, 1, '透明度必须在0-1之间')
+        ]
       }
     ];
 
@@ -297,7 +372,12 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         key: 'borderWidth',
         min: 0,
         step: 1,
-        tooltip: '边框宽度（像素）'
+        tooltip: '边框宽度（像素）',
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.min(0, '边框宽度不能小于0'),
+          ValidationService.createRules.max(50, '边框宽度不能超过50像素')
+        ]
       },
       {
         type: 'select',
@@ -310,13 +390,18 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
           { label: '点线', value: 'dotted' },
           { label: '双线', value: 'double' }
         ],
-        tooltip: '边框线条样式'
+        tooltip: '边框线条样式',
+        realtimeValidation: true
       },
       {
         type: 'color',
         label: '边框颜色',
         key: 'borderColor',
-        tooltip: '边框颜色'
+        tooltip: '边框颜色',
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.color('请输入有效的颜色值')
+        ]
       },
       {
         type: 'number',
@@ -324,7 +409,12 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         key: 'borderRadius',
         min: 0,
         step: 1,
-        tooltip: '边框圆角半径（像素）'
+        tooltip: '边框圆角半径（像素）',
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.min(0, '圆角半径不能小于0'),
+          ValidationService.createRules.max(500, '圆角半径不能超过500像素')
+        ]
       }
     ];
 
@@ -334,14 +424,23 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         type: 'color',
         label: '背景颜色',
         key: 'backgroundColor',
-        tooltip: '组件背景颜色'
+        tooltip: '组件背景颜色',
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.color('请输入有效的颜色值')
+        ]
       },
       {
         type: 'input',
         label: '背景图片',
         key: 'backgroundImage',
         placeholder: 'url(...) 或图片URL',
-        tooltip: '背景图片URL'
+        tooltip: '背景图片URL',
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.url('请输入有效的图片URL地址'),
+          ValidationService.createRules.maxLength(500, 'URL长度不能超过500个字符')
+        ]
       }
     ];
 
@@ -353,7 +452,12 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
         key: 'zIndex',
         min: 0,
         step: 1,
-        tooltip: '组件层级，数值越大越靠前'
+        tooltip: '组件层级，数值越大越靠前',
+        realtimeValidation: true,
+        validationRules: [
+          ValidationService.createRules.min(0, 'Z-Index不能小于0'),
+          ValidationService.createRules.max(9999, 'Z-Index不能超过9999')
+        ]
       }
     ];
   }
@@ -547,5 +651,84 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
     if (Object.keys(styleUpdates).length > 0) {
       this.canvasService.updateComponentStyle(this.component.id, styleUpdates);
     }
+  }
+
+  // 验证相关方法
+  private setupValidation(): void {
+    // 初始化验证结果
+    this.validateAllFields();
+  }
+
+  onValidationChange(event: { keys: string[]; result: ValidationResult }): void {
+    const fieldKey = event.keys.join('.');
+    this.validationResults[fieldKey] = event.result;
+    this.updateFormValidationStatus();
+  }
+
+  private updateFormValidationStatus(): void {
+    this.isFormValid = this.validationService.isFormValid(this.validationResults);
+
+    if (!this.isFormValid) {
+      this.showValidationSummary = true;
+    }
+  }
+
+  private validateAllFields(): void {
+    const allConfigs = [
+      ...this.positionConfig,
+      ...this.sizeConfig,
+      ...this.transformConfig,
+      ...this.borderConfig,
+      ...this.backgroundConfig,
+      ...this.layerConfig
+    ];
+
+    this.validationResults = this.validationService.validateForm(this.formData, allConfigs);
+    this.updateFormValidationStatus();
+  }
+
+  getValidationErrors(): string[] {
+    const errors: string[] = [];
+
+    Object.entries(this.validationResults).forEach(([field, result]) => {
+      if (!result.isValid && result.message) {
+        errors.push(result.message);
+      }
+    });
+
+    return errors;
+  }
+
+  // 公共验证方法
+  public validateForm(): boolean {
+    this.validateAllFields();
+
+    // 强制显示所有表单项的验证错误
+    if (this.formItems) {
+      this.formItems.forEach(item => {
+        if (!item.isValid()) {
+          item.validate();
+        }
+      });
+    }
+
+    this.showValidationSummary = !this.isFormValid;
+    return this.isFormValid;
+  }
+
+  public resetValidation(): void {
+    this.validationResults = {};
+    this.isFormValid = true;
+    this.showValidationSummary = false;
+
+    if (this.formItems) {
+      this.formItems.forEach(item => {
+        item.reset();
+      });
+    }
+  }
+
+  public isFormValidating(): boolean {
+    return !this.isFormValid;
   }
 }

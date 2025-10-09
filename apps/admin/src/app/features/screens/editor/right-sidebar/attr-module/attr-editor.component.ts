@@ -1,10 +1,12 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, debounceTime } from 'rxjs';
 import { ComponentItem } from '../../models/component.model';
-import { FormMetadata, FormChangeEvent } from '../../models/form-metadata.model';
+import { FormMetadata, FormChangeEvent, ValidationResult } from '../../models/form-metadata.model';
 import { FormContainerComponent } from '../form-controls/form-container.component';
+import { FormItemComponent } from '../form-controls/form-item.component';
+import { ValidationService } from '../../services/validation.service';
 import { CanvasService } from '../../canvas/services/canvas.service';
 import { ComponentRegistryService } from '../../../../../core/services/component-registry.service';
 
@@ -25,13 +27,21 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
   basicSectionCollapsed: boolean = false;
   advancedSectionCollapsed: boolean = true;
 
+  // 验证相关
+  validationResults: { [key: string]: ValidationResult } = {};
+  isFormValid: boolean = true;
+  showValidationSummary: boolean = false;
+
+  @ViewChildren(FormItemComponent) formItems!: QueryList<FormItemComponent>;
+
   private destroy$ = new Subject<void>();
   private changeSubject$ = new Subject<FormChangeEvent>();
   private searchSubject$ = new Subject<string>();
 
   constructor(
     private canvasService: CanvasService,
-    private componentRegistry: ComponentRegistryService
+    private componentRegistry: ComponentRegistryService,
+    private validationService: ValidationService
   ) {}
 
   ngOnInit(): void {
@@ -39,6 +49,7 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
     this.buildFormData();
     this.setupChangeHandler();
     this.setupSearchHandler();
+    this.setupValidation();
     this.filteredAttrConfig = [...this.attrConfig];
   }
 
@@ -75,7 +86,15 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
             label: '组件名称',
             key: ['common', 'name'],
             placeholder: '输入组件名称',
-            tooltip: '自定义组件名称'
+            tooltip: '自定义组件名称',
+            required: true,
+            realtimeValidation: true,
+            validationRules: [
+              ValidationService.createRules.required('组件名称为必填项'),
+              ValidationService.createRules.minLength(2, '组件名称至少需要2个字符'),
+              ValidationService.createRules.maxLength(50, '组件名称不能超过50个字符'),
+              ValidationService.createRules.pattern('^[a-zA-Z0-9_\\u4e00-\\u9fa5\\s-]+$', '组件名称只能包含字母、数字、下划线、中文、空格和连字符')
+            ]
           }
         ]
       }
@@ -103,25 +122,38 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
         type: formType,
         label: config.label || key,
         key: ['config', key],
-        tooltip: config.description
+        tooltip: config.description,
+        realtimeValidation: true
       };
 
+      // 根据配置类型设置验证规则
       switch (config.type) {
         case 'string':
           formItem.type = config.multiline ? 'textarea' : 'input';
           formItem.placeholder = config.placeholder;
+          formItem.validationRules = this.buildStringValidationRules(config);
+          if (config.required) {
+            formItem.required = true;
+          }
           break;
         case 'number':
           formItem.type = 'number';
           formItem.min = config.min;
           formItem.max = config.max;
           formItem.step = config.step;
+          formItem.validationRules = this.buildNumberValidationRules(config);
+          if (config.required) {
+            formItem.required = true;
+          }
           break;
         case 'boolean':
           formItem.type = 'switch';
           break;
         case 'color':
           formItem.type = 'color';
+          formItem.validationRules = [
+            ValidationService.createRules.color('请输入有效的颜色值')
+          ];
           break;
         case 'select':
           formItem.type = 'select';
@@ -132,6 +164,27 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
           formItem.min = config.min;
           formItem.max = config.max;
           formItem.step = config.step;
+          formItem.validationRules = this.buildNumberValidationRules(config);
+          break;
+        case 'url':
+          formItem.type = 'input';
+          formItem.placeholder = config.placeholder || 'https://example.com';
+          formItem.validationRules = [
+            ValidationService.createRules.url('请输入有效的URL地址')
+          ];
+          if (config.required) {
+            formItem.required = true;
+          }
+          break;
+        case 'email':
+          formItem.type = 'input';
+          formItem.placeholder = config.placeholder || 'email@example.com';
+          formItem.validationRules = [
+            ValidationService.createRules.email('请输入有效的邮箱地址')
+          ];
+          if (config.required) {
+            formItem.required = true;
+          }
           break;
       }
 
@@ -139,6 +192,50 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
     }
 
     return formItems;
+  }
+
+  private buildStringValidationRules(config: any): any[] {
+    const rules: any[] = [];
+
+    if (config.required) {
+      rules.push(ValidationService.createRules.required(`${config.label || '此字段'}为必填项`));
+    }
+
+    if (config.minLength) {
+      rules.push(ValidationService.createRules.minLength(config.minLength, `长度不能少于${config.minLength}个字符`));
+    }
+
+    if (config.maxLength) {
+      rules.push(ValidationService.createRules.maxLength(config.maxLength, `长度不能超过${config.maxLength}个字符`));
+    }
+
+    if (config.pattern) {
+      rules.push(ValidationService.createRules.pattern(config.pattern, config.patternMessage || '格式不正确'));
+    }
+
+    return rules;
+  }
+
+  private buildNumberValidationRules(config: any): any[] {
+    const rules: any[] = [];
+
+    if (config.required) {
+      rules.push(ValidationService.createRules.required(`${config.label || '此字段'}为必填项`));
+    }
+
+    if (config.min !== undefined) {
+      rules.push(ValidationService.createRules.min(config.min, `值不能小于${config.min}`));
+    }
+
+    if (config.max !== undefined) {
+      rules.push(ValidationService.createRules.max(config.max, `值不能大于${config.max}`));
+    }
+
+    if (config.min !== undefined && config.max !== undefined) {
+      rules.push(ValidationService.createRules.range(config.min, config.max, `值必须在${config.min}到${config.max}之间`));
+    }
+
+    return rules;
   }
 
   private buildFormData(): void {
@@ -344,5 +441,75 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
         }, 1000);
       }
     });
+  }
+
+  // 验证相关方法
+  private setupValidation(): void {
+    // 初始化验证结果
+    this.validateAllFields();
+  }
+
+  onValidationChange(event: { keys: string[]; result: ValidationResult }): void {
+    const fieldKey = event.keys.join('.');
+    this.validationResults[fieldKey] = event.result;
+    this.updateFormValidationStatus();
+  }
+
+  private updateFormValidationStatus(): void {
+    this.isFormValid = this.validationService.isFormValid(this.validationResults);
+
+    if (!this.isFormValid) {
+      this.showValidationSummary = true;
+    }
+  }
+
+  private validateAllFields(): void {
+    this.validationResults = this.validationService.validateForm(this.formData, this.attrConfig);
+    this.updateFormValidationStatus();
+  }
+
+  getValidationErrors(): string[] {
+    const errors: string[] = [];
+
+    Object.entries(this.validationResults).forEach(([field, result]) => {
+      if (!result.isValid && result.message) {
+        errors.push(result.message);
+      }
+    });
+
+    return errors;
+  }
+
+  // 公共验证方法
+  public validateForm(): boolean {
+    this.validateAllFields();
+
+    // 强制显示所有表单项的验证错误
+    if (this.formItems) {
+      this.formItems.forEach(item => {
+        if (!item.isValid()) {
+          item.validate();
+        }
+      });
+    }
+
+    this.showValidationSummary = !this.isFormValid;
+    return this.isFormValid;
+  }
+
+  public resetValidation(): void {
+    this.validationResults = {};
+    this.isFormValid = true;
+    this.showValidationSummary = false;
+
+    if (this.formItems) {
+      this.formItems.forEach(item => {
+        item.reset();
+      });
+    }
+  }
+
+  public isFormValidating(): boolean {
+    return !this.isFormValid;
   }
 }
