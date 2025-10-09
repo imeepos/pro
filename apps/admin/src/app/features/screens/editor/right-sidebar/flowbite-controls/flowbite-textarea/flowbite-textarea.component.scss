@@ -1,0 +1,83 @@
+.flowbite-textarea-wrapper {
+  @apply w-full;
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  :host ::ng-deep textarea {
+    @apply bg-gray-800 text-gray-100 border-gray-600;
+  }
+
+  :host ::ng-deep textarea:focus {
+    @apply bg-gray-800 text-gray-100;
+  }
+
+  :host ::ng-deep textarea:disabled {
+    @apply bg-gray-700 text-gray-400;
+  }
+}
+
+// Custom animations
+:host ::ng-deep textarea {
+  @apply transition-all duration-200;
+  font-family: inherit;
+}
+
+:host ::ng-deep textarea:focus {
+  @apply transform scale-[1.005];
+}
+
+// Error state enhancements
+:host ::ng-deep textarea:focus.error {
+  @apply ring-red-500 ring-opacity-50;
+}
+
+// Success state (for future use)
+:host ::ng-deep textarea.success {
+  @apply border-green-300 focus:ring-green-500 focus:border-green-500;
+}
+
+// Warning state (for future use)
+:host ::ng-deep textarea.warning {
+  @apply border-yellow-300 focus:ring-yellow-500 focus:border-yellow-500;
+}
+
+// Character count styling
+.char-count {
+  @apply transition-colors duration-200;
+}
+
+.char-count.warning {
+  @apply text-yellow-600 dark:text-yellow-400;
+}
+
+.char-count.error {
+  @apply text-red-600 dark:text-red-400 font-medium;
+}
+
+// Auto-resize support (when needed)
+.auto-resize {
+  @apply overflow-hidden resize-none;
+  transition: height 0.2s ease-out;
+}
+
+// Scrollbar styling for dark mode
+@media (prefers-color-scheme: dark) {
+  :host ::ng-deep textarea::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  :host ::ng-deep textarea::-webkit-scrollbar-track {
+    background: rgba(55, 65, 81, 0.3);
+    border-radius: 3px;
+  }
+
+  :host ::ng-deep textarea::-webkit-scrollbar-thumb {
+    background: rgba(75, 85, 99, 0.5);
+    border-radius: 3px;
+  }
+
+  :host ::ng-deep textarea::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 114, 128, 0.7);
+  }
+}
