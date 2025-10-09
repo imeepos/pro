@@ -237,14 +237,18 @@ export class ShapeComponent implements OnInit, OnDestroy {
       newLeft = Math.max(0, newLeft);
       newTop = Math.max(0, newTop);
 
-      this.canvasService.updateComponentStyle(this.component.id, { left: newLeft, top: newTop });
+      // 计算最终位置，先处理吸附，再统一更新
+      let finalStyle = { left: newLeft, top: newTop };
 
       if (this.editor && state.showMarkLine) {
         const snapStyle = this.editor.showMarkLine(this.component);
         if (snapStyle) {
-          this.canvasService.updateComponentStyle(this.component.id, snapStyle);
+          // 吸附样式与计算的位置合并
+          finalStyle = { ...finalStyle, ...snapStyle };
         }
       }
+
+      this.canvasService.updateComponentStyle(this.component.id, finalStyle);
     });
 
     const up = () => {

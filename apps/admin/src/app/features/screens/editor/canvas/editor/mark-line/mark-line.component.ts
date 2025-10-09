@@ -8,11 +8,14 @@ interface AlignmentCondition {
   targetValue: number;
   snapValue: number;
   prop: 'top' | 'left';
+  distance?: number;
+  strength?: number;
 }
 
 interface LinePosition {
   top?: number;
   left?: number;
+  distance?: number;
 }
 
 @Component({
@@ -41,7 +44,7 @@ export class MarkLineComponent {
     yr: {}
   };
 
-  private readonly threshold = 3;
+  private readonly threshold = 5;
 
   showLine(dragComponent: ComponentItem, allComponents: ComponentItem[]): Partial<ComponentStyle> | null {
     this.hideAllLines();
@@ -54,11 +57,15 @@ export class MarkLineComponent {
       const conditions = this.calculateAlignmentConditions(dragComponent, comp);
 
       conditions.forEach(condition => {
+        const distance = Math.abs(condition.dragValue - condition.targetValue);
+
         if (this.isNearly(condition.dragValue, condition.targetValue)) {
           if (!snapStyle) {
             snapStyle = {};
           }
           snapStyle[condition.prop] = condition.snapValue;
+
+          condition.distance = Math.round(distance);
 
           this.lineStatus[condition.line] = true;
           this.linePositions[condition.line] = this.calculateLinePosition(condition);
@@ -134,9 +141,15 @@ export class MarkLineComponent {
 
   private calculateLinePosition(condition: AlignmentCondition): LinePosition {
     if (condition.prop === 'top') {
-      return { top: condition.targetValue };
+      return {
+        top: condition.targetValue,
+        distance: condition.distance
+      };
     } else {
-      return { left: condition.targetValue };
+      return {
+        left: condition.targetValue,
+        distance: condition.distance
+      };
     }
   }
 
@@ -160,5 +173,14 @@ export class MarkLineComponent {
     }
 
     return style;
+  }
+
+  getDistance(line: string): number | undefined {
+    return this.linePositions[line]?.distance;
+  }
+
+  shouldShowDistance(line: string): boolean {
+    const distance = this.getDistance(line);
+    return this.isLineVisible(line) && distance !== undefined && distance > 0;
   }
 }
