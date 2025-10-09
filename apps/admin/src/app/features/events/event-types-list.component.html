@@ -1,20 +1,23 @@
-<div class="h-full flex flex-col bg-gray-50">
-  <div class="bg-white border-b px-6 py-4">
+<div class="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+  <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">事件类型管理</h1>
-        <p class="text-sm text-gray-600 mt-1">管理不同行业的事件类型分类</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">事件类型管理</h1>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">管理不同行业的事件类型分类</p>
       </div>
       <button
         (click)="createEventType()"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors dark:focus:ring-offset-gray-800"
       >
-        + 新增事件类型
+        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        新增事件类型
       </button>
     </div>
   </div>
 
-  <div class="bg-white border-b px-6 py-3">
+  <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
     <div class="flex items-center gap-4">
       <div class="flex-1">
         <input
@@ -22,13 +25,16 @@
           [(ngModel)]="searchKeyword"
           (keyup.enter)="onSearch()"
           placeholder="搜索事件类型名称、代码或描述..."
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500"
         />
       </div>
       <button
         (click)="onSearch()"
-        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        class="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors dark:focus:ring-offset-gray-800"
       >
+        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
         搜索
       </button>
     </div>
@@ -36,42 +42,68 @@
 
   <div class="flex-1 overflow-y-auto p-6">
     <div *ngIf="loading" class="flex items-center justify-center h-full">
-      <div class="text-gray-500">加载中...</div>
+      <div class="flex space-x-2">
+        <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
+        <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+        <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+      </div>
+      <span class="ml-3 text-gray-500 dark:text-gray-400">加载中...</span>
     </div>
 
     <div *ngIf="error" class="flex items-center justify-center h-full">
-      <div class="text-red-500">{{ error }}</div>
+      <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400">
+        <div class="flex items-start space-x-3">
+          <svg class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-red-800 dark:text-red-400">{{ error }}</p>
+        </div>
+      </div>
     </div>
 
     <div *ngIf="!loading && !error && filteredEventTypes.length === 0" class="flex items-center justify-center h-full">
-      <div class="text-gray-500">暂无事件类型数据</div>
+      <div class="text-center">
+        <svg class="mx-auto h-16 w-16 text-gray-400 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        </svg>
+        <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">暂无事件类型数据</h3>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">点击"新增事件类型"按钮开始创建事件类型</p>
+        <button
+          (click)="createEventType()"
+          class="mt-6 inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors dark:focus:ring-offset-gray-800">
+          <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          立即创建
+        </button>
+      </div>
     </div>
 
-    <div *ngIf="!loading && !error && filteredEventTypes.length > 0" class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div *ngIf="!loading && !error && filteredEventTypes.length > 0" class="relative overflow-x-auto shadow-md sm:rounded-lg">
       <table class="w-full">
-        <thead class="bg-gray-50 border-b border-gray-200">
+        <thead class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">事件代码</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">事件名称</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">描述</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">排序</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">事件代码</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">事件名称</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">描述</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">排序</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">状态</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">创建时间</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">操作</th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr *ngFor="let item of filteredEventTypes" class="hover:bg-gray-50">
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <tr *ngFor="let item of filteredEventTypes" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
               {{ item.eventCode }}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
               {{ item.eventName }}
             </td>
-            <td class="px-6 py-4 text-sm text-gray-600">
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
               {{ item.description || '-' }}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
               {{ item.sortOrder }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
@@ -79,20 +111,20 @@
                 {{ getStatusText(item.status) }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
               {{ formatDate(item.createdAt) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
               <div class="flex gap-2">
                 <button
                   (click)="editEventType(item)"
-                  class="text-blue-600 hover:text-blue-800"
+                  class="inline-flex items-center px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 dark:focus:ring-offset-gray-800"
                 >
                   编辑
                 </button>
                 <button
                   (click)="openDeleteDialog(item)"
-                  class="text-red-600 hover:text-red-800"
+                  class="inline-flex items-center px-3 py-2 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 dark:focus:ring-offset-gray-800"
                 >
                   删除
                 </button>
@@ -107,28 +139,31 @@
 
 <div
   *ngIf="showDeleteDialog"
-  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  class="fixed inset-0 bg-black bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-75 flex items-center justify-center z-50"
   (click)="closeDeleteDialog()"
 >
   <div
-    class="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+    class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
     (click)="$event.stopPropagation()"
   >
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">确认删除</h3>
-    <p class="text-gray-600 mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">确认删除</h3>
+    <p class="text-gray-600 dark:text-gray-400 mb-6">
       确定要删除事件类型 "{{ eventTypeToDelete?.eventName }}" 吗？此操作不可恢复。
     </p>
     <div class="flex justify-end gap-3">
       <button
         (click)="closeDeleteDialog()"
-        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+        class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors dark:focus:ring-offset-gray-800"
       >
         取消
       </button>
       <button
         (click)="confirmDelete()"
-        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors dark:focus:ring-offset-gray-800"
       >
+        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
         确认删除
       </button>
     </div>

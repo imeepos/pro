@@ -189,12 +189,12 @@ export class JdAccountsComponent implements OnInit {
    */
   getStatusClass(status: string): { [key: string]: boolean } {
     const classMap: Record<string, { [key: string]: boolean }> = {
-      'active': { 'bg-success/10 text-success': true },
-      'expired': { 'bg-warning/10 text-warning': true },
-      'restricted': { 'bg-warning/10 text-warning': true },
-      'banned': { 'bg-error/10 text-error': true }
+      'active': { 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': true },
+      'expired': { 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': true },
+      'restricted': { 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': true },
+      'banned': { 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': true }
     };
-    return classMap[status] || { 'bg-gray-100 text-gray-800': true };
+    return classMap[status] || { 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': true };
   }
 
   /**

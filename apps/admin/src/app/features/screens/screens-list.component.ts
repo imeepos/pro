@@ -232,7 +232,9 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   }
 
   getStatusClass(status: string): string {
-    return status === 'draft' ? 'bg-gray-100 text-gray-800' : 'bg-green-100 text-green-800';
+    return status === 'draft'
+      ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+      : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
   }
 
   formatDate(dateStr: string): string {

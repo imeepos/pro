@@ -62,7 +62,7 @@
             *ngFor="let preset of quickPresets"
             (click)="selectQuickPreset(preset.key)"
             [title]="getQuickPresetRange(preset.key)"
-            [attr.aria-label]="`${preset.label} - ${getQuickPresetRange(preset.key)}`"
+            [attr.aria-label]="preset.label + ' - ' + getQuickPresetRange(preset.key)"
           >
             <span class="preset-icon">{{ preset.icon }}</span>
             <span class="preset-label">{{ preset.label }}</span>

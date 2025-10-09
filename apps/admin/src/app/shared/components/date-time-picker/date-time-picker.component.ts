@@ -95,6 +95,9 @@ export class DateTimePickerComponent implements ControlValueAccessor, OnInit, On
   private onChange: (value: Date | null) => void = () => {};
   private onTouched: () => void = () => {};
 
+  // 暴露 parseInt 给模板使用
+  protected readonly parseInt = parseInt;
+
   constructor() {
     this.bindDocumentClick();
   }

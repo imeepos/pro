@@ -133,7 +133,9 @@ export class EventTypesListComponent implements OnInit, OnDestroy {
   }
 
   getStatusClass(status: number): string {
-    return status === 1 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+    return status === 1
+      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
   }
 
   formatDate(dateStr: string): string {

@@ -9,6 +9,15 @@ export interface ComponentItem {
   parent?: ComponentItem;
   isGroup?: boolean;
   children?: ComponentItem[];
+  hasError?: boolean;
+  errorInfo?: ComponentErrorInfo;
+}
+
+export interface ComponentErrorInfo {
+  message: string;
+  stack?: string;
+  timestamp: number;
+  phase: 'init' | 'render' | 'data' | 'unknown';
 }
 
 export interface ComponentStyle {
@@ -19,6 +28,13 @@ export interface ComponentStyle {
   rotate: number;
   zIndex?: number;
   opacity?: number;
+  borderRadius?: number;
+  borderWidth?: number;
+  borderStyle?: 'solid' | 'dashed' | 'dotted' | 'none';
+  borderColor?: string;
+  backgroundColor?: string;
+  backgroundImage?: string;
+  boxShadow?: string;
 }
 
 export interface Point {

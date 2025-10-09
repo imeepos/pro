@@ -1,93 +1,87 @@
-.date-time-picker {
+
+.pro-date-time-picker {
   position: relative;
   display: inline-block;
   width: 100%;
 }
 
-// 输入区域
 .picker-input {
   position: relative;
   display: flex;
   align-items: center;
   width: 100%;
+
+  &.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
 .input-field {
   flex: 1;
   width: 100%;
-  padding: 10px 50px 10px 12px;
-  border: 1px solid theme('colors.gray.300');
-  border-radius: theme('borderRadius.lg');
-  font-size: theme('fontSize.sm');
-  line-height: theme('lineHeight.tight');
-  color: theme('colors.gray.900');
-  background-color: theme('colors.white');
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
-  box-shadow: theme('boxShadow.sm');
+  padding: 10px 44px 10px 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  color: #111827;
+  background-color: #f9fafb;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 
   &:focus {
     outline: none;
-    border-color: theme('colors.primary.DEFAULT');
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), theme('boxShadow.md');
-    background-color: theme('colors.white');
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
   }
 
-  &:hover:not(:focus):not(:disabled):not(.readonly) {
-    border-color: theme('colors.gray.400');
-    background-color: theme('colors.white');
+  &:hover:not(:focus):not(:disabled) {
+    border-color: #9ca3af;
+    background-color: #ffffff;
   }
 
-  &:disabled,
-  &.disabled {
-    background-color: theme('colors.gray.100');
+  &:disabled {
+    background-color: #f3f4f6;
     cursor: not-allowed;
     opacity: 0.7;
   }
 
-  &.readonly {
-    background-color: theme('colors.gray.50');
-    cursor: default;
-  }
-
   &::placeholder {
-    color: theme('colors.gray.500');
+    color: #6b7280;
   }
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    background-color: theme('colors.gray.800');
-    border-color: theme('colors.gray.600');
-    color: theme('colors.white');
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #ffffff;
 
     &:focus {
-      border-color: theme('colors.primary.DEFAULT');
+      border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-      background-color: theme('colors.gray.700');
+      background-color: #1f2937;
     }
 
-    &:hover:not(:focus):not(:disabled):not(.readonly) {
-      border-color: theme('colors.gray.500');
-      background-color: theme('colors.gray.700');
+    &:hover:not(:focus):not(:disabled) {
+      border-color: #6b7280;
+      background-color: #1f2937;
     }
 
-    &:disabled,
-    &.disabled {
-      background-color: theme('colors.gray.900);
-    }
-
-    &.readonly {
-      background-color: theme('colors.gray.800');
+    &:disabled {
+      background-color: #111827;
     }
 
     &::placeholder {
-      color: theme('colors.gray.400');
+      color: #9ca3af;
     }
   }
 }
 
 .clear-btn {
   position: absolute;
-  right: 45px;
+  right: 40px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -97,34 +91,34 @@
   height: 24px;
   background: transparent;
   border: none;
-  color: theme('colors.gray.500');
+  color: #6b7280;
   cursor: pointer;
-  border-radius: theme('borderRadius.md');
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  border-radius: 0.375rem;
+  transition: all 0.15s ease-in-out;
   z-index: 2;
 
   &:hover {
-    background-color: theme('colors.gray.100');
-    color: theme('colors.gray.700');
+    background-color: #f3f4f6;
+    color: #374151;
   }
 
   &:active {
-    background-color: theme('colors.gray.200');
-    color: theme('colors.gray.900);
+    background-color: #e5e7eb;
+    color: #111827;
   }
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    color: theme('colors.gray.400');
+    color: #9ca3af;
 
     &:hover {
-      background-color: theme('colors.gray.700');
-      color: theme('colors.gray.200);
+      background-color: #374151;
+      color: #d1d5db;
     }
 
     &:active {
-      background-color: theme('colors.gray.600');
-      color: theme('colors.white');
+      background-color: #4b5563;
+      color: #ffffff;
     }
   }
 }
@@ -141,19 +135,19 @@
   height: 32px;
   background: transparent;
   border: none;
-  color: theme('colors.gray.500');
+  color: #6b7280;
   cursor: pointer;
-  border-radius: theme('borderRadius.md');
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  border-radius: 0.375rem;
+  transition: all 0.15s ease-in-out;
 
   &:hover:not(:disabled) {
-    background-color: theme('colors.gray.100');
-    color: theme('colors.primary.DEFAULT');
+    background-color: #f3f4f6;
+    color: #3b82f6;
   }
 
   &:active:not(:disabled) {
-    background-color: theme('colors.primary.50');
-    color: theme('colors.primary.600');
+    background-color: #dbeafe;
+    color: #1d4ed8;
   }
 
   &:disabled {
@@ -163,45 +157,45 @@
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    color: theme('colors.gray.400');
+    color: #9ca3af;
 
     &:hover:not(:disabled) {
-      background-color: theme('colors.gray.700');
-      color: theme('colors.primary.400');
+      background-color: #374151;
+      color: #60a5fa;
     }
 
     &:active:not(:disabled) {
-      background-color: theme('colors.primary.900');
-      color: theme('colors.primary.300');
+      background-color: #1e3a8a;
+      color: #93c5fd;
     }
   }
 }
 
-// 选择面板
 .picker-panel {
   position: absolute;
   top: 100%;
   left: 0;
   z-index: 1000;
-  min-width: 600px;
-  max-width: 90vw;
-  background-color: theme('colors.white');
-  border: 1px solid theme('colors.gray.200');
-  border-radius: theme('borderRadius.xl');
-  box-shadow: theme('boxShadow.xl'), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  min-width: 640px;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   margin-top: 8px;
   backdrop-filter: blur(8px);
   animation: slideDown 0.2s ease-out;
+  display: flex;
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    background-color: theme('colors.gray.800');
-    border-color: theme('colors.gray.700');
-    box-shadow: theme('boxShadow.xl'), 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    background-color: #1f2937;
+    border-color: #374151;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
   }
 }
 
+// 动画定义
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -213,138 +207,17 @@
   }
 }
 
-.panel-content {
-  display: flex;
-  flex-direction: column;
-  max-height: 80vh;
-}
-
-// 快捷预设区域
-.quick-presets-section {
-  padding: theme('spacing.4');
-  border-bottom: 1px solid theme('colors.gray.100');
-  background: linear-gradient(135deg, theme('colors.gray.50') 0%, theme('colors.white') 100%);
-
-  // 暗色模式
-  @media (prefers-color-scheme: dark) {
-    border-bottom-color: theme('colors.gray.700');
-    background: linear-gradient(135deg, theme('colors.gray.900') 0%, theme('colors.gray.800') 100%);
-  }
-}
-
-.section-title {
-  font-size: theme('fontSize.xs');
-  font-weight: theme('fontWeight.semibold');
-  color: theme('colors.gray.600');
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: theme('spacing.2');
-  display: flex;
-  align-items: center;
-  gap: theme('spacing.1');
-
-  &::before {
-    content: '';
-    width: 3px;
-    height: 12px;
-    background-color: theme('colors.primary.DEFAULT');
-    border-radius: 2px;
-  }
-
-  // 暗色模式
-  @media (prefers-color-scheme: dark) {
-    color: theme('colors.gray.400');
-  }
-}
-
-.presets-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: theme('spacing.2');
-}
-
-.preset-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: theme('spacing.2') theme('spacing.3');
-  background: theme('colors.white');
-  border: 1px solid theme('colors.gray.200');
-  border-radius: theme('borderRadius.lg');
-  cursor: pointer;
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
-  font-size: theme('fontSize.xs');
-  font-weight: theme('fontWeight.medium');
-  color: theme('colors.gray.700');
-  box-shadow: theme('boxShadow.sm');
-
-  &:hover {
-    background-color: theme('colors.primary.50');
-    border-color: theme('colors.primary.300');
-    color: theme('colors.primary.700');
-    transform: translateY(-2px);
-    box-shadow: theme('boxShadow.md'), 0 4px 12px rgba(59, 130, 246, 0.15);
-  }
-
-  &:active {
-    background-color: theme('colors.primary.100');
-    transform: translateY(0);
-    box-shadow: theme('boxShadow.sm');
-  }
-
-  // 暗色模式
-  @media (prefers-color-scheme: dark) {
-    background-color: theme('colors.gray.700');
-    border-color: theme('colors.gray.600');
-    color: theme('colors.gray.300');
-
-    &:hover {
-      background-color: theme('colors.primary.900');
-      border-color: theme('colors.primary.600');
-      color: theme('colors.primary.300');
-      box-shadow: theme('boxShadow.md'), 0 4px 12px rgba(59, 130, 246, 0.2);
-    }
-
-    &:active {
-      background-color: theme('colors.primary.800');
-    }
-  }
-}
-
-.preset-icon {
-  font-size: theme('fontSize.base');
-  margin-bottom: 2px;
-  transition: transform theme('transitionDuration.150') theme('transitionTimingFunction.default');
-}
-
-.preset-btn:hover .preset-icon {
-  transform: scale(1.1);
-}
-
-.preset-label {
-  font-weight: theme('fontWeight.medium');
-  color: inherit;
-  text-align: center;
-}
-
-// 主要选择区域：日期和时间并排显示
-.main-selection-area {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
 // 日期选择区域
 .date-selection-section {
   flex: 1;
-  padding: theme('spacing.4');
-  border-right: 1px solid theme('colors.gray.100');
+  padding: 16px;
+  border-right: 1px solid #f3f4f6;
   display: flex;
   flex-direction: column;
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    border-right-color: theme('colors.gray.700);
+    border-right-color: #374151;
   }
 }
 
@@ -352,142 +225,154 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: theme('spacing.3');
+  margin-bottom: 12px;
 }
 
 .nav-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: theme('colors.white');
-  border: 1px solid theme('colors.gray.300');
-  color: theme('colors.gray.600');
+  width: 36px;
+  height: 36px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #6b7280;
   cursor: pointer;
-  border-radius: theme('borderRadius.full');
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
-  font-weight: theme('fontWeight.medium');
-  box-shadow: theme('boxShadow.sm');
+  border-radius: 9999px;
+  transition: all 0.15s ease-in-out;
+  font-weight: 500;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 
   &:hover {
-    background-color: theme('colors.primary.50');
-    border-color: theme('colors.primary.300');
-    color: theme('colors.primary.DEFAULT');
+    background-color: #eff6ff;
+    border-color: #93c5fd;
+    color: #3b82f6;
     transform: scale(1.05);
-    box-shadow: theme('boxShadow.md');
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
 
   &:active {
-    background-color: theme('colors.primary.100');
+    background-color: #dbeafe;
     transform: scale(0.95);
   }
 
   &:focus-visible {
-    outline: 2px solid theme('colors.primary.DEFAULT');
+    outline: 2px solid #3b82f6;
     outline-offset: 2px;
   }
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    background-color: theme('colors.gray.700');
-    border-color: theme('colors.gray.600');
-    color: theme('colors.gray.400');
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #9ca3af;
 
     &:hover {
-      background-color: theme('colors.primary.900');
-      border-color: theme('colors.primary.600');
-      color: theme('colors.primary.400);
+      background-color: #1e3a8a;
+      border-color: #2563eb;
+      color: #60a5fa;
     }
 
     &:active {
-      background-color: theme('colors.primary.800');
+      background-color: #1d4ed8;
     }
   }
 }
 
 .month-title {
-  font-size: theme('fontSize.sm');
-  font-weight: theme('fontWeight.semibold');
-  color: theme('colors.gray.900');
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
   text-align: center;
-  min-width: 100px;
+  min-width: 120px;
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    color: theme('colors.white');
+    color: #ffffff;
   }
 }
 
 .weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  margin-bottom: theme('spacing.1');
+  padding: 8px 16px 0;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border-bottom: 1px solid #f3f4f6;
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    border-bottom-color: #374151;
+  }
 }
 
 .weekday {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
-  font-size: theme('fontSize.xs');
-  font-weight: theme('fontWeight.semibold');
-  color: theme('colors.gray.600');
+  height: 36px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    color: theme('colors.gray.400');
+    color: #9ca3af;
   }
 }
 
 .days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  padding: 8px 16px 16px;
   gap: 2px;
-  flex: 1;
 }
 
 .day-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  margin: 1px;
   background: transparent;
   border: 2px solid transparent;
-  border-radius: theme('borderRadius.lg');
-  font-size: theme('fontSize.sm');
-  font-weight: theme('fontWeight.medium');
-  color: theme('colors.gray.700');
+  border-radius: 0.5rem;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
   cursor: pointer;
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  transition: all 0.15s ease-in-out;
   position: relative;
   overflow: hidden;
 
+  // 悬停效果
   &:hover:not(.disabled):not(.selected) {
-    background-color: theme('colors.gray.100');
-    color: theme('colors.gray.900');
+    background-color: #f3f4f6;
+    color: #111827;
     transform: scale(1.05);
-    box-shadow: theme('boxShadow.sm');
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
 
+  // 其他月份的日期
   &.other-month {
-    color: theme('colors.gray.400);
+    color: #9ca3af;
     opacity: 0.6;
 
     &:hover:not(.disabled) {
-      color: theme('colors.gray.600);
-      background-color: theme('colors.gray.50');
+      color: #6b7280;
+      background-color: #f9fafb;
     }
   }
 
+  // 今天的日期
   &.today {
-    background: linear-gradient(135deg, theme('colors.primary.50') 0%, theme('colors.primary.100') 100%);
-    color: theme('colors.primary.700');
-    font-weight: theme('fontWeight.semibold');
-    border-color: theme('colors.primary.300');
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: #1d4ed8;
+    font-weight: 600;
+    border-color: #93c5fd;
 
     &::before {
       content: '';
@@ -496,23 +381,24 @@
       right: 2px;
       width: 6px;
       height: 6px;
-      background-color: theme('colors.primary.DEFAULT');
+      background-color: #3b82f6;
       border-radius: 50%;
-      box-shadow: 0 0 0 2px theme('colors.white');
+      box-shadow: 0 0 0 2px #ffffff;
     }
 
     &:hover:not(.selected) {
-      background: linear-gradient(135deg, theme('colors.primary.100') 0%, theme('colors.primary.200') 100%);
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
       transform: scale(1.05);
-      box-shadow: theme('boxShadow.md'), 0 0 0 1px theme('colors.primary.300');
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 0 0 1px #93c5fd;
     }
   }
 
+  // 选中的日期
   &.selected {
-    background: linear-gradient(135deg, theme('colors.primary.DEFAULT') 0%, theme('colors.primary.600') 100%);
-    color: theme('colors.white');
-    font-weight: theme('fontWeight.semibold');
-    border-color: theme('colors.primary.500');
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #ffffff;
+    font-weight: 600;
+    border-color: #3b82f6;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     transform: scale(1.05);
 
@@ -522,25 +408,27 @@
       top: 1px;
       right: 4px;
       font-size: 10px;
-      font-weight: theme('fontWeight.bold');
-      color: theme('colors.white');
+      font-weight: 700;
+      color: #ffffff;
     }
 
     &:hover {
-      background: linear-gradient(135deg, theme('colors.primary.hover') 0%, theme('colors.primary.700') 100%);
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
       transform: scale(1.08);
       box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
     }
   }
 
+  // 悬停状态（用于范围选择）
   &.hovered:not(.selected):not(.disabled):not(.today) {
-    background-color: theme('colors.primary.50');
-    color: theme('colors.primary.700');
-    border-color: theme('colors.primary.200');
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border-color: #dbeafe;
   }
 
+  // 禁用状态
   &.disabled {
-    color: theme('colors.gray.300');
+    color: #d1d5db;
     cursor: not-allowed;
     opacity: 0.4;
 
@@ -551,51 +439,52 @@
     }
   }
 
+  // 焦点状态
   &:focus-visible {
-    outline: 2px solid theme('colors.primary.DEFAULT');
+    outline: 2px solid #3b82f6;
     outline-offset: 2px;
   }
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    color: theme('colors.gray.300');
+    color: #d1d5db;
 
     &:hover:not(.disabled):not(.selected) {
-      background-color: theme('colors.gray.700');
-      color: theme('colors.white');
+      background-color: #374151;
+      color: #ffffff;
     }
 
     &.other-month {
-      color: theme('colors.gray.600);
+      color: #6b7280;
 
       &:hover:not(.disabled) {
-        color: theme('colors.gray.400);
-        background-color: theme('colors.gray.800');
+        color: #9ca3af;
+        background-color: #111827;
       }
     }
 
     &.today {
-      background: linear-gradient(135deg, theme('colors.primary.900') 0%, theme('colors.primary.800') 100%);
-      color: theme('colors.primary.300');
-      border-color: theme('colors.primary.600');
+      background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+      color: #93c5fd;
+      border-color: #2563eb;
 
       &::before {
-        box-shadow: 0 0 0 2px theme('colors.gray.800');
+        box-shadow: 0 0 0 2px #1f2937;
       }
 
       &:hover:not(.selected) {
-        background: linear-gradient(135deg, theme('colors.primary.800') 0%, theme('colors.primary.700') 100%);
+        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
       }
     }
 
     &.selected {
-      background: linear-gradient(135deg, theme('colors.primary.600') 0%, theme('colors.primary.700') 100%);
-      color: theme('colors.white');
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
       box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
     }
 
     &.disabled {
-      color: theme('colors.gray.600);
+      color: #6b7280;
     }
   }
 }
@@ -603,100 +492,97 @@
 // 时间选择区域
 .time-selection-section {
   flex: 1;
-  padding: theme('spacing.4');
-  display: flex;
-  flex-direction: column;
-  gap: theme('spacing.4');
+  padding: 16px;
 }
 
-.time-presets-section {
-  margin-bottom: theme('spacing.2');
+.time-presets {
+  margin-bottom: 16px;
 }
 
-.time-section-title {
-  font-size: theme('fontSize.xs');
-  font-weight: theme('fontWeight.semibold');
-  color: theme('colors.gray.600');
+.time-presets-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: theme('spacing.2');
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
-  gap: theme('spacing.1');
+  gap: 4px;
 
   &::before {
     content: '';
     width: 3px;
     height: 12px;
-    background-color: theme('colors.info.DEFAULT');
+    background-color: #3b82f6;
     border-radius: 2px;
   }
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    color: theme('colors.gray.400');
+    color: #9ca3af;
   }
 }
 
 .time-presets-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: theme('spacing.2');
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
 }
 
 .time-preset-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: theme('spacing.2') theme('spacing.3');
-  background: theme('colors.white');
-  border: 1px solid theme('colors.gray.200');
-  border-radius: theme('borderRadius.md');
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
   cursor: pointer;
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
-  font-size: theme('fontSize.xs');
-  font-weight: theme('fontWeight.medium');
-  color: theme('colors.gray.700');
-  box-shadow: theme('boxShadow.sm');
+  transition: all 0.15s ease-in-out;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 
   &:hover {
-    background-color: theme('colors.info.50');
-    border-color: theme('colors.info.300');
-    color: theme('colors.info.700);
+    background-color: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
     transform: translateY(-1px);
-    box-shadow: theme('boxShadow.md');
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
 
   &:active {
-    background-color: theme('colors.info.100');
+    background-color: #dbeafe;
     transform: translateY(0);
   }
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    background-color: theme('colors.gray.700');
-    border-color: theme('colors.gray.600');
-    color: theme('colors.gray.300');
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #d1d5db;
 
     &:hover {
-      background-color: theme('colors.info.900');
-      border-color: theme('colors.info.600');
-      color: theme('colors.info.300');
+      background-color: #1e3a8a;
+      border-color: #2563eb;
+      color: #93c5fd;
     }
   }
 }
 
-.time-inputs-section {
-  flex: 1;
+.time-inputs-container {
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
 
 .time-inputs {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  gap: theme('spacing.2');
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -704,17 +590,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: theme('spacing.1);
+  gap: 4px;
 }
 
 .time-input-label {
-  font-size: theme('fontSize.xs');
-  font-weight: theme('fontWeight.medium');
-  color: theme('colors.gray.600);
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    color: theme('colors.gray.400');
+    color: #9ca3af;
   }
 }
 
@@ -722,7 +608,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: theme('spacing.1');
+  gap: 4px;
 }
 
 .time-adjust-btn {
@@ -731,22 +617,21 @@
   justify-content: center;
   width: 24px;
   height: 20px;
-  background: theme('colors.white');
-  border: 1px solid theme('colors.gray.300');
-  color: theme('colors.gray.600);
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #6b7280;
   cursor: pointer;
-  border-radius: theme('borderRadius.sm');
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  border-radius: 0.125rem;
+  transition: all 0.15s ease-in-out;
 
   &:hover:not(:disabled) {
-    background-color: theme('colors.info.50');
-    border-color: theme('colors.info.300');
-    color: theme('colors.info.DEFAULT');
-    transform: scale(1.05);
+    background-color: #eff6ff;
+    border-color: #93c5fd;
+    color: #3b82f6;
   }
 
   &:active:not(:disabled) {
-    background-color: theme('colors.info.100');
+    background-color: #dbeafe;
     transform: scale(0.95);
   }
 
@@ -757,14 +642,14 @@
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    background-color: theme('colors.gray.700');
-    border-color: theme('colors.gray.600');
-    color: theme('colors.gray.400);
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #9ca3af;
 
     &:hover:not(:disabled) {
-      background-color: theme('colors.info.900');
-      border-color: theme('colors.info.600');
-      color: theme('colors.info.400');
+      background-color: #1e3a8a;
+      border-color: #2563eb;
+      color: #60a5fa;
     }
   }
 }
@@ -773,107 +658,107 @@
   width: 50px;
   height: 36px;
   text-align: center;
-  border: 2px solid theme('colors.gray.300');
-  border-radius: theme('borderRadius.md');
-  font-size: theme('fontSize.sm');
-  font-weight: theme('fontWeight.semibold');
-  color: theme('colors.gray.900');
-  background-color: theme('colors.white');
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  border: 2px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  background-color: #ffffff;
+  transition: all 0.15s ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: theme('colors.info.DEFAULT');
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
-    background-color: theme('colors.info.50');
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background-color: #eff6ff;
   }
 
   &.active {
-    border-color: theme('colors.info.DEFAULT');
-    background-color: theme('colors.info.50');
-    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
   }
 
   &:hover:not(:focus):not(:disabled) {
-    border-color: theme('colors.gray.400');
-    background-color: theme('colors.gray.50');
+    border-color: #9ca3af;
+    background-color: #f9fafb;
   }
 
   &:disabled {
-    background-color: theme('colors.gray.100');
-    color: theme('colors.gray.500');
+    background-color: #f3f4f6;
+    color: #6b7280;
     cursor: not-allowed;
   }
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    background-color: theme('colors.gray.700');
-    border-color: theme('colors.gray.600');
-    color: theme('colors.white');
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #ffffff;
 
     &:focus,
     &.active {
-      border-color: theme('colors.info.DEFAULT');
-      background-color: theme('colors.info.900');
-      box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25);
+      border-color: #3b82f6;
+      background-color: #1e3a8a;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
     }
 
     &:hover:not(:focus):not(:disabled) {
-      border-color: theme('colors.gray.500');
-      background-color: theme('colors.gray.600');
+      border-color: #6b7280;
+      background-color: #4b5563;
     }
 
     &:disabled {
-      background-color: theme('colors.gray.800');
-      color: theme('colors.gray.600);
+      background-color: #111827;
+      color: #6b7280;
     }
   }
 }
 
 .time-separator {
-  font-size: theme('fontSize.lg');
-  font-weight: theme('fontWeight.bold');
-  color: theme('colors.gray.600');
-  margin-top: theme('spacing.5');
+  font-size: 18px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-top: 18px;
   user-select: none;
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    color: theme('colors.gray.400');
+    color: #9ca3af;
   }
 }
 
 .ampm-toggle {
   display: flex;
   flex-direction: column;
-  gap: theme('spacing.1);
-  margin-top: theme('spacing.1');
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .ampm-btn {
-  padding: theme('spacing.1') theme('spacing.2');
+  padding: 4px 8px;
   min-width: 40px;
   height: 32px;
-  background: theme('colors.white');
-  border: 1px solid theme('colors.gray.300');
-  border-radius: theme('borderRadius.md');
-  font-size: theme('fontSize.xs');
-  font-weight: theme('fontWeight.semibold');
-  color: theme('colors.gray.600');
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
   cursor: pointer;
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  transition: all 0.15s ease-in-out;
 
   &:hover:not(:disabled) {
-    background-color: theme('colors.gray.50');
-    border-color: theme('colors.gray.400');
-    color: theme('colors.gray.800');
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+    color: #111827;
   }
 
   &.active {
-    background-color: theme('colors.info.DEFAULT');
-    border-color: theme('colors.info.DEFAULT');
-    color: theme('colors.white');
-    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
   }
 
   &:disabled {
@@ -883,20 +768,20 @@
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    background-color: theme('colors.gray.700');
-    border-color: theme('colors.gray.600');
-    color: theme('colors.gray.400);
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #9ca3af;
 
     &:hover:not(:disabled) {
-      background-color: theme('colors.gray.600');
-      border-color: theme('colors.gray.500');
-      color: theme('colors.gray.200);
+      background-color: #4b5563;
+      border-color: #6b7280;
+      color: #f3f4f6;
     }
 
     &.active {
-      background-color: theme('colors.info.600');
-      border-color: theme('colors.info.600');
-      color: theme('colors.white');
+      background-color: #2563eb;
+      border-color: #2563eb;
+      color: #ffffff;
     }
   }
 }
@@ -904,153 +789,150 @@
 .current-time-display {
   display: flex;
   justify-content: center;
-  padding: theme('spacing.2');
-  background: linear-gradient(135deg, theme('colors.info.50') 0%, theme('colors.info.100') 100%);
-  border-radius: theme('borderRadius.lg');
-  border: 1px solid theme('colors.info.200);
-  margin-top: theme('spacing.2');
+  padding: 8px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-radius: 0.5rem;
+  border: 1px solid #93c5fd;
+  margin-top: 8px;
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    background: linear-gradient(135deg, theme('colors.info.900') 0%, theme('colors.info.800') 100%);
-    border-color: theme('colors.info.700');
+    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+    border-color: #2563eb;
   }
 }
 
 .time-preview {
-  font-size: theme('fontSize.sm');
-  font-weight: theme('fontWeight.semibold');
-  color: theme('colors.info.700');
-  font-family: theme('fontFamily.mono');
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d4ed8;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    color: theme('colors.info.300');
+    color: #93c5fd;
   }
 }
 
 // 底部操作按钮
-.panel-footer {
+.picker-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: theme('spacing.3') theme('spacing.4');
-  border-top: 1px solid theme('colors.gray.100');
-  background: linear-gradient(135deg, theme('colors.gray.50') 0%, theme('colors.white') 100%);
+  padding: 12px 16px;
+  border-top: 1px solid #f3f4f6;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  gap: 8px;
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    border-top-color: theme('colors.gray.700');
-    background: linear-gradient(135deg, theme('colors.gray.900') 0%, theme('colors.gray.800') 100%);
+    border-top-color: #374151;
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
   }
-}
-
-.footer-spacer {
-  flex: 1;
 }
 
 .footer-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: theme('spacing.2') theme('spacing.4');
-  font-size: theme('fontSize.sm');
-  font-weight: theme('fontWeight.medium');
-  border: 1px solid theme('colors.gray.300');
-  border-radius: theme('borderRadius.lg');
-  background-color: theme('colors.white');
-  color: theme('colors.gray.700');
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  color: #374151;
   cursor: pointer;
-  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
-  box-shadow: theme('boxShadow.sm');
-  min-width: 70px;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  min-width: 80px;
 
   &:hover {
-    background-color: theme('colors.gray.50');
-    border-color: theme('colors.gray.400');
-    color: theme('colors.gray.900');
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+    color: #111827;
     transform: translateY(-1px);
-    box-shadow: theme('boxShadow.md');
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
 
   &:active {
-    background-color: theme('colors.gray.100');
+    background-color: #f3f4f6;
     transform: translateY(0);
-    box-shadow: theme('boxShadow.sm');
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
 
   &:focus-visible {
-    outline: 2px solid theme('colors.primary.DEFAULT');
+    outline: 2px solid #3b82f6;
     outline-offset: 2px;
   }
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    background-color: theme('colors.gray.700');
-    border-color: theme('colors.gray.600');
-    color: theme('colors.gray.300);
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #d1d5db;
 
     &:hover {
-      background-color: theme('colors.gray.600');
-      border-color: theme('colors.gray.500');
-      color: theme('colors.white');
+      background-color: #4b5563;
+      border-color: #6b7280;
+      color: #ffffff;
     }
 
     &:active {
-      background-color: theme('colors.gray.800');
+      background-color: #111827;
     }
   }
 }
 
 .today-btn {
-  background: linear-gradient(135deg, theme('colors.primary.DEFAULT') 0%, theme('colors.primary.600') 100%);
-  color: theme('colors.white');
-  border-color: theme('colors.primary.DEFAULT');
-  font-weight: theme('fontWeight.semibold');
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border-color: #3b82f6;
+  font-weight: 600;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
 
   &:hover {
-    background: linear-gradient(135deg, theme('colors.primary.hover') 0%, theme('colors.primary.700') 100%);
-    border-color: theme('colors.primary.hover');
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border-color: #2563eb;
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35);
   }
 
   &:active {
-    background: linear-gradient(135deg, theme('colors.primary.700') 0%, theme('colors.primary.800') 100%);
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
     transform: translateY(0);
   }
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    background: linear-gradient(135deg, theme('colors.primary.600') 0%, theme('colors.primary.700') 100%);
-    border-color: theme('colors.primary.600');
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border-color: #2563eb;
 
     &:hover {
-      background: linear-gradient(135deg, theme('colors.primary.500') 0%, theme('colors.primary.600') 100%);
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     }
   }
 }
 
 .close-btn {
-  border-color: theme('colors.gray.300');
-  color: theme('colors.gray.600);
+  border-color: #d1d5db;
+  color: #6b7280;
 
   &:hover {
-    background-color: theme('colors.gray.50');
-    border-color: theme('colors.gray.400');
-    color: theme('colors.gray.800);
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+    color: #374151;
   }
 
   // 暗色模式
   @media (prefers-color-scheme: dark) {
-    border-color: theme('colors.gray.600');
-    color: theme('colors.gray.400);
+    border-color: #4b5563;
+    color: #9ca3af;
 
     &:hover {
-      background-color: theme('colors.gray.700');
-      border-color: theme('colors.gray.500');
-      color: theme('colors.gray.200);
+      background-color: #374151;
+      border-color: #6b7280;
+      color: #d1d5db;
     }
   }
 }
@@ -1062,60 +944,76 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 95vw;
-    max-width: 500px;
-    max-height: 90vh;
+    width: 90vw;
+    max-width: 640px;
+    max-height: 80vh;
     overflow-y: auto;
     margin-top: 0;
-  }
-
-  .main-selection-area {
     flex-direction: column;
   }
 
   .date-selection-section {
     border-right: none;
-    border-bottom: 1px solid theme('colors.gray.100');
+    border-bottom: 1px solid #f3f4f6;
 
     // 暗色模式
     @media (prefers-color-scheme: dark) {
-      border-bottom-color: theme('colors.gray.700');
+      border-bottom-color: #374151;
     }
   }
 
-  .presets-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
   .time-presets-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .time-inputs {
-    flex-direction: column;
-    align-items: center;
-    gap: theme('spacing.3');
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .ampm-toggle {
     flex-direction: row;
     justify-content: center;
-    margin-top: theme('spacing.2');
+    margin-top: 8px;
+  }
+}
+
+// 加载状态
+.picker-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: #6b7280;
+
+  &::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// 高对比度模式支持
+@media (prefers-contrast: high) {
+  .time-input {
+    border-width: 2px;
+
+    &:focus,
+    &.active {
+      border-color: #000000;
+    }
   }
 
-  .day-btn {
-    width: 32px;
-    height: 32px;
-    font-size: theme('fontSize.xs');
-  }
+  .ampm-btn {
+    border-width: 2px;
 
-  .nav-btn {
-    width: 28px;
-    height: 28px;
-  }
-
-  .month-title {
-    font-size: theme('fontSize.xs');
+    &.active {
+      border-color: #000000;
+    }
   }
 }
 
@@ -1125,39 +1023,5 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-}
-
-// 高对比度模式支持
-@media (prefers-contrast: high) {
-  .day-btn,
-  .nav-btn,
-  .footer-btn {
-    border-width: 2px;
-
-    &.selected {
-      border-color: theme('colors.black');
-    }
-
-    &.today {
-      border-color: theme('colors.primary.DEFAULT');
-    }
-  }
-
-  .time-input {
-    border-width: 2px;
-
-    &:focus,
-    &.active {
-      border-color: theme('colors.black');
-    }
-  }
-
-  .ampm-btn {
-    border-width: 2px;
-
-    &.active {
-      border-color: theme('colors.black');
-    }
   }
 }
