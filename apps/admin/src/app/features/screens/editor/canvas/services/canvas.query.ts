@@ -24,6 +24,8 @@ export class CanvasQuery extends Query<CanvasState> {
   retryCount$ = this.select('retryCount');
   isOnline$ = this.select('isOnline');
   networkStatus$ = this.select('networkStatus');
+  isFullscreen$ = this.select('isFullscreen');
+  isShowCoordinates$ = this.select('isShowCoordinates');
 
   activeComponent$ = this.select(
     state => state.componentData.find(comp => comp.id === state.activeComponentId)

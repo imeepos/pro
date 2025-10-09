@@ -23,6 +23,8 @@ export interface CanvasState {
   retryCount: number;
   isOnline: boolean;
   networkStatus: 'online' | 'offline' | 'checking';
+  isFullscreen: boolean;
+  isShowCoordinates: boolean;
 }
 
 export interface SaveError {
@@ -38,9 +40,12 @@ function createInitialState(): CanvasState {
     thumbnail: '',
     editMode: 'edit',
     canvasStyle: {
-      width: 1200,
-      height: 800,
-      background: '#ffffff'
+      width: 1920,
+      height: 1080,
+      background: '#ffffff',
+      className: '',
+      dataAttrs: {},
+      description: ''
     },
     componentData: [],
     activeComponentId: null,
@@ -56,7 +61,9 @@ function createInitialState(): CanvasState {
     lastSaveError: null,
     retryCount: 0,
     isOnline: navigator.onLine,
-    networkStatus: 'online'
+    networkStatus: 'online',
+    isFullscreen: false,
+    isShowCoordinates: false
   };
 }
 

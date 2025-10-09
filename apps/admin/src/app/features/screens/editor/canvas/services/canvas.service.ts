@@ -130,6 +130,10 @@ export class CanvasService implements OnDestroy {
     this.store.update((state) => ({ showMarkLine: !state.showMarkLine }));
   }
 
+  toggleCoordinates(): void {
+    this.store.update((state) => ({ isShowCoordinates: !state.isShowCoordinates }));
+  }
+
   setGridSize(size: number): void {
     this.store.update({ gridSize: Math.max(1, Math.min(100, size)) });
   }
