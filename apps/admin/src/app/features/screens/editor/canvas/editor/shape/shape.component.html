@@ -53,6 +53,12 @@
     </div>
   </div>
 
+  <div class="coordinates-label" *ngIf="isShowCoordinates && !hasRenderError">
+    <span class="coordinates-text">X: {{ component.style.left | number:'1.0-0' }}, Y: {{ component.style.top | number:'1.0-0' }}</span>
+    <span class="coordinates-size">W: {{ component.style.width | number:'1.0-0' }}, H: {{ component.style.height | number:'1.0-0' }}</span>
+    <span class="coordinates-rotate" *ngIf="component.style.rotate">R: {{ component.style.rotate | number:'1.0-0' }}°</span>
+  </div>
+
   <div class="control-bar" *ngIf="isActive && !component.locked">
     <button class="delete-btn" (click)="onDelete()" title="删除">
       ×

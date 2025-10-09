@@ -58,6 +58,10 @@ export class ShapeComponent implements OnInit, OnDestroy {
         this.isSelected = selectedIds.includes(this.component.id);
       });
 
+      this.query.isShowCoordinates$.pipe(takeUntil(this.destroy$)).subscribe((show) => {
+        this.isShowCoordinates = show;
+      });
+
       this.validateComponent();
     } catch (error) {
       this.captureInitError(error);
