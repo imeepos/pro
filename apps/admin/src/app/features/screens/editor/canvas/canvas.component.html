@@ -1,21 +1,24 @@
 <div class="w-full h-full overflow-auto bg-gray-200" (wheel)="onWheel($event)">
   <div class="canvas-container relative flex items-center justify-center min-w-full min-h-full">
-    <!-- 标尺系统 -->
-    <app-ruler-wrapper
-      [canvasWidth]="(canvasStyle$ | async)?.width || 800"
-      [canvasHeight]="(canvasStyle$ | async)?.height || 600"
-      (settingsToggle)="onRulerSettingsToggle()">
-    </app-ruler-wrapper>
+    <!-- 画布和标尺包装容器 -->
+    <div class="canvas-ruler-container relative">
+      <!-- 标尺系统 -->
+      <app-ruler-wrapper
+        [canvasWidth]="(canvasStyle$ | async)?.width || 800"
+        [canvasHeight]="(canvasStyle$ | async)?.height || 600"
+        (settingsToggle)="onRulerSettingsToggle()">
+      </app-ruler-wrapper>
 
-    <!-- 画布区域 -->
-    <div
-      class="canvas-wrapper canvas-target relative flex-shrink-0 max-w-full max-h-full overflow-visible bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.1)]"
-      [style.transform]="'scale(' + (scale$ | async) + ')'"
-      [style.transform-origin]="'center center'"
-      [style.width.px]="(canvasStyle$ | async)?.width"
-      [style.height.px]="(canvasStyle$ | async)?.height"
-      [style.background]="(canvasStyle$ | async)?.background">
-      <app-editor></app-editor>
+      <!-- 画布区域 -->
+      <div
+        class="canvas-wrapper canvas-target relative flex-shrink-0 max-w-full max-h-full overflow-visible bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.1)]"
+        [style.transform]="'scale(' + (scale$ | async) + ')'"
+        [style.transform-origin]="'center center'"
+        [style.width.px]="(canvasStyle$ | async)?.width"
+        [style.height.px]="(canvasStyle$ | async)?.height"
+        [style.background]="(canvasStyle$ | async)?.background">
+        <app-editor></app-editor>
+      </div>
     </div>
   </div>
 </div>

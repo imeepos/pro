@@ -320,36 +320,47 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
     }
 
     try {
-      // 获取父级容器（canvas-container）的位置
-      const canvasContainer = this.elementRef.nativeElement.closest('.canvas-container');
-      if (!canvasContainer) {
-        console.warn('未找到 canvas-container 元素');
+      // 获取共同的父级容器（canvas-ruler-container）
+      const rulerContainer = this.elementRef.nativeElement.closest('.canvas-ruler-container');
+      if (!rulerContainer) {
+        console.warn('未找到 canvas-ruler-container 元素');
         return { left: 0, top: 0 };
       }
 
-      const containerRect = canvasContainer.getBoundingClientRect();
+      const rulerRect = this.elementRef.nativeElement.getBoundingClientRect();
+      const canvasRect = this.canvasWrapperRef.getBoundingClientRect();
 
-      // 由于canvas-container使用flex居中，画布实际位置在容器中心
-      const containerCenterX = containerRect.left + containerRect.width / 2;
-      const containerCenterY = containerRect.top + containerRect.height / 2;
+      // 直接计算画布相对于标尺容器的偏移
+      const offsetLeft = canvasRect.left - rulerRect.left;
+      const offsetTop = canvasRect.top - rulerRect.top;
 
-      // 计算缩放后的画布尺寸
-      const scaledWidth = canvasStyle.width * scale;
-      const scaledHeight = canvasStyle.height * scale;
+      console.log('新布局偏移计算:', {
+        scale,
+        rulerRect: {
+          left: rulerRect.left,
+          top: rulerRect.top,
+          width: rulerRect.width,
+          height: rulerRect.height
+        },
+        canvasRect: {
+          left: canvasRect.left,
+          top: canvasRect.top,
+          width: canvasRect.width,
+          height: canvasRect.height
+        },
+        offset: {
+          left: offsetLeft,
+          top: offsetTop
+        },
+        finalOffset: {
+          left: Math.max(0, offsetLeft),
+          top: Math.max(0, offsetTop)
+        }
+      });
 
-      // 计算画布左上角相对于容器左上角的偏移
-      // 画居中：offset = (containerSize - scaledSize) / 2
-      const offsetLeft = (containerRect.width - scaledWidth) / 2;
-      const offsetTop = (containerRect.height - scaledHeight) / 2;
-
-      // 考虑容器可能的滚动偏移
-      const finalOffsetLeft = Math.max(0, offsetLeft);
-      const finalOffsetTop = Math.max(0, offsetTop);
-
-      
       return {
-        left: finalOffsetLeft,
-        top: finalOffsetTop
+        left: Math.max(0, offsetLeft),
+        top: Math.max(0, offsetTop)
       };
     } catch (error) {
       console.warn('计算画布偏移量时出错:', error);
