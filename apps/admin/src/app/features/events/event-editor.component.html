@@ -66,7 +66,7 @@
               </label>
               <app-select
                 [options]="industryTypeOptions"
-                [formControl]="eventForm.get('industryTypeId')"
+                [formControl]="industryTypeIdControl"
                 placeholder="请选择行业类型"
               ></app-select>
             </div>
@@ -77,7 +77,7 @@
               </label>
               <app-select
                 [options]="eventTypeOptions"
-                [formControl]="eventForm.get('eventTypeId')"
+                [formControl]="eventTypeIdControl"
                 placeholder="请选择事件类型"
               ></app-select>
             </div>

@@ -1,6 +1,8 @@
-import { Component, forwardRef, input, model, output, ViewChild, ElementRef, AfterViewInit, effect, signal } from '@angular/core';
+import { Component, forwardRef, input, model, output, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+// flowbite-angular directives are imported automatically through the library
+// No explicit imports needed for the directives
 
 export interface SelectOption {
   value: string | number;
@@ -22,9 +24,7 @@ export interface SelectOption {
   templateUrl: './select.component.html',
   styleUrl: './select.component.scss'
 })
-export class SelectComponent implements ControlValueAccessor, AfterViewInit {
-  @ViewChild('trigger') triggerElement!: ElementRef;
-  @ViewChild('dropdown') dropdownElement!: ElementRef;
+export class SelectComponent implements ControlValueAccessor {
 
   // Inputs
   options = input<SelectOption[]>([]);
@@ -54,10 +54,8 @@ export class SelectComponent implements ControlValueAccessor, AfterViewInit {
       // Update highlighted index when search term changes
       this.highlightedIndex.set(-1);
     });
-  }
 
-  ngAfterViewInit() {
-    // Add click outside listener
+    // Add click outside listener using document click handling
     document.addEventListener('click', this.handleClickOutside.bind(this));
   }
 
@@ -65,13 +63,15 @@ export class SelectComponent implements ControlValueAccessor, AfterViewInit {
     document.removeEventListener('click', this.handleClickOutside.bind(this));
   }
 
-  private handleClickOutside(event: MouseEvent) {
-    const target = event.target as Node;
-    if (!this.triggerElement?.nativeElement.contains(target) &&
-        !this.dropdownElement?.nativeElement.contains(target)) {
-      this.isOpen.set(false);
+  private handleClickOutside = (event: MouseEvent): void => {
+    const target = event.target as Element;
+    const dropdownContainer = target.closest('[flowbiteDropdown]');
+
+    // Close dropdown if clicking outside
+    if (!dropdownContainer && this.isOpen()) {
+      this.closeDropdown();
     }
-  }
+  };
 
   get selectedOption(): SelectOption | null {
     if (this.value() === null || this.value() === undefined) {
