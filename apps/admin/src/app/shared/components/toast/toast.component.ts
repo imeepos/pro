@@ -42,30 +42,30 @@ export class ToastComponent implements OnInit, OnDestroy {
 
   get alertClasses(): string {
     const classes: Record<ToastType, string> = {
-      success: 'text-green-800 border-green-300 bg-green-50 dark:bg-gray-800 dark:text-green-400 dark:border-green-800',
-      error: 'text-red-800 border-red-300 bg-red-50 dark:bg-gray-800 dark:text-red-400 dark:border-red-800',
-      warning: 'text-yellow-800 border-yellow-300 bg-yellow-50 dark:bg-gray-800 dark:text-yellow-300 dark:border-yellow-800',
-      info: 'text-blue-800 border-blue-300 bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-800'
+      success: 'text-green-900 border-green-400 bg-green-100 dark:bg-gray-800 dark:text-green-400 dark:border-green-800',
+      error: 'text-red-900 border-red-400 bg-red-100 dark:bg-gray-800 dark:text-red-400 dark:border-red-800',
+      warning: 'text-yellow-900 border-yellow-400 bg-yellow-100 dark:bg-gray-800 dark:text-yellow-300 dark:border-yellow-800',
+      info: 'text-blue-900 border-blue-400 bg-blue-100 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-800'
     };
     return classes[this.type];
   }
 
   get iconClasses(): string {
     const classes: Record<ToastType, string> = {
-      success: 'text-green-500 dark:text-green-400',
-      error: 'text-red-500 dark:text-red-400',
-      warning: 'text-yellow-500 dark:text-yellow-300',
-      info: 'text-blue-500 dark:text-blue-400'
+      success: 'text-green-600 dark:text-green-400',
+      error: 'text-red-600 dark:text-red-400',
+      warning: 'text-yellow-600 dark:text-yellow-300',
+      info: 'text-blue-600 dark:text-blue-400'
     };
     return classes[this.type];
   }
 
   get closeButtonClasses(): string {
     const classes: Record<ToastType, string> = {
-      success: 'bg-green-50 text-green-500 hover:bg-green-200 focus:ring-green-400 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700',
-      error: 'bg-red-50 text-red-500 hover:bg-red-200 focus:ring-red-400 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700',
-      warning: 'bg-yellow-50 text-yellow-500 hover:bg-yellow-200 focus:ring-yellow-400 dark:bg-gray-800 dark:text-yellow-300 dark:hover:bg-gray-700',
-      info: 'bg-blue-50 text-blue-500 hover:bg-blue-200 focus:ring-blue-400 dark:bg-gray-800 dark:text-blue-400 dark:hover:bg-gray-700'
+      success: 'bg-green-100 text-green-600 hover:bg-green-200 focus:ring-green-400 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700',
+      error: 'bg-red-100 text-red-600 hover:bg-red-200 focus:ring-red-400 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700',
+      warning: 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200 focus:ring-yellow-400 dark:bg-gray-800 dark:text-yellow-300 dark:hover:bg-gray-700',
+      info: 'bg-blue-100 text-blue-600 hover:bg-blue-200 focus:ring-blue-400 dark:bg-gray-800 dark:text-blue-400 dark:hover:bg-gray-700'
     };
     return classes[this.type];
   }
