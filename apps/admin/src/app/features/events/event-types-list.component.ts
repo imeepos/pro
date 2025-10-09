@@ -2,12 +2,10 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, takeUntil, combineLatest } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { EventTypesService } from '../../state/event-types.service';
 import { EventTypesQuery } from '../../state/event-types.query';
-import { IndustryTypesService } from '../../state/industry-types.service';
-import { IndustryTypesQuery } from '../../state/industry-types.query';
-import { EventType, IndustryType } from '@pro/sdk';
+import { EventType } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
 
 @Component({
@@ -19,12 +17,10 @@ import { ToastService } from '../../shared/services/toast.service';
 })
 export class EventTypesListComponent implements OnInit, OnDestroy {
   eventTypes: EventType[] = [];
-  industryTypes: IndustryType[] = [];
   filteredEventTypes: EventType[] = [];
   loading = false;
   error: string | null = null;
   searchKeyword = '';
-  selectedIndustryId = '';
   showDeleteDialog = false;
   eventTypeToDelete: EventType | null = null;
 
@@ -33,21 +29,15 @@ export class EventTypesListComponent implements OnInit, OnDestroy {
   constructor(
     private eventTypesService: EventTypesService,
     private eventTypesQuery: EventTypesQuery,
-    private industryTypesService: IndustryTypesService,
-    private industryTypesQuery: IndustryTypesQuery,
     private router: Router,
     private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
-    combineLatest([
-      this.eventTypesQuery.eventTypes$,
-      this.industryTypesQuery.industryTypes$
-    ]).pipe(
+    this.eventTypesQuery.eventTypes$.pipe(
       takeUntil(this.destroy$)
-    ).subscribe(([eventTypes, industryTypes]) => {
+    ).subscribe(eventTypes => {
       this.eventTypes = eventTypes;
-      this.industryTypes = industryTypes;
       this.applyFilter();
     });
 
@@ -64,7 +54,6 @@ export class EventTypesListComponent implements OnInit, OnDestroy {
     });
 
     this.loadEventTypes();
-    this.loadIndustryTypes();
   }
 
   ngOnDestroy(): void {
@@ -80,20 +69,9 @@ export class EventTypesListComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadIndustryTypes(): void {
-    this.industryTypesService.loadIndustryTypes().subscribe({
-      error: (error) => {
-        console.error('加载行业类型列表失败:', error);
-      }
-    });
-  }
-
+  
   applyFilter(): void {
     let filtered = [...this.eventTypes];
-
-    if (this.selectedIndustryId) {
-      filtered = filtered.filter(item => item.industryId === this.selectedIndustryId);
-    }
 
     const keyword = this.searchKeyword.toLowerCase().trim();
     if (keyword) {
@@ -111,10 +89,7 @@ export class EventTypesListComponent implements OnInit, OnDestroy {
     this.applyFilter();
   }
 
-  onIndustryChange(): void {
-    this.applyFilter();
-  }
-
+  
   createEventType(): void {
     this.router.navigate(['/events/event-types/create']);
   }
@@ -152,11 +127,7 @@ export class EventTypesListComponent implements OnInit, OnDestroy {
     });
   }
 
-  getIndustryName(industryId: string): string {
-    const industry = this.industryTypes.find(i => i.id === industryId);
-    return industry ? industry.industryName : '-';
-  }
-
+  
   getStatusText(status: number): string {
     return status === 1 ? '启用' : '禁用';
   }

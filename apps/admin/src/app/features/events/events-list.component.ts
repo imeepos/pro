@@ -131,9 +131,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
     ] as IndustryType[];
 
     this.eventTypes = [
-      { id: '1', eventName: '产品发布', industryId: '1' },
-      { id: '2', eventName: '市场活动', industryId: '2' },
-      { id: '3', eventName: '技术更新', industryId: '3' }
+      { id: '1', eventName: '产品发布' },
+      { id: '2', eventName: '市场活动' },
+      { id: '3', eventName: '技术更新' }
     ] as EventType[];
   }
 

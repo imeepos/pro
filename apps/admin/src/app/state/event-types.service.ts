@@ -55,27 +55,7 @@ export class EventTypesService {
     );
   }
 
-  loadEventTypesByIndustry(industryId: number): Observable<void> {
-    this.setLoading(true);
-    this.setError(null);
-
-    return new Observable(observer => {
-      from(this.api.getEventTypesByIndustry(industryId)).pipe(
-        tap(eventTypes => {
-          this.store.set(eventTypes);
-          observer.next();
-          observer.complete();
-        }),
-        catchError(error => {
-          this.setError(error.message || '加载行业事件类型失败');
-          observer.error(error);
-          return throwError(() => error);
-        }),
-        finalize(() => this.setLoading(false))
-      ).subscribe();
-    });
-  }
-
+  
   createEventType(dto: CreateEventTypeDto): Observable<EventType> {
     this.setLoading(true);
     this.setError(null);
