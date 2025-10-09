@@ -5,11 +5,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
-  ManyToOne,
   OneToMany,
-  JoinColumn,
 } from 'typeorm';
-import { IndustryTypeEntity } from './industry-type.entity';
 import { EventEntity } from './event.entity';
 
 @Entity('event_type')
@@ -23,10 +20,6 @@ export class EventTypeEntity {
 
   @Column({ type: 'varchar', length: 100, name: 'event_name' })
   eventName: string;
-
-  @Index()
-  @Column({ type: 'bigint', name: 'industry_id' })
-  industryId: string;
 
   @Column({ type: 'text', nullable: true })
   description: string;
@@ -44,12 +37,7 @@ export class EventTypeEntity {
   @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   updatedAt: Date;
 
-  @ManyToOne(() => IndustryTypeEntity, (industry) => industry.eventTypes, {
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({ name: 'industry_id' })
-  industryType: IndustryTypeEntity;
-
+  
   @OneToMany(() => EventEntity, (event) => event.eventType)
   events: EventEntity[];
 }

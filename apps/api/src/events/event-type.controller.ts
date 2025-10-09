@@ -27,11 +27,7 @@ export class EventTypeController {
     return this.eventTypeService.findAll();
   }
 
-  @Get('by-industry/:industryId')
-  findByIndustry(@Param('industryId') industryId: string) {
-    return this.eventTypeService.findByIndustry(industryId);
-  }
-
+  
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.eventTypeService.findOne(id);

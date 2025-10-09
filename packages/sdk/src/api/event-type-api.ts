@@ -29,13 +29,7 @@ export class EventTypeApi {
     return this.http.get<EventType>(`/api/event-types/${id}`);
   }
 
-  /**
-   * 按行业查询事件类型
-   */
-  async getEventTypesByIndustry(industryId: number): Promise<EventType[]> {
-    return this.http.get<EventType[]>(`/api/event-types/by-industry/${industryId}`);
-  }
-
+  
   /**
    * 创建事件类型
    */

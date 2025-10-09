@@ -7,7 +7,6 @@ import {
   Index,
   OneToMany,
 } from 'typeorm';
-import { EventTypeEntity } from './event-type.entity';
 import { EventEntity } from './event.entity';
 
 @Entity('industry_type')
@@ -38,9 +37,7 @@ export class IndustryTypeEntity {
   @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   updatedAt: Date;
 
-  @OneToMany(() => EventTypeEntity, (eventType) => eventType.industryType)
-  eventTypes: EventTypeEntity[];
-
+  
   @OneToMany(() => EventEntity, (event) => event.industryType)
   events: EventEntity[];
 }

@@ -78,11 +78,10 @@ export interface EventFilterParams extends Omit<EventQueryParams, 'page' | 'page
               </label>
               <select
                 [(ngModel)]="filterParams.eventTypeId"
-                [disabled]="!filterParams.industryTypeId"
                 class="modern-select"
               >
                 <option [value]="undefined">全部类型</option>
-                <option *ngFor="let eventType of filteredEventTypes" [value]="eventType.id">
+                <option *ngFor="let eventType of eventTypes" [value]="eventType.id">
                   {{ eventType.eventName }}
                 </option>
               </select>
@@ -594,14 +593,7 @@ export class EventFilterPanelComponent implements OnInit {
   }
 
   onIndustryChange(): void {
-    if (this.filterParams.industryTypeId) {
-      this.filteredEventTypes = this.eventTypes.filter(
-        et => et.industryId === this.filterParams.industryTypeId
-      );
-    } else {
-      this.filteredEventTypes = this.eventTypes;
-    }
-    this.filterParams.eventTypeId = undefined;
+    this.filteredEventTypes = this.eventTypes;
   }
 
   onAddressChange(address: AddressData): void {

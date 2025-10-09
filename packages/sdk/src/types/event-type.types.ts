@@ -5,7 +5,6 @@ export interface EventType {
   id: string;
   eventCode: string;
   eventName: string;
-  industryId: string;
   description?: string;
   sortOrder: number;
   status: number;
@@ -19,7 +18,6 @@ export interface EventType {
 export interface CreateEventTypeDto {
   eventCode: string;
   eventName: string;
-  industryId: string;
   description?: string;
   sortOrder?: number;
   status?: number;

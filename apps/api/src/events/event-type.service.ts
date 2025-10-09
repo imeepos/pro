@@ -30,7 +30,6 @@ export class EventTypeService {
 
   async findAll(): Promise<EventTypeEntity[]> {
     return this.eventTypeRepository.find({
-      relations: ['industryType'],
       order: { sortOrder: 'ASC', createdAt: 'DESC' },
     });
   }
@@ -38,7 +37,6 @@ export class EventTypeService {
   async findOne(id: string): Promise<EventTypeEntity> {
     const eventType = await this.eventTypeRepository.findOne({
       where: { id },
-      relations: ['industryType'],
     });
 
     if (!eventType) {
@@ -46,13 +44,6 @@ export class EventTypeService {
     }
 
     return eventType;
-  }
-
-  async findByIndustry(industryId: string): Promise<EventTypeEntity[]> {
-    return this.eventTypeRepository.find({
-      where: { industryId, status: 1 },
-      order: { sortOrder: 'ASC', createdAt: 'DESC' },
-    });
   }
 
   async update(
