@@ -23,8 +23,8 @@ export class CreateScreenDialogComponent implements OnInit {
     this.form = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(50)]],
       description: ['', [Validators.maxLength(200)]],
-      cols: [24, [Validators.required, Validators.min(6), Validators.max(48)]],
-      rows: [24, [Validators.required, Validators.min(6), Validators.max(48)]]
+      width: [1920, [Validators.required, Validators.min(800), Validators.max(10000)]],
+      height: [1080, [Validators.required, Validators.min(600), Validators.max(10000)]]
     });
   }
 
@@ -36,12 +36,12 @@ export class CreateScreenDialogComponent implements OnInit {
     return this.form.get('description');
   }
 
-  get colsControl() {
-    return this.form.get('cols');
+  get widthControl() {
+    return this.form.get('width');
   }
 
-  get rowsControl() {
-    return this.form.get('rows');
+  get heightControl() {
+    return this.form.get('height');
   }
 
   submit(): void {
@@ -57,8 +57,8 @@ export class CreateScreenDialogComponent implements OnInit {
       name: formValue.name,
       description: formValue.description || undefined,
       layout: {
-        cols: formValue.cols,
-        rows: formValue.rows
+        width: formValue.width,
+        height: formValue.height
       },
       components: []
     };

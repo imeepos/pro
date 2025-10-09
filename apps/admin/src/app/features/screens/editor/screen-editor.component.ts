@@ -215,9 +215,9 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
 
             // 2. 根据页面配置设置画布尺寸
             if (screen.layout) {
-              // 使用新的布局配置
-              const canvasWidth = screen.layout.cols * 50; // 每列50px
-              const canvasHeight = screen.layout.rows * 50; // 每行50px
+              // 直接使用像素尺寸设置画布
+              const canvasWidth = screen.layout.width || 1920;
+              const canvasHeight = screen.layout.height || 1080;
               this.canvasService.setCanvasSize(canvasWidth, canvasHeight);
             }
 

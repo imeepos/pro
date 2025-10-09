@@ -873,8 +873,8 @@ export class CanvasService implements OnDestroy {
     const updateDto: UpdateScreenDto = {
       name: pageName,
       layout: {
-        cols: Math.floor(state.canvasStyle.width / 50), // 假设每列50px
-        rows: Math.floor(state.canvasStyle.height / 50) // 假设每行50px
+        width: state.canvasStyle.width,
+        height: state.canvasStyle.height
       },
       components: this.convertComponentsToApiFormat(state.componentData)
     };

@@ -27,30 +27,18 @@ export class GridConfigDto {
 
 /**
  * 布局配置DTO
- * 支持两种格式：
- * 1. 前端格式：{cols: number, rows: number}
- * 2. 实体格式：{width: number, height: number, background: string, grid?: GridConfigDto}
+ * 使用像素单位设置画布尺寸
  */
 export class LayoutConfigDto {
   @IsOptional()
   @IsNumber()
-  @Min(1)
-  cols?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  rows?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(100)
+  @Min(800)
   @Max(10000)
   width?: number;
 
   @IsOptional()
   @IsNumber()
-  @Min(100)
+  @Min(600)
   @Max(10000)
   height?: number;
 
@@ -63,6 +51,17 @@ export class LayoutConfigDto {
   @ValidateNested()
   @Type(() => GridConfigDto)
   grid?: GridConfigDto;
+
+  // 向后兼容：保留栅格字段但标记为废弃
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  cols?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  rows?: number;
 }
 
 /**

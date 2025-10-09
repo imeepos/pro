@@ -5,14 +5,8 @@ import { map } from 'rxjs/operators';
 import { getApiUrl } from '@pro/config';
 
 export interface LayoutConfig {
-  cols: number;
-  rows: number;
-}
-
-// 兼容旧格式的 LayoutConfig 接口
-interface LegacyLayoutConfig {
-  width?: number;
-  height?: number;
+  width: number;
+  height: number;
   background?: string;
   grid?: {
     size?: number;
@@ -20,37 +14,40 @@ interface LegacyLayoutConfig {
   };
 }
 
+// 兼容旧格式的 LayoutConfig 接口
+interface LegacyLayoutConfig {
+  cols?: number;
+  rows?: number;
+}
+
 // 标准化布局数据
 function normalizeLayoutData(layout: LayoutConfig | LegacyLayoutConfig): LayoutConfig {
-  // 如果已经是新格式，直接返回
-  if ('cols' in layout && 'rows' in layout) {
+  // 如果已经是新格式（width/height），直接返回
+  if ('width' in layout && 'height' in layout) {
     return layout as LayoutConfig;
   }
 
-  // 处理旧格式数据
+  // 处理旧格式数据（cols/rows）
   const legacyLayout = layout as LegacyLayoutConfig;
 
   // 默认值
-  const defaultCols = 24;
-  const defaultRows = 12;
+  const defaultWidth = 1920;
+  const defaultHeight = 1080;
 
-  // 如果有 width 和 height，按比例转换为 cols 和 rows
-  // 1920x1080 是常见的 16:9 比例，对应 24:12 的栅格
-  if (legacyLayout.width && legacyLayout.height) {
-    const aspectRatio = legacyLayout.width / legacyLayout.height;
-    const targetCols = Math.round(defaultCols);
-    const targetRows = Math.round(targetCols / aspectRatio);
+  // 如果有栅格数据，转换为像素
+  if (legacyLayout.cols && legacyLayout.rows) {
+    const gridPixelSize = 50; // 每个栅格50px
 
     return {
-      cols: targetCols,
-      rows: Math.max(6, Math.min(48, targetRows)) // 限制在 6-48 范围内
+      width: legacyLayout.cols * gridPixelSize,
+      height: legacyLayout.rows * gridPixelSize
     };
   }
 
   // 如果没有完整的尺寸信息，返回默认值
   return {
-    cols: defaultCols,
-    rows: defaultRows
+    width: defaultWidth,
+    height: defaultHeight
   };
 }
 
