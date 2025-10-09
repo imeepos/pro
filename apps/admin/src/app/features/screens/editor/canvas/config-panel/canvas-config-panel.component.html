@@ -1,0 +1,308 @@
+<div class="canvas-config-panel" [class.dark]="(query.darkTheme$ | async)">
+  <div class="panel-header">
+    <h3 class="panel-title">画布配置</h3>
+  </div>
+
+  <div class="panel-tabs">
+    <button
+      class="tab-button"
+      [class.active]="selectedTab === 'basic'"
+      (click)="selectTab('basic')">
+      基本设置
+    </button>
+    <button
+      class="tab-button"
+      [class.active]="selectedTab === 'background'"
+      (click)="selectTab('background')">
+      背景配置
+    </button>
+    <button
+      class="tab-button"
+      [class.active]="selectedTab === 'advanced'"
+      (click)="selectTab('advanced')">
+      高级选项
+    </button>
+  </div>
+
+  <div class="panel-content">
+    <!-- 基本设置 -->
+    <div *ngIf="selectedTab === 'basic'" class="tab-content">
+      <div class="config-section">
+        <label class="section-label">分辨率预设</label>
+        <div class="preset-grid">
+          <ng-container *ngFor="let preset of resolutionPresets">
+            <button
+              class="preset-button"
+              [class.active]="customWidth === preset.width && customHeight === preset.height"
+              (click)="applyPreset(preset.width, preset.height)"
+              [title]="getCategoryLabel(preset.category)">
+              {{ preset.label }}
+            </button>
+          </ng-container>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <label class="section-label">自定义尺寸</label>
+        <div class="size-inputs">
+          <div class="input-group">
+            <label>宽度 (px)</label>
+            <input
+              type="number"
+              [(ngModel)]="customWidth"
+              (blur)="updateCustomSize()"
+              min="1"
+              class="input-field" />
+          </div>
+          <div class="input-group">
+            <label>高度 (px)</label>
+            <input
+              type="number"
+              [(ngModel)]="customHeight"
+              (blur)="updateCustomSize()"
+              min="1"
+              class="input-field" />
+          </div>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <label class="section-label">当前尺寸</label>
+        <div class="current-size" *ngIf="canvasStyle$ | async as style">
+          {{ style.width }} × {{ style.height }} px
+        </div>
+      </div>
+    </div>
+
+    <!-- 背景配置 -->
+    <div *ngIf="selectedTab === 'background'" class="tab-content">
+      <div class="config-section">
+        <label class="section-label">背景类型</label>
+        <div class="button-group">
+          <button
+            class="type-button"
+            [class.active]="backgroundType === 'color'"
+            (click)="selectBackgroundType('color')">
+            纯色
+          </button>
+          <button
+            class="type-button"
+            [class.active]="backgroundType === 'gradient'"
+            (click)="selectBackgroundType('gradient')">
+            渐变
+          </button>
+          <button
+            class="type-button"
+            [class.active]="backgroundType === 'image'"
+            (click)="selectBackgroundType('image')">
+            图片
+          </button>
+        </div>
+      </div>
+
+      <!-- 纯色背景 -->
+      <div *ngIf="backgroundType === 'color'" class="config-section">
+        <label class="section-label">背景颜色</label>
+        <div class="color-picker-wrapper">
+          <input
+            type="color"
+            [(ngModel)]="backgroundColor"
+            (change)="updateBackgroundColor(backgroundColor)"
+            class="color-picker" />
+          <input
+            type="text"
+            [(ngModel)]="backgroundColor"
+            (blur)="updateBackgroundColor(backgroundColor)"
+            class="color-input"
+            placeholder="#ffffff" />
+        </div>
+      </div>
+
+      <!-- 渐变背景 -->
+      <div *ngIf="backgroundType === 'gradient'" class="gradient-config">
+        <div class="config-section">
+          <label class="section-label">渐变类型</label>
+          <div class="button-group">
+            <button
+              class="type-button"
+              [class.active]="gradientType === 'linear'"
+              (click)="selectGradientType('linear')">
+              线性
+            </button>
+            <button
+              class="type-button"
+              [class.active]="gradientType === 'radial'"
+              (click)="selectGradientType('radial')">
+              径向
+            </button>
+            <button
+              class="type-button"
+              [class.active]="gradientType === 'conic'"
+              (click)="selectGradientType('conic')">
+              圆锥
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="gradientType === 'linear'" class="config-section">
+          <label class="section-label">角度 (度)</label>
+          <input
+            type="range"
+            [(ngModel)]="gradientAngle"
+            (change)="updateGradientAngle()"
+            min="0"
+            max="360"
+            class="slider" />
+          <span class="value-display">{{ gradientAngle }}°</span>
+        </div>
+
+        <div class="config-section">
+          <div class="section-header">
+            <label class="section-label">颜色节点</label>
+            <button class="add-button" (click)="addGradientColor()">+ 添加</button>
+          </div>
+          <div class="color-stops">
+            <div *ngFor="let colorStop of gradientColors; let i = index" class="color-stop-item">
+              <input
+                type="color"
+                [(ngModel)]="colorStop.color"
+                (change)="updateGradientColor(i, colorStop.color)"
+                class="color-picker-small" />
+              <input
+                type="range"
+                [(ngModel)]="colorStop.position"
+                (change)="updateGradientPosition(i, colorStop.position)"
+                min="0"
+                max="100"
+                class="slider-small" />
+              <span class="position-label">{{ colorStop.position }}%</span>
+              <button
+                *ngIf="gradientColors.length > 2"
+                class="remove-button"
+                (click)="removeGradientColor(i)">
+                ×
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 图片背景 -->
+      <div *ngIf="backgroundType === 'image'" class="image-config">
+        <div class="config-section">
+          <label class="section-label">图片URL</label>
+          <input
+            type="text"
+            [(ngModel)]="backgroundImage"
+            (blur)="updateBackgroundImage()"
+            class="input-field"
+            placeholder="https://example.com/image.jpg" />
+        </div>
+
+        <div class="config-section">
+          <label class="section-label">大小</label>
+          <select
+            [(ngModel)]="backgroundSize"
+            (change)="updateBackgroundSize()"
+            class="select-field">
+            <option value="cover">覆盖 (cover)</option>
+            <option value="contain">包含 (contain)</option>
+            <option value="auto">自动 (auto)</option>
+            <option value="100% 100%">拉伸 (100% 100%)</option>
+          </select>
+        </div>
+
+        <div class="config-section">
+          <label class="section-label">位置</label>
+          <select
+            [(ngModel)]="backgroundPosition"
+            (change)="updateBackgroundPosition()"
+            class="select-field">
+            <option value="center">居中</option>
+            <option value="top">顶部</option>
+            <option value="bottom">底部</option>
+            <option value="left">左侧</option>
+            <option value="right">右侧</option>
+            <option value="top left">左上</option>
+            <option value="top right">右上</option>
+            <option value="bottom left">左下</option>
+            <option value="bottom right">右下</option>
+          </select>
+        </div>
+
+        <div class="config-section">
+          <label class="section-label">重复</label>
+          <select
+            [(ngModel)]="backgroundRepeat"
+            (change)="updateBackgroundRepeat()"
+            class="select-field">
+            <option value="no-repeat">不重复</option>
+            <option value="repeat">平铺</option>
+            <option value="repeat-x">水平平铺</option>
+            <option value="repeat-y">垂直平铺</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 透明度 -->
+      <div class="config-section">
+        <label class="section-label">透明度</label>
+        <input
+          type="range"
+          [(ngModel)]="backgroundOpacity"
+          (change)="updateBackgroundOpacity()"
+          min="0"
+          max="100"
+          class="slider" />
+        <span class="value-display">{{ backgroundOpacity }}%</span>
+      </div>
+    </div>
+
+    <!-- 高级选项 -->
+    <div *ngIf="selectedTab === 'advanced'" class="tab-content">
+      <div class="config-section">
+        <label class="section-label">CSS 类名</label>
+        <input
+          type="text"
+          [(ngModel)]="className"
+          (blur)="updateClassName()"
+          class="input-field"
+          placeholder="custom-canvas-class" />
+      </div>
+
+      <div class="config-section">
+        <label class="section-label">画布描述</label>
+        <textarea
+          [(ngModel)]="description"
+          (blur)="updateDescription()"
+          class="textarea-field"
+          rows="3"
+          placeholder="输入画布描述..."></textarea>
+      </div>
+
+      <div class="config-section">
+        <div class="section-header">
+          <label class="section-label">自定义数据属性</label>
+          <button class="add-button" (click)="addDataAttr()">+ 添加</button>
+        </div>
+        <div class="data-attrs">
+          <div *ngFor="let attr of dataAttrs; let i = index" class="data-attr-item">
+            <input
+              type="text"
+              [(ngModel)]="attr.key"
+              (blur)="updateDataAttr()"
+              class="input-field-small"
+              placeholder="属性名" />
+            <input
+              type="text"
+              [(ngModel)]="attr.value"
+              (blur)="updateDataAttr()"
+              class="input-field-small"
+              placeholder="属性值" />
+            <button class="remove-button" (click)="removeDataAttr(i)">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

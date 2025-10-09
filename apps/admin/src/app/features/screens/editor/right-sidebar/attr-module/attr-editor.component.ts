@@ -80,12 +80,13 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
       }
     ];
 
-    if (componentMeta?.metadata?.configSchema) {
+    const configSchema = (componentMeta as any)?.metadata?.configSchema;
+    if (configSchema) {
       this.attrConfig.push({
         type: 'group',
         label: '组件配置',
         key: 'config',
-        children: this.buildConfigSchema(componentMeta.metadata.configSchema)
+        children: this.buildConfigSchema(configSchema)
       });
     }
   }
@@ -144,7 +145,7 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
       common: {
         id: this.component.id,
         type: this.component.type,
-        name: this.component.config?.name || this.component.type
+        name: this.component.config?.['name'] || this.component.type
       },
       config: { ...this.component.config }
     };

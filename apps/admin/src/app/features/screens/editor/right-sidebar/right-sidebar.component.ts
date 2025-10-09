@@ -4,14 +4,17 @@ import { Subject, takeUntil } from 'rxjs';
 import { ComponentItem } from '../models/component.model';
 import { StyleEditorComponent } from './style-module/style-editor.component';
 import { AttrEditorComponent } from './attr-module/attr-editor.component';
+import { CanvasConfigPanelComponent } from '../canvas/config-panel/canvas-config-panel.component';
 import { CanvasQuery } from '../canvas/services/canvas.query';
+import { DataModuleComponent } from '../data-module/data-module.component';
+import { DataPluginInitializerService } from '../data-plugins/data-plugin-initializer.service';
 
 type TabType = 'style' | 'attr' | 'data' | 'canvas';
 
 @Component({
   selector: 'app-right-sidebar',
   standalone: true,
-  imports: [CommonModule, StyleEditorComponent, AttrEditorComponent],
+  imports: [CommonModule, StyleEditorComponent, AttrEditorComponent, CanvasConfigPanelComponent, DataModuleComponent],
   template: `
     <div
       class="right-sidebar h-full transition-all duration-300 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700"
@@ -67,9 +70,10 @@ type TabType = 'style' | 'attr' | 'data' | 'canvas';
               *ngIf="activeTab === 'attr'"
               [component]="activeComponent"
             />
-            <div *ngIf="activeTab === 'data'" class="p-4">
-              <p class="text-sm text-gray-500 dark:text-gray-400">数据配置功能开发中...</p>
-            </div>
+            <app-data-module
+              *ngIf="activeTab === 'data'"
+              [component]="activeComponent"
+            />
           </div>
 
           <!-- 无选中组件时显示 -->
@@ -144,13 +148,16 @@ export class RightSidebarComponent implements OnInit, OnDestroy {
     }
   ];
 
-  constructor(private canvasQuery: CanvasQuery) {}
+  constructor(
+    private canvasQuery: CanvasQuery,
+    private dataPluginInitializer: DataPluginInitializerService
+  ) {}
 
   ngOnInit(): void {
     this.canvasQuery.activeComponent$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(component => {
-      this.activeComponent = component;
+      this.activeComponent = component || null;
 
       if (component && this.activeTab === 'canvas') {
         this.activeTab = 'attr';

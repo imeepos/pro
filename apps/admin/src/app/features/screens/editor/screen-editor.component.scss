@@ -483,3 +483,23 @@
     padding: 1rem !important;
   }
 }
+
+// 全屏模式样式
+.fullscreen-mode {
+  background: #000;
+
+  app-canvas {
+    padding: 0 !important;
+    background: #000 !important;
+  }
+
+  &:fullscreen,
+  &:-webkit-full-screen,
+  &:-moz-full-screen {
+    app-canvas {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}

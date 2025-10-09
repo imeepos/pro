@@ -1,6 +1,6 @@
-<div class="flex flex-col w-full h-full">
+<div #editorContainer class="flex flex-col w-full h-full" [class.fullscreen-mode]="isFullscreen$ | async">
   <!-- 顶部工具栏 -->
-  <div class="toolbar flex items-center gap-1 px-4 py-2 bg-white border-b border-gray-200">
+  <div *ngIf="!(isFullscreen$ | async)" class="toolbar flex items-center gap-1 px-4 py-2 bg-white border-b border-gray-200">
     <button
       (click)="backToList()"
       class="toolbar-icon-btn"
@@ -91,6 +91,24 @@
     </button>
 
     <button
+      (click)="toggleCoordinates()"
+      class="toolbar-icon-btn"
+      [class.active]="isShowCoordinates$ | async"
+      [title]="(isShowCoordinates$ | async) ? '隐藏组件坐标 (Ctrl+Shift+C)' : '显示组件坐标 (Ctrl+Shift+C)'">
+      @if (isShowCoordinates$ | async) {
+        <svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          <path d="M9 12h6m-6 4h6"/>
+        </svg>
+      } @else {
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          <path d="M9 12h6m-6 4h6"/>
+        </svg>
+      }
+    </button>
+
+    <button
       (click)="toggleTheme()"
       class="toolbar-icon-btn"
       [title]="(darkTheme$ | async) ? '切换到亮色主题' : '切换到暗色主题'">
@@ -119,6 +137,22 @@
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
           <circle cx="12" cy="12" r="3"/>
+        </svg>
+      }
+    </button>
+
+    <button
+      (click)="toggleFullscreen()"
+      class="toolbar-icon-btn"
+      [class.active]="isFullscreen$ | async"
+      [title]="(isFullscreen$ | async) ? '退出全屏 (ESC)' : '全屏预览 (F11)'">
+      @if (isFullscreen$ | async) {
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>
+        </svg>
+      } @else {
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
         </svg>
       }
     </button>
@@ -198,7 +232,7 @@
   <!-- 主内容区 -->
   <div class="flex flex-1 min-h-0 overflow-hidden">
     <!-- 左侧组件库面板 -->
-    <div *ngIf="!leftPanelCollapsed" class="component-library-panel w-64 border-r border-gray-200 bg-white overflow-hidden flex flex-col">
+    <div *ngIf="!leftPanelCollapsed && !(isFullscreen$ | async)" class="component-library-panel w-64 border-r border-gray-200 bg-white overflow-hidden flex flex-col">
       <!-- 面板头部 -->
       <div class="p-3 border-b border-gray-200">
         <div class="flex items-center justify-between mb-3">
@@ -273,7 +307,7 @@
 
     <!-- 左侧面板折叠按钮 -->
     <button
-      *ngIf="leftPanelCollapsed"
+      *ngIf="leftPanelCollapsed && !(isFullscreen$ | async)"
       (click)="toggleLeftPanel()"
       class="panel-toggle-btn left"
       title="展开组件库">
@@ -286,6 +320,12 @@
     <app-canvas class="flex-1 bg-gray-100 overflow-hidden p-1" [class.dark-theme]="darkTheme$ | async"></app-canvas>
 
     <!-- 右侧图层面板 -->
-    <app-layer-panel *ngIf="!layerPanelCollapsed"></app-layer-panel>
+    <app-layer-panel *ngIf="!layerPanelCollapsed && !(isFullscreen$ | async)"></app-layer-panel>
+
+    <!-- 右侧属性编辑面板 -->
+    <app-right-sidebar
+      *ngIf="!(isFullscreen$ | async)"
+      [(collapsed)]="rightPanelCollapsed"
+    ></app-right-sidebar>
   </div>
 </div>

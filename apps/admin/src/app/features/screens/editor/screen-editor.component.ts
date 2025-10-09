@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,10 +10,13 @@ import { ScreenPage, UpdateScreenDto } from '../../../core/services/screen-api.s
 import { ComponentRegistryService } from '../../../core/services/component-registry.service';
 import { CanvasComponent } from './canvas/canvas.component';
 import { LayerPanelComponent } from './canvas/layer-panel/layer-panel.component';
+import { CanvasConfigPanelComponent } from './canvas/config-panel/canvas-config-panel.component';
+import { RightSidebarComponent } from './right-sidebar/right-sidebar.component';
 import { CanvasService } from './canvas/services/canvas.service';
 import { CanvasQuery } from './canvas/services/canvas.query';
 import { ComponentItem } from './models/component.model';
 import { KeyboardService } from './services/keyboard.service';
+import { FullscreenService } from './services/fullscreen.service';
 
 interface ToastMessage {
   id: string;
@@ -27,7 +30,7 @@ interface ToastMessage {
 @Component({
   selector: 'app-screen-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, CanvasComponent, LayerPanelComponent],
+  imports: [CommonModule, FormsModule, CanvasComponent, LayerPanelComponent, CanvasConfigPanelComponent, RightSidebarComponent],
   templateUrl: './screen-editor.component.html',
   styleUrls: ['./screen-editor.component.scss'],
   animations: [
@@ -80,10 +83,16 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   snapToGrid$ = this.canvasQuery.snapToGrid$;
   showMarkLine$ = this.canvasQuery.showMarkLine$;
   darkTheme$ = this.canvasQuery.darkTheme$;
+  isShowCoordinates$ = this.canvasQuery.isShowCoordinates$;
 
   // 新增的保存状态流
   isDirty$ = this.canvasQuery.isDirty$;
   saveStatus$ = this.canvasQuery.saveStatus$;
+
+  // 全屏状态
+  isFullscreen$ = this.fullscreenService.isFullscreen$;
+
+  @ViewChild('editorContainer', { read: ElementRef }) editorContainer?: ElementRef<HTMLElement>;
 
   private readonly keyboardService = inject(KeyboardService);
 
@@ -94,7 +103,8 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
     private screensQuery: ScreensQuery,
     private componentRegistry: ComponentRegistryService,
     private canvasService: CanvasService,
-    private canvasQuery: CanvasQuery
+    private canvasQuery: CanvasQuery,
+    private fullscreenService: FullscreenService
   ) {}
 
   ngOnInit(): void {
@@ -107,6 +117,7 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
     this.setupBeforeUnloadListener();
     this.setupSaveStatusListener();
     this.setupKeyboardShortcuts();
+    this.setupFullscreenListener();
     this.keyboardService.startListening();
   }
 
@@ -362,19 +373,26 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   }
 
   private setupKeyboardShortcuts(): void {
-    // 添加Ctrl+S 保存快捷键
-    const saveShortcut = (event: KeyboardEvent) => {
+    // 添加Ctrl+S 保存快捷键和 F11 全屏快捷键
+    const keyboardShortcut = (event: KeyboardEvent) => {
+      // Ctrl+S 保存
       if ((event.ctrlKey || event.metaKey) && event.key === 's') {
         event.preventDefault();
         this.save();
       }
+
+      // F11 全屏
+      if (event.key === 'F11') {
+        event.preventDefault();
+        this.toggleFullscreen();
+      }
     };
 
-    document.addEventListener('keydown', saveShortcut);
+    document.addEventListener('keydown', keyboardShortcut);
 
     // 确保在组件销毁时移除事件监听器
     this.destroy$.subscribe(() => {
-      document.removeEventListener('keydown', saveShortcut);
+      document.removeEventListener('keydown', keyboardShortcut);
     });
   }
 
@@ -489,6 +507,10 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
     this.canvasService.toggleMarkLine();
   }
 
+  toggleCoordinates(): void {
+    this.canvasService.toggleCoordinates();
+  }
+
   // Toast通知系统方法
   showToast(toast: Omit<ToastMessage, 'id'>): void {
     const newToast: ToastMessage = {
@@ -559,6 +581,23 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
       this.showInfoToast('预览模式', '已进入预览模式，无法编辑组件');
     } else {
       this.showInfoToast('编辑模式', '已退出预览模式');
+    }
+  }
+
+  private setupFullscreenListener(): void {
+    this.fullscreenService.isFullscreen$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(isFullscreen => {
+      this.canvasService.setFullscreenState(isFullscreen);
+    });
+  }
+
+  async toggleFullscreen(): Promise<void> {
+    try {
+      const element = this.editorContainer?.nativeElement;
+      await this.fullscreenService.toggleFullscreen(element);
+    } catch (error) {
+      this.showErrorToast('全屏失败', '您的浏览器不支持全屏功能或已被禁用');
     }
   }
 }
