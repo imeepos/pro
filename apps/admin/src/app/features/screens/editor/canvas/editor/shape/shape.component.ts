@@ -1,4 +1,4 @@
-import { Component, Input, HostListener, ElementRef, OnInit, OnDestroy, ErrorHandler, ViewChild, AfterViewInit, ComponentRef } from '@angular/core';
+import { Component, Input, HostListener, ElementRef, OnInit, OnDestroy, ErrorHandler, ViewChild, AfterViewInit, ComponentRef, Type } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, combineLatest } from 'rxjs';
 import { CanvasService } from '../../services/canvas.service';
@@ -6,8 +6,8 @@ import { CanvasQuery } from '../../services/canvas.query';
 import { RulerGridService } from '../../services/ruler-grid.service';
 import { ErrorBoundaryService } from '../../services/error-boundary.service';
 import { ComponentEventHandlerService } from '../../../services/component-event-handler.service';
-import { ComponentRegistryService } from '../../../../core/services/component-registry.service';
-import { ComponentHostDirective } from '../../component-host.directive';
+import { ComponentRegistryService } from '../../../../../../core/services/component-registry.service';
+import { ComponentHostDirective } from '../../../component-host.directive';
 import { ComponentItem, ComponentStyle, Point, ComponentErrorInfo } from '../../../models/component.model';
 import { throttleFrame } from '../../../utils/throttle.util';
 import { GeometryUtil } from '../../../utils/geometry.util';
@@ -217,7 +217,9 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       });
 
-      this.componentRef.changeDetectorRef.detectChanges();
+      if (this.componentRef) {
+        this.componentRef.changeDetectorRef.detectChanges();
+      }
     } catch (error) {
       this.setRenderError(
         error instanceof Error ? error.message : '组件创建失败',
