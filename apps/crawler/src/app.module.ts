@@ -8,6 +8,7 @@ import { BrowserService } from './browser/browser.service';
 import { WeiboSearchCrawlerService } from './weibo/search-crawler.service';
 import { RawDataService } from './raw-data/raw-data.service';
 import { CrawlQueueConsumer } from './crawl-queue.consumer';
+import { defaultCrawlerConfig, defaultRabbitMQConfig, defaultMongoDBConfig, defaultWeiboConfig } from './config/crawler.config';
 
 @Module({
   imports: [
@@ -68,7 +69,23 @@ import { CrawlQueueConsumer } from './crawl-queue.consumer';
     BrowserService,
     WeiboSearchCrawlerService,
     RawDataService,
-    CrawlQueueConsumer
+    CrawlQueueConsumer,
+    {
+      provide: 'CRAWLER_CONFIG',
+      useValue: defaultCrawlerConfig
+    },
+    {
+      provide: 'RABBITMQ_CONFIG',
+      useValue: defaultRabbitMQConfig
+    },
+    {
+      provide: 'MONGODB_CONFIG',
+      useValue: defaultMongoDBConfig
+    },
+    {
+      provide: 'WEIBO_CONFIG',
+      useValue: defaultWeiboConfig
+    }
   ],
 })
 export class AppModule {}

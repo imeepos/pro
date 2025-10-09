@@ -1,17 +1,18 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitMQClient } from '@pro/rabbitmq';
 import { WeiboSearchCrawlerService, SubTaskMessage, CrawlResult } from './weibo/search-crawler.service';
+import { RabbitMQConfig } from './config/crawler.interface';
 
 @Injectable()
 export class CrawlQueueConsumer implements OnModuleInit {
   private readonly logger = new Logger(CrawlQueueConsumer.name);
-  private readonly queueName = 'weibo_crawl_queue';
   private rabbitMQClient: RabbitMQClient;
 
   constructor(
     private readonly weiboSearchCrawlerService: WeiboSearchCrawlerService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    @Inject('RABBITMQ_CONFIG') private readonly rabbitmqConfig: RabbitMQConfig
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -20,16 +21,17 @@ export class CrawlQueueConsumer implements OnModuleInit {
 
   private async setupConsumer(): Promise<void> {
     try {
-      const rabbitmqUrl = this.configService.get<string>('RABBITMQ_URL', 'amqp://localhost:5672');
-
-      this.rabbitMQClient = new RabbitMQClient({ url: rabbitmqUrl, queue: this.queueName });
+      this.rabbitMQClient = new RabbitMQClient({
+        url: this.rabbitmqConfig.url,
+        queue: this.rabbitmqConfig.queues.crawlQueue
+      });
       await this.rabbitMQClient.connect();
 
-      await this.rabbitMQClient.consume(this.queueName, async (message: any) => {
+      await this.rabbitMQClient.consume(this.rabbitmqConfig.queues.crawlQueue, async (message: any) => {
         await this.handleMessage(message);
       });
 
-      this.logger.log(`已启动队列消费者: ${this.queueName}`);
+      this.logger.log(`已启动队列消费者: ${this.rabbitmqConfig.queues.crawlQueue}`);
     } catch (error) {
       this.logger.error('设置队列消费者失败:', error);
       throw error;
@@ -43,7 +45,9 @@ export class CrawlQueueConsumer implements OnModuleInit {
     try {
       subTask = message;
 
-      this.logger.log(`收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}`);
+      this.logger.log(`收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}, ` +
+                     `时间范围=${this.formatDate(subTask.start)}~${this.formatDate(subTask.end)}, ` +
+                     `isInitialCrawl=${subTask.isInitialCrawl}`);
 
       const result = await this.weiboSearchCrawlerService.crawl(subTask);
 
@@ -58,8 +62,55 @@ export class CrawlQueueConsumer implements OnModuleInit {
 
       if (subTask) {
         await this.handleTaskFailure(subTask, error instanceof Error ? error.message : '未知错误');
+
+        // 重试逻辑 - 如果是网络错误或临时错误，可以重新入队
+        if (this.shouldRetry(error) && subTask.isInitialCrawl) {
+          await this.scheduleRetry(subTask, error instanceof Error ? error.message : '未知错误');
+        }
       }
     }
+  }
+
+  private shouldRetry(error: any): boolean {
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
+
+    // 网络相关错误可以重试
+    const retryableErrors = [
+      'timeout',
+      'network',
+      'connection',
+      'etimedout',
+      'enotfound',
+      'econnreset'
+    ];
+
+    return retryableErrors.some(err => errorMessage.includes(err));
+  }
+
+  private async scheduleRetry(subTask: SubTaskMessage, errorMessage: string): Promise<void> {
+    const retryDelay = 5 * 60 * 1000; // 5分钟后重试
+
+    try {
+      // 延迟重试消息
+      setTimeout(async () => {
+        try {
+          await this.rabbitMQClient.publish(this.rabbitmqConfig.queues.crawlQueue, {
+            ...subTask,
+            retryCount: (subTask as any).retryCount ? (subTask as any).retryCount + 1 : 1
+          });
+          this.logger.log(`已重新安排任务重试: taskId=${subTask.taskId}, 重试次数=${(subTask as any).retryCount ? (subTask as any).retryCount + 1 : 1}`);
+        } catch (error) {
+          this.logger.error(`重试任务安排失败: taskId=${subTask.taskId}`, error);
+        }
+      }, retryDelay);
+
+    } catch (error) {
+      this.logger.error(`安排重试失败: taskId=${subTask.taskId}`, error);
+    }
+  }
+
+  private formatDate(date: Date): string {
+    return date.toISOString().split('T')[0];
   }
 
   private async handleCrawlResult(subTask: SubTaskMessage, result: CrawlResult): Promise<void> {
@@ -68,49 +119,26 @@ export class CrawlQueueConsumer implements OnModuleInit {
       return;
     }
 
-    const updates: any = {
-      status: 'running',
-      progress: (subTask.taskId * 100) / 100,
-      updatedAt: new Date()
-    };
+    this.logger.log(`爬取任务成功完成: taskId=${subTask.taskId}, pageCount=${result.pageCount}, ` +
+                   `首条时间=${result.firstPostTime?.toISOString()}, 末条时间=${result.lastPostTime?.toISOString()}`);
 
-    if (subTask.isInitialCrawl) {
-      if (result.pageCount === 50 && result.lastPostTime) {
-        updates.currentCrawlTime = result.lastPostTime;
-        if (!subTask.weiboAccountId) {
-          updates.latestCrawlTime = result.firstPostTime;
-        }
-        await this.triggerNextSubTask(subTask, result.lastPostTime);
-      } else {
-        updates.currentCrawlTime = subTask.start;
-        updates.nextRunAt = new Date(Date.now() + 60 * 60 * 1000);
-        updates.status = 'paused';
-      }
-    } else {
-      if (result.firstPostTime) {
-        updates.latestCrawlTime = result.firstPostTime;
-      }
-      updates.nextRunAt = new Date(Date.now() + 60 * 60 * 1000);
-    }
-
-    this.logger.log(`任务状态更新: taskId=${subTask.taskId}, 更新内容=`, updates);
-  }
-
-  private async triggerNextSubTask(subTask: SubTaskMessage, endTime: Date): Promise<void> {
-    const nextTask: SubTaskMessage = {
-      ...subTask,
-      end: endTime
-    };
-
-    try {
-      await this.rabbitMQClient.publish(this.queueName, nextTask);
-      this.logger.log(`已自动触发下一个子任务: taskId=${subTask.taskId}, 新结束时间=${endTime.toISOString()}`);
-    } catch (error) {
-      this.logger.error(`触发下一个子任务失败: taskId=${subTask.taskId}`, error);
-    }
+    // 状态更新逻辑已移至 WeiboSearchCrawlerService.handleTaskResult()
+    // 这里只做日志记录和失败处理
   }
 
   private async handleTaskFailure(subTask: SubTaskMessage, errorMessage: string): Promise<void> {
-    this.logger.error(`任务执行失败: taskId=${subTask.taskId}, 错误=${errorMessage}`);
+    this.logger.error(`任务执行失败: taskId=${subTask.taskId}, keyword=${subTask.keyword}, 错误=${errorMessage}`);
+
+    // 发布失败状态更新消息
+    try {
+      await this.rabbitMQClient.publish(this.rabbitmqConfig.queues.statusQueue, {
+        taskId: subTask.taskId,
+        status: 'failed',
+        errorMessage: errorMessage,
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      this.logger.error(`发布失败状态更新消息失败: taskId=${subTask.taskId}`, error);
+    }
   }
 }
