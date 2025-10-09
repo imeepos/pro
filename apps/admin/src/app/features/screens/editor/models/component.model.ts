@@ -1,3 +1,5 @@
+import { ComponentEvent } from './event.model';
+
 export interface ComponentItem {
   id: string;
   type: string;
@@ -13,6 +15,7 @@ export interface ComponentItem {
   errorInfo?: ComponentErrorInfo;
   dataSlotId?: string;
   enableDataSource?: boolean;
+  events?: ComponentEvent[];
 }
 
 export interface ComponentErrorInfo {
