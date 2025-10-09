@@ -336,19 +336,23 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
       }
 
       const containerRect = canvasContainer.getBoundingClientRect();
-      const canvasRect = this.canvasWrapperRef.getBoundingClientRect();
 
-      // 计算画布在容器中的实际偏移量（考虑缩放）
+      // 由于canvas-container使用flex居中，画布实际位置在容器中心
       const containerCenterX = containerRect.left + containerRect.width / 2;
       const containerCenterY = containerRect.top + containerRect.height / 2;
 
-      // 计算画布左上角相对于容器中心的偏移（已考虑缩放）
-      const canvasLeft = containerCenterX - (canvasStyle.width * scale) / 2;
-      const canvasTop = containerCenterY - (canvasStyle.height * scale) / 2;
+      // 计算缩放后的画布尺寸
+      const scaledWidth = canvasStyle.width * scale;
+      const scaledHeight = canvasStyle.height * scale;
 
-      // 计算相对于容器左上角的偏移
-      const offsetLeft = canvasLeft - containerRect.left;
-      const offsetTop = canvasTop - containerRect.top;
+      // 计算画布左上角相对于容器左上角的偏移
+      // 画居中：offset = (containerSize - scaledSize) / 2
+      const offsetLeft = (containerRect.width - scaledWidth) / 2;
+      const offsetTop = (containerRect.height - scaledHeight) / 2;
+
+      // 考虑容器可能的滚动偏移
+      const finalOffsetLeft = Math.max(0, offsetLeft);
+      const finalOffsetTop = Math.max(0, offsetTop);
 
       console.log('偏移量计算:', {
         scale,
@@ -359,19 +363,27 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
           width: containerRect.width,
           height: containerRect.height
         },
-        canvasRect: {
-          left: canvasRect.left,
-          top: canvasRect.top,
-          width: canvasRect.width,
-          height: canvasRect.height
+        scaledDimensions: {
+          width: scaledWidth,
+          height: scaledHeight
         },
-        offsetLeft,
-        offsetTop
+        centerPoint: {
+          x: containerCenterX,
+          y: containerCenterY
+        },
+        calculatedOffset: {
+          left: offsetLeft,
+          top: offsetTop
+        },
+        finalOffset: {
+          left: finalOffsetLeft,
+          top: finalOffsetTop
+        }
       });
 
       return {
-        left: offsetLeft,
-        top: offsetTop
+        left: finalOffsetLeft,
+        top: finalOffsetTop
       };
     } catch (error) {
       console.warn('计算画布偏移量时出错:', error);
