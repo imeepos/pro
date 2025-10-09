@@ -1,7 +1,7 @@
 import { Injectable, Injector } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
-import { AnyDataConfig, DataAcceptor, DataInstance, DataPlugin, DataResponse, DataSlot, DataSourceType } from '../models/data-source.model';
-import { DataStatus } from '../models/data-source.enum';
+import { AnyDataConfig, DataAcceptor, DataInstance, DataPlugin, DataResponse, DataSlot } from '../models/data-source.model';
+import { DataStatus, DataSourceType } from '../models/data-source.enum';
 import { DataSlotterStore } from './data-slotter.store';
 import { DataSlotterQuery } from './data-slotter.query';
 

@@ -10,7 +10,6 @@ import {
   FlowbiteFormFieldColors
 } from 'flowbite-angular/form';
 import {
-  Dropdown,
   DropdownContent,
   DropdownItem,
   provideFlowbiteDropdownConfig,
@@ -31,7 +30,6 @@ export interface SelectOption {
     CommonModule,
     FormField,
     FormControl,
-    Dropdown,
     DropdownContent,
     DropdownItem
   ],

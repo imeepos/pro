@@ -6,7 +6,6 @@ import { RulerGridService } from '../services/ruler-grid.service';
 import { ShapeComponent } from './shape/shape.component';
 import { MarkLineComponent } from './mark-line/mark-line.component';
 import { AreaComponent } from './area/area.component';
-import { GridComponent } from './grid/grid.component';
 import { ComponentItem, ComponentStyle, Rect } from '../../models/component.model';
 import { GeometryUtil } from '../../utils/geometry.util';
 import { ContextMenuComponent, MenuItem } from './context-menu/context-menu.component';
@@ -14,7 +13,7 @@ import { ContextMenuComponent, MenuItem } from './context-menu/context-menu.comp
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, ShapeComponent, MarkLineComponent, AreaComponent, ContextMenuComponent, GridComponent],
+  imports: [CommonModule, ShapeComponent, MarkLineComponent, AreaComponent, ContextMenuComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss']
 })
