@@ -8,16 +8,17 @@ import { AreaComponent } from './area/area.component';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { ComponentItem, ComponentStyle, Rect } from '../../models/component.model';
 import { GeometryUtil } from '../../utils/geometry.util';
+import { ContextMenuComponent, MenuItem } from './context-menu/context-menu.component';
 
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, ShapeComponent, MarkLineComponent, AreaComponent, DragDropModule],
+  imports: [CommonModule, ShapeComponent, MarkLineComponent, AreaComponent, DragDropModule, ContextMenuComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss']
 })
 export class EditorComponent {
-  @ViewChild(MarkLineComponent) markLine!: MarkLineComponent;
+  @ViewChild(MarkLineComponent, { static: false }) markLine!: MarkLineComponent;
 
   componentData$ = this.query.componentData$;
   editMode$ = this.query.editMode$;
@@ -26,6 +27,10 @@ export class EditorComponent {
   isSelecting = false;
   selectionArea?: Rect;
 
+  showContextMenu = false;
+  contextMenuX = 0;
+  contextMenuY = 0;
+
   constructor(
     private canvasService: CanvasService,
     private query: CanvasQuery,
@@ -33,7 +38,11 @@ export class EditorComponent {
   ) {}
 
   onComponentDrop(event: CdkDragDrop<any>): void {
-    const componentType = event.item.data;
+    const componentData = event.item.data;
+    if (!componentData) return;
+
+    // 从组件库拖拽过来的数据格式: { type, name, icon, category }
+    const componentType = componentData.type || componentData;
     const dropPoint = event.dropPoint;
     const editorRect = (event.event.target as HTMLElement)
       .closest('.editor-container')
@@ -50,17 +59,23 @@ export class EditorComponent {
       type: componentType,
       component: componentType,
       style: {
-        top: y,
-        left: x,
+        top: Math.max(0, y),
+        left: Math.max(0, x),
         width: 200,
         height: 150,
         rotate: 0,
-        zIndex: 1
+        zIndex: this.getNextZIndex()
       },
       config: {}
     };
 
     this.canvasService.addComponent(newComponent);
+  }
+
+  private getNextZIndex(): number {
+    const components = this.query.getValue().componentData;
+    if (components.length === 0) return 1;
+    return Math.max(...components.map(c => c.style.zIndex || 1)) + 1;
   }
 
   @HostListener('click', ['$event'])
@@ -70,6 +85,21 @@ export class EditorComponent {
       if (!event.shiftKey) {
         this.canvasService.clearSelection();
       }
+    }
+  }
+
+  @HostListener('contextmenu', ['$event'])
+  onEditorContextMenu(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.classList.contains('editor-container')) return;
+
+    const selectedIds = this.query.getValue().selectedComponentIds;
+    if (selectedIds.length > 1) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.contextMenuX = event.clientX;
+      this.contextMenuY = event.clientY;
+      this.showContextMenu = true;
     }
   }
 
@@ -170,5 +200,103 @@ export class EditorComponent {
     if (this.markLine) {
       this.markLine.hideAllLines();
     }
+  }
+
+  get multiSelectContextMenuItems(): MenuItem[] {
+    const selectedIds = this.query.getValue().selectedComponentIds;
+
+    return [
+      {
+        label: `组合 (${selectedIds.length}个组件)`,
+        icon: '📦',
+        handler: () => this.composeComponents(),
+        disabled: selectedIds.length < 2
+      },
+      { divider: true, label: '', handler: () => {} },
+      {
+        label: '左对齐',
+        icon: '⬅️',
+        handler: () => this.alignComponents('left')
+      },
+      {
+        label: '右对齐',
+        icon: '➡️',
+        handler: () => this.alignComponents('right')
+      },
+      {
+        label: '顶部对齐',
+        icon: '⬆️',
+        handler: () => this.alignComponents('top')
+      },
+      {
+        label: '底部对齐',
+        icon: '⬇️',
+        handler: () => this.alignComponents('bottom')
+      },
+      {
+        label: '水平居中',
+        icon: '↔️',
+        handler: () => this.alignComponents('centerH')
+      },
+      {
+        label: '垂直居中',
+        icon: '↕️',
+        handler: () => this.alignComponents('centerV')
+      },
+      { divider: true, label: '', handler: () => {} },
+      {
+        label: '水平分布',
+        icon: '⬌',
+        handler: () => this.distributeHorizontally(),
+        disabled: selectedIds.length < 3
+      },
+      {
+        label: '垂直分布',
+        icon: '⬍',
+        handler: () => this.distributeVertically(),
+        disabled: selectedIds.length < 3
+      },
+      { divider: true, label: '', handler: () => {} },
+      {
+        label: '批量删除',
+        icon: '🗑️',
+        handler: () => this.batchDelete()
+      }
+    ];
+  }
+
+  closeContextMenu(): void {
+    this.showContextMenu = false;
+  }
+
+  private composeComponents(): void {
+    const selectedIds = this.query.getValue().selectedComponentIds;
+    if (selectedIds.length >= 2) {
+      this.canvasService.composeComponents(selectedIds);
+    }
+  }
+
+  private alignComponents(type: 'left' | 'right' | 'top' | 'bottom' | 'centerH' | 'centerV'): void {
+    const selectedIds = this.query.getValue().selectedComponentIds;
+    this.canvasService.batchAlign(selectedIds, type);
+    this.canvasService.recordSnapshot();
+  }
+
+  private distributeHorizontally(): void {
+    const selectedIds = this.query.getValue().selectedComponentIds;
+    this.canvasService.distributeHorizontally(selectedIds);
+    this.canvasService.recordSnapshot();
+  }
+
+  private distributeVertically(): void {
+    const selectedIds = this.query.getValue().selectedComponentIds;
+    this.canvasService.distributeVertically(selectedIds);
+    this.canvasService.recordSnapshot();
+  }
+
+  private batchDelete(): void {
+    const selectedIds = this.query.getValue().selectedComponentIds;
+    this.canvasService.batchDelete(selectedIds);
+    this.canvasService.recordSnapshot();
   }
 }

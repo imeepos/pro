@@ -1,8 +1,124 @@
 :host {
   display: flex;
-  height: 100%;
-  width: 100%;
+  height: 100vh;
+  width: 100vw;
   background: #f3f4f6;
+  overflow: hidden;
+}
+
+// 工具栏样式
+.toolbar {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  z-index: 50;
+  position: relative;
+}
+
+// 工具栏分隔线
+.toolbar-divider {
+  height: 24px;
+  width: 1px;
+  background: #e5e7eb;
+  margin: 0 4px;
+}
+
+// 图标按钮基础样式
+.toolbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #374151;
+  }
+
+  &:active:not(:disabled) {
+    background: #f3f4f6;
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    color: #d1d5db;
+  }
+
+  &.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+  }
+}
+
+
+// 旋转动画
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+// 暗色主题
+:host ::ng-deep .dark-theme {
+  background: #1f2937 !important;
+
+  .canvas-wrapper {
+    background: #111827 !important;
+  }
+
+  .shape-wrapper {
+    background: rgba(31, 41, 55, 0.5) !important;
+    border-color: rgba(75, 85, 99, 0.5) !important;
+
+    &:hover {
+      border-color: rgba(96, 165, 250, 0.7) !important;
+    }
+
+    &.active {
+      border-color: #60a5fa !important;
+      box-shadow: 0 0 0 1px #60a5fa !important;
+    }
+
+    &.selected {
+      border-color: #34d399 !important;
+      box-shadow: 0 0 0 1px #34d399 !important;
+    }
+  }
+
+  .component-content .placeholder {
+    color: rgba(209, 213, 219, 0.7) !important;
+  }
+
+  .editor-container {
+    background: #111827 !important;
+  }
 }
 
 .left-panel,
@@ -42,6 +158,91 @@
 ::ng-deep .cdk-drag-preview {
   position: fixed !important;
   z-index: 9999 !important;
+}
+
+// 组件库面板样式
+.component-library-panel {
+  background: white;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.05);
+}
+
+// 分类标签样式
+.category-tag {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid transparent;
+
+  &:hover {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  &.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
+}
+
+// 组件卡片样式
+.component-card {
+  user-select: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  position: relative;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// 拖拽时的样式
+.component-card.cdk-drag-dragging {
+  opacity: 0.8;
+  z-index: 1000;
+  transform: rotate(2deg);
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.2);
+}
+
+// 面板折叠按钮
+.panel-toggle-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+
+  &:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  &.left {
+    left: 0;
+    border-radius: 0 4px 4px 0;
+    border-left: none;
+  }
+
+  &.right {
+    right: 0;
+    border-radius: 4px 0 0 4px;
+    border-right: none;
+  }
 }
 
 // 组件面板样式
