@@ -1,8 +1,22 @@
 import { Component, forwardRef, input, model, output, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-// flowbite-angular directives are imported automatically through the library
-// No explicit imports needed for the directives
+import {
+  FormField,
+  FormControl,
+  provideFlowbiteFormFieldConfig,
+  provideFlowbiteFormControlConfig,
+  FlowbiteFormFieldSizes,
+  FlowbiteFormFieldColors
+} from 'flowbite-angular/form';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  provideFlowbiteDropdownConfig,
+  provideFlowbiteDropdownContentConfig,
+  provideFlowbiteDropdownItemConfig
+} from 'flowbite-angular/dropdown';
 
 export interface SelectOption {
   value: string | number;
@@ -13,13 +27,31 @@ export interface SelectOption {
 @Component({
   selector: 'app-select',
   standalone: true,
-  imports: [CommonModule],
+  imports: [
+    CommonModule,
+    FormField,
+    FormControl,
+    Dropdown,
+    DropdownContent,
+    DropdownItem
+  ],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => SelectComponent),
       multi: true
-    }
+    },
+    provideFlowbiteFormFieldConfig({
+      size: 'md',
+      color: 'default',
+      mode: 'normal'
+    }),
+    provideFlowbiteFormControlConfig({}),
+    provideFlowbiteDropdownConfig({
+      color: 'default'
+    }),
+    provideFlowbiteDropdownContentConfig({}),
+    provideFlowbiteDropdownItemConfig({})
   ],
   templateUrl: './select.component.html',
   styleUrl: './select.component.scss'
@@ -33,6 +65,11 @@ export class SelectComponent implements ControlValueAccessor {
   clearable = input<boolean>(false);
   searchable = input<boolean>(false);
   loading = input<boolean>(false);
+
+  // Flowbite theme inputs
+  size = input<keyof FlowbiteFormFieldSizes>('md');
+  color = input<keyof FlowbiteFormFieldColors>('default');
+  customTheme = input<any>({});
 
   // Model for two-way binding
   value = model<string | number | null>(null);
@@ -73,25 +110,33 @@ export class SelectComponent implements ControlValueAccessor {
     }
   };
 
+  // Enhanced value getter with better null handling
   get selectedOption(): SelectOption | null {
-    if (this.value() === null || this.value() === undefined) {
+    const currentValue = this.value();
+    if (currentValue === null || currentValue === undefined) {
       return null;
     }
-    return this.options().find(option => option.value === this.value()) || null;
+    return this.options().find(option => option.value === currentValue) || null;
   }
 
+  // Optimized filtered options with memoization potential
   get filteredOptions(): SelectOption[] {
     if (!this.searchable()) {
       return this.options();
     }
 
-    const term = this.searchTerm().toLowerCase();
+    const term = this.searchTerm().toLowerCase().trim();
+    if (!term) {
+      return this.options();
+    }
+
     return this.options().filter(option =>
       option.label.toLowerCase().includes(term) &&
       !option.disabled
     );
   }
 
+  
   get displayValue(): string {
     const selected = this.selectedOption;
     return selected ? selected.label : this.placeholder();
@@ -167,29 +212,13 @@ export class SelectComponent implements ControlValueAccessor {
   private focusSearch(): void {
     if (this.searchable()) {
       setTimeout(() => {
-        const searchInput = document.querySelector('.select-search-input') as HTMLInputElement;
+        const searchInput = document.querySelector('.search-input') as HTMLInputElement;
         searchInput?.focus();
       });
     }
   }
 
-  // ControlValueAccessor implementation
-  writeValue(value: any): void {
-    this.value.set(value);
-  }
-
-  registerOnChange(fn: any): void {
-    this.onChange = fn;
-  }
-
-  registerOnTouched(fn: any): void {
-    this.onTouched = fn;
-  }
-
-  setDisabledState(isDisabled: boolean): void {
-    // This will be handled by the disabled input signal
-  }
-
+  // Enhanced keyboard navigation with better accessibility
   onKeydown(event: KeyboardEvent): void {
     if (this.disabled()) return;
 
@@ -226,6 +255,35 @@ export class SelectComponent implements ControlValueAccessor {
       case 'Tab':
         this.closeDropdown();
         break;
+      case 'Home':
+        event.preventDefault();
+        if (this.isOpen()) {
+          this.highlightedIndex.set(0);
+        }
+        break;
+      case 'End':
+        event.preventDefault();
+        if (this.isOpen()) {
+          this.highlightedIndex.set(this.filteredOptions.length - 1);
+        }
+        break;
     }
+  }
+
+  // ControlValueAccessor implementation
+  writeValue(value: any): void {
+    this.value.set(value);
+  }
+
+  registerOnChange(fn: any): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: any): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState(isDisabled: boolean): void {
+    // This will be handled by the disabled input signal
   }
 }

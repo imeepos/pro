@@ -1,6 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SelectComponent, SelectOption } from './select.component';
+import {
+  FormField,
+  FormControl,
+  provideFlowbiteFormFieldConfig,
+  provideFlowbiteFormControlConfig,
+} from 'flowbite-angular/form';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  provideFlowbiteDropdownConfig,
+  provideFlowbiteDropdownContentConfig,
+  provideFlowbiteDropdownItemConfig
+} from 'flowbite-angular/dropdown';
 
 describe('SelectComponent', () => {
   let component: SelectComponent;
@@ -14,7 +28,29 @@ describe('SelectComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SelectComponent, FormsModule, ReactiveFormsModule],
+      imports: [
+        SelectComponent,
+        FormsModule,
+        ReactiveFormsModule,
+        FormField,
+        FormControl,
+        Dropdown,
+        DropdownContent,
+        DropdownItem
+      ],
+      providers: [
+        provideFlowbiteFormFieldConfig({
+          size: 'md',
+          color: 'default',
+          mode: 'normal'
+        }),
+        provideFlowbiteFormControlConfig({}),
+        provideFlowbiteDropdownConfig({
+          color: 'default'
+        }),
+        provideFlowbiteDropdownContentConfig({}),
+        provideFlowbiteDropdownItemConfig({})
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(SelectComponent);

@@ -1,128 +1,148 @@
-<div class="relative w-full" [class.opacity-60]="disabled()" [class.cursor-not-allowed]="disabled()">
-  <!-- Dropdown trigger -->
-  <button
-    #trigger
-    flowbiteDropdown
-    class="relative flex items-center justify-between w-full px-3 py-2 text-sm leading-5 transition-all duration-150 ease-in-out rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900"
-    [class.cursor-not-allowed]="disabled()"
-    [class.bg-gray-100]="disabled()"
-    [class.dark:bg-gray-900]="disabled()"
-    [class.text-gray-500]="disabled()"
-    [class.dark:text-gray-600]="disabled()"
-    [class.border-gray-300]="disabled()"
-    [class.dark:border-gray-700]="disabled()"
-    (click)="toggleDropdown()"
-    (keydown)="onKeydown($event)"
-    [disabled]="disabled()"
-    [tabindex]="disabled() ? -1 : 0"
-    role="combobox"
-    [attr.aria-expanded]="isOpen()"
-    [attr.aria-disabled]="disabled()"
-    type="button"
-  >
-    <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
-          [class.text-gray-400]="!selectedOption"
-          [class.dark:text-gray-500]="!selectedOption">
-      {{ displayValue }}
-    </span>
-
-    <div class="flex items-center gap-1 ml-2">
-      <!-- Clear button -->
-      <button
-        *ngIf="clearable() && selectedOption && !disabled()"
-        type="button"
-        class="flex items-center justify-center w-4 h-4 text-gray-500 dark:text-gray-400 transition-all duration-150 rounded-sm hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-        (click)="clearSelection(); $event.stopPropagation()"
-        aria-label="清除选择"
-        flowbiteDropdownItem
-      >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-      </button>
-
-      <!-- Dropdown arrow -->
-      <svg
-        class="flex-shrink-0 text-gray-500 dark:text-gray-400 transition-transform duration-150"
-        [class.rotate-180]="isOpen()"
-        width="12"
-        height="12"
-        viewBox="0 0 12 12"
-        fill="none"
-      >
-        <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-  </button>
-
-  <!-- Dropdown content -->
-  <ul
-    *ngIf="isOpen()"
-    flowbiteDropdownContent
-    class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-hidden"
-    role="listbox"
-  >
-    <!-- Search input -->
-    <li *ngIf="searchable()" class="p-2 border-b border-gray-200 dark:border-gray-700">
-      <input
-        type="text"
-        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 focus:outline-none"
-        [value]="searchTerm()"
-        (input)="onSearchChange($any($event.target).value)"
-        (keydown)="
-          $event.key === 'ArrowDown' ? highlightNext() :
-          $event.key === 'ArrowUp' ? highlightPrevious() :
-          $event.key === 'Enter' ? selectHighlighted() :
-          $event.key === 'Escape' ? closeDropdown() : null
-        "
-        placeholder="搜索..."
-        autocomplete="off"
-        flowbiteDropdownItem
-      >
-    </li>
-
-    <!-- Loading state -->
-    <li *ngIf="loading()" class="flex items-center justify-center p-4 text-gray-500 dark:text-gray-400">
-      <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600 mr-2"></div>
-      <span class="text-sm">加载中...</span>
-    </li>
-
-    <!-- Empty state -->
-    <li *ngIf="!loading() && filteredOptions.length === 0" class="flex items-center justify-center p-4 text-gray-500 dark:text-gray-400">
-      <span class="text-sm">无数据</span>
-    </li>
-
-    <!-- Options list -->
-    <li
-      *ngFor="let option of filteredOptions; let i = index"
-      flowbiteDropdownItem
-      class="flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-      [class.bg-blue-50]="option.value === value()"
-      [class.dark:bg-blue-900]="option.value === value()"
-      [class.text-blue-700]="option.value === value()"
-      [class.dark:text-blue-300]="option.value === value()"
-      [class.text-gray-400]="option.disabled"
-      [class.dark:text-gray-600]="option.disabled"
-      [class.cursor-not-allowed]="option.disabled"
-      [class.hover:bg-transparent]="option.disabled"
-      [class.dark:hover:bg-transparent]="option.disabled"
-      (click)="selectOption(option)"
-      (mouseenter)="highlightedIndex.set(i)"
-      role="option"
-      [attr.aria-selected]="option.value === value()"
-      [attr.aria-disabled]="option.disabled"
+<div
+  flowbiteFormField
+  [size]="size()"
+  [color]="color()"
+  [customTheme]="customTheme()"
+  class="relative w-full"
+  [class.opacity-60]="disabled()"
+  [class.cursor-not-allowed]="disabled()"
+>
+  <!-- Form field structure with flowbite FormControl -->
+  <div class="relative">
+    <!-- Select trigger button -->
+    <button
+      #trigger
+      flowbiteFormControl
+      flowbiteDropdown
+      [disabled]="disabled()"
+      class="trigger-button"
+      [customTheme]="{
+        host: {
+          base: 'relative flex items-center justify-between w-full text-sm leading-5 cursor-pointer transition-all duration-150 ease-in-out rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900'
+        }
+      }"
+      (click)="toggleDropdown()"
+      (keydown)="onKeydown($event)"
+      [tabindex]="disabled() ? -1 : 0"
+      role="combobox"
+      [attr.aria-expanded]="isOpen()"
+      [attr.aria-disabled]="disabled()"
+      type="button"
     >
-      <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ option.label }}</span>
+      <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
+            [class.text-gray-400]="!selectedOption"
+            [class.dark:text-gray-500]="!selectedOption">
+        {{ displayValue }}
+      </span>
 
-      <!-- Check icon for selected option -->
-      <svg
-        *ngIf="option.value === value()"
-        class="flex-shrink-0 w-4 h-4 ml-2 text-blue-600 dark:text-blue-400"
-        viewBox="0 0 16 16"
-        fill="none"
+      <div class="flex items-center gap-1 ml-2">
+        <!-- Clear button -->
+        <button
+          *ngIf="clearable() && selectedOption && !disabled()"
+          type="button"
+          class="flex items-center justify-center w-4 h-4 text-gray-500 dark:text-gray-400 transition-all duration-150 rounded-sm hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+          (click)="clearSelection(); $event.stopPropagation()"
+          aria-label="清除选择"
+          flowbiteDropdownItem
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        <!-- Dropdown arrow -->
+        <svg
+          class="flex-shrink-0 text-gray-500 dark:text-gray-400 transition-transform duration-150"
+          [class.rotate-180]="isOpen()"
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+        >
+          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </button>
+
+    <!-- Dropdown content -->
+    <ul
+      *ngIf="isOpen()"
+      flowbiteDropdownContent
+      class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-hidden text-left"
+      [customTheme]="{
+        host: {
+          base: 'absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-hidden text-left'
+        }
+      }"
+      role="listbox"
+    >
+      <!-- Search input -->
+      <li *ngIf="searchable()" class="p-2 border-b border-gray-200 dark:border-gray-700">
+        <input
+          type="text"
+          class="search-input w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 focus:outline-none"
+          [value]="searchTerm()"
+          (input)="onSearchChange($any($event.target).value)"
+          (keydown)="
+            $event.key === 'ArrowDown' ? highlightNext() :
+            $event.key === 'ArrowUp' ? highlightPrevious() :
+            $event.key === 'Enter' ? selectHighlighted() :
+            $event.key === 'Escape' ? closeDropdown() : null
+          "
+          placeholder="搜索..."
+          autocomplete="off"
+          flowbiteDropdownItem
+        >
+      </li>
+
+      <!-- Loading state -->
+      <li *ngIf="loading()" class="loading-state flex items-center justify-center p-4 text-gray-500 dark:text-gray-400">
+        <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600 mr-2"></div>
+        <span class="text-sm">加载中...</span>
+      </li>
+
+      <!-- Empty state -->
+      <li *ngIf="!loading() && filteredOptions.length === 0" class="empty-state flex items-center justify-center p-4 text-gray-500 dark:text-gray-400">
+        <span class="text-sm">无数据</span>
+      </li>
+
+      <!-- Options list -->
+      <li
+        *ngFor="let option of filteredOptions; let i = index"
+        flowbiteDropdownItem
+        class="flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+        [class.bg-blue-50]="option.value === value()"
+        [class.dark:bg-blue-900]="option.value === value()"
+        [class.text-blue-700]="option.value === value()"
+        [class.dark:text-blue-300]="option.value === value()"
+        [class.text-gray-400]="option.disabled"
+        [class.dark:text-gray-600]="option.disabled"
+        [class.cursor-not-allowed]="option.disabled"
+        [class.hover:bg-transparent]="option.disabled"
+        [class.dark:hover:bg-transparent]="option.disabled"
+        [customTheme]="{
+          host: {
+            base: 'flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors hover:bg-gray-100 dark:hover:bg-gray-700'
+          }
+        }"
+        (click)="selectOption(option)"
+        (mouseenter)="highlightedIndex.set(i)"
+        role="option"
+        [attr.aria-selected]="option.value === value()"
+        [attr.aria-disabled]="option.disabled"
       >
-        <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </li>
-  </ul>
+        <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ option.label }}</span>
+
+        <!-- Check icon for selected option -->
+        <svg
+          *ngIf="option.value === value()"
+          class="flex-shrink-0 w-4 h-4 ml-2 text-blue-600 dark:text-blue-400"
+          viewBox="0 0 16 16"
+          fill="none"
+        >
+          <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </li>
+    </ul>
+  </div>
 </div>
