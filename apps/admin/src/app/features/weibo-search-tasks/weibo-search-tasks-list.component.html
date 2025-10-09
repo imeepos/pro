@@ -1,4 +1,4 @@
-<div class="page-container">
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
   <div class="page-header">
     <h1>微博搜索任务管理</h1>
     <button class="btn btn-primary" (click)="createTask()">
@@ -72,7 +72,8 @@
       {{ error$ | async }}
     </div>
 
-    <div class="table-container" *ngIf="!(loading$ | async)">
+    <!-- 数据表格 -->
+    <div class="table-container" *ngIf="((tasks$ | async)?.length ?? 0) > 0 && !(loading$ | async)">
       <table class="data-table">
         <thead>
           <tr>
@@ -229,13 +230,13 @@
           </tr>
         </tbody>
       </table>
+    </div>
 
-      <!-- 空状态 -->
-      <div class="empty-state" *ngIf="(tasks$ | async)?.length === 0 && !(loading$ | async)">
-        <div class="empty-icon">📋</div>
-        <div class="empty-text">暂无任务数据</div>
-        <button class="btn btn-primary" (click)="createTask()">创建第一个任务</button>
-      </div>
+    <!-- 空状态 -->
+    <div class="empty-state" *ngIf="((tasks$ | async)?.length ?? 0) === 0 && !(loading$ | async)">
+      <div class="empty-icon">📋</div>
+      <div class="empty-text">暂无任务数据</div>
+      <button class="btn btn-primary" (click)="createTask()">创建第一个任务</button>
     </div>
 
     <!-- 分页 -->
