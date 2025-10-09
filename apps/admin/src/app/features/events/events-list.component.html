@@ -109,50 +109,6 @@
   </div>
 
   <div class="flex-1 flex overflow-hidden relative">
-    <!-- 筛选面板折叠按钮 -->
-    <button
-      (click)="toggleFilterPanel()"
-      class="filter-toggle-btn"
-      [class.expanded]="!isFilterPanelCollapsed"
-      type="button"
-      [attr.title]="isFilterPanelCollapsed ? '展开筛选面板' : '折叠筛选面板'"
-    >
-      <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-      </svg>
-      <span class="filter-indicator" *ngIf="hasActiveFilters()"></span>
-    </button>
-
-    <!-- 筛选面板 -->
-    <div
-      class="filter-panel-wrapper"
-      [class.collapsed]="isFilterPanelCollapsed"
-      (click)="onBackdropClick()"
-    >
-      <app-event-filter-panel
-        *ngIf="!isFilterPanelCollapsed"
-        [filterParams]="filterParams"
-        [industryTypes]="industryTypes"
-        [eventTypes]="eventTypes"
-        [tags]="tags"
-        (filterChange)="onFilterChange($event)"
-        (reset)="onFilterReset()"
-        (click)="$event.stopPropagation()"
-      ></app-event-filter-panel>
-
-      <!-- 折叠状态下的简化筛选按钮 -->
-      <div
-        *ngIf="isFilterPanelCollapsed"
-        class="collapsed-filter-hint"
-        (click)="toggleFilterPanel()"
-      >
-        <svg class="w-6 h-6 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
-        </svg>
-        <span class="text-sm text-gray-500">筛选</span>
-      </div>
-    </div>
-
     <!-- 主内容区 -->
     <div class="flex-1 flex flex-col overflow-hidden">
       <!-- 事件列表 -->

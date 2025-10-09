@@ -5,14 +5,9 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { EventsService } from '../../state/events.service';
 import { EventsQuery } from '../../state/events.query';
-import { TagsService } from '../../state/tags.service';
-import { TagsQuery } from '../../state/tags.query';
-import { Event, EventQueryParams, EventStatus, IndustryType, EventType, Tag } from '@pro/sdk';
+import { Event, EventQueryParams, EventStatus } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
-import {
-  EventFilterPanelComponent,
-  DeleteEventDialogComponent
-} from './components';
+import { DeleteEventDialogComponent } from './components';
 
 @Component({
   selector: 'app-events-list',
@@ -20,7 +15,6 @@ import {
   imports: [
     CommonModule,
     FormsModule,
-    EventFilterPanelComponent,
     DeleteEventDialogComponent
   ],
   templateUrl: './events-list.component.html',
@@ -28,9 +22,6 @@ import {
 })
 export class EventsListComponent implements OnInit, OnDestroy {
   events: Event[] = [];
-  industryTypes: IndustryType[] = [];
-  eventTypes: EventType[] = [];
-  tags: Tag[] = [];
   loading = false;
   error: string | null = null;
   total = 0;
@@ -45,15 +36,12 @@ export class EventsListComponent implements OnInit, OnDestroy {
   showDeleteDialog = false;
   eventToDelete: Event | null = null;
   searchHistory: string[] = [];
-  isFilterPanelCollapsed = true;
 
   private destroy$ = new Subject<void>();
 
   constructor(
     private eventsService: EventsService,
     private eventsQuery: EventsQuery,
-    private tagsService: TagsService,
-    private tagsQuery: TagsQuery,
     private router: Router,
     private toastService: ToastService
   ) {}
@@ -83,15 +71,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
       this.total = total;
     });
 
-    this.tagsQuery.tags$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(tags => {
-      this.tags = tags;
-    });
-
     this.loadEvents();
-    this.loadFilterData();
-    this.loadTags();
   }
 
   ngOnDestroy(): void {
@@ -109,71 +89,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadFilterData(): void {
-    // 这里应该调用服务获取行业类型和事件类型数据
-    // 暂时使用模拟数据
-    this.industryTypes = [
-      { id: '1', industryName: '制造业', industryCode: 'MFG' },
-      { id: '2', industryName: '金融业', industryCode: 'FIN' },
-      { id: '3', industryName: '科技业', industryCode: 'TECH' }
-    ] as IndustryType[];
-
-    this.eventTypes = [
-      { id: '1', eventName: '产品发布' },
-      { id: '2', eventName: '市场活动' },
-      { id: '3', eventName: '技术更新' }
-    ] as EventType[];
-  }
-
-  loadTags(): void {
-    this.tagsService.loadTags().pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      error: (error) => {
-        console.error('加载标签列表失败:', error);
-      }
-    });
-  }
-
-  toggleFilterPanel(): void {
-    this.isFilterPanelCollapsed = !this.isFilterPanelCollapsed;
-  }
-
-  hasActiveFilters(): boolean {
-    return !!(
-      this.filterParams.keyword ||
-      this.filterParams.industryTypeId ||
-      this.filterParams.eventTypeId ||
-      (this.filterParams.tagIds && this.filterParams.tagIds.length > 0) ||
-      this.filterParams.status !== undefined ||
-      this.filterParams.startTime ||
-      this.filterParams.endTime
-    );
-  }
-
-  onFilterChange(params: Partial<EventQueryParams>): void {
-    this.filterParams = { ...this.filterParams, ...params, page: 1 };
-    this.loadEvents();
-
-    // 在筛选应用后，可选择性地折叠面板（移动端自动折叠）
-    if (window.innerWidth <= 768) {
-      setTimeout(() => {
-        this.isFilterPanelCollapsed = true;
-      }, 500);
-    }
-  }
-
-  // 添加点击遮罩层关闭面板的功能（移动端）
-  onBackdropClick(): void {
-    if (window.innerWidth <= 768 && !this.isFilterPanelCollapsed) {
-      this.isFilterPanelCollapsed = true;
-    }
-  }
-
-  onFilterReset(): void {
-    this.filterParams = { page: 1, pageSize: 20 };
-    this.loadEvents();
-  }
 
   onSearch(keyword: string): void {
     this.filterParams = { ...this.filterParams, keyword, page: 1 };
