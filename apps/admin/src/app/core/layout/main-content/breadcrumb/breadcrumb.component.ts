@@ -32,7 +32,15 @@ export class BreadcrumbComponent implements OnInit, OnDestroy {
     'weibo-search-tasks': '微博搜索任务',
     'accounts': '账号列表',
     'login': '微博登录',
-    'create': '创建'
+    'register': '注册',
+    'jd': '京东管理',
+    'events': '事件管理',
+    'industry-types': '行业类型',
+    'event-types': '事件类型',
+    'media-type': '媒体类型',
+    'create': '创建',
+    'edit': '编辑',
+    'detail': '详情'
   };
 
   ngOnInit(): void {

@@ -1,4 +1,4 @@
-<div class="canvas-container overflow-hidden" (wheel)="onWheel($event)">
+<div class="canvas-container" (wheel)="onWheel($event)">
   <div
     class="canvas-wrapper"
     [style.transform]="'scale(' + (scale$ | async) + ')'"
