@@ -16,6 +16,9 @@ export { FlowbiteSliderComponent } from './flowbite-slider/flowbite-slider.compo
 // Flowbite Select Component
 export { FlowbiteSelectComponent, SelectOption, SelectGroup } from './flowbite-select/flowbite-select.component';
 
+// Flowbite Checkbox Component
+export { FlowbiteCheckboxComponent } from './flowbite-checkbox/flowbite-checkbox.component';
+
 // Module exports for easy importing
 import { FlowbiteInputComponent } from './flowbite-input/flowbite-input.component';
 import { FlowbiteTextareaComponent } from './flowbite-textarea/flowbite-textarea.component';
@@ -23,6 +26,7 @@ import { FlowbiteToggleComponent } from './flowbite-toggle/flowbite-toggle.compo
 import { FlowbiteColorComponent } from './flowbite-color/flowbite-color.component';
 import { FlowbiteSliderComponent } from './flowbite-slider/flowbite-slider.component';
 import { FlowbiteSelectComponent } from './flowbite-select/flowbite-select.component';
+import { FlowbiteCheckboxComponent } from './flowbite-checkbox/flowbite-checkbox.component';
 
 export const FLOWBITE_CONTROLS = [
   FlowbiteInputComponent,
@@ -30,7 +34,8 @@ export const FLOWBITE_CONTROLS = [
   FlowbiteToggleComponent,
   FlowbiteColorComponent,
   FlowbiteSliderComponent,
-  FlowbiteSelectComponent
+  FlowbiteSelectComponent,
+  FlowbiteCheckboxComponent
 ];
 
 // Type exports

@@ -1,0 +1,76 @@
+.flowbite-checkbox-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  input[type="checkbox"] {
+    transition: all 0.2s ease-in-out;
+
+    &:hover:not(:disabled) {
+      border-color: #6b7280;
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    }
+
+    &:checked {
+      background-color: #2563eb;
+      border-color: #2563eb;
+    }
+
+    &:indeterminate {
+      background-color: #6b7280;
+      border-color: #6b7280;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      background-color: #f3f4f6;
+      border-color: #d1d5db;
+    }
+  }
+
+  label {
+    user-select: none;
+    transition: color 0.2s ease-in-out;
+
+    &:hover {
+      color: #374151;
+    }
+  }
+
+  .text-red-600 {
+    color: #dc2626;
+  }
+
+  .text-red-500 {
+    color: #ef4444;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .flowbite-checkbox-wrapper {
+    input[type="checkbox"] {
+      &:checked {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+      }
+
+      &:disabled {
+        background-color: #374151;
+        border-color: #4b5563;
+      }
+    }
+
+    label {
+      color: #f9fafb;
+
+      &:hover {
+        color: #e5e7eb;
+      }
+    }
+  }
+}
