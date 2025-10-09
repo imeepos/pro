@@ -15,8 +15,7 @@ interface Notification {
   selector: 'app-notification',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './notification.component.html',
-  styleUrls: ['./notification.component.scss']
+  templateUrl: './notification.component.html'
 })
 export class NotificationComponent implements OnInit, OnDestroy {
   isDropdownOpen = false;

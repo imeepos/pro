@@ -1,18 +1,21 @@
-<div class="notification-container relative">
+<!-- Flowbite Notification Dropdown -->
+<div class="relative inline-block">
+  <!-- Dropdown Button with Badge -->
   <button
     (click)="toggleDropdown()"
     (keydown.escape)="isDropdownOpen && toggleDropdown()"
-    class="notification-button relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+    class="relative inline-flex items-center p-2 text-sm font-medium text-center text-gray-600 dark:text-gray-300 bg-transparent rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 transition-all"
     [attr.aria-expanded]="isDropdownOpen"
     aria-label="通知"
     aria-haspopup="true"
     type="button"
   >
     <svg
-      class="w-6 h-6 text-gray-600 dark:text-gray-300"
+      class="w-6 h-6"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
     >
       <path
         stroke-linecap="round"
@@ -22,42 +25,38 @@
       />
     </svg>
 
-    <span
-      *ngIf="hasUnread"
-      class="absolute top-1 right-1 flex h-5 w-5 items-center justify-center"
-    >
-      <span
-        class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"
-      ></span>
-      <span
-        class="relative inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white"
-      >
-        {{ unreadCount > 9 ? '9+' : unreadCount }}
-      </span>
-    </span>
+    <!-- Flowbite Badge with Ping Animation -->
+    <div *ngIf="hasUnread" class="absolute inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 border-2 border-white rounded-full -top-1 -end-1 dark:border-gray-800">
+      <span class="sr-only">未读通知</span>
+      {{ unreadCount > 9 ? '9+' : unreadCount }}
+    </div>
   </button>
 
+  <!-- Flowbite Dropdown Menu -->
   <div
     *ngIf="isDropdownOpen"
-    class="notification-dropdown absolute right-0 mt-2 w-80 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+    class="absolute right-0 z-20 mt-2 w-80 bg-white divide-y divide-gray-100 rounded-lg shadow-lg dark:bg-gray-800 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 animate-fade-in"
   >
-    <div class="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-        通知
-      </h3>
-      <button
-        *ngIf="hasUnread"
-        (click)="markAllAsRead()"
-        class="text-sm text-primary hover:text-primary-600 transition-colors duration-150"
-      >
-        全部已读
-      </button>
+    <!-- Dropdown Header -->
+    <div class="px-4 py-3 text-sm text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between">
+        <div class="font-semibold">通知</div>
+        <button
+          *ngIf="hasUnread"
+          (click)="markAllAsRead()"
+          class="text-xs font-medium text-blue-600 dark:text-blue-500 hover:underline"
+        >
+          全部已读
+        </button>
+      </div>
     </div>
 
-    <div class="notification-list max-h-96 overflow-y-auto">
+    <!-- Dropdown Content -->
+    <div class="max-h-96 overflow-y-auto">
+      <!-- Empty State -->
       <div *ngIf="notifications.length === 0" class="p-8 text-center">
         <svg
-          class="mx-auto h-12 w-12 text-gray-400"
+          class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -74,35 +73,41 @@
         </p>
       </div>
 
-      <div
+      <!-- Notification Items -->
+      <a
         *ngFor="let notification of notifications; trackBy: trackById"
-        (click)="markAsRead(notification)"
+        href="#"
+        (click)="$event.preventDefault(); markAsRead(notification)"
         (keydown.enter)="markAsRead(notification)"
         (keydown.space)="$event.preventDefault(); markAsRead(notification)"
-        class="notification-item border-b border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50"
-        [class.unread]="!notification.read"
+        class="flex px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        [class.bg-blue-50]="!notification.read"
+        [class.dark:bg-gray-900]="!notification.read"
         tabindex="0"
         role="button"
         [attr.aria-label]="notification.title + ': ' + notification.message"
       >
-        <div class="flex items-start gap-3">
+        <div class="flex items-start gap-3 w-full">
+          <!-- Unread Indicator -->
           <div
             *ngIf="!notification.read"
-            class="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary"
+            class="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-blue-600 dark:bg-blue-500"
           ></div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-900 dark:text-white">
+
+          <!-- Content -->
+          <div class="flex-1 min-w-0" [class.ps-0]="!notification.read">
+            <div class="text-sm font-semibold text-gray-900 dark:text-white truncate">
               {{ notification.title }}
-            </p>
-            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
               {{ notification.message }}
-            </p>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            </div>
+            <div class="text-xs text-blue-600 dark:text-blue-500 mt-1">
               {{ getTimeAgo(notification.timestamp) }}
-            </p>
+            </div>
           </div>
         </div>
-      </div>
+      </a>
     </div>
   </div>
 </div>
