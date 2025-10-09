@@ -1,0 +1,250 @@
+<div
+  class="right-sidebar h-full transition-all duration-300 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700"
+  [ngClass]="{ 'w-80': !collapsed, 'w-12': collapsed }"
+>
+  <!-- 折叠按钮 -->
+  <button
+    type="button"
+    (click)="toggleCollapse()"
+    class="collapse-btn absolute -left-3 top-4 z-10 w-6 h-6 rounded-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 shadow-md hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center justify-center transition-all duration-200 hover:scale-110"
+    title="{{ collapsed ? '展开侧边栏' : '折叠侧边栏' }}"
+  >
+    <svg
+      class="w-4 h-4 text-gray-600 dark:text-gray-300 transition-transform duration-300"
+      [ngClass]="{ 'rotate-180': collapsed }"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+  </button>
+
+  <!-- 展开状态 -->
+  <div *ngIf="!collapsed" class="h-full flex flex-col">
+    <!-- 选项卡 -->
+    <div class="tabs-container border-b border-gray-200 dark:border-gray-700">
+      <div class="flex space-x-1 p-1">
+        <!-- 样式标签页 -->
+        <button
+          type="button"
+          (click)="activeTab = 'style'"
+          [disabled]="!activeComponent"
+          [ngClass]="{
+            'tab-button-active': activeTab === 'style',
+            'tab-button-inactive': activeTab !== 'style',
+            'opacity-50 cursor-not-allowed': !activeComponent
+          }"
+          class="tab-button flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+          title="编辑组件样式属性"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+          </svg>
+          <span>样式</span>
+          <span
+            *ngIf="tabStates.style.hasChanges"
+            class="badge-warning text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+          >
+            未保存
+          </span>
+        </button>
+
+        <!-- 属性标签页 -->
+        <button
+          type="button"
+          (click)="activeTab = 'attr'"
+          [disabled]="!activeComponent"
+          [ngClass]="{
+            'tab-button-active': activeTab === 'attr',
+            'tab-button-inactive': activeTab !== 'attr',
+            'opacity-50 cursor-not-allowed': !activeComponent
+          }"
+          class="tab-button flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+          title="编辑组件基本属性"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span>属性</span>
+          <span
+            *ngIf="tabStates.attr.hasChanges"
+            class="badge-warning text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+          >
+            未保存
+          </span>
+        </button>
+
+        <!-- 数据标签页 -->
+        <button
+          type="button"
+          (click)="activeTab = 'data'"
+          [disabled]="!activeComponent"
+          [ngClass]="{
+            'tab-button-active': activeTab === 'data',
+            'tab-button-inactive': activeTab !== 'data',
+            'opacity-50 cursor-not-allowed': !activeComponent
+          }"
+          class="tab-button flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+          title="管理组件数据绑定"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+          </svg>
+          <span>数据</span>
+          <span
+            *ngIf="tabStates.data.hasChanges"
+            class="badge-warning text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+          >
+            未保存
+          </span>
+        </button>
+
+        <!-- 事件标签页 -->
+        <button
+          type="button"
+          (click)="activeTab = 'event'"
+          [disabled]="!activeComponent"
+          [ngClass]="{
+            'tab-button-active': activeTab === 'event',
+            'tab-button-inactive': activeTab !== 'event',
+            'opacity-50 cursor-not-allowed': !activeComponent
+          }"
+          class="tab-button flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+          title="配置组件事件处理"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <span>事件</span>
+          <span
+            *ngIf="tabStates.event.hasChanges"
+            class="badge-warning text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+          >
+            未保存
+          </span>
+          <span
+            *ngIf="tabStates.event.hasErrors"
+            class="badge-error text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 ml-1"
+          >
+            错误
+          </span>
+        </button>
+
+        <!-- 画布标签页 -->
+        <button
+          type="button"
+          (click)="activeTab = 'canvas'"
+          [ngClass]="{
+            'tab-button-active': activeTab === 'canvas',
+            'tab-button-inactive': activeTab !== 'canvas'
+          }"
+          class="tab-button flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+          title="画布全局设置"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 15a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" />
+          </svg>
+          <span>画布</span>
+          <span
+            *ngIf="tabStates.canvas.hasChanges"
+            class="badge-warning text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+          >
+            未保存
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 内容区 -->
+    <div class="content-container flex-1 overflow-hidden">
+      <!-- 样式标签页内容 -->
+      <div *ngIf="activeTab === 'style'" class="tab-content h-full">
+        <div class="p-4 h-full overflow-y-auto">
+          <app-style-editor *ngIf="activeComponent" [component]="activeComponent" />
+          <div *ngIf="!activeComponent" class="text-center py-8 empty-state">
+            <svg class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p class="text-sm text-gray-500 dark:text-gray-400">请在画布中选择一个组件</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 属性标签页内容 -->
+      <div *ngIf="activeTab === 'attr'" class="tab-content h-full">
+        <div class="p-4 h-full overflow-y-auto">
+          <app-attr-editor *ngIf="activeComponent" [component]="activeComponent" />
+          <div *ngIf="!activeComponent" class="text-center py-8 empty-state">
+            <svg class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p class="text-sm text-gray-500 dark:text-gray-400">请在画布中选择一个组件</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 数据标签页内容 -->
+      <div *ngIf="activeTab === 'data'" class="tab-content h-full">
+        <div class="p-4 h-full overflow-y-auto">
+          <app-data-module *ngIf="activeComponent" [component]="activeComponent" />
+          <div *ngIf="!activeComponent" class="text-center py-8 empty-state">
+            <svg class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p class="text-sm text-gray-500 dark:text-gray-400">请在画布中选择一个组件</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 事件标签页内容 -->
+      <div *ngIf="activeTab === 'event'" class="tab-content h-full">
+        <div class="p-4 h-full overflow-y-auto">
+          <app-event-config-panel *ngIf="activeComponent" [component]="activeComponent" />
+          <div *ngIf="!activeComponent" class="text-center py-8 empty-state">
+            <svg class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p class="text-sm text-gray-500 dark:text-gray-400">请在画布中选择一个组件</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 画布标签页内容 -->
+      <div *ngIf="activeTab === 'canvas'" class="tab-content h-full">
+        <div class="p-4 h-full overflow-y-auto">
+          <app-canvas-config-panel />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 折叠状态 -->
+  <div *ngIf="collapsed" class="h-full flex flex-col items-center py-4 space-y-4">
+    <button
+      *ngFor="let tab of visibleTabs"
+      type="button"
+      (click)="expandAndSetTab(tab.key)"
+      [title]="getTabTooltip(tab.key)"
+      class="collapsed-tab-btn w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 relative"
+      [ngClass]="{
+        'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400 shadow-sm': activeTab === tab.key,
+        'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700': activeTab !== tab.key
+      }"
+    >
+      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <path [attr.d]="tab.icon" />
+      </svg>
+
+      <!-- 折叠状态下的状态指示器 -->
+      <span
+        *ngIf="tabStates[tab.key]?.hasChanges || tabStates[tab.key]?.hasErrors"
+        class="absolute -top-1 -right-1 w-2 h-2 rounded-full animate-pulse"
+        [ngClass]="{
+          'bg-yellow-400': tabStates[tab.key]?.hasChanges && !tabStates[tab.key]?.hasErrors,
+          'bg-red-500': tabStates[tab.key]?.hasErrors
+        }"
+      ></span>
+    </button>
+  </div>
+</div>
