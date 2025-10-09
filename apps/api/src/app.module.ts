@@ -10,6 +10,7 @@ import { WeiboModule } from './weibo/weibo.module';
 import { JdModule } from './jd/jd.module';
 import { ScreensModule } from './screens/screens.module';
 import { EventsModule } from './events/events.module';
+import { MediaTypeModule } from './media-type/media-type.module';
 import { getDatabaseConfig } from './config';
 
 @Module({
@@ -25,6 +26,7 @@ import { getDatabaseConfig } from './config';
     JdModule,
     ScreensModule,
     EventsModule,
+    MediaTypeModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

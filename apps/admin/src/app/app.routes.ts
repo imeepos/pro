@@ -80,6 +80,10 @@ export const routes: Routes = [
             loadComponent: () => import('./features/events/event-type-editor.component').then(m => m.EventTypeEditorComponent)
           }
         ]
+      },
+      {
+        path: 'media-type',
+        loadChildren: () => import('./features/media-type/media-type.routes').then(m => m.mediaTypeRoutes)
       }
     ]
   },

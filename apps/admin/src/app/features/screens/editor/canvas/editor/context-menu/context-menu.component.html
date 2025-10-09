@@ -1,0 +1,25 @@
+<div
+  class="context-menu"
+  [style.left]="position.left"
+  [style.top]="position.top"
+  (click)="onMenuClick($event)">
+  <div class="menu-items">
+    <ng-container *ngFor="let item of items">
+      <div
+        *ngIf="item.divider"
+        class="menu-divider">
+      </div>
+      <div
+        *ngIf="!item.divider"
+        class="menu-item"
+        [class.disabled]="item.disabled"
+        (click)="handleItemClick(item, $event)">
+        <div class="menu-item-content">
+          <span *ngIf="item.icon" class="menu-icon">{{ item.icon }}</span>
+          <span class="menu-label">{{ item.label }}</span>
+        </div>
+        <span *ngIf="item.shortcut" class="menu-shortcut">{{ item.shortcut }}</span>
+      </div>
+    </ng-container>
+  </div>
+</div>

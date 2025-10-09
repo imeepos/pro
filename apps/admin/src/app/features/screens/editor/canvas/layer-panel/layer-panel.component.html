@@ -1,0 +1,130 @@
+<div class="layer-panel">
+  <div class="layer-panel-header">
+    <h3 class="text-sm font-semibold text-gray-700">图层</h3>
+    <div class="text-xs text-gray-500">共 {{ layers().length }} 个</div>
+  </div>
+
+  <div class="layer-list" cdkDropList (cdkDropListDropped)="onDrop($event)">
+    @for (layer of layers(); track layer.id) {
+      <div
+        class="layer-item"
+        [class.active]="layer.id === activeLayerId()"
+        [class.locked]="layer.locked"
+        cdkDrag
+        (click)="selectLayer(layer.id)"
+        (contextmenu)="onContextMenu($event, layer.id)"
+      >
+        <div class="layer-drag-handle" cdkDragHandle>
+          <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2zm0-4a1 1 0 100-2 1 1 0 000 2zm0-4a1 1 0 100-2 1 1 0 000 2z"></path>
+          </svg>
+        </div>
+
+        <div class="layer-icon">
+          {{ getLayerIcon(layer.type) }}
+        </div>
+
+        @if (renamingLayerId() === layer.id) {
+          <input
+            type="text"
+            class="layer-name-input"
+            [value]="newLayerName()"
+            (input)="newLayerName.set($any($event.target).value)"
+            (keydown.enter)="confirmRename()"
+            (keydown.escape)="cancelRename()"
+            (blur)="confirmRename()"
+            (click)="$event.stopPropagation()"
+            autofocus
+          />
+        } @else {
+          <div class="layer-name">{{ layer.name }}</div>
+        }
+
+        <div class="layer-actions">
+          <button
+            class="layer-action-btn"
+            [class.active]="layer.visible"
+            (click)="toggleVisibility($event, layer.id)"
+            title="{{ layer.visible ? '隐藏' : '显示' }}"
+          >
+            @if (layer.visible) {
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+            } @else {
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+              </svg>
+            }
+          </button>
+
+          <button
+            class="layer-action-btn"
+            [class.active]="layer.locked"
+            (click)="toggleLock($event, layer.id)"
+            title="{{ layer.locked ? '解锁' : '锁定' }}"
+          >
+            @if (layer.locked) {
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+            } @else {
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+              </svg>
+            }
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (layers().length === 0) {
+      <div class="empty-state">
+        <svg class="w-12 h-12 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <p class="text-sm text-gray-500">暂无图层</p>
+        <p class="text-xs text-gray-400 mt-1">从左侧添加组件</p>
+      </div>
+    }
+  </div>
+</div>
+
+@if (contextMenu(); as menu) {
+  <div
+    class="context-menu-overlay"
+    (click)="closeContextMenu()"
+    (contextmenu)="$event.preventDefault()"
+  >
+    <div
+      class="context-menu"
+      [style.left.px]="menu.x"
+      [style.top.px]="menu.y"
+      (click)="$event.stopPropagation()"
+    >
+      <button class="context-menu-item" (click)="startRename(menu.layerId)">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+        </svg>
+        重命名
+      </button>
+
+      <button class="context-menu-item" (click)="duplicateLayer(menu.layerId)">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+        </svg>
+        复制
+      </button>
+
+      <div class="context-menu-divider"></div>
+
+      <button class="context-menu-item danger" (click)="deleteLayer(menu.layerId)">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+        </svg>
+        删除
+      </button>
+    </div>
+  </div>
+}

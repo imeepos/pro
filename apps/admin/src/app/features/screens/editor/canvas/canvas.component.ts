@@ -31,6 +31,31 @@ export class CanvasComponent {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
+    const isInputFocused = this.isInputElement(event.target as HTMLElement);
+
+    if ((event.ctrlKey || event.metaKey) && event.key === 'c' && !isInputFocused) {
+      event.preventDefault();
+      this.canvasService.copyComponents();
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key === 'v' && !isInputFocused) {
+      event.preventDefault();
+      this.canvasService.pasteComponents();
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key === 'x' && !isInputFocused) {
+      event.preventDefault();
+      this.canvasService.cutComponents();
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key === 'd' && !isInputFocused) {
+      event.preventDefault();
+      const activeId = this.query.getValue().activeComponentId;
+      if (activeId) {
+        this.canvasService.duplicateComponent(activeId);
+      }
+    }
+
     if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
       event.preventDefault();
       this.undo();
@@ -48,11 +73,16 @@ export class CanvasComponent {
 
     if (event.key === 'Delete' || event.key === 'Backspace') {
       const selectedIds = this.query.getValue().selectedComponentIds;
-      if (selectedIds.length > 0) {
+      if (selectedIds.length > 0 && !isInputFocused) {
         event.preventDefault();
         this.canvasService.batchDelete(selectedIds);
       }
     }
+  }
+
+  private isInputElement(element: HTMLElement): boolean {
+    const tagName = element?.tagName?.toLowerCase();
+    return tagName === 'input' || tagName === 'textarea' || element?.isContentEditable;
   }
 
   undo(): void {

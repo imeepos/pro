@@ -1,0 +1,18 @@
+:host {
+  display: block;
+  background-color: #f0f0f0;
+
+  &[data-direction='horizontal'] {
+    width: 100%;
+    height: 20px;
+  }
+
+  &[data-direction='vertical'] {
+    width: 20px;
+    height: 100%;
+  }
+}
+
+canvas {
+  display: block;
+}

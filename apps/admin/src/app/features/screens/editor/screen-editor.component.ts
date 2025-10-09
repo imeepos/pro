@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,9 +10,11 @@ import { ScreensQuery } from '../../../state/screens.query';
 import { ScreenPage, UpdateScreenDto } from '../../../core/services/screen-api.service';
 import { ComponentRegistryService } from '../../../core/services/component-registry.service';
 import { CanvasComponent } from './canvas/canvas.component';
+import { LayerPanelComponent } from './canvas/layer-panel/layer-panel.component';
 import { CanvasService } from './canvas/services/canvas.service';
 import { CanvasQuery } from './canvas/services/canvas.query';
 import { ComponentItem } from './models/component.model';
+import { KeyboardService } from './services/keyboard.service';
 
 interface ToastMessage {
   id: string;
@@ -26,7 +28,7 @@ interface ToastMessage {
 @Component({
   selector: 'app-screen-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, CanvasComponent],
+  imports: [CommonModule, FormsModule, DragDropModule, CanvasComponent, LayerPanelComponent],
   templateUrl: './screen-editor.component.html',
   styleUrls: ['./screen-editor.component.scss'],
   animations: [
@@ -77,6 +79,8 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   selectedComponentIds$ = this.canvasQuery.selectedComponentIds$;
   showGrid$ = this.canvasQuery.showGrid$;
 
+  private readonly keyboardService = inject(KeyboardService);
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -94,9 +98,11 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
     this.loadAvailableComponents();
     this.loadScreen();
     this.setupAutoSave();
+    this.keyboardService.startListening();
   }
 
   ngOnDestroy(): void {
+    this.keyboardService.stopListening();
     this.destroy$.next();
     this.destroy$.complete();
     if (this.autoSaveTimer) {

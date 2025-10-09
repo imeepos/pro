@@ -1,8 +1,15 @@
+import { getConfig } from '@pro/config';
+
 /**
  * HTTP 客户端封装
  */
 export class HttpClient {
-  constructor(private baseUrl: string) {}
+  private readonly tokenKey: string;
+
+  constructor(private baseUrl: string) {
+    const config = getConfig();
+    this.tokenKey = config.tokenKey;
+  }
 
   private async request<T>(
     method: string,
@@ -70,7 +77,7 @@ export class HttpClient {
 
   private getToken(): string | null {
     if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem('auth_token');
+      return localStorage.getItem(this.tokenKey);
     }
     return null;
   }

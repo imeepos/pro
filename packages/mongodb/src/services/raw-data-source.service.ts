@@ -28,8 +28,7 @@ export class RawDataSourceService {
       sourceUrl: dto.sourceUrl,
       rawContent: dto.rawContent,
       contentHash,
-      weiboId: dto.weiboId,
-      userId: dto.userId,
+      metadata: dto.metadata,
       status: ProcessingStatus.PENDING,
     });
 
@@ -60,20 +59,6 @@ export class RawDataSourceService {
       .sort({ createdAt: 1 })
       .limit(limit)
       .exec();
-  }
-
-  /**
-   * 根据微博 ID 查询
-   */
-  async findByWeiboId(weiboId: string) {
-    return this.rawDataSourceModel.find({ weiboId }).exec();
-  }
-
-  /**
-   * 根据用户 ID 查询
-   */
-  async findByUserId(userId: string) {
-    return this.rawDataSourceModel.find({ userId }).exec();
   }
 
   /**

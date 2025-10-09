@@ -71,5 +71,18 @@ export const MENU_ITEMS: MenuItem[] = [
         route: '/jd/accounts'
       }
     ]
+  },
+  {
+    id: 'media-type',
+    label: '媒体类型管理',
+    icon: 'film',
+    children: [
+      {
+        id: 'media-type-list',
+        label: '类型列表',
+        icon: 'list',
+        route: '/media-type'
+      }
+    ]
   }
 ];

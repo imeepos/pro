@@ -13,6 +13,7 @@
   "keywords": ["sdk", "api", "interfaces"],
   "license": "UNLICENSED",
   "dependencies": {
+    "@pro/config": "workspace:*",
     "@pro/types": "workspace:*",
     "rxjs": "^7.8.1"
   },

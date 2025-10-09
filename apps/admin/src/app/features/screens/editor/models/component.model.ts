@@ -7,6 +7,8 @@ export interface ComponentItem {
   locked?: boolean;
   display?: boolean;
   parent?: ComponentItem;
+  isGroup?: boolean;
+  children?: ComponentItem[];
 }
 
 export interface ComponentStyle {

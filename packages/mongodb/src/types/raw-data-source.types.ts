@@ -24,7 +24,6 @@ export interface CreateRawDataSourceDto {
   sourceType: SourceType | string;
   sourceUrl: string;
   rawContent: string;
-  weiboId?: string;
-  userId?: string;
+  metadata?: Record<string, any>;
 }
 

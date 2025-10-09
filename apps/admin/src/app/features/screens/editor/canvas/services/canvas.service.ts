@@ -7,6 +7,8 @@ import { EditMode } from '../../models/canvas.model';
 
 @Injectable({ providedIn: 'root' })
 export class CanvasService {
+  private clipboard: ComponentItem[] = [];
+
   constructor(
     private store: CanvasStore,
     private query: CanvasQuery,
@@ -264,5 +266,246 @@ export class CanvasService {
 
   canRedo(): boolean {
     return this.snapshotService.canRedo();
+  }
+
+  updateComponentZIndex(id: string, zIndex: number): void {
+    this.updateComponentStyle(id, { zIndex });
+    this.recordSnapshot();
+  }
+
+  toggleComponentVisibility(id: string): void {
+    this.store.update((state) => ({
+      componentData: state.componentData.map((comp) =>
+        comp.id === id ? { ...comp, display: comp.display !== false ? false : true } : comp
+      )
+    }));
+    this.recordSnapshot();
+  }
+
+  toggleComponentLock(id: string): void {
+    this.store.update((state) => ({
+      componentData: state.componentData.map((comp) =>
+        comp.id === id ? { ...comp, locked: !comp.locked } : comp
+      )
+    }));
+    this.recordSnapshot();
+  }
+
+  duplicateComponent(id: string): void {
+    const component = this.query.getValue().componentData.find(c => c.id === id);
+    if (!component) return;
+
+    const newComponent = this.deepCloneComponent(component);
+    newComponent.id = this.generateId();
+    newComponent.style = {
+      ...newComponent.style,
+      left: component.style.left + 20,
+      top: component.style.top + 20
+    };
+
+    this.addComponent(newComponent);
+  }
+
+  copyComponents(): void {
+    const state = this.query.getValue();
+    const selectedIds = state.selectedComponentIds.length > 0
+      ? state.selectedComponentIds
+      : state.activeComponentId
+      ? [state.activeComponentId]
+      : [];
+
+    if (selectedIds.length === 0) return;
+
+    const components = state.componentData.filter(c => selectedIds.includes(c.id));
+    this.clipboard = components.map(c => this.deepCloneComponent(c));
+  }
+
+  pasteComponents(): void {
+    if (this.clipboard.length === 0) return;
+
+    const newComponents = this.clipboard.map(component => {
+      const newComponent = this.deepCloneComponent(component);
+      newComponent.id = this.generateId();
+      newComponent.style = {
+        ...newComponent.style,
+        left: component.style.left + 20,
+        top: component.style.top + 20
+      };
+
+      if (newComponent.isGroup && newComponent.children) {
+        newComponent.children = this.cloneChildren(newComponent.children);
+      }
+
+      return newComponent;
+    });
+
+    this.store.update(state => ({
+      componentData: [...state.componentData, ...newComponents]
+    }));
+
+    const newIds = newComponents.map(c => c.id);
+    this.selectMultipleComponents(newIds);
+    this.recordSnapshot();
+  }
+
+  cutComponents(): void {
+    const state = this.query.getValue();
+    const selectedIds = state.selectedComponentIds.length > 0
+      ? state.selectedComponentIds
+      : state.activeComponentId
+      ? [state.activeComponentId]
+      : [];
+
+    if (selectedIds.length === 0) return;
+
+    this.copyComponents();
+    this.batchDelete(selectedIds);
+    this.recordSnapshot();
+  }
+
+  private deepCloneComponent(component: ComponentItem): ComponentItem {
+    return {
+      ...component,
+      style: { ...component.style },
+      config: JSON.parse(JSON.stringify(component.config)),
+      children: component.children ? this.cloneChildren(component.children) : undefined
+    };
+  }
+
+  private cloneChildren(children: ComponentItem[]): ComponentItem[] {
+    return children.map(child => {
+      const cloned = this.deepCloneComponent(child);
+      cloned.id = this.generateId();
+      return cloned;
+    });
+  }
+
+  private generateId(): string {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  composeComponents(componentIds: string[]): void {
+    if (componentIds.length < 2) return;
+
+    const state = this.query.getValue();
+    const components = state.componentData.filter(c => componentIds.includes(c.id));
+    if (components.length < 2) return;
+
+    const minLeft = Math.min(...components.map(c => c.style.left));
+    const minTop = Math.min(...components.map(c => c.style.top));
+    const maxRight = Math.max(...components.map(c => c.style.left + c.style.width));
+    const maxBottom = Math.max(...components.map(c => c.style.top + c.style.height));
+
+    const width = maxRight - minLeft;
+    const height = maxBottom - minTop;
+
+    const childrenWithRelativePosition = components.map(comp => ({
+      ...comp,
+      style: {
+        ...comp.style,
+        left: comp.style.left - minLeft,
+        top: comp.style.top - minTop
+      }
+    }));
+
+    const maxZIndex = Math.max(...components.map(c => c.style.zIndex ?? 0), 0);
+
+    const groupComponent: ComponentItem = {
+      id: `group_${Date.now()}`,
+      type: 'Group',
+      component: 'Group',
+      style: {
+        left: minLeft,
+        top: minTop,
+        width,
+        height,
+        rotate: 0,
+        zIndex: maxZIndex
+      },
+      config: {},
+      isGroup: true,
+      children: childrenWithRelativePosition
+    };
+
+    this.store.update(state => ({
+      componentData: [
+        ...state.componentData.filter(c => !componentIds.includes(c.id)),
+        groupComponent
+      ],
+      activeComponentId: groupComponent.id,
+      selectedComponentIds: []
+    }));
+
+    this.recordSnapshot();
+  }
+
+  decomposeComponent(groupId: string): void {
+    const state = this.query.getValue();
+    const groupComponent = state.componentData.find(c => c.id === groupId);
+
+    if (!groupComponent?.isGroup || !groupComponent.children) return;
+
+    const restoredComponents = groupComponent.children.map(child => ({
+      ...child,
+      style: {
+        ...child.style,
+        left: child.style.left + groupComponent.style.left,
+        top: child.style.top + groupComponent.style.top
+      }
+    }));
+
+    this.store.update(state => ({
+      componentData: [
+        ...state.componentData.filter(c => c.id !== groupId),
+        ...restoredComponents
+      ],
+      activeComponentId: null,
+      selectedComponentIds: restoredComponents.map(c => c.id)
+    }));
+
+    this.recordSnapshot();
+  }
+
+  selectAll(): void {
+    const state = this.query.getValue();
+    const allIds = state.componentData
+      .filter(c => !c.locked)
+      .map(c => c.id);
+
+    if (allIds.length > 0) {
+      this.selectMultipleComponents(allIds);
+      this.deactivateComponent();
+    }
+  }
+
+  deleteSelected(): void {
+    const state = this.query.getValue();
+    const selectedIds = state.selectedComponentIds.length > 0
+      ? state.selectedComponentIds
+      : state.activeComponentId
+      ? [state.activeComponentId]
+      : [];
+
+    if (selectedIds.length === 0) return;
+
+    const unlocked = selectedIds.filter(id => {
+      const component = state.componentData.find(c => c.id === id);
+      return component && !component.locked;
+    });
+
+    if (unlocked.length > 0) {
+      this.batchDelete(unlocked);
+      this.recordSnapshot();
+    }
+  }
+
+  moveComponent(id: string, deltaX: number, deltaY: number): void {
+    const component = this.query.getValue().componentData.find(c => c.id === id);
+    if (!component || component.locked) return;
+
+    this.updateComponentStyle(id, {
+      left: component.style.left + deltaX,
+      top: component.style.top + deltaY
+    });
   }
 }

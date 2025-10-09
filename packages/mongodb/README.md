@@ -44,8 +44,10 @@ export class CrawlerService {
       sourceType: 'weibo_api_json',
       sourceUrl: url,
       rawContent: content,
-      weiboId: '123456',
-      userId: '789',
+      metadata: {
+        weiboId: '123456',
+        userId: '789',
+      },
     });
   }
 
@@ -66,12 +68,11 @@ export class CrawlerService {
 - `create(data)` - 创建原始数据记录
 - `findById(id)` - 查询单条记录
 - `findPending()` - 查询待处理数据
-- `findByWeiboId(weiboId)` - 按微博ID查询
-- `findByUserId(userId)` - 按用户ID查询
 - `markProcessing(id)` - 标记为处理中
 - `markCompleted(id)` - 标记为已完成
 - `markFailed(id, error)` - 标记为失败
 - `deleteOldCompleted(days)` - 清理旧数据
+- `getStatistics()` - 获取统计信息
 
 ## Schema
 

@@ -18,11 +18,8 @@ export class RawDataSource {
   @Prop({ required: true, unique: true, sparse: true })
   contentHash!: string;
 
-  @Prop({ index: true })
-  weiboId?: string;
-
-  @Prop({ index: true })
-  userId?: string;
+  @Prop({ type: Object })
+  metadata?: Record<string, any>;
 
   @Prop({ required: true, default: 'pending', index: true })
   status!: string;
@@ -41,7 +38,5 @@ export type RawDataSourceDoc = RawDataSource & Document;
 
 export const RawDataSourceSchema = SchemaFactory.createForClass(RawDataSource);
 
-// 创建索引
+// 创建复合索引
 RawDataSourceSchema.index({ status: 1, createdAt: 1 });
-RawDataSourceSchema.index({ weiboId: 1 });
-RawDataSourceSchema.index({ userId: 1 });

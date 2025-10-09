@@ -59,6 +59,21 @@
         <path *ngIf="item.icon === 'tags'" d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5z"></path>
         <path *ngIf="item.icon === 'tags'" d="M12.41 9.41L20 2h-7L5.59 9.41c-.94.94-.94 2.48 0 3.42l3.58 3.58c.94.94 2.48.94 3.42 0l6.82-6.82c.78-.78.78-2.05 0-2.83L12.41 9.41z"></path>
         <circle *ngIf="item.icon === 'tags'" cx="6.5" cy="6.5" r="1"></circle>
+
+        <!-- shopping-cart -->
+        <circle *ngIf="item.icon === 'shopping-cart'" cx="9" cy="21" r="1"></circle>
+        <path *ngIf="item.icon === 'shopping-cart'" d="M7 7h10l2 8H5l2-8z"></path>
+        <path *ngIf="item.icon === 'shopping-cart'" d="M9 21V7a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14"></path>
+
+        <!-- film -->
+        <rect *ngIf="item.icon === 'film'" x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+        <line *ngIf="item.icon === 'film'" x1="7" y1="2" x2="7" y2="22"></line>
+        <line *ngIf="item.icon === 'film'" x1="17" y1="2" x2="17" y2="22"></line>
+        <line *ngIf="item.icon === 'film'" x1="2" y1="12" x2="22" y2="12"></line>
+        <line *ngIf="item.icon === 'film'" x1="2" y1="7" x2="7" y2="7"></line>
+        <line *ngIf="item.icon === 'film'" x1="2" y1="17" x2="7" y2="17"></line>
+        <line *ngIf="item.icon === 'film'" x1="17" y1="17" x2="22" y2="17"></line>
+        <line *ngIf="item.icon === 'film'" x1="17" y1="7" x2="22" y2="7"></line>
       </svg>
     </div>
 
@@ -125,6 +140,16 @@
           <path *ngIf="child.icon === 'tags'" d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5z"></path>
           <path *ngIf="child.icon === 'tags'" d="M12.41 9.41L20 2h-7L5.59 9.41c-.94.94-.94 2.48 0 3.42l3.58 3.58c.94.94 2.48.94 3.42 0l6.82-6.82c.78-.78.78-2.05 0-2.83L12.41 9.41z"></path>
           <circle *ngIf="child.icon === 'tags'" cx="6.5" cy="6.5" r="1"></circle>
+
+          <!-- film -->
+          <rect *ngIf="child.icon === 'film'" x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+          <line *ngIf="child.icon === 'film'" x1="7" y1="2" x2="7" y2="22"></line>
+          <line *ngIf="child.icon === 'film'" x1="17" y1="2" x2="17" y2="22"></line>
+          <line *ngIf="child.icon === 'film'" x1="2" y1="12" x2="22" y2="12"></line>
+          <line *ngIf="child.icon === 'film'" x1="2" y1="7" x2="7" y2="7"></line>
+          <line *ngIf="child.icon === 'film'" x1="2" y1="17" x2="7" y2="17"></line>
+          <line *ngIf="child.icon === 'film'" x1="17" y1="17" x2="22" y2="17"></line>
+          <line *ngIf="child.icon === 'film'" x1="17" y1="7" x2="22" y2="7"></line>
         </svg>
       </div>
       <span class="submenu-label">{{ child.label }}</span>

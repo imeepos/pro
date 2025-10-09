@@ -6,6 +6,8 @@ export * from './weibo.interface';
 export * from './weibo-auth.sdk';
 export * from './jd.interface';
 export * from './jd-auth.sdk';
+export * from './media-type.interface';
+export * from './media-type.sdk';
 
 export * from '@pro/types';
 
