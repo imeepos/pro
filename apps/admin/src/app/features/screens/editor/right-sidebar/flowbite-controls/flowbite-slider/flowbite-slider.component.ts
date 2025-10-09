@@ -136,7 +136,7 @@ export class FlowbiteSliderComponent implements ControlValueAccessor {
   }
 
   onSliderInput(event: Event): void {
-    const newValue = parseFloat(($event.target as HTMLInputElement).value);
+    const newValue = parseFloat((event.target as HTMLInputElement).value);
     this.value = newValue;
     this.onChange(newValue);
     this.input.emit(newValue);
@@ -144,7 +144,7 @@ export class FlowbiteSliderComponent implements ControlValueAccessor {
   }
 
   onSliderChange(event: Event): void {
-    const newValue = parseFloat(($event.target as HTMLInputElement).value);
+    const newValue = parseFloat((event.target as HTMLInputElement).value);
     this.value = newValue;
     this.change.emit(newValue);
   }
@@ -159,7 +159,7 @@ export class FlowbiteSliderComponent implements ControlValueAccessor {
   }
 
   onValueInputChange(event: Event): void {
-    const inputValue = parseFloat(($event.target as HTMLInputElement).value);
+    const inputValue = parseFloat((event.target as HTMLInputElement).value);
 
     if (!isNaN(inputValue) && inputValue >= this.min && inputValue <= this.max) {
       this.value = inputValue;

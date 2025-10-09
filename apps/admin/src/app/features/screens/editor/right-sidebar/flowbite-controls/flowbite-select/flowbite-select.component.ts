@@ -222,7 +222,7 @@ export class FlowbiteSelectComponent implements ControlValueAccessor {
   }
 
   onSearchChange(event: Event): void {
-    const query = ($event.target as HTMLInputElement).value;
+    const query = (event.target as HTMLInputElement).value;
     this.searchQuery = query;
     this.search.emit(query);
     this.highlightedIndex = -1;

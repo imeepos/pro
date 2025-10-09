@@ -115,7 +115,7 @@ export class FlowbiteToggleComponent implements ControlValueAccessor {
   onToggleChange(event: Event): void {
     if (this.disabled) return;
 
-    const newValue = ($event.target as HTMLInputElement).checked;
+    const newValue = (event.target as HTMLInputElement).checked;
     this.checked = newValue;
     this.onChange(newValue);
     this.valueChange.emit(newValue);

@@ -124,7 +124,7 @@ export class FlowbiteColorComponent implements ControlValueAccessor {
   }
 
   onColorInputChange(event: Event): void {
-    const inputValue = ($event.target as HTMLInputElement).value;
+    const inputValue = (event.target as HTMLInputElement).value;
     const normalizedValue = this.normalizeColorValue(inputValue);
 
     this.value = normalizedValue;
@@ -134,7 +134,7 @@ export class FlowbiteColorComponent implements ControlValueAccessor {
   }
 
   onColorPickerChange(event: Event): void {
-    const selectedColor = ($event.target as HTMLInputElement).value;
+    const selectedColor = (event.target as HTMLInputElement).value;
 
     this.value = selectedColor;
     this.onChange(selectedColor);
