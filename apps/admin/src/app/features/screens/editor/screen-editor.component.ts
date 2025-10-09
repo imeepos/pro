@@ -225,6 +225,9 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
             this.screen = screen;
             this.pageName = screen.name;
 
+            // 设置CanvasService的当前屏幕名称，供KeyboardService使用
+            this.canvasService.setCurrentScreenName(screen.name);
+
             // 2. 根据页面配置设置画布尺寸
             if (screen.layout) {
               // 直接使用像素尺寸设置画布
@@ -374,14 +377,9 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   }
 
   private setupKeyboardShortcuts(): void {
-    // 添加Ctrl+S 保存快捷键、F11 全屏快捷键、Ctrl+Shift+C 坐标显示快捷键、Ctrl+Shift+E 导出、Ctrl+O 导入
+    // 添加F11 全屏快捷键、Ctrl+Shift+C 坐标显示快捷键、Ctrl+Shift+E 导出、Ctrl+O 导入
+    // Ctrl+S 保存快捷键已移至KeyboardService统一管理
     const keyboardShortcut = (event: KeyboardEvent) => {
-      // Ctrl+S 保存
-      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-        event.preventDefault();
-        this.save();
-      }
-
       // F11 全屏
       if (event.key === 'F11') {
         event.preventDefault();
@@ -468,6 +466,9 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
       this.showErrorToast('错误', '页面名称不能为空');
       return;
     }
+
+    // 更新CanvasService的当前屏幕名称
+    this.canvasService.setCurrentScreenName(this.getCurrentPageName());
 
     // 触发立即保存，包含新的页面名称
     this.canvasService.triggerImmediateSave(this.getCurrentPageName());

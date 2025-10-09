@@ -16,6 +16,7 @@ export class CanvasService implements OnDestroy {
   private immediateSave$ = new Subject<void>();
   private manualRetry$ = new Subject<void>();
   private currentPageId: string | null = null;
+  private currentScreenName: string | null = null;
   private readonly DEBOUNCE_TIME = 2500; // 2.5秒防抖时间
   private readonly MAX_RETRY_COUNT = 3; // 最大重试次数
   private readonly RETRY_DELAYS = [1000, 2000, 4000]; // 重试延迟：1秒、2秒、4秒
@@ -38,6 +39,10 @@ export class CanvasService implements OnDestroy {
     this.clearErrorState();
     this.setDirty(false);
     this.setSaveStatus('saved');
+  }
+
+  setCurrentScreenName(screenName: string): void {
+    this.currentScreenName = screenName;
   }
 
   setCanvasSize(width: number, height: number): void {
@@ -805,8 +810,10 @@ export class CanvasService implements OnDestroy {
     if (!this.currentPageId) return;
 
     this.setDirty(true);
+    // 如果没有提供页面名称，使用当前屏幕名称
+    const finalPageName = pageName || this.currentScreenName || '未命名页面';
     // 保存待保存的数据
-    this.pendingSaveData = { pageName };
+    this.pendingSaveData = { pageName: finalPageName };
     this.immediateSave$.next();
   }
 

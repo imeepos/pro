@@ -23,6 +23,12 @@ export class KeyboardService {
 
   private readonly shortcuts: KeyboardShortcut[] = [
     {
+      key: 's',
+      ctrl: true,
+      handler: () => this.saveScreen(),
+      description: '保存页面'
+    },
+    {
       key: 'z',
       ctrl: true,
       handler: () => this.canvasService.undo(),
@@ -219,6 +225,10 @@ export class KeyboardService {
     });
 
     this.canvasService.recordSnapshot();
+  }
+
+  private saveScreen(): void {
+    this.canvasService.triggerImmediateSave();
   }
 
   getShortcuts(): KeyboardShortcut[] {
