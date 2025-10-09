@@ -27,6 +27,28 @@
       <div class="error-text">
         <strong>组件渲染异常</strong>
         <small>{{ errorMessage }}</small>
+        <div class="error-actions">
+          <button class="retry-btn" (click)="retryRender()" title="重新渲染">
+            🔄 重试
+          </button>
+          <button class="details-btn" (click)="toggleErrorDetails()" title="错误详情">
+            {{ showErrorDetails ? '▼' : '▶' }} 详情
+          </button>
+        </div>
+        <div class="error-details" *ngIf="showErrorDetails && component.errorInfo">
+          <div class="error-detail-item">
+            <span class="label">错误阶段:</span>
+            <span class="value">{{ getErrorPhaseText(component.errorInfo.phase) }}</span>
+          </div>
+          <div class="error-detail-item">
+            <span class="label">时间:</span>
+            <span class="value">{{ formatTimestamp(component.errorInfo.timestamp) }}</span>
+          </div>
+          <div class="error-detail-item" *ngIf="component.errorInfo.stack">
+            <span class="label">堆栈:</span>
+            <pre class="value stack">{{ component.errorInfo.stack }}</pre>
+          </div>
+        </div>
       </div>
     </div>
   </div>

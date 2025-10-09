@@ -1,10 +1,11 @@
-import { Component, Input, HostListener, ElementRef, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, HostListener, ElementRef, OnInit, OnDestroy, ErrorHandler } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, combineLatest } from 'rxjs';
 import { CanvasService } from '../../services/canvas.service';
 import { CanvasQuery } from '../../services/canvas.query';
 import { RulerGridService } from '../../services/ruler-grid.service';
-import { ComponentItem, ComponentStyle, Point } from '../../../models/component.model';
+import { ErrorBoundaryService } from '../../services/error-boundary.service';
+import { ComponentItem, ComponentStyle, Point, ComponentErrorInfo } from '../../../models/component.model';
 import { throttleFrame } from '../../../utils/throttle.util';
 import { GeometryUtil } from '../../../utils/geometry.util';
 import { ContextMenuComponent, MenuItem } from '../context-menu/context-menu.component';
@@ -34,50 +35,126 @@ export class ShapeComponent implements OnInit, OnDestroy {
 
   hasRenderError = false;
   errorMessage = '';
+  showErrorDetails = false;
 
   constructor(
     private canvasService: CanvasService,
     private query: CanvasQuery,
     private rulerGridService: RulerGridService,
+    private errorBoundary: ErrorBoundaryService,
     private elementRef: ElementRef
   ) {}
 
   isSelected = false;
+  isShowCoordinates = false;
 
   ngOnInit(): void {
-    this.query.activeComponentId$.pipe(takeUntil(this.destroy$)).subscribe((activeId) => {
-      this.isActive = activeId === this.component.id;
-    });
+    try {
+      this.query.activeComponentId$.pipe(takeUntil(this.destroy$)).subscribe((activeId) => {
+        this.isActive = activeId === this.component.id;
+      });
 
-    this.query.selectedComponentIds$.pipe(takeUntil(this.destroy$)).subscribe((selectedIds) => {
-      this.isSelected = selectedIds.includes(this.component.id);
-    });
+      this.query.selectedComponentIds$.pipe(takeUntil(this.destroy$)).subscribe((selectedIds) => {
+        this.isSelected = selectedIds.includes(this.component.id);
+      });
 
-    this.validateComponent();
+      this.validateComponent();
+    } catch (error) {
+      this.captureInitError(error);
+    }
   }
 
   private validateComponent(): void {
     try {
       if (!this.component || !this.component.type) {
-        this.setRenderError('组件类型无效');
+        this.setRenderError('组件类型无效', 'init');
         return;
       }
 
       if (!this.component.style) {
-        this.setRenderError('组件样式缺失');
+        this.setRenderError('组件样式缺失', 'init');
         return;
       }
 
-      this.hasRenderError = false;
+      if (this.component.hasError) {
+        this.hasRenderError = true;
+        this.errorMessage = this.component.errorInfo?.message || '组件存在错误';
+      } else {
+        this.hasRenderError = false;
+        this.errorMessage = '';
+      }
     } catch (error) {
-      this.setRenderError(error instanceof Error ? error.message : '未知错误');
+      this.setRenderError(
+        error instanceof Error ? error.message : '未知错误',
+        'init'
+      );
     }
   }
 
-  private setRenderError(message: string): void {
+  private captureInitError(error: unknown): void {
+    const err = error instanceof Error ? error : new Error(String(error));
+    const errorInfo = this.errorBoundary.captureError(this.component, err, 'init');
+
+    this.hasRenderError = true;
+    this.errorMessage = errorInfo.message;
+
+    this.canvasService.updateComponent(this.component.id, {
+      hasError: true,
+      errorInfo
+    });
+  }
+
+  private setRenderError(message: string, phase: ComponentErrorInfo['phase']): void {
     this.hasRenderError = true;
     this.errorMessage = message;
-    console.error(`[ShapeComponent] ${this.component?.type || 'Unknown'}: ${message}`);
+
+    const error = new Error(message);
+    const errorInfo = this.errorBoundary.captureError(this.component, error, phase);
+
+    this.canvasService.updateComponent(this.component.id, {
+      hasError: true,
+      errorInfo
+    });
+  }
+
+  retryRender(): void {
+    this.errorBoundary.clearError(this.component.id);
+    this.hasRenderError = false;
+    this.errorMessage = '';
+    this.showErrorDetails = false;
+
+    this.canvasService.updateComponent(this.component.id, {
+      hasError: false,
+      errorInfo: undefined
+    });
+
+    this.validateComponent();
+  }
+
+  toggleErrorDetails(): void {
+    this.showErrorDetails = !this.showErrorDetails;
+  }
+
+  getErrorPhaseText(phase: ComponentErrorInfo['phase']): string {
+    const phaseMap: Record<ComponentErrorInfo['phase'], string> = {
+      init: '初始化',
+      render: '渲染',
+      data: '数据处理',
+      unknown: '未知'
+    };
+    return phaseMap[phase] || '未知';
+  }
+
+  formatTimestamp(timestamp: number): string {
+    const date = new Date(timestamp);
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   }
 
   ngOnDestroy(): void {
