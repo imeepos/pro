@@ -1,0 +1,42 @@
+.flowbite-input-wrapper {
+  @apply w-full;
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  :host ::ng-deep input {
+    @apply bg-gray-800 text-gray-100 border-gray-600;
+  }
+
+  :host ::ng-deep input:focus {
+    @apply bg-gray-800 text-gray-100;
+  }
+
+  :host ::ng-deep input:disabled {
+    @apply bg-gray-700 text-gray-400;
+  }
+}
+
+// Custom animations
+:host ::ng-deep input {
+  @apply transition-all duration-200;
+}
+
+:host ::ng-deep input:focus {
+  @apply transform scale-[1.01];
+}
+
+// Error state enhancements
+:host ::ng-deep input:focus.error {
+  @apply ring-red-500 ring-opacity-50;
+}
+
+// Success state (for future use)
+:host ::ng-deep input.success {
+  @apply border-green-300 focus:ring-green-500 focus:border-green-500;
+}
+
+// Warning state (for future use)
+:host ::ng-deep input.warning {
+  @apply border-yellow-300 focus:ring-yellow-500 focus:border-yellow-500;
+}

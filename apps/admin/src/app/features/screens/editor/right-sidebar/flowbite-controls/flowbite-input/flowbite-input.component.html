@@ -1,0 +1,38 @@
+<div class="flowbite-input-wrapper">
+  @if (label) {
+    <label
+      for="input-{{ label.replace(/\s+/g, '-').toLowerCase() }}"
+      class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300"
+      [class.text-red-600]="errorText"
+    >
+      {{ label }}
+      @if (required) {
+        <span class="text-red-500 ml-1">*</span>
+      }
+    </label>
+  }
+
+  <input
+    [id]="label ? 'input-' + label.replace(/\s+/g, '-').toLowerCase() : null"
+    [type]="type"
+    [value]="value"
+    [placeholder]="placeholder"
+    [disabled]="disabled"
+    [readonly]="readonly"
+    [required]="required"
+    [class]="inputClasses"
+    (input)="onValueChange($any($event.target).value)"
+    (blur)="onBlur()"
+    (focus)="onFocus()"
+    (keydown)="onKeyDown($event)"
+    (keyup)="onKeyUp($event)"
+  />
+
+  @if (helperText && !errorText) {
+    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ helperText }}</p>
+  }
+
+  @if (errorText) {
+    <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errorText }}</p>
+  }
+</div>
