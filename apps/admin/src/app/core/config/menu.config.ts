@@ -60,6 +60,19 @@ export const MENU_ITEMS: MenuItem[] = [
     ]
   },
   {
+    id: 'weibo-search',
+    label: '微博搜索任务',
+    icon: 'search',
+    children: [
+      {
+        id: 'weibo-search-tasks',
+        label: '搜索任务',
+        icon: 'list',
+        route: '/weibo-search-tasks'
+      }
+    ]
+  },
+  {
     id: 'jd',
     label: '京东账号管理',
     icon: 'shopping-cart',

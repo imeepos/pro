@@ -172,6 +172,214 @@
 阶段六（6.1 → 6.2 → 6.3）
 ```
 
+## 核心技术深度分析
+
+### 1. Accessibility Tree 方案（Microsoft Playwright MCP）
+
+**为什么用 Accessibility Tree 而不是 HTML？**
+
+| 对比项 | HTML 分析 | Accessibility Tree |
+|--------|-----------|-------------------|
+| 数据量 | 完整 DOM（包含样式、脚本、元数据） | 仅可交互元素 |
+| 处理速度 | 慢（需要解析大量无关内容） | 快（精简后的树结构） |
+| Token 消耗 | 高（大量 HTML 标签） | 低（YAML 格式，精简） |
+| 准确性 | 可能包含隐藏/不可用元素 | 仅包含真正可访问的元素 |
+
+**核心 API**：
+```typescript
+// 获取页面的 accessibility snapshot（YAML 格式）
+const snapshot = await locator.ariaSnapshot();
+
+// 示例输出：
+// - button "登录" [ref=1]
+// - textbox "用户名" [ref=2]
+// - link "忘记密码" [ref=3]
+```
+
+**优势**：
+- ✅ 自动过滤不可见和不可用的元素
+- ✅ 提供语义化的元素描述（role + name）
+- ✅ 生成唯一的 ref 引用，便于 AI 选择操作
+- ✅ Chromium 会丢弃屏幕阅读器不用的节点（更轻量）
+
+**实现架构**：
+```
+页面加载 → 生成 Accessibility Snapshot → 提取 YAML 结构
+  → 发送给 AI 分析 → AI 返回 ref 编号 → 通过 ref 执行操作
+```
+
+### 2. 反爬虫处理方案（browser-use）
+
+**核心策略**：
+
+#### 方式一：云服务（推荐生产环境）
+```python
+from browser_use import Agent, Browser
+
+browser = Browser(
+    use_cloud=True,  # 使用托管浏览器服务
+)
+```
+- 💰 费用：$30/月
+- ✅ 优势：自动更新绕过策略，无需维护
+- ✅ 适用：绕过 Cloudflare、PerimeterX 等主流反爬虫
+
+#### 方式二：自建方案（技术要点）
+
+**a. 浏览器指纹伪装**
+- TLS 指纹一致性（确保 TLS 握手与真实浏览器一致）
+- HTTP/2 指纹一致性（请求头顺序、大小写）
+- WebGL/Canvas 指纹随机化
+
+**b. Session 管理**
+- Cookie 持久化存储
+- User-Agent 与 Cookie 保持一致
+- 保持会话的浏览器上下文（BrowserContext）
+
+**c. 行为模拟**
+```typescript
+// 随机延迟
+await page.waitForTimeout(Math.random() * 2000 + 1000);
+
+// 鼠标轨迹模拟
+await page.mouse.move(x1, y1);
+await page.mouse.move(x2, y2, { steps: 10 });
+
+// 人类化的滚动
+await page.evaluate(() => {
+  window.scrollBy({
+    top: 300,
+    behavior: 'smooth'
+  });
+});
+```
+
+**d. 频率控制**
+- 请求间隔：2-5 秒随机延迟
+- 并发限制：单账号避免多标签页同时操作
+- 时段控制：避免深夜高频操作
+
+**⚠️ 注意事项**：
+- 开源方案容易被 Cloudflare 研究后封堵
+- 生产环境建议使用专业服务（browser-use cloud / BrowserBase / ScrapingBee）
+- 微博的反爬虫相对温和，主要关注：Cookie 有效性、请求频率、User-Agent
+
+### 3. 混合模式设计（Stagehand）
+
+**核心思想**：**熟悉用代码，陌生用 AI**
+
+**三大 AI 方法**：
+
+```typescript
+import { Stagehand } from "@browserbasehq/stagehand";
+
+const stagehand = new Stagehand();
+await stagehand.init();
+const page = stagehand.page;
+
+// 1. act() - 执行单个操作
+await page.act("点击登录按钮");
+await page.act("在用户名输入框输入: test@example.com");
+
+// 2. extract() - 提取数据
+const data = await page.extract({
+  instruction: "提取所有微博的标题和点赞数",
+  schema: z.object({
+    posts: z.array(z.object({
+      title: z.string(),
+      likes: z.number()
+    }))
+  })
+});
+
+// 3. observe() - 观察页面状态
+const observation = await page.observe();
+```
+
+**混合模式示例**：
+
+```typescript
+// 已知流程：用 Playwright 代码（快速、可靠）
+await page.goto('https://weibo.com');
+await page.fill('#username', 'myuser');
+await page.fill('#password', 'mypass');
+await page.click('button[type="submit"]');
+
+// 未知页面：用 AI（灵活、适应性强）
+await page.act("找到热搜榜单并点击第一个话题");
+await page.act("滚动到评论区");
+
+// 数据提取：用 extract（结构化输出）
+const comments = await page.extract({
+  instruction: "提取前10条评论的内容和点赞数",
+  schema: commentSchema
+});
+
+// 继续已知操作：回到代码
+await page.goBack();
+await page.click('.home-button');
+```
+
+**优势对比**：
+
+| 场景 | 传统 Playwright | Stagehand 混合模式 |
+|------|----------------|-------------------|
+| 登录表单（已知结构） | ✅ 快速、精确 | ✅ 代码模式，同样快 |
+| 复杂页面（未知结构） | ❌ 需要分析 DOM | ✅ AI 自动识别 |
+| 数据提取（结构化） | ❌ 需要写选择器 | ✅ 自然语言描述 |
+| 生产稳定性 | ✅ 可控 | ✅ 代码+AI 结合，可控且灵活 |
+
+**适用场景**：
+- ✅ 多网站爬虫（每个网站结构不同）
+- ✅ 动态变化的页面（需要适应性）
+- ✅ 快速原型开发（减少选择器编写）
+
+## 参考项目
+
+### 1. Microsoft Playwright MCP ⭐（官方）
+- **仓库**：https://github.com/microsoft/playwright-mcp
+- **NPM**：@playwright/mcp
+- **特点**：
+  - 官方实现的 MCP + Playwright 集成
+  - 使用浏览器的 **accessibility tree** 而非截图
+  - 提供结构化的页面快照
+  - 2025年3月发布，持续更新中
+
+### 2. browser-use
+- **仓库**：https://github.com/browser-use/browser-use
+- **特点**：
+  - 让 AI 代理能访问和操作网站
+  - 支持多种 LLM（OpenAI GPT-4、Anthropic Claude、Meta Llama）
+  - 提供云服务绕过 Cloudflare 和反爬虫
+  - Python 实现：`pip install browser-use`
+
+### 3. Stagehand（browserbase）
+- **仓库**：https://github.com/browserbase/stagehand
+- **特点**：
+  - AI 浏览器自动化框架
+  - 混合模式：熟悉的用代码，陌生的用 AI
+  - 在 AI 和传统 Playwright 之间灵活切换
+
+### 4. playwright-browser-agent
+- **仓库**：https://github.com/leoch95/playwright-browser-agent
+- **特点**：
+  - 基于 LangGraph + LiteLLM
+  - Playwright 浏览器控制
+  - LLM 驱动的智能决策
+
+### 5. Skyvern
+- **仓库**：https://github.com/Skyvern-AI/skyvern
+- **特点**：
+  - LLM + 计算机视觉
+  - 基于 Task-Driven autonomous agent 设计
+  - 使用 Playwright 进行浏览器自动化
+
+### 6. playwright-computer-use
+- **仓库**：https://github.com/invariantlabs-ai/playwright-computer-use
+- **特点**：
+  - 让 Claude 直接控制浏览器
+  - 连接 Playwright 到 Claude 的 computer use 能力
+
 ## 技术栈
 
 - **MCP SDK**：@modelcontextprotocol/sdk
