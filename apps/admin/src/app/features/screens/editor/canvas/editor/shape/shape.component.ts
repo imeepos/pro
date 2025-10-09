@@ -5,6 +5,7 @@ import { CanvasService } from '../../services/canvas.service';
 import { CanvasQuery } from '../../services/canvas.query';
 import { RulerGridService } from '../../services/ruler-grid.service';
 import { ErrorBoundaryService } from '../../services/error-boundary.service';
+import { ComponentEventHandlerService } from '../../../services/component-event-handler.service';
 import { ComponentItem, ComponentStyle, Point, ComponentErrorInfo } from '../../../models/component.model';
 import { throttleFrame } from '../../../utils/throttle.util';
 import { GeometryUtil } from '../../../utils/geometry.util';
@@ -42,7 +43,8 @@ export class ShapeComponent implements OnInit, OnDestroy {
     private query: CanvasQuery,
     private rulerGridService: RulerGridService,
     private errorBoundary: ErrorBoundaryService,
-    private elementRef: ElementRef
+    private elementRef: ElementRef,
+    private eventHandler: ComponentEventHandlerService
   ) {}
 
   isSelected = false;
@@ -189,6 +191,11 @@ export class ShapeComponent implements OnInit, OnDestroy {
     if (event.button !== 0) {
       console.log('[ShapeComponent] Non-left button click ignored');
       return;
+    }
+
+    // 在预览模式下触发点击事件
+    if (this.eventHandler.getIsPreviewMode()) {
+      this.eventHandler.handleComponentClick(this.component, event);
     }
 
     // 检查是否应该触发拖拽 - 放宽条件，允许子元素触发
@@ -487,6 +494,20 @@ export class ShapeComponent implements OnInit, OnDestroy {
       l: 'ew-resize'
     };
     return cursors[point] || 'default';
+  }
+
+  @HostListener('mouseenter', ['$event'])
+  onMouseEnter(event: MouseEvent): void {
+    if (this.eventHandler.getIsPreviewMode()) {
+      this.eventHandler.handleComponentHover(this.component, event);
+    }
+  }
+
+  @HostListener('mouseleave', ['$event'])
+  onMouseLeave(event: MouseEvent): void {
+    if (this.eventHandler.getIsPreviewMode()) {
+      this.eventHandler.handleComponentLeave(this.component, event);
+    }
   }
 
   @HostListener('contextmenu', ['$event'])
