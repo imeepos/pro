@@ -1,8 +1,11 @@
 .ruler-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   pointer-events: none;
+  z-index: 100;
 
   .ruler-horizontal {
     position: absolute;
@@ -13,6 +16,8 @@
     pointer-events: auto;
     z-index: 10;
     border-bottom: 1px solid #e0e0e0;
+    // 标尺刻度将通过 JavaScript 动态调整
+    background-clip: padding-box;
   }
 
   .ruler-vertical {
@@ -24,6 +29,8 @@
     pointer-events: auto;
     z-index: 10;
     border-right: 1px solid #e0e0e0;
+    // 标尺刻度将通过 JavaScript 动态调整
+    background-clip: padding-box;
   }
 
   .ruler-corner {
@@ -70,6 +77,7 @@
     bottom: 0;
     pointer-events: none;
     z-index: 5;
+    // 参考线位置将通过 JavaScript 动态调整以匹配标尺零点
 
     .reference-line {
       position: absolute;

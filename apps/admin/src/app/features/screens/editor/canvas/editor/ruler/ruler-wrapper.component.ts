@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Observable, Subject, BehaviorSubject, fromEvent, takeUntil, combineLatest } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, startWith } from 'rxjs/operators';
 import { SketchRulerComponent } from './sketch-ruler';
 import { RulerGridService, ReferenceLine } from '../../services/ruler-grid.service';
 import { CanvasQuery } from '../../services/canvas.query';
@@ -99,6 +99,7 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
   private draggedLine: ReferenceLine | null = null;
   private dragStartPos = 0;
   private dragStartLinePos = 0;
+  private canvasWrapperRef: HTMLElement | null = null;
 
   // 状态观察流
   showRuler$!: Observable<boolean>;
@@ -109,6 +110,7 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
   scrollTop$!: Observable<number>;
   horizontalLines$!: Observable<ReferenceLine[]>;
   verticalLines$!: Observable<ReferenceLine[]>;
+  canvasOffset$!: Observable<{ left: number; top: number }>;
 
   themeColors = this.rulerGridService.getThemeColors();
 
@@ -121,6 +123,7 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
+    this.findCanvasWrapper();
     this.setupEventListeners();
   }
 
@@ -144,6 +147,16 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
       map((lines: ReferenceLine[]) => lines.filter((line: ReferenceLine) => line.type === 'vertical'))
     );
 
+    // 创建画布偏移量观察流
+    this.canvasOffset$ = combineLatest([
+      this.canvasQuery.canvasStyle$,
+      fromEvent<Window>(window, 'resize').pipe(startWith(null)),
+      this.scale$
+    ]).pipe(
+      map(([canvasStyle, , scale]) => this.calculateCanvasOffset(canvasStyle, scale)),
+      startWith({ left: 0, top: 0 })
+    );
+
     // 监听主题变化
     this.rulerGridService.theme$.pipe(
       takeUntil(this.destroy$)
@@ -157,16 +170,17 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
     combineLatest([
       this.scrollLeft$,
       this.scrollTop$,
-      this.scale$
+      this.scale$,
+      this.canvasOffset$
     ]).pipe(
       takeUntil(this.destroy$)
-    ).subscribe(([scrollLeft, scrollTop, scale]) => {
+    ).subscribe(([scrollLeft, scrollTop, scale, canvasOffset]) => {
       if (this.horizontalRuler) {
-        this.horizontalRuler.updateStartPos(scrollLeft, 0);
+        this.horizontalRuler.updateStartPos(scrollLeft - canvasOffset.left, 0);
         this.horizontalRuler.updateScale(scale);
       }
       if (this.verticalRuler) {
-        this.verticalRuler.updateStartPos(0, scrollTop);
+        this.verticalRuler.updateStartPos(0, scrollTop - canvasOffset.top);
         this.verticalRuler.updateScale(scale);
       }
     });
@@ -275,5 +289,47 @@ export class RulerWrapperComponent implements AfterViewInit, OnDestroy {
 
   trackByLineId(index: number, line: ReferenceLine): string {
     return line.id;
+  }
+
+  /**
+   * 查找画布容器元素
+   */
+  private findCanvasWrapper(): void {
+    // 通过父级元素查找 canvas-wrapper，优先查找带有 canvas-target 类的元素
+    let parent = this.elementRef.nativeElement.parentElement;
+    while (parent) {
+      const canvasWrapper = parent.querySelector('.canvas-wrapper.canvas-target') || parent.querySelector('.canvas-wrapper');
+      if (canvasWrapper) {
+        this.canvasWrapperRef = canvasWrapper as HTMLElement;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+  }
+
+  /**
+   * 计算画布相对于标尺容器的偏移量
+   */
+  private calculateCanvasOffset(canvasStyle: any, scale: number): { left: number; top: number } {
+    if (!this.canvasWrapperRef || !canvasStyle) {
+      return { left: 0, top: 0 };
+    }
+
+    try {
+      const rulerRect = this.elementRef.nativeElement.getBoundingClientRect();
+      const canvasRect = this.canvasWrapperRef.getBoundingClientRect();
+
+      // 计算画布相对于标尺容器的偏移量
+      const offsetLeft = canvasRect.left - rulerRect.left;
+      const offsetTop = canvasRect.top - rulerRect.top;
+
+      return {
+        left: offsetLeft,
+        top: offsetTop
+      };
+    } catch (error) {
+      console.warn('计算画布偏移量时出错:', error);
+      return { left: 0, top: 0 };
+    }
   }
 }
