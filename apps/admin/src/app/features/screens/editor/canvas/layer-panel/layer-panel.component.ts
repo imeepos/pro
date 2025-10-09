@@ -12,6 +12,8 @@ interface LayerItem {
   visible: boolean;
   locked: boolean;
   zIndex: number;
+  hasError?: boolean;
+  errorMessage?: string;
 }
 
 @Component({
@@ -48,7 +50,9 @@ export class LayerPanelComponent {
       type: comp.type,
       visible: comp.display !== false,
       locked: comp.locked || false,
-      zIndex: comp.style.zIndex || 0
+      zIndex: comp.style.zIndex || 0,
+      hasError: comp.hasError,
+      errorMessage: comp.errorInfo?.message
     }));
   }
 

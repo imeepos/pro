@@ -10,6 +10,7 @@
         class="layer-item"
         [class.active]="layer.id === activeLayerId()"
         [class.locked]="layer.locked"
+        [class.has-error]="layer.hasError"
         cdkDrag
         (click)="selectLayer(layer.id)"
         (contextmenu)="onContextMenu($event, layer.id)"
@@ -20,8 +21,12 @@
           </svg>
         </div>
 
-        <div class="layer-icon">
-          {{ getLayerIcon(layer.type) }}
+        <div class="layer-icon" [class.error-icon]="layer.hasError">
+          @if (layer.hasError) {
+            ⚠️
+          } @else {
+            {{ getLayerIcon(layer.type) }}
+          }
         </div>
 
         @if (renamingLayerId() === layer.id) {
@@ -37,7 +42,12 @@
             autofocus
           />
         } @else {
-          <div class="layer-name">{{ layer.name }}</div>
+          <div class="layer-name" [class.error-name]="layer.hasError">
+            {{ layer.name }}
+            @if (layer.hasError && layer.errorMessage) {
+              <span class="error-hint" [title]="layer.errorMessage">错误</span>
+            }
+          </div>
         }
 
         <div class="layer-actions">
