@@ -1,31 +1,43 @@
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-  <div class="page-header">
-    <h1>微博搜索任务管理</h1>
-    <button class="btn btn-primary" (click)="createTask()">
-      <span class="icon">+</span>
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">微博搜索任务管理</h1>
+    <button
+      type="button"
+      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-colors duration-200"
+      (click)="createTask()"
+    >
+      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+      </svg>
       创建任务
     </button>
   </div>
 
   <!-- 筛选条件 -->
-  <div class="filter-card">
-    <div class="filter-row">
-      <div class="filter-item">
-        <label>关键词搜索</label>
-        <div class="search-group">
+  <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 mb-6">
+    <div class="flex flex-wrap gap-4 items-end">
+      <div class="flex-1 min-w-[300px]">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">关键词搜索</label>
+        <div class="flex gap-2">
           <input
             type="text"
-            class="form-input"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
             placeholder="输入任务关键词搜索"
             [(ngModel)]="searchKeyword"
             (keyup.enter)="applyFilters()"
           />
-          <button class="btn btn-primary" (click)="applyFilters()">搜索</button>
+          <button
+            type="button"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-colors duration-200"
+            (click)="applyFilters()"
+          >
+            搜索
+          </button>
         </div>
       </div>
 
-      <div class="filter-item">
-        <label>任务状态</label>
+      <div class="min-w-[180px]">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">任务状态</label>
         <app-select
           [options]="statusOptions"
           [(ngModel)]="selectedStatus"
@@ -34,8 +46,8 @@
         ></app-select>
       </div>
 
-      <div class="filter-item">
-        <label>启用状态</label>
+      <div class="min-w-[120px]">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">启用状态</label>
         <app-select
           [options]="enabledOptions"
           [(ngModel)]="selectedEnabled"
@@ -44,9 +56,13 @@
         ></app-select>
       </div>
 
-      <div class="filter-item">
-        <label>&nbsp;</label>
-        <button class="btn btn-secondary" (click)="resetFilters()">
+      <div class="min-w-[80px]">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">&nbsp;</label>
+        <button
+          type="button"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-600 dark:focus:ring-offset-gray-800 transition-colors duration-200"
+          (click)="resetFilters()"
+        >
           重置
         </button>
       </div>
@@ -54,167 +70,210 @@
   </div>
 
   <!-- 任务列表 -->
-  <div class="table-card">
-    <div class="loading-container" *ngIf="loading$ | async">
-      <div class="loading-spinner">加载中...</div>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <!-- 加载状态 -->
+    <div class="flex justify-center items-center py-12" *ngIf="loading$ | async">
+      <div class="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+        <div class="animate-spin rounded-full h-5 w-5 border-2 border-gray-300 border-t-blue-600"></div>
+        <span class="text-sm">加载中...</span>
+      </div>
     </div>
 
-    <div class="error-message" *ngIf="error$ | async">
+    <!-- 错误状态 -->
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-lg m-4" *ngIf="error$ | async">
       {{ error$ | async }}
     </div>
 
     <!-- 数据表格 -->
-    <div class="table-container" *ngIf="((tasks$ | async)?.length ?? 0) > 0 && !(loading$ | async)">
-      <table class="data-table">
-        <thead>
+    <div class="overflow-x-auto custom-scrollbar" *ngIf="((tasks$ | async)?.length ?? 0) > 0 && !(loading$ | async)">
+      <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+        <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
           <tr>
-            <th>关键词</th>
-            <th>状态</th>
-            <th>启用状态</th>
-            <th>进度</th>
-            <th>当前抓取时间</th>
-            <th>最新数据时间</th>
-            <th>下次执行时间</th>
-            <th>抓取间隔</th>
-            <th>错误信息</th>
-            <th>操作</th>
+            <th scope="col" class="px-6 py-3">关键词</th>
+            <th scope="col" class="px-6 py-3">状态</th>
+            <th scope="col" class="px-6 py-3">启用状态</th>
+            <th scope="col" class="px-6 py-3">进度</th>
+            <th scope="col" class="px-6 py-3">当前抓取时间</th>
+            <th scope="col" class="px-6 py-3">最新数据时间</th>
+            <th scope="col" class="px-6 py-3">下次执行时间</th>
+            <th scope="col" class="px-6 py-3">抓取间隔</th>
+            <th scope="col" class="px-6 py-3">错误信息</th>
+            <th scope="col" class="px-6 py-3">操作</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let task of tasks$ | async; trackBy: trackByTaskId">
-            <td>
+          <tr *ngFor="let task of tasks$ | async; trackBy: trackByTaskId" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+            <td class="px-6 py-4">
               <div class="keyword-cell">
-                <strong>{{ task.keyword }}</strong>
-                <small class="text-muted">
+                <div class="font-semibold text-gray-900 dark:text-white">{{ task.keyword }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   起始: {{ task.startDate | date:'yyyy-MM-dd' }}
-                </small>
+                </div>
               </div>
             </td>
-            <td>
-              <span class="status-tag status-{{ task.status }}">
+            <td class="px-6 py-4">
+              <!-- 状态标签 -->
+              <span
+                class="px-2 py-1 text-xs font-medium rounded-full"
+                [ngClass]="{
+                  'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': task.status === taskStatus.PENDING,
+                  'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300': task.status === taskStatus.RUNNING,
+                  'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': task.status === taskStatus.PAUSED,
+                  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': task.status === taskStatus.FAILED || task.status === taskStatus.TIMEOUT
+                }"
+              >
                 {{ getStatusText(task.status) }}
               </span>
             </td>
-            <td>
-              <span class="status-tag" [class.enabled]="task.enabled" [class.disabled]="!task.enabled">
+            <td class="px-6 py-4">
+              <!-- 启用状态标签 -->
+              <span
+                class="px-2 py-1 text-xs font-medium rounded-full"
+                [ngClass]="{
+                  'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': task.enabled,
+                  'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': !task.enabled
+                }"
+              >
                 {{ task.enabled ? '启用' : '禁用' }}
               </span>
             </td>
-            <td>
-              <div class="progress-cell">
-                <div class="progress-bar">
-                  <div class="progress-fill" [style.width.%]="getCompletionRate(task.progress, task.totalSegments)"></div>
+            <td class="px-6 py-4">
+              <div class="min-w-[140px]">
+                <div class="w-full bg-gray-200 rounded-full h-1.5 mb-2 dark:bg-gray-700">
+                  <div class="bg-green-600 h-1.5 rounded-full transition-all duration-300 animate-progress" [style.width.%]="getCompletionRate(task.progress, task.totalSegments)"></div>
                 </div>
-                <small>{{ task.progress }} / {{ task.totalSegments }}</small>
+                <div class="text-xs text-gray-500 dark:text-gray-400 text-center">{{ task.progress }} / {{ task.totalSegments }}</div>
               </div>
             </td>
-            <td>
-              <div class="time-cell">
-                <div *ngIf="task.currentCrawlTime">
+            <td class="px-6 py-4">
+              <div class="min-w-[160px] time-cell">
+                <div *ngIf="task.currentCrawlTime" class="text-sm text-gray-900 dark:text-white">
                   {{ formatTime(task.currentCrawlTime) }}
                 </div>
-                <div *ngIf="task.currentCrawlTime" class="text-muted small">
+                <div *ngIf="task.currentCrawlTime" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {{ formatDateTime(task.currentCrawlTime) }}
                 </div>
-                <div *ngIf="!task.currentCrawlTime" class="text-muted">
+                <div *ngIf="!task.currentCrawlTime" class="text-sm text-gray-500 dark:text-gray-400">
                   未开始
                 </div>
               </div>
             </td>
-            <td>
-              <div class="time-cell">
-                <div *ngIf="task.latestCrawlTime">
+            <td class="px-6 py-4">
+              <div class="min-w-[160px] time-cell">
+                <div *ngIf="task.latestCrawlTime" class="text-sm text-gray-900 dark:text-white">
                   {{ formatTime(task.latestCrawlTime) }}
                 </div>
-                <div *ngIf="task.latestCrawlTime" class="text-muted small">
+                <div *ngIf="task.latestCrawlTime" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {{ formatDateTime(task.latestCrawlTime) }}
                 </div>
-                <div *ngIf="!task.latestCrawlTime" class="text-muted">
+                <div *ngIf="!task.latestCrawlTime" class="text-sm text-gray-500 dark:text-gray-400">
                   无数据
                 </div>
               </div>
             </td>
-            <td>
-              <div class="time-cell">
-                <div *ngIf="task.nextRunAt">
+            <td class="px-6 py-4">
+              <div class="min-w-[160px] time-cell">
+                <div *ngIf="task.nextRunAt" class="text-sm text-gray-900 dark:text-white">
                   {{ formatTime(task.nextRunAt) }}
                 </div>
-                <div *ngIf="task.nextRunAt" class="text-muted small">
+                <div *ngIf="task.nextRunAt" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {{ formatDateTime(task.nextRunAt) }}
                 </div>
-                <div *ngIf="!task.nextRunAt" class="text-muted">
+                <div *ngIf="!task.nextRunAt" class="text-sm text-gray-500 dark:text-gray-400">
                   -
                 </div>
               </div>
             </td>
-            <td>
-              <span class="interval-badge">{{ task.crawlInterval }}</span>
+            <td class="px-6 py-4">
+              <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full dark:bg-green-900 dark:text-green-300">
+                {{ task.crawlInterval }}
+              </span>
             </td>
-            <td>
-              <div *ngIf="task.errorMessage" class="error-cell">
-                <span class="error-icon">⚠️</span>
-                <span class="error-text" [title]="task.errorMessage">
+            <td class="px-6 py-4">
+              <div *ngIf="task.errorMessage" class="flex items-center gap-2 max-w-[200px]">
+                <span class="text-red-500 text-sm">⚠️</span>
+                <span class="text-xs text-red-600 dark:text-red-400 truncate" [title]="task.errorMessage">
                   {{ task.errorMessage.length > 20 ? task.errorMessage.substring(0, 20) + '...' : task.errorMessage }}
                 </span>
               </div>
-              <span *ngIf="!task.errorMessage" class="text-muted">-</span>
+              <span *ngIf="!task.errorMessage" class="text-sm text-gray-500 dark:text-gray-400">-</span>
             </td>
-            <td>
-              <div class="action-buttons">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-1">
                 <!-- 查看详情 -->
                 <button
-                  class="btn btn-sm btn-text"
+                  type="button"
+                  class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
                   title="查看详情"
                   (click)="viewTask(task)"
                 >
-                  👁️
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
                 </button>
 
                 <!-- 编辑 -->
                 <button
-                  class="btn btn-sm btn-text"
+                  type="button"
+                  class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
                   title="编辑"
                   (click)="editTask(task)"
                 >
-                  ✏️
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
                 </button>
 
                 <!-- 暂停/恢复 -->
                 <button
                   *ngIf="canPauseTask(task)"
-                  class="btn btn-sm btn-text"
+                  type="button"
+                  class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
                   title="暂停"
                   (click)="pauseTask(task)"
                 >
-                  ⏸️
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
                 </button>
 
                 <button
                   *ngIf="canResumeTask(task)"
-                  class="btn btn-sm btn-text"
+                  type="button"
+                  class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
                   title="恢复"
                   (click)="resumeTask(task)"
                 >
-                  ▶️
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
                 </button>
 
                 <!-- 立即执行 -->
                 <button
                   *ngIf="canRunNowTask(task)"
-                  class="btn btn-sm btn-text"
+                  type="button"
+                  class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
                   title="立即执行"
                   (click)="runTaskNow(task)"
                 >
-                  ⚡
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                  </svg>
                 </button>
 
                 <!-- 删除 -->
                 <button
-                  class="btn btn-sm btn-text btn-danger"
+                  type="button"
+                  class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-200 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
                   title="删除"
                   (click)="deleteTask(task)"
                 >
-                  🗑️
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
                 </button>
               </div>
             </td>
@@ -224,36 +283,50 @@
     </div>
 
     <!-- 空状态 -->
-    <div class="empty-state" *ngIf="((tasks$ | async)?.length ?? 0) === 0 && !(loading$ | async)">
-      <div class="empty-icon">📋</div>
-      <div class="empty-text">暂无任务数据</div>
-      <button class="btn btn-primary" (click)="createTask()">创建第一个任务</button>
+    <div class="text-center py-12" *ngIf="((tasks$ | async)?.length ?? 0) === 0 && !(loading$ | async)">
+      <div class="text-6xl mb-4">📋</div>
+      <div class="text-lg text-gray-600 dark:text-gray-400 mb-4">暂无任务数据</div>
+      <button
+        type="button"
+        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-colors duration-200"
+        (click)="createTask()"
+      >
+        创建第一个任务
+      </button>
     </div>
 
     <!-- 分页 -->
-    <div class="pagination-wrapper" *ngIf="total > 0">
-      <div class="pagination-info">
-        显示 {{ page * limit - limit + 1 }} -
-        {{ min(page * limit, total) }}
-        共 {{ total }} 条
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 border-t border-gray-200 dark:border-gray-700" *ngIf="total > 0">
+      <div class="text-sm text-gray-700 dark:text-gray-300">
+        显示 {{ page * limit - limit + 1 }} - {{ min(page * limit, total) }} 共 {{ total }} 条
       </div>
-      <div class="pagination-controls">
+      <div class="flex items-center gap-2">
         <button
-          class="btn btn-sm"
+          type="button"
+          class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-600 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           [disabled]="page <= 1"
           (click)="onPageChange(page - 1)"
         >
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
           上一页
         </button>
 
-        <span class="page-info">第 {{ page }} 页</span>
+        <span class="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+          第 {{ page }} 页
+        </span>
 
         <button
-          class="btn btn-sm"
+          type="button"
+          class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-600 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           [disabled]="page >= totalPages"
           (click)="onPageChange(page + 1)"
         >
           下一页
+          <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
         </button>
       </div>
     </div>
