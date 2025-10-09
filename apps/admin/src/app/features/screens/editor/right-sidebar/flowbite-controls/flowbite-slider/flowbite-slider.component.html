@@ -1,0 +1,140 @@
+<div class="flowbite-slider-wrapper" [class]="containerClasses">
+  @if (label) {
+    <label
+      [for]="sliderId"
+      class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+      [class.text-red-600]="errorText"
+    >
+      {{ label }}
+      @if (required) {
+        <span class="text-red-500 ml-1">*</span>
+      }
+    </label>
+  }
+
+  <div class="slider-container">
+    <!-- Min/Max Labels -->
+    @if (showMinMax) {
+      <div class="flex justify-between mb-2">
+        <span [class]="minMaxClasses">{{ formattedMin }}{{ unit }}</span>
+        <span [class]="minMaxClasses">{{ formattedMax }}{{ unit }}</span>
+      </div>
+    }
+
+    <!-- Slider Input -->
+    <div class="relative">
+      <input
+        [id]="sliderId"
+        type="range"
+        [value]="value"
+        [min]="min"
+        [max]="max"
+        [step]="step"
+        [disabled]="disabled"
+        [required]="required"
+        [class]="sliderClasses"
+        [style]="sliderStyles"
+        (input)="onSliderInput($event)"
+        (change)="onSliderChange($event)"
+        (focus)="onFocus()"
+        (blur)="onBlur()"
+        (mousedown)="onMouseDown()"
+        (mouseup)="onMouseUp()"
+      />
+
+      <!-- Custom Thumb Tooltip -->
+      @if (showTooltip) {
+        <div
+          class="absolute pointer-events-none transition-transform duration-150"
+          [style]="thumbPosition"
+        >
+          <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
+            {{ formattedValue }}{{ unit }}
+            <div class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+              <div class="border-4 border-transparent border-t-gray-900"></div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Marks -->
+      @if (marks && marks.length > 0) {
+        <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
+          @for (mark of marks; track mark.value) {
+            <div
+              class="absolute top-1/2 transform -translate-y-1/2 w-1 h-1 rounded-full transition-colors duration-200"
+              [style.left.%]="getMarkPosition(mark.value)"
+              [class.bg-gray-400]="!isMarkActive(mark.value)"
+              [class.bg-current]="isMarkActive(mark.value)"
+            ></div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Value Display -->
+    @if (showValue) {
+      <div class="flex items-center justify-between mt-2">
+        <div class="flex items-center space-x-2">
+          <input
+            type="number"
+            [value]="formattedValue"
+            [min]="min"
+            [max]="max"
+            [step]="step"
+            [disabled]="disabled"
+            class="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+            (input)="onValueInputChange($event)"
+            (focus)="onFocus()"
+            (blur)="onBlur()"
+          />
+          @if (unit) {
+            <span [class]="minMaxClasses">{{ unit }}</span>
+          }
+        </div>
+
+        <!-- Percentage Display -->
+        <span [class]="minMaxClasses">{{ Math.round(percentage) }}%</span>
+      </div>
+    }
+
+    <!-- Mark Labels -->
+    @if (marks && marks.some(mark => mark.label)) {
+      <div class="relative mt-4">
+        <div class="flex justify-between">
+          @for (mark of marks; track mark.value) {
+            <div
+              class="text-xs text-gray-500 dark:text-gray-400 select-none"
+              [style.left.%]="getMarkPosition(mark.value)"
+              [style.position]="'absolute'"
+              [style.transform]="'translateX(-50%)'"
+            >
+              @if (mark.label) {
+                {{ mark.label }}
+              } @else {
+                {{ mark.value }}
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Helper Text -->
+  @if (helperText && !errorText) {
+    <p class="text-xs text-gray-500 dark:text-gray-400">{{ helperText }}</p>
+  }
+
+  <!-- Error Text -->
+  @if (errorText) {
+    <p class="text-xs text-red-600 dark:text-red-400">{{ errorText }}</p>
+  }
+
+  <!-- Range Validation Error -->
+  @if (value < min || value > max) {
+    <p class="text-xs text-red-600 dark:text-red-400">
+      值必须在 {{ formattedMin }} 和 {{ formattedMax }} 之间
+    </p>
+  }
+</div>
