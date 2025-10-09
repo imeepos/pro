@@ -1,0 +1,113 @@
+<div class="pro-date-picker" (click)="stopPropagation($event)">
+  <!-- 输入框 -->
+  <div class="date-picker-input" [class.disabled]="disabled">
+    <input
+      type="text"
+      class="date-input"
+      [placeholder]="placeholder"
+      [(ngModel)]="inputText"
+      (input)="onInputChange($event)"
+      (blur)="onInputBlur()"
+      (focus)="openCalendar()"
+      (keydown)="onKeyDown($event)"
+      [disabled]="disabled"
+      [readonly]="disabled"
+    />
+
+    <!-- 清除按钮 -->
+    <button
+      type="button"
+      class="clear-btn"
+      *ngIf="selectedDate && !disabled"
+      (click)="clearSelection()"
+      tabindex="-1"
+    >
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+
+    <!-- 日历图标 -->
+    <button
+      type="button"
+      class="calendar-btn"
+      (click)="toggleCalendar()"
+      [disabled]="disabled"
+      tabindex="-1"
+    >
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- 日历弹窗 -->
+  <div class="date-picker-calendar" *ngIf="isOpen" (click)="stopPropagation($event)">
+    <!-- 快捷预设 -->
+    <div class="quick-presets" *ngIf="showQuickPresets">
+      <div class="presets-title">快捷选择</div>
+      <div class="presets-grid">
+        <button
+          type="button"
+          class="preset-btn"
+          *ngFor="let preset of quickPresets"
+          (click)="selectQuickPreset(preset.key)"
+          [title]="getQuickPresetRange(preset.key)"
+        >
+          <span class="preset-icon">{{ preset.icon }}</span>
+          <span class="preset-label">{{ preset.label }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 日历主体 -->
+    <div class="calendar-header">
+      <button type="button" class="nav-btn" (click)="previousMonth()">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <div class="month-title">{{ getMonthName() }}</div>
+      <button type="button" class="nav-btn" (click)="nextMonth()">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- 星期标题 -->
+    <div class="weekdays">
+      <div class="weekday" *ngFor="let day of getWeekDays()">{{ day }}</div>
+    </div>
+
+    <!-- 日期网格 -->
+    <div class="days-grid">
+      <button
+        type="button"
+        class="day-btn"
+        *ngFor="let day of getCalendarDays()"
+        [class.other-month]="!isCurrentMonth(day)"
+        [class.today]="isToday(day)"
+        [class.selected]="isSelected(day)"
+        [class.hovered]="isHovered(day)"
+        [class.disabled]="isDateDisabled(day)"
+        (click)="selectDate(day)"
+        (mouseenter)="onDateHover(day)"
+        (mouseleave)="onDateHover(undefined)"
+        [disabled]="isDateDisabled(day)"
+      >
+        {{ day?.getDate() }}
+      </button>
+    </div>
+
+    <!-- 底部操作 -->
+    <div class="calendar-footer">
+      <button type="button" class="footer-btn today-btn" (click)="selectQuickPreset('today')">
+        今天
+      </button>
+      <button type="button" class="footer-btn close-btn" (click)="closeCalendar()">
+        关闭
+      </button>
+    </div>
+  </div>
+</div>

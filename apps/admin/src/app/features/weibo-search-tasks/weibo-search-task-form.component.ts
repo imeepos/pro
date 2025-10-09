@@ -6,6 +6,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { WeiboSearchTasksService } from '../../state/weibo-search-tasks.service';
 import { WeiboSearchTasksQuery } from '../../state/weibo-search-tasks.query';
 import { ToastService } from '../../shared/services/toast.service';
+import { DatePickerComponent } from '../../shared/components/date-picker';
 import { WeiboSearchTask, CreateWeiboSearchTaskDto, UpdateWeiboSearchTaskDto } from '@pro/types';
 
 @Component({
@@ -14,7 +15,8 @@ import { WeiboSearchTask, CreateWeiboSearchTaskDto, UpdateWeiboSearchTaskDto } f
   imports: [
     CommonModule,
     FormsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    DatePickerComponent
   ],
   templateUrl: './weibo-search-task-form.component.html',
   styleUrls: ['./weibo-search-task-form.component.scss']
@@ -242,5 +244,12 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
   // 最大日期（今天）
   get maxDate(): string {
     return new Date().toISOString().split('T')[0];
+  }
+
+  // 最大日期对象
+  get maxDateObj(): Date {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    return today;
   }
 }
