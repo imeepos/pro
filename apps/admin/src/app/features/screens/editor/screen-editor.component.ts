@@ -373,7 +373,7 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   }
 
   private setupKeyboardShortcuts(): void {
-    // 添加Ctrl+S 保存快捷键和 F11 全屏快捷键
+    // 添加Ctrl+S 保存快捷键、F11 全屏快捷键和 Ctrl+Shift+C 坐标显示快捷键
     const keyboardShortcut = (event: KeyboardEvent) => {
       // Ctrl+S 保存
       if ((event.ctrlKey || event.metaKey) && event.key === 's') {
@@ -385,6 +385,12 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
       if (event.key === 'F11') {
         event.preventDefault();
         this.toggleFullscreen();
+      }
+
+      // Ctrl+Shift+C 切换坐标显示
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'c') {
+        event.preventDefault();
+        this.toggleCoordinates();
       }
     };
 

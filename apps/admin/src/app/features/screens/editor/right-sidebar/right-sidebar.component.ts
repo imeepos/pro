@@ -78,9 +78,15 @@ type TabType = 'style' | 'attr' | 'data' | 'canvas';
 
           <!-- 无选中组件时显示 -->
           <div *ngIf="!activeComponent" class="p-4">
-            <div *ngIf="activeTab === 'canvas'" class="space-y-4">
-              <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">画布设置</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">画布配置功能开发中...</p>
+            <div *ngIf="activeTab === 'canvas' class="h-full">
+              <app-canvas-config-panel />
+            </div>
+            <div *ngIf="activeTab === 'canvas' class="h-full">
+              <app-canvas-config-panel />
+            </div>
+            <div *ngIf="activeTab === 'canvas' class="h-full">
+              <app-canvas-config-panel />
+            </div>
             </div>
             <div *ngIf="activeTab !== 'canvas'" class="text-center py-8">
               <svg class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
