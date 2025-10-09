@@ -17,12 +17,12 @@ import { CanvasQuery } from '../../services/canvas.query';
         <app-sketch-ruler
           #horizontalRuler
           direction="horizontal"
-          [scale]="scale$ | async"
-          [width]="canvasWidth$ | async"
+          [scale]="(scale$ | async) ?? 1"
+          [width]="canvasWidth"
           [height]="20"
-          [startX]="scrollLeft$ | async"
+          [startX]="(scrollLeft$ | async) ?? 0"
           [startY]="0"
-          [showReferLine]="showReferenceLines$ | async"
+          [showReferLine]="(showReferenceLines$ | async) ?? false"
           [theme]="themeColors"
           (newLine)="onHorizontalNewLine($event)"
           (lineDrag)="onHorizontalLineDrag($event)">
@@ -34,12 +34,12 @@ import { CanvasQuery } from '../../services/canvas.query';
         <app-sketch-ruler
           #verticalRuler
           direction="vertical"
-          [scale]="scale$ | async"
+          [scale]="(scale$ | async) ?? 1"
           [width]="20"
-          [height]="canvasHeight$ | async"
+          [height]="canvasHeight"
           [startX]="0"
-          [startY]="scrollTop$ | async"
-          [showReferLine]="showReferenceLines$ | async"
+          [startY]="(scrollTop$ | async) ?? 0"
+          [showReferLine]="(showReferenceLines$ | async) ?? false"
           [theme]="themeColors"
           (newLine)="onVerticalNewLine($event)"
           (lineDrag)="onVerticalLineDrag($event)">
@@ -65,7 +65,7 @@ import { CanvasQuery } from '../../services/canvas.query';
         <div
           *ngFor="let line of horizontalLines$ | async; trackBy: trackByLineId"
           class="reference-line horizontal-line"
-          [style.top.px]="line.position * (scale$ | async)"
+          [style.top.px]="line.position * ((scale$ | async) ?? 1)"
           [style.background-color]="line.color || '#51d3db'"
           [class.locked]="line.locked">
           <div class="line-handle" (mousedown)="onLineMouseDown($event, line, 'horizontal')"></div>
@@ -75,7 +75,7 @@ import { CanvasQuery } from '../../services/canvas.query';
         <div
           *ngFor="let line of verticalLines$ | async; trackBy: trackByLineId"
           class="reference-line vertical-line"
-          [style.left.px]="line.position * (scale$ | async)"
+          [style.left.px]="line.position * ((scale$ | async) ?? 1)"
           [style.background-color]="line.color || '#51d3db'"
           [class.locked]="line.locked">
           <div class="line-handle" (mousedown)="onLineMouseDown($event, line, 'vertical')"></div>

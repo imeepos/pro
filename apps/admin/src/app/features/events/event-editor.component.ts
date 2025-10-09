@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { EventsService } from '../../state/events.service';
@@ -244,5 +244,13 @@ export class EventEditorComponent implements OnInit, OnDestroy {
 
   get title(): string {
     return this.isEditMode ? '编辑事件' : '创建事件';
+  }
+
+  get industryTypeIdControl(): FormControl {
+    return this.eventForm.get('industryTypeId') as FormControl;
+  }
+
+  get eventTypeIdControl(): FormControl {
+    return this.eventForm.get('eventTypeId') as FormControl;
   }
 }

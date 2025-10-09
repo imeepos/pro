@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { EventTypesService } from '../../state/event-types.service';
@@ -159,5 +159,9 @@ export class EventTypeEditorComponent implements OnInit, OnDestroy {
     if (field.errors['min']) return '必须大于等于0';
 
     return '输入无效';
+  }
+
+  get statusControl(): FormControl {
+    return this.eventTypeForm.get('status') as FormControl;
   }
 }
