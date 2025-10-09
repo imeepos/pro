@@ -1,6 +1,7 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { UserEntity } from '../entities/user.entity';
 import { WeiboAccountEntity } from '../entities/weibo-account.entity';
+import { JdAccountEntity } from '../entities/jd-account.entity';
 import { ScreenPageEntity } from '../entities/screen-page.entity';
 import { IndustryTypeEntity } from '../entities/industry-type.entity';
 import { EventTypeEntity } from '../entities/event-type.entity';
@@ -13,6 +14,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
   const entities = [
     UserEntity,
     WeiboAccountEntity,
+    JdAccountEntity,
     ScreenPageEntity,
     IndustryTypeEntity,
     EventTypeEntity,
