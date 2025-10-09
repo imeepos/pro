@@ -1,3 +1,5 @@
+@use 'sass:color';
+
 // 京东主题色
 $jd-red: #e4393c;
 $jd-red-light: #f8d7d7;
@@ -155,7 +157,7 @@ $error: #ef4444;
     }
 
     &:active {
-      background: darken($jd-red-dark, 10%);
+      background: color.adjust($jd-red-dark, $lightness: -10%);
     }
 
     &:disabled {
