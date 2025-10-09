@@ -61,7 +61,7 @@
           <app-select
             id="crawlInterval"
             [options]="crawlIntervalOptions"
-            [formControl]="validateForm.get('crawlInterval') as FormControl"
+            [formControl]="crawlIntervalControl"
             placeholder="请选择抓取间隔"
           ></app-select>
           <div class="mt-1 text-xs text-gray-500">
@@ -83,7 +83,7 @@
           <app-select
             id="weiboAccountId"
             [options]="weiboAccountOptions"
-            [formControl]="validateForm.get('weiboAccountId') as FormControl"
+            [formControl]="weiboAccountIdControl"
             placeholder="选择微博账号（可选）"
           ></app-select>
           <div class="mt-1 text-xs text-gray-500">

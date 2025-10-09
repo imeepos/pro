@@ -6,11 +6,13 @@ import { Subject, takeUntil } from 'rxjs';
 import { IndustryTypesService } from '../../state/industry-types.service';
 import { CreateIndustryTypeDto, UpdateIndustryTypeDto } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
+import { SelectComponent } from '../../shared/components/select';
+import type { SelectOption } from '../../shared/components/select';
 
 @Component({
   selector: 'app-industry-type-editor',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SelectComponent],
   templateUrl: './industry-type-editor.component.html',
   host: { class: 'block h-full' }
 })
@@ -19,6 +21,11 @@ export class IndustryTypeEditorComponent implements OnInit, OnDestroy {
   isEditMode = false;
   industryTypeId: string | null = null;
   loading = false;
+
+  statusOptions: SelectOption[] = [
+    { value: 1, label: '启用' },
+    { value: 0, label: '禁用' }
+  ];
 
   private destroy$ = new Subject<void>();
 

@@ -500,8 +500,4 @@ export class ShapeComponent implements OnInit, OnDestroy {
       this.canvasService.decomposeComponent(this.component.id);
     }
   }
-
-  private snapValue(value: number, gridSize: number): number {
-    return Math.round(value / gridSize) * gridSize;
-  }
 }

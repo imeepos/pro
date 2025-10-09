@@ -6,11 +6,13 @@ import { Subject, takeUntil } from 'rxjs';
 import { EventTypesService } from '../../state/event-types.service';
 import { CreateEventTypeDto, UpdateEventTypeDto } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
+import { SelectComponent } from '../../shared/components/select';
+import type { SelectOption } from '../../shared/components/select';
 
 @Component({
   selector: 'app-event-type-editor',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SelectComponent],
   templateUrl: './event-type-editor.component.html',
   host: { class: 'block h-full' }
 })
@@ -19,6 +21,11 @@ export class EventTypeEditorComponent implements OnInit, OnDestroy {
   isEditMode = false;
   eventTypeId: string | null = null;
   loading = false;
+
+  statusOptions: SelectOption[] = [
+    { value: 1, label: '启用' },
+    { value: 0, label: '禁用' }
+  ];
 
   private destroy$ = new Subject<void>();
 

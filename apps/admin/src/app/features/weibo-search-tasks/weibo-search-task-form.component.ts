@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormControl, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, ParamMap } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { WeiboSearchTasksService } from '../../state/weibo-search-tasks.service';
@@ -267,5 +267,14 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
     return today;
+  }
+
+  // 表单控件 getter 方法，提供正确的类型
+  get crawlIntervalControl(): FormControl {
+    return this.validateForm.get('crawlInterval') as FormControl;
+  }
+
+  get weiboAccountIdControl(): FormControl {
+    return this.validateForm.get('weiboAccountId') as FormControl;
   }
 }

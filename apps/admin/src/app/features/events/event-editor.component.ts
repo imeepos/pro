@@ -7,6 +7,8 @@ import { EventsService } from '../../state/events.service';
 import { TagsService } from '../../state/tags.service';
 import { CreateEventDto, UpdateEventDto, EventStatus, EventDetail } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
+import { SelectComponent } from '../../shared/components/select';
+import type { SelectOption } from '../../shared/components/select';
 import {
   AddressCascaderComponent,
   AmapPickerComponent,
@@ -20,6 +22,7 @@ import {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    SelectComponent,
     AddressCascaderComponent,
     AmapPickerComponent,
     TagSelectorComponent,
@@ -35,6 +38,15 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   loading = false;
   selectedTagIds: string[] = [];
   attachments: any[] = [];
+
+  // 下拉选择选项（临时数据，实际应从服务获取）
+  industryTypeOptions: SelectOption[] = [
+    { value: '', label: '请选择行业类型' }
+  ];
+
+  eventTypeOptions: SelectOption[] = [
+    { value: '', label: '请选择事件类型' }
+  ];
 
   private destroy$ = new Subject<void>();
 
