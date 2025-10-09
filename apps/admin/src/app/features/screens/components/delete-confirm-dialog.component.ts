@@ -1,35 +1,13 @@
 import { Component, Input, Output, EventEmitter, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { trigger, transition, state, style, animate } from '@angular/animations';
 import { ScreenPage } from '../../../core/services/screen-api.service';
 
 @Component({
   selector: 'app-delete-confirm-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './delete-confirm-dialog.component.html',
-  styleUrls: ['./delete-confirm-dialog.component.scss'],
-  animations: [
-    trigger('slideUp', [
-      transition(':enter', [
-        style({
-          opacity: 0,
-          transform: 'translateY(20px) scale(0.95)'
-        }),
-        animate('300ms ease-out', style({
-          opacity: 1,
-          transform: 'translateY(0) scale(1)'
-        }))
-      ]),
-      transition(':leave', [
-        animate('200ms ease-in', style({
-          opacity: 0,
-          transform: 'translateY(-10px) scale(0.95)'
-        }))
-      ])
-    ])
-  ]
+  templateUrl: './delete-confirm-dialog.component.html'
 })
 export class DeleteConfirmDialogComponent implements OnInit {
   @Input() screen: ScreenPage | null = null;
