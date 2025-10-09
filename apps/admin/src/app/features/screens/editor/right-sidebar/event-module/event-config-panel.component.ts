@@ -150,7 +150,7 @@ import { CanvasService } from '../../canvas/services/canvas.service';
                 <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">跳转URL</label>
                 <input
                   type="text"
-                  [(ngModel)]="action.params.url"
+                  [(ngModel)]="action.params!['url']"
                   (change)="updateComponent()"
                   placeholder="输入URL或路由路径"
                   class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -158,8 +158,8 @@ import { CanvasService } from '../../canvas/services/canvas.service';
                 <label class="flex items-center gap-1 mt-1">
                   <input
                     type="checkbox"
-                    [checked]="action.params.target === '_blank'"
-                    (change)="action.params.target = $any($event.target).checked ? '_blank' : '_self'; updateComponent()"
+                    [checked]="action.params?.['target'] === '_blank'"
+                    (change)="ensureParams(action); action.params!['target'] = $any($event.target).checked ? '_blank' : '_self'; updateComponent()"
                     class="w-3 h-3 text-blue-600 rounded"
                   />
                   <span class="text-xs text-gray-500 dark:text-gray-400">新窗口打开</span>
@@ -229,7 +229,7 @@ export class EventConfigPanelComponent implements OnInit, OnDestroy {
     this.loadEvents();
     this.loadAllComponents();
 
-    this.canvasQuery.components$.pipe(
+    this.canvasQuery.componentData$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(() => {
       this.loadAllComponents();
@@ -243,15 +243,22 @@ export class EventConfigPanelComponent implements OnInit, OnDestroy {
 
   private loadEvents(): void {
     this.events = this.component.events ? [...this.component.events] : [];
+    this.events.forEach(event => {
+      event.actions?.forEach(action => {
+        if (!action.params) {
+          action.params = {};
+        }
+      });
+    });
     if (this.events.length > 0) {
       this.expandedEvents.add(0);
     }
   }
 
   private loadAllComponents(): void {
-    this.canvasQuery.components$.pipe(
+    this.canvasQuery.componentData$.pipe(
       takeUntil(this.destroy$)
-    ).subscribe(components => {
+    ).subscribe((components: ComponentItem[]) => {
       this.allComponents = this.flattenComponents(components).filter(c => c.id !== this.component.id);
     });
   }
@@ -289,8 +296,7 @@ export class EventConfigPanelComponent implements OnInit, OnDestroy {
 
   addAction(event: ComponentEvent): void {
     const newAction: EventAction = {
-      type: EventActionType.SHOW,
-      params: {}
+      type: EventActionType.SHOW
     };
     if (!event.actions) {
       event.actions = [];
@@ -330,6 +336,12 @@ export class EventConfigPanelComponent implements OnInit, OnDestroy {
       [EventType.CUSTOM]: '自定义'
     };
     return labels[type] || type;
+  }
+
+  ensureParams(action: EventAction): void {
+    if (!action.params) {
+      action.params = {};
+    }
   }
 
   updateComponent(): void {

@@ -65,7 +65,7 @@ export class EventExecutorService {
         break;
 
       case EventActionType.NAVIGATE:
-        this.navigate(action.params?.url || '', action.params?.target);
+        this.navigate(action.params?.['url'] || '', action.params?.['target']);
         break;
 
       case EventActionType.CUSTOM_SCRIPT:
@@ -117,7 +117,8 @@ export class EventExecutorService {
       return;
     }
 
-    if (target === '_blank') {
+    const targetValue = target || '_self';
+    if (targetValue === '_blank') {
       window.open(url, '_blank');
     } else if (url.startsWith('http://') || url.startsWith('https://')) {
       window.location.href = url;

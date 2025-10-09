@@ -5,7 +5,6 @@ import { EventExecutorService } from './event-executor.service';
 import { CanvasQuery } from '../canvas/services/canvas.query';
 import { ComponentItem } from '../models/component.model';
 import { EventType, Event, ComponentEvent } from '../models/event.model';
-import { EditMode } from '../models/canvas.model';
 
 @Injectable({
   providedIn: 'root'
@@ -31,12 +30,12 @@ export class ComponentEventHandlerService implements OnDestroy {
     this.canvasQuery.editMode$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(mode => {
-      this.isPreviewMode = mode === EditMode.PREVIEW;
+      this.isPreviewMode = mode === 'preview';
     });
 
-    this.canvasQuery.components$.pipe(
+    this.canvasQuery.componentData$.pipe(
       takeUntil(this.destroy$)
-    ).subscribe(components => {
+    ).subscribe((components: ComponentItem[]) => {
       this.eventExecutor.registerComponents(components);
     });
   }
