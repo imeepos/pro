@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "paths": {
+      "@pro/config": ["../../packages/config/src"],
+      "@pro/mongodb": ["../../packages/mongodb/src"],
+      "@pro/rabbitmq": ["../../packages/rabbitmq/src"],
+      "@pro/redis": ["../../packages/redis/src"],
+      "@pro/types": ["../../packages/types/src"],
+      "@pro/utils": ["../../packages/utils/src"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts"]
+}

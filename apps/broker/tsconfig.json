@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@pro/config": ["../../packages/config/src"],
+      "@pro/mongodb": ["../../packages/mongodb/src"],
+      "@pro/rabbitmq": ["../../packages/rabbitmq/src"],
+      "@pro/redis": ["../../packages/redis/src"],
+      "@pro/types": ["../../packages/types/src"],
+      "@pro/utils": ["../../packages/utils/src"]
+    }
+  }
+}
