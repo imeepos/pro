@@ -1,0 +1,60 @@
+<div class="flowbite-toggle-wrapper" [class]="containerClasses">
+  <input
+    [id]="toggleId"
+    type="checkbox"
+    [checked]="checked"
+    [disabled]="disabled"
+    [required]="required"
+    class="sr-only"
+    (change)="onToggleChange($event)"
+    (focus)="onFocus()"
+    (blur)="onBlur()"
+  />
+
+  @if (showLabel && label && (labelPosition === 'top' || labelPosition === 'bottom')) {
+    <div class="flex flex-col">
+      <label [for]="toggleId" [class]="labelClasses">
+        {{ label }}
+        @if (required) {
+          <span class="text-red-500 ml-1">*</span>
+        }
+      </label>
+      @if (description) {
+        <p [class]="descriptionClasses">{{ description }}</p>
+      }
+      @if (helperText && !errorText) {
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ helperText }}</p>
+      }
+      @if (errorText) {
+        <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errorText }}</p>
+      }
+    </div>
+  }
+
+  <label [for]="toggleId" [class]="toggleClasses" class="peer">
+    <span [class]="thumbClasses"
+          [class.peer-checked:translate-x-5]="!disabled && checked && size === 'md'"
+          [class.peer-checked:translate-x-4]="!disabled && checked && size === 'sm'"
+          [class.peer-checked:translate-x-7]="!disabled && checked && size === 'lg'"></span>
+  </label>
+
+  @if (showLabel && label && (labelPosition === 'left' || labelPosition === 'right')) {
+    <div class="flex flex-col">
+      <label [for]="toggleId" [class]="labelClasses">
+        {{ label }}
+        @if (required) {
+          <span class="text-red-500 ml-1">*</span>
+        }
+      </label>
+      @if (description) {
+        <p [class]="descriptionClasses">{{ description }}</p>
+      }
+      @if (helperText && !errorText) {
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ helperText }}</p>
+      }
+      @if (errorText) {
+        <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errorText }}</p>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,175 @@
+.flowbite-toggle-wrapper {
+  @apply w-fit;
+}
+
+// Base toggle styles
+.toggle-track {
+  @apply relative inline-flex items-center rounded-full transition-colors duration-200 ease-in-out;
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+}
+
+.toggle-thumb {
+  @apply inline-block bg-white rounded-full shadow-md transform;
+  @apply transition-transform duration-200 ease-in-out;
+  @apply pointer-events-none;
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .toggle-track {
+    @apply focus:ring-offset-gray-800;
+  }
+
+  .toggle-thumb {
+    @apply bg-gray-100;
+  }
+
+  .toggle-track.disabled {
+    @apply bg-gray-700;
+  }
+}
+
+// Size variations
+.size-sm {
+  @apply w-9 h-5;
+
+  .toggle-thumb {
+    @apply w-4 h-4;
+  }
+}
+
+.size-md {
+  @apply w-11 h-6;
+
+  .toggle-thumb {
+    @apply w-5 h-5;
+  }
+}
+
+.size-lg {
+  @apply w-14 h-7;
+
+  .toggle-thumb {
+    @apply w-6 h-6;
+  }
+}
+
+// Color variations
+.color-blue {
+  &.checked {
+    @apply bg-blue-600 focus:ring-blue-500;
+  }
+
+  &.unchecked {
+    @apply bg-gray-200;
+  }
+}
+
+.color-green {
+  &.checked {
+    @apply bg-green-600 focus:ring-green-500;
+  }
+
+  &.unchecked {
+    @apply bg-gray-200;
+  }
+}
+
+.color-red {
+  &.checked {
+    @apply bg-red-600 focus:ring-red-500;
+  }
+
+  &.unchecked {
+    @apply bg-gray-200;
+  }
+}
+
+.color-yellow {
+  &.checked {
+    @apply bg-yellow-500 focus:ring-yellow-500;
+  }
+
+  &.unchecked {
+    @apply bg-gray-200;
+  }
+}
+
+.color-purple {
+  &.checked {
+    @apply bg-purple-600 focus:ring-purple-500;
+  }
+
+  &.unchecked {
+    @apply bg-gray-200;
+  }
+}
+
+.color-gray {
+  &.checked {
+    @apply bg-gray-600 focus:ring-gray-500;
+  }
+
+  &.unchecked {
+    @apply bg-gray-200;
+  }
+}
+
+// Animations
+:host ::ng-deep .toggle-track {
+  @apply transition-all duration-200;
+}
+
+:host ::ng-deep .toggle-track:hover {
+  @apply transform scale-105;
+}
+
+:host ::ng-deep .toggle-track:active {
+  @apply transform scale-95;
+}
+
+// Disabled state
+.toggle-track.disabled {
+  @apply opacity-50 cursor-not-allowed;
+
+  &:hover {
+    @apply transform scale-100;
+  }
+
+  &:active {
+    @apply transform scale-100;
+  }
+}
+
+// Focus visible state
+.toggle-track:focus-visible {
+  @apply ring-2 ring-offset-2;
+}
+
+// Label positioning
+.label-left {
+  @apply flex-row-reverse space-x-reverse;
+}
+
+.label-right {
+  @apply flex-row;
+}
+
+.label-top {
+  @apply flex-col items-start space-y-2;
+}
+
+.label-bottom {
+  @apply flex-col items-start space-y-2 space-y-reverse;
+}
+
+// Custom ripple effect for better UX
+.ripple {
+  @apply absolute inset-0 rounded-full;
+  @apply bg-white opacity-0;
+  @apply transition-opacity duration-300;
+}
+
+.toggle-track:active .ripple {
+  @apply opacity-25;
+}
