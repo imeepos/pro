@@ -26,7 +26,7 @@ import {
     AttachmentUploaderComponent
   ],
   templateUrl: './event-editor.component.html',
-  styleUrls: ['./event-editor.component.scss']
+  host: { class: 'block h-full' }
 })
 export class EventEditorComponent implements OnInit, OnDestroy {
   eventForm: FormGroup;

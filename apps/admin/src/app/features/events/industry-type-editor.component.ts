@@ -12,7 +12,7 @@ import { ToastService } from '../../shared/services/toast.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './industry-type-editor.component.html',
-  styleUrls: ['./industry-type-editor.component.scss']
+  host: { class: 'block h-full' }
 })
 export class IndustryTypeEditorComponent implements OnInit, OnDestroy {
   industryTypeForm: FormGroup;

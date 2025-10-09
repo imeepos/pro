@@ -11,8 +11,7 @@ import { validateEmail, validateUsername, validatePassword } from '@pro/utils';
   selector: 'app-register',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
-  templateUrl: './register.component.html',
-  styleUrls: ['./register.component.scss']
+  templateUrl: './register.component.html'
 })
 export class RegisterComponent implements OnInit, OnDestroy {
   registerForm!: FormGroup;

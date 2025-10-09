@@ -4,7 +4,7 @@ import { Component, Input } from '@angular/core';
   selector: 'app-page-header',
   standalone: true,
   templateUrl: './page-header.component.html',
-  styleUrl: './page-header.component.scss'
+  host: { class: 'block' }
 })
 export class PageHeaderComponent {
   @Input({ required: true }) title!: string;

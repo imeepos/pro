@@ -12,8 +12,7 @@ import { ToastService } from '../../../shared/services/toast.service';
   selector: 'app-media-type-list',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './media-type-list.component.html',
-  styleUrls: ['./media-type-list.component.scss']
+  templateUrl: './media-type-list.component.html'
 })
 export class MediaTypeListComponent implements OnInit, OnDestroy {
   mediaTypes: MediaType[] = [];

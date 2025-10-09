@@ -12,8 +12,7 @@ import { ToastService } from '../../../shared/services/toast.service';
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.scss']
+  templateUrl: './login.component.html'
 })
 export class LoginComponent implements OnInit, OnDestroy {
   loginForm!: FormGroup;

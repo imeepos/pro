@@ -6,8 +6,7 @@ import { ToastContainerComponent } from './shared/components/toast/toast-contain
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, ToastContainerComponent],
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  templateUrl: './app.component.html'
 })
 export class AppComponent {
   title = 'admin';

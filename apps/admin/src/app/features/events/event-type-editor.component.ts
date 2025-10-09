@@ -12,7 +12,7 @@ import { ToastService } from '../../shared/services/toast.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './event-type-editor.component.html',
-  styleUrls: ['./event-type-editor.component.scss']
+  host: { class: 'block h-full' }
 })
 export class EventTypeEditorComponent implements OnInit, OnDestroy {
   eventTypeForm: FormGroup;

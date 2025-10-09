@@ -11,8 +11,7 @@ import { ToastService } from '../../../shared/services/toast.service';
   selector: 'app-media-type-form',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './media-type-form.component.html',
-  styleUrls: ['./media-type-form.component.scss']
+  templateUrl: './media-type-form.component.html'
 })
 export class MediaTypeFormComponent implements OnInit, OnDestroy {
   mediaTypeForm: FormGroup;

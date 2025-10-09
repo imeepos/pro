@@ -5,13 +5,10 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { EventsService } from '../../state/events.service';
 import { EventsQuery } from '../../state/events.query';
-import { TagsService } from '../../state/tags.service';
-import { TagsQuery } from '../../state/tags.query';
-import { Event, EventQueryParams, EventStatus, Tag, IndustryType, EventType } from '@pro/sdk';
+import { Event, EventQueryParams, EventStatus, IndustryType, EventType } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
 import {
   EventFilterPanelComponent,
-  TagCloudComponent,
   DeleteEventDialogComponent
 } from './components';
 
@@ -22,7 +19,6 @@ import {
     CommonModule,
     FormsModule,
     EventFilterPanelComponent,
-    TagCloudComponent,
     DeleteEventDialogComponent
   ],
   templateUrl: './events-list.component.html',
@@ -30,7 +26,6 @@ import {
 })
 export class EventsListComponent implements OnInit, OnDestroy {
   events: Event[] = [];
-  tags: Tag[] = [];
   industryTypes: IndustryType[] = [];
   eventTypes: EventType[] = [];
   loading = false;
@@ -54,8 +49,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
   constructor(
     private eventsService: EventsService,
     private eventsQuery: EventsQuery,
-    private tagsService: TagsService,
-    private tagsQuery: TagsQuery,
     private router: Router,
     private toastService: ToastService
   ) {}
@@ -85,14 +78,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
       this.total = total;
     });
 
-    this.tagsQuery.tags$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(tags => {
-      this.tags = tags;
-    });
-
     this.loadEvents();
-    this.loadPopularTags();
     this.loadFilterData();
   }
 
@@ -107,16 +93,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     ).subscribe({
       error: (error) => {
         console.error('加载事件列表失败:', error);
-      }
-    });
-  }
-
-  loadPopularTags(): void {
-    this.tagsService.loadPopularTags(20).pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      error: (error) => {
-        console.error('加载热门标签失败:', error);
       }
     });
   }
@@ -163,24 +139,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
         this.isFilterPanelCollapsed = true;
       }, 500);
     }
-  }
-
-  onTagClick(tagId: string): void {
-    const tagIds = this.filterParams.tagIds || [];
-    const index = tagIds.indexOf(tagId);
-
-    if (index > -1) {
-      tagIds.splice(index, 1);
-    } else {
-      tagIds.push(tagId);
-      // 如果面板是折叠状态，点击标签时自动展开
-      if (this.isFilterPanelCollapsed) {
-        this.isFilterPanelCollapsed = false;
-      }
-    }
-
-    this.filterParams = { ...this.filterParams, tagIds, page: 1 };
-    this.loadEvents();
   }
 
   // 添加点击遮罩层关闭面板的功能（移动端）

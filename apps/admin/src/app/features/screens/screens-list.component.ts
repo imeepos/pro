@@ -14,8 +14,7 @@ import { DeleteConfirmDialogComponent } from './components/delete-confirm-dialog
   selector: 'app-screens-list',
   standalone: true,
   imports: [CommonModule, FormsModule, CreateScreenDialogComponent, DeleteConfirmDialogComponent],
-  templateUrl: './screens-list.component.html',
-  styleUrls: ['./screens-list.component.scss']
+  templateUrl: './screens-list.component.html'
 })
 export class ScreensListComponent implements OnInit, OnDestroy {
   screens: ScreenPage[] = [];

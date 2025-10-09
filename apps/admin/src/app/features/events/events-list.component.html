@@ -155,15 +155,6 @@
 
     <!-- 主内容区 -->
     <div class="flex-1 flex flex-col overflow-hidden">
-      <!-- 标签云 -->
-      <div class="tag-cloud-section">
-        <app-tag-cloud
-          [tags]="tags"
-          [selectedTagIds]="filterParams.tagIds || []"
-          (tagClick)="onTagClick($event)"
-        ></app-tag-cloud>
-      </div>
-
       <!-- 事件列表 -->
       <div class="flex-1 overflow-y-auto p-6" *ngIf="viewMode === 'list'">
         <div *ngIf="loading" class="loading-state">

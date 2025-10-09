@@ -13,7 +13,7 @@ import { ToastService } from '../../shared/services/toast.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './industry-types-list.component.html',
-  styleUrls: ['./industry-types-list.component.scss']
+  host: { class: 'block h-full' }
 })
 export class IndustryTypesListComponent implements OnInit, OnDestroy {
   industryTypes: IndustryType[] = [];

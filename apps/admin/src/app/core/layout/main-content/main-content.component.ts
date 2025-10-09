@@ -7,6 +7,6 @@ import { BreadcrumbComponent } from './breadcrumb/breadcrumb.component';
   standalone: true,
   imports: [RouterOutlet, BreadcrumbComponent],
   templateUrl: './main-content.component.html',
-  styleUrls: ['./main-content.component.scss']
+  host: { class: 'flex flex-1 overflow-hidden' }
 })
 export class MainContentComponent {}

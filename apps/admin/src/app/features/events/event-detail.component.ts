@@ -12,7 +12,7 @@ import { AmapViewerComponent, DeleteEventDialogComponent } from './components';
   standalone: true,
   imports: [CommonModule, AmapViewerComponent, DeleteEventDialogComponent],
   templateUrl: './event-detail.component.html',
-  styleUrls: ['./event-detail.component.scss']
+  host: { class: 'block h-full' }
 })
 export class EventDetailComponent implements OnInit, OnDestroy {
   event: EventDetail | null = null;

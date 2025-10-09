@@ -8,8 +8,7 @@ import { LayoutStateService } from '../services/layout-state.service';
   selector: 'app-layout',
   standalone: true,
   imports: [HeaderComponent, SidebarComponent, MainContentComponent],
-  templateUrl: './layout.component.html',
-  styleUrls: ['./layout.component.scss']
+  templateUrl: './layout.component.html'
 })
 export class LayoutComponent {
   constructor(private layoutState: LayoutStateService) {}

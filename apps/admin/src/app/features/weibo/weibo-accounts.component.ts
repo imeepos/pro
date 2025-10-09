@@ -20,8 +20,7 @@ import { WeiboLoginComponent } from './weibo-login.component';
   selector: 'app-weibo-accounts',
   standalone: true,
   imports: [CommonModule, WeiboLoginComponent],
-  templateUrl: './weibo-accounts.component.html',
-  styleUrls: ['./weibo-accounts.component.scss']
+  templateUrl: './weibo-accounts.component.html'
 })
 export class WeiboAccountsComponent implements OnInit {
   accounts: WeiboAccount[] = [];

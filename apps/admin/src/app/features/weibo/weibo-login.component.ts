@@ -17,8 +17,7 @@ import { TokenStorageService } from '../../core/services/token-storage.service';
   selector: 'app-weibo-login',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './weibo-login.component.html',
-  styleUrls: ['./weibo-login.component.scss']
+  templateUrl: './weibo-login.component.html'
 })
 export class WeiboLoginComponent implements OnDestroy {
   qrcodeUrl = '';

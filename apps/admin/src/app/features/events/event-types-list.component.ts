@@ -13,7 +13,7 @@ import { ToastService } from '../../shared/services/toast.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './event-types-list.component.html',
-  styleUrls: ['./event-types-list.component.scss']
+  host: { class: 'block h-full' }
 })
 export class EventTypesListComponent implements OnInit, OnDestroy {
   eventTypes: EventType[] = [];
