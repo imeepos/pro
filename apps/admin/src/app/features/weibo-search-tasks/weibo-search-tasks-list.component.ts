@@ -7,13 +7,16 @@ import { WeiboSearchTasksService } from '../../state/weibo-search-tasks.service'
 import { WeiboSearchTasksQuery } from '../../state/weibo-search-tasks.query';
 import { WeiboSearchTask, WeiboSearchTaskStatus, WeiboSearchTaskFilters } from '@pro/types';
 import { ToastService } from '../../shared/services/toast.service';
+import { SelectComponent } from '../../shared/components/select';
+import type { SelectOption } from '../../shared/components/select';
 
 @Component({
   selector: 'app-weibo-search-tasks-list',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule
+    FormsModule,
+    SelectComponent
   ],
   templateUrl: './weibo-search-tasks-list.component.html',
   styleUrls: ['./weibo-search-tasks-list.component.scss']
@@ -44,6 +47,22 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
 
   // 枚举
   taskStatus = WeiboSearchTaskStatus;
+
+  // 下拉选择选项
+  statusOptions: SelectOption[] = [
+    { value: '', label: '全部状态' },
+    { value: WeiboSearchTaskStatus.PENDING, label: '等待中' },
+    { value: WeiboSearchTaskStatus.RUNNING, label: '运行中' },
+    { value: WeiboSearchTaskStatus.PAUSED, label: '已暂停' },
+    { value: WeiboSearchTaskStatus.FAILED, label: '失败' },
+    { value: WeiboSearchTaskStatus.TIMEOUT, label: '超时' }
+  ];
+
+  enabledOptions: SelectOption[] = [
+    { value: '', label: '全部' },
+    { value: 'true', label: '启用' },
+    { value: 'false', label: '禁用' }
+  ];
 
   constructor(
     private service: WeiboSearchTasksService,

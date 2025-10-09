@@ -7,11 +7,13 @@ import { MediaTypesService } from '../../../state/media-types.service';
 import { MediaTypesQuery } from '../../../state/media-types.query';
 import { MediaType } from '@pro/sdk';
 import { ToastService } from '../../../shared/services/toast.service';
+import { SelectComponent } from '../../../shared/components/select';
+import type { SelectOption } from '../../../shared/components/select';
 
 @Component({
   selector: 'app-media-type-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SelectComponent],
   templateUrl: './media-type-list.component.html'
 })
 export class MediaTypeListComponent implements OnInit, OnDestroy {
@@ -23,6 +25,12 @@ export class MediaTypeListComponent implements OnInit, OnDestroy {
   selectedStatus: string = '';
   showDeleteDialog = false;
   mediaTypeToDelete: MediaType | null = null;
+
+  statusOptions: SelectOption[] = [
+    { value: '', label: '全部状态' },
+    { value: 'ACTIVE', label: '启用' },
+    { value: 'INACTIVE', label: '禁用' }
+  ];
 
   private destroy$ = new Subject<void>();
 

@@ -1,8 +1,9 @@
 import { Component, Input, HostListener, ElementRef, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, combineLatest } from 'rxjs';
 import { CanvasService } from '../../services/canvas.service';
 import { CanvasQuery } from '../../services/canvas.query';
+import { RulerGridService } from '../../services/ruler-grid.service';
 import { ComponentItem, ComponentStyle, Point } from '../../../models/component.model';
 import { throttleFrame } from '../../../utils/throttle.util';
 import { GeometryUtil } from '../../../utils/geometry.util';
@@ -37,6 +38,7 @@ export class ShapeComponent implements OnInit, OnDestroy {
   constructor(
     private canvasService: CanvasService,
     private query: CanvasQuery,
+    private rulerGridService: RulerGridService,
     private elementRef: ElementRef
   ) {}
 
@@ -209,8 +211,7 @@ export class ShapeComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const state = this.query.getValue();
-      const shouldSnap = state.snapToGrid && !e.shiftKey;
+      const shouldSnap = this.rulerGridService.getState().snapToGrid && !e.shiftKey;
 
       const deltaX = (e.clientX - startX) / scale;
       const deltaY = (e.clientY - startY) / scale;
@@ -230,8 +231,8 @@ export class ShapeComponent implements OnInit, OnDestroy {
       }
 
       if (shouldSnap) {
-        newLeft = this.snapValue(newLeft, state.gridSize);
-        newTop = this.snapValue(newTop, state.gridSize);
+        newLeft = this.rulerGridService.snapToGridPosition(newLeft);
+        newTop = this.rulerGridService.snapToGridPosition(newTop);
       }
 
       newLeft = Math.max(0, newLeft);
@@ -326,10 +327,10 @@ export class ShapeComponent implements OnInit, OnDestroy {
       );
 
       if (shouldSnap) {
-        if (newStyle.left !== undefined) newStyle.left = this.snapValue(newStyle.left, state.gridSize);
-        if (newStyle.top !== undefined) newStyle.top = this.snapValue(newStyle.top, state.gridSize);
-        if (newStyle.width !== undefined) newStyle.width = this.snapValue(newStyle.width, state.gridSize);
-        if (newStyle.height !== undefined) newStyle.height = this.snapValue(newStyle.height, state.gridSize);
+        if (newStyle.left !== undefined) newStyle.left = this.rulerGridService.snapToGridPosition(newStyle.left);
+        if (newStyle.top !== undefined) newStyle.top = this.rulerGridService.snapToGridPosition(newStyle.top);
+        if (newStyle.width !== undefined) newStyle.width = this.rulerGridService.snapToGridPosition(newStyle.width);
+        if (newStyle.height !== undefined) newStyle.height = this.rulerGridService.snapToGridPosition(newStyle.height);
       }
 
       if (newStyle.left !== undefined) newStyle.left = Math.max(0, newStyle.left);

@@ -7,6 +7,8 @@ import { WeiboSearchTasksService } from '../../state/weibo-search-tasks.service'
 import { WeiboSearchTasksQuery } from '../../state/weibo-search-tasks.query';
 import { ToastService } from '../../shared/services/toast.service';
 import { DatePickerComponent } from '../../shared/components/date-picker';
+import { SelectComponent } from '../../shared/components/select';
+import type { SelectOption } from '../../shared/components/select';
 import { WeiboSearchTask, CreateWeiboSearchTaskDto, UpdateWeiboSearchTaskDto } from '@pro/types';
 
 @Component({
@@ -16,7 +18,8 @@ import { WeiboSearchTask, CreateWeiboSearchTaskDto, UpdateWeiboSearchTaskDto } f
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    DatePickerComponent
+    DatePickerComponent,
+    SelectComponent
   ],
   templateUrl: './weibo-search-task-form.component.html',
   styleUrls: ['./weibo-search-task-form.component.scss']
@@ -39,13 +42,23 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
   weiboAccounts: Array<{ id: number; nickname: string; status: string }> = [];
 
   // 抓取间隔选项
-  crawlIntervalOptions = [
+  crawlIntervalOptions: SelectOption[] = [
     { label: '1小时', value: '1h' },
     { label: '2小时', value: '2h' },
     { label: '6小时', value: '6h' },
     { label: '12小时', value: '12h' },
     { label: '24小时', value: '24h' }
   ];
+
+  get weiboAccountOptions(): SelectOption[] {
+    return [
+      { value: '', label: '选择微博账号（可选）' },
+      ...this.weiboAccounts.map(account => ({
+        value: account.id.toString(),
+        label: account.nickname
+      }))
+    ];
+  }
 
   constructor(
     private fb: FormBuilder,

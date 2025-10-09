@@ -58,16 +58,12 @@
         <!-- 抓取间隔 -->
         <div class="mb-6">
           <label for="crawlInterval" class="block text-sm font-medium text-gray-700 mb-2 before:content-['*'] before:text-red-500 before:mr-1">抓取间隔</label>
-          <select
+          <app-select
             id="crawlInterval"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
-            formControlName="crawlInterval"
-          >
-            <option
-              *ngFor="let option of crawlIntervalOptions"
-              [value]="option.value"
-            >{{ option.label }}</option>
-          </select>
+            [options]="crawlIntervalOptions"
+            [formControl]="validateForm.get('crawlInterval')"
+            placeholder="请选择抓取间隔"
+          ></app-select>
           <div class="mt-1 text-xs text-gray-500">
             完成历史数据回溯后，系统将按照此间隔进行增量更新
           </div>
@@ -84,17 +80,12 @@
         <!-- 指定微博账号 -->
         <div class="mb-6">
           <label for="weiboAccountId" class="block text-sm font-medium text-gray-700 mb-2">指定微博账号</label>
-          <select
+          <app-select
             id="weiboAccountId"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
-            formControlName="weiboAccountId"
-          >
-            <option value="">选择微博账号（可选）</option>
-            <option
-              *ngFor="let account of weiboAccounts"
-              [value]="account.id"
-            >{{ account.nickname }}</option>
-          </select>
+            [options]="weiboAccountOptions"
+            [formControl]="validateForm.get('weiboAccountId')"
+            placeholder="选择微博账号（可选）"
+          ></app-select>
           <div class="mt-1 text-xs text-gray-500">
             不选择时将随机使用可用账号，选择后将优先使用指定账号
           </div>

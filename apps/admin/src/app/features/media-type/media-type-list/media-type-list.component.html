@@ -26,15 +26,12 @@
           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
-      <select
+      <app-select
+        [options]="statusOptions"
         [(ngModel)]="selectedStatus"
-        (change)="onStatusChange()"
-        class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="">全部状态</option>
-        <option value="ACTIVE">启用</option>
-        <option value="INACTIVE">禁用</option>
-      </select>
+        (ngModelChange)="onStatusChange()"
+        placeholder="全部状态"
+      ></app-select>
       <button
         type="button"
         (click)="onSearch()"

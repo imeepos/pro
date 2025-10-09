@@ -6,11 +6,13 @@ import { Subject, takeUntil } from 'rxjs';
 import { MediaTypesService } from '../../../state/media-types.service';
 import { CreateMediaTypeDto, UpdateMediaTypeDto } from '@pro/sdk';
 import { ToastService } from '../../../shared/services/toast.service';
+import { SelectComponent } from '../../../shared/components/select';
+import type { SelectOption } from '../../../shared/components/select';
 
 @Component({
   selector: 'app-media-type-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SelectComponent],
   templateUrl: './media-type-form.component.html'
 })
 export class MediaTypeFormComponent implements OnInit, OnDestroy {
@@ -18,6 +20,11 @@ export class MediaTypeFormComponent implements OnInit, OnDestroy {
   isEditMode = false;
   mediaTypeId: number | null = null;
   loading = false;
+
+  statusOptions: SelectOption[] = [
+    { value: 'ACTIVE', label: '启用' },
+    { value: 'INACTIVE', label: '禁用' }
+  ];
 
   private destroy$ = new Subject<void>();
 

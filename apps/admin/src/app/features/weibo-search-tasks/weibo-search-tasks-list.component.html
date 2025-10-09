@@ -26,31 +26,22 @@
 
       <div class="filter-item">
         <label>任务状态</label>
-        <select
-          class="form-select"
+        <app-select
+          [options]="statusOptions"
           [(ngModel)]="selectedStatus"
-          (change)="applyFilters()"
-        >
-          <option value="">全部状态</option>
-          <option [value]="taskStatus.PENDING">等待中</option>
-          <option [value]="taskStatus.RUNNING">运行中</option>
-          <option [value]="taskStatus.PAUSED">已暂停</option>
-          <option [value]="taskStatus.FAILED">失败</option>
-          <option [value]="taskStatus.TIMEOUT">超时</option>
-        </select>
+          (ngModelChange)="applyFilters()"
+          placeholder="全部状态"
+        ></app-select>
       </div>
 
       <div class="filter-item">
         <label>启用状态</label>
-        <select
-          class="form-select"
+        <app-select
+          [options]="enabledOptions"
           [(ngModel)]="selectedEnabled"
-          (change)="applyFilters()"
-        >
-          <option value="">全部</option>
-          <option [value]="true">启用</option>
-          <option [value]="false">禁用</option>
-        </select>
+          (ngModelChange)="applyFilters()"
+          placeholder="全部"
+        ></app-select>
       </div>
 
       <div class="filter-item">
