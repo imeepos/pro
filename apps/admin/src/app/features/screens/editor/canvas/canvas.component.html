@@ -1,0 +1,11 @@
+<div class="canvas-container" (wheel)="onWheel($event)">
+  <div
+    class="canvas-wrapper"
+    [style.transform]="'scale(' + (scale$ | async) + ')'"
+    [style.transform-origin]="'center center'"
+    [style.width.px]="(canvasStyle$ | async)?.width"
+    [style.height.px]="(canvasStyle$ | async)?.height"
+    [style.background]="(canvasStyle$ | async)?.background">
+    <!-- 画布内容区域 -->
+  </div>
+</div>

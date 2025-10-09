@@ -31,6 +31,55 @@ export const routes: Routes = [
       {
         path: 'weibo/accounts',
         loadComponent: () => import('./features/weibo/weibo-accounts.component').then(m => m.WeiboAccountsComponent)
+      },
+      {
+        path: 'jd/accounts',
+        loadComponent: () => import('./features/jd/jd-accounts.component').then(m => m.JdAccountsComponent)
+      },
+      {
+        path: 'events',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/events/events-list.component').then(m => m.EventsListComponent)
+          },
+          {
+            path: 'create',
+            loadComponent: () => import('./features/events/event-editor.component').then(m => m.EventEditorComponent)
+          },
+          {
+            path: 'edit/:id',
+            loadComponent: () => import('./features/events/event-editor.component').then(m => m.EventEditorComponent)
+          },
+          {
+            path: 'detail/:id',
+            loadComponent: () => import('./features/events/event-detail.component').then(m => m.EventDetailComponent)
+          },
+          {
+            path: 'industry-types',
+            loadComponent: () => import('./features/events/industry-types-list.component').then(m => m.IndustryTypesListComponent)
+          },
+          {
+            path: 'industry-types/create',
+            loadComponent: () => import('./features/events/industry-type-editor.component').then(m => m.IndustryTypeEditorComponent)
+          },
+          {
+            path: 'industry-types/edit/:id',
+            loadComponent: () => import('./features/events/industry-type-editor.component').then(m => m.IndustryTypeEditorComponent)
+          },
+          {
+            path: 'event-types',
+            loadComponent: () => import('./features/events/event-types-list.component').then(m => m.EventTypesListComponent)
+          },
+          {
+            path: 'event-types/create',
+            loadComponent: () => import('./features/events/event-type-editor.component').then(m => m.EventTypeEditorComponent)
+          },
+          {
+            path: 'event-types/edit/:id',
+            loadComponent: () => import('./features/events/event-type-editor.component').then(m => m.EventTypeEditorComponent)
+          }
+        ]
       }
     ]
   },

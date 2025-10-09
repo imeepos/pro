@@ -65,14 +65,17 @@ export class BreadcrumbComponent implements OnInit {
       const pathSegments = url.split('/').filter(segment => segment);
       const currentPath = pathSegments[pathSegments.length - 1] || '';
 
-      const label = this.getLabel(currentPath, child);
+      // 跳过空路径，避免与硬编码的"首页"重复
+      if (currentPath !== '') {
+        const label = this.getLabel(currentPath, child);
 
-      if (label && !breadcrumbs.some(b => b.url === url)) {
-        breadcrumbs.push({
-          label,
-          url,
-          active: false
-        });
+        if (label && !breadcrumbs.some(b => b.url === url)) {
+          breadcrumbs.push({
+            label,
+            url,
+            active: false
+          });
+        }
       }
 
       return this.buildBreadcrumbs(child, url, breadcrumbs);

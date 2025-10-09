@@ -1,0 +1,181 @@
+<div class="h-full flex flex-col bg-gray-50">
+  <!-- 头部 -->
+  <div class="bg-white border-b px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+        <p class="text-sm text-gray-600 mt-1">填写事件的完整信息</p>
+      </div>
+      <div class="flex gap-3">
+        <button
+          (click)="cancel()"
+          class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          [disabled]="loading"
+        >
+          取消
+        </button>
+        <button
+          (click)="saveDraft()"
+          class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          [disabled]="loading"
+        >
+          保存草稿
+        </button>
+        <button
+          (click)="publish()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          [disabled]="loading"
+        >
+          {{ isEditMode ? '保存并发布' : '创建并发布' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 表单内容 -->
+  <div class="flex-1 overflow-y-auto p-6">
+    <form [formGroup]="eventForm" class="max-w-4xl mx-auto space-y-6">
+      <!-- 基础信息 -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">基础信息</h2>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              事件名称 <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              formControlName="eventName"
+              placeholder="请输入事件名称"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              [class.border-red-500]="eventForm.get('eventName')?.invalid && eventForm.get('eventName')?.touched"
+            />
+            <p
+              *ngIf="eventForm.get('eventName')?.invalid && eventForm.get('eventName')?.touched"
+              class="text-sm text-red-500 mt-1"
+            >
+              事件名称为必填项
+            </p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                行业类型 <span class="text-red-500">*</span>
+              </label>
+              <select
+                formControlName="industryTypeId"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">请选择行业类型</option>
+                <!-- TODO: 从后端加载行业类型列表 -->
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                事件类型 <span class="text-red-500">*</span>
+              </label>
+              <select
+                formControlName="eventTypeId"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">请选择事件类型</option>
+                <!-- TODO: 根据行业类型联动加载事件类型 -->
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">简介</label>
+            <textarea
+              formControlName="summary"
+              rows="4"
+              placeholder="请输入事件简介"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 时间地点 -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">时间地点</h2>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              发生时间 <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="datetime-local"
+              formControlName="occurTime"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              地址 <span class="text-red-500">*</span>
+            </label>
+            <app-address-cascader
+              [province]="eventForm.get('province')?.value"
+              [city]="eventForm.get('city')?.value"
+              [district]="eventForm.get('district')?.value"
+              (addressChange)="onAddressChange($event)"
+            ></app-address-cascader>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">街道/详细地址</label>
+            <input
+              type="text"
+              formControlName="street"
+              placeholder="请输入街道或详细地址"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">地点文字描述</label>
+            <input
+              type="text"
+              formControlName="locationText"
+              placeholder="例如：XX大厦A座10楼"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">地图选点</label>
+            <app-amap-picker
+              [longitude]="eventForm.get('longitude')?.value"
+              [latitude]="eventForm.get('latitude')?.value"
+              [city]="eventForm.get('city')?.value"
+              (locationPick)="onLocationPick($event)"
+            ></app-amap-picker>
+          </div>
+        </div>
+      </div>
+
+      <!-- 标签设置 -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">标签设置</h2>
+        <app-tag-selector
+          [selectedTagIds]="selectedTagIds"
+          (tagsChange)="onTagsChange($event)"
+        ></app-tag-selector>
+      </div>
+
+      <!-- 附件上传 -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">附件上传</h2>
+        <app-attachment-uploader
+          [attachments]="attachments"
+          (attachmentsChange)="onAttachmentsChange($event)"
+        ></app-attachment-uploader>
+      </div>
+    </form>
+  </div>
+</div>

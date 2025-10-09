@@ -22,6 +22,31 @@ export const MENU_ITEMS: MenuItem[] = [
     ]
   },
   {
+    id: 'events',
+    label: '事件管理',
+    icon: 'calendar',
+    children: [
+      {
+        id: 'events-list',
+        label: '事件列表',
+        icon: 'list',
+        route: '/events'
+      },
+      {
+        id: 'industry-types',
+        label: '行业类型管理',
+        icon: 'apartment',
+        route: '/events/industry-types'
+      },
+      {
+        id: 'event-types',
+        label: '事件类型管理',
+        icon: 'tags',
+        route: '/events/event-types'
+      }
+    ]
+  },
+  {
     id: 'weibo',
     label: '微博账号管理',
     icon: 'user-circle',
@@ -31,6 +56,19 @@ export const MENU_ITEMS: MenuItem[] = [
         label: '账号列表',
         icon: 'users',
         route: '/weibo/accounts'
+      }
+    ]
+  },
+  {
+    id: 'jd',
+    label: '京东账号管理',
+    icon: 'shopping-cart',
+    children: [
+      {
+        id: 'jd-accounts',
+        label: '账号列表',
+        icon: 'users',
+        route: '/jd/accounts'
       }
     ]
   }

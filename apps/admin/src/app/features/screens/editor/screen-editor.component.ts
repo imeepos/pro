@@ -1,23 +1,18 @@
-import { Component, OnInit, OnDestroy, ViewContainerRef, ViewChild, ComponentRef, createComponent, EnvironmentInjector, QueryList, ViewChildren, AfterViewInit } from '@angular/core';
-import { CdkDragEnd, CdkDragStart } from '@angular/cdk/drag-drop';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
-import { GridsterModule, GridsterConfig, GridsterItem } from 'angular-gridster2';
+import { DragDropModule, CdkDragDrop, CdkDragStart, CdkDragEnd } from '@angular/cdk/drag-drop';
 import { Subject, takeUntil } from 'rxjs';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { ScreensService } from '../../../state/screens.service';
 import { ScreensQuery } from '../../../state/screens.query';
 import { ScreenPage, UpdateScreenDto } from '../../../core/services/screen-api.service';
 import { ComponentRegistryService } from '../../../core/services/component-registry.service';
-import { ComponentHostDirective } from './component-host.directive';
-
-interface ScreenGridsterItem extends GridsterItem {
-  id?: string;
-  type?: string;
-  componentRef?: ComponentRef<any>;
-}
+import { CanvasComponent } from './canvas/canvas.component';
+import { CanvasService } from './canvas/services/canvas.service';
+import { CanvasQuery } from './canvas/services/canvas.query';
+import { ComponentItem } from './models/component.model';
 
 interface ToastMessage {
   id: string;
@@ -31,7 +26,7 @@ interface ToastMessage {
 @Component({
   selector: 'app-screen-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, GridsterModule, DragDropModule, ComponentHostDirective],
+  imports: [CommonModule, FormsModule, DragDropModule, CanvasComponent],
   templateUrl: './screen-editor.component.html',
   styleUrls: ['./screen-editor.component.scss'],
   animations: [
@@ -53,61 +48,34 @@ interface ToastMessage {
     ])
   ]
 })
-export class ScreenEditorComponent implements OnInit, OnDestroy, AfterViewInit {
-  @ViewChildren(ComponentHostDirective) componentHosts!: QueryList<ComponentHostDirective>;
+export class ScreenEditorComponent implements OnInit, OnDestroy {
   screenId: string = '';
   screen: ScreenPage | null = null;
   loading = false;
   saving = false;
   autoSaving = false;
   previewMode = false;
-previewDevice: 'desktop' | 'tablet' | 'mobile' = 'desktop';
-realPreviewMode = false;
 
   pageName = '';
-  canvasCols = 24;
-  canvasRows = 24;
-
-  gridsterOptions: GridsterConfig = {};
-  gridsterItems: Array<ScreenGridsterItem> = [];
 
   availableComponents: Array<{ type: string; name: string; icon: string; category: string }> = [];
   filteredComponents: Array<{ type: string; name: string; icon: string; category: string }> = [];
   componentCategories: Array<{ name: string; count: number; expanded: boolean }> = [];
 
-  // UI状态
   leftPanelCollapsed = false;
   rightPanelCollapsed = false;
-  selectedComponentType = '';
   searchQuery = '';
   selectedCategory = '全部';
-  private _showGridLines = true;
+  isDragOver = false;
 
-  get showGridLines(): boolean {
-    return this._showGridLines;
-  }
-
-  set showGridLines(value: boolean) {
-    if (this._showGridLines !== value) {
-      this._showGridLines = value;
-      this.updateGridDisplay();
-    }
-  }
-
-  // 历史记录（撤销重做）
-  private history: Array<Array<ScreenGridsterItem>> = [];
-  private historyIndex = -1;
-  private maxHistorySize = 50;
-
-  // Toast通知系统
   toasts: Array<ToastMessage> = [];
   private toastCounter = 0;
-
   private destroy$ = new Subject<void>();
   private autoSaveTimer?: number;
-  private componentCounter = 0;
-  private resizeObserver?: ResizeObserver;
-  private resizeTimeout?: number;
+
+  componentData$ = this.canvasQuery.componentData$;
+  selectedComponentIds$ = this.canvasQuery.selectedComponentIds$;
+  showGrid$ = this.canvasQuery.showGrid$;
 
   constructor(
     private route: ActivatedRoute,
@@ -115,44 +83,24 @@ realPreviewMode = false;
     private screensService: ScreensService,
     private screensQuery: ScreensQuery,
     private componentRegistry: ComponentRegistryService,
-    private environmentInjector: EnvironmentInjector
-  ) {
-    console.log('ScreenEditorComponent 构造函数执行成功');
-    console.log('所有依赖注入完成');
-  }
+    private canvasService: CanvasService,
+    private canvasQuery: CanvasQuery
+  ) {}
 
   ngOnInit(): void {
     this.screenId = this.route.snapshot.paramMap.get('id') || '';
+    this.canvasService.initPage(this.screenId);
 
     this.loadAvailableComponents();
-    this.initGridsterOptions();
     this.loadScreen();
     this.setupAutoSave();
-    this.setupResponsiveHandler();
-  }
-
-  ngAfterViewInit(): void {
-    this.componentHosts.changes.pipe(takeUntil(this.destroy$)).subscribe(() => {
-      this.renderAllComponents();
-    });
   }
 
   ngOnDestroy(): void {
-    this.gridsterItems.forEach(item => {
-      if (item.componentRef) {
-        item.componentRef.destroy();
-      }
-    });
     this.destroy$.next();
     this.destroy$.complete();
     if (this.autoSaveTimer) {
       clearInterval(this.autoSaveTimer);
-    }
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-    }
-    if (this.resizeTimeout) {
-      clearTimeout(this.resizeTimeout);
     }
   }
 
@@ -231,47 +179,6 @@ realPreviewMode = false;
     this.rightPanelCollapsed = !this.rightPanelCollapsed;
   }
 
-  selectComponent(item: ScreenGridsterItem): void {
-    this.selectedComponentType = item.id || '';
-  }
-
-  private initGridsterOptions(): void {
-    // 计算可用容器尺寸
-    const containerElement = document.querySelector('.canvas-container') as HTMLElement;
-    const availableWidth = containerElement?.clientWidth || window.innerWidth - 200; // 减去侧边栏宽度
-    const availableHeight = window.innerHeight - 200; // 减去工具栏和边距
-
-    // 动态计算网格尺寸，确保不超过可用空间
-    const maxColWidth = Math.min(80, Math.floor(availableWidth / this.canvasCols));
-    const maxRowHeight = Math.min(60, Math.floor(availableHeight / this.canvasRows));
-
-    // 确保最小尺寸，避免组件过小
-    const fixedColWidth = Math.max(40, maxColWidth);
-    const fixedRowHeight = Math.max(40, maxRowHeight);
-
-    this.gridsterOptions = {
-      gridType: 'fixed',
-      displayGrid: this._showGridLines ? 'always' : 'none',
-      pushItems: true,
-      draggable: {
-        enabled: !this.previewMode
-      },
-      resizable: {
-        enabled: !this.previewMode
-      },
-      minCols: this.canvasCols,
-      maxCols: this.canvasCols,
-      minRows: this.canvasRows,
-      maxRows: this.canvasRows,
-      fixedColWidth,
-      fixedRowHeight,
-      margin: 8,
-      itemChangeCallback: (item: GridsterItem) => {
-        this.onGridsterItemChange(item);
-      }
-    };
-  }
-
   private loadScreen(): void {
     this.loading = true;
     this.screensQuery.selectEntity(this.screenId)
@@ -280,27 +187,29 @@ realPreviewMode = false;
         if (screen) {
           this.screen = screen;
           this.pageName = screen.name;
-          this.canvasCols = screen.layout.cols;
-          this.canvasRows = screen.layout.rows;
 
-          this.gridsterItems = screen.components.map(comp => ({
-            x: comp.position.x,
-            y: comp.position.y,
-            cols: comp.position.width,
-            rows: comp.position.height,
+          this.canvasService.clearCanvas();
+
+          const componentItems: ComponentItem[] = screen.components.map(comp => ({
             id: comp.id,
-            type: comp.type
+            type: comp.type,
+            component: comp.type,
+            style: {
+              top: comp.position.y,
+              left: comp.position.x,
+              width: comp.position.width,
+              height: comp.position.height,
+              rotate: 0,
+              zIndex: comp.position.zIndex || 1
+            },
+            config: comp.config || {}
           }));
 
-          // 初始化历史记录
-          this.history = [JSON.parse(JSON.stringify(this.gridsterItems))];
-          this.historyIndex = 0;
+          componentItems.forEach(item => {
+            this.canvasService.addComponent(item);
+          });
 
           this.loading = false;
-
-          setTimeout(() => {
-            this.renderAllComponents();
-          }, 100);
         }
       });
 
@@ -315,88 +224,33 @@ realPreviewMode = false;
     }, 30000);
   }
 
-  private setupResponsiveHandler(): void {
-    // 监听窗口尺寸变化
-    window.addEventListener('resize', this.handleResize.bind(this));
-
-    // 使用 ResizeObserver 监听容器尺寸变化
-    const containerElement = document.querySelector('.canvas-container');
-    if (containerElement) {
-      this.resizeObserver = new ResizeObserver(this.handleContainerResize.bind(this));
-      this.resizeObserver.observe(containerElement);
-    }
-  }
-
-  private handleResize(): void {
-    // 防抖处理
-    if (this.resizeTimeout) {
-      clearTimeout(this.resizeTimeout);
-    }
-
-    this.resizeTimeout = window.setTimeout(() => {
-      this.updateGridsterSize();
-    }, 150);
-  }
-
-  private handleContainerResize(entries: ResizeObserverEntry[]): void {
-    // 防抖处理
-    if (this.resizeTimeout) {
-      clearTimeout(this.resizeTimeout);
-    }
-
-    this.resizeTimeout = window.setTimeout(() => {
-      this.updateGridsterSize();
-    }, 150);
-  }
-
-  private updateGridsterSize(): void {
-    if (this.gridsterOptions.api) {
-      // 重新计算网格尺寸
-      const containerElement = document.querySelector('.canvas-container') as HTMLElement;
-      const availableWidth = containerElement?.clientWidth || window.innerWidth - 200;
-      const availableHeight = window.innerHeight - 200;
-
-      const maxColWidth = Math.min(80, Math.floor(availableWidth / this.canvasCols));
-      const maxRowHeight = Math.min(60, Math.floor(availableHeight / this.canvasRows));
-
-      const fixedColWidth = Math.max(40, maxColWidth);
-      const fixedRowHeight = Math.max(40, maxRowHeight);
-
-      // 更新配置
-      this.gridsterOptions.fixedColWidth = fixedColWidth;
-      this.gridsterOptions.fixedRowHeight = fixedRowHeight;
-
-      // 通知 gridster 更新
-      this.gridsterOptions.api.optionsChanged!();
-    }
-  }
-
   backToList(): void {
     this.router.navigate(['/screens']);
   }
 
-  
   save(): void {
     if (this.saving) return;
 
     this.saving = true;
+    const components = this.canvasQuery.getValue().componentData;
+
     const dto: UpdateScreenDto = {
       name: this.pageName,
       layout: {
-        cols: this.canvasCols,
-        rows: this.canvasRows
+        cols: 24,
+        rows: 24
       },
-      components: this.gridsterItems.map(item => ({
-        id: item.id || '',
-        type: item.type || '',
+      components: components.map(item => ({
+        id: item.id,
+        type: item.type,
         position: {
-          x: item.x || 0,
-          y: item.y || 0,
-          width: item.cols || 1,
-          height: item.rows || 1,
-          zIndex: 1
+          x: Math.round(item.style.left),
+          y: Math.round(item.style.top),
+          width: Math.round(item.style.width),
+          height: Math.round(item.style.height),
+          zIndex: item.style.zIndex || 1
         },
-        config: {}
+        config: item.config
       }))
     };
 
@@ -416,22 +270,24 @@ realPreviewMode = false;
     if (!this.screen) return;
 
     this.autoSaving = true;
+    const components = this.canvasQuery.getValue().componentData;
+
     const dto: UpdateScreenDto = {
       layout: {
-        cols: this.canvasCols,
-        rows: this.canvasRows
+        cols: 24,
+        rows: 24
       },
-      components: this.gridsterItems.map(item => ({
-        id: item.id || '',
-        type: item.type || '',
+      components: components.map(item => ({
+        id: item.id,
+        type: item.type,
         position: {
-          x: item.x || 0,
-          y: item.y || 0,
-          width: item.cols || 1,
-          height: item.rows || 1,
-          zIndex: 1
+          x: Math.round(item.style.left),
+          y: Math.round(item.style.top),
+          width: Math.round(item.style.width),
+          height: Math.round(item.style.height),
+          zIndex: item.style.zIndex || 1
         },
-        config: {}
+        config: item.config
       }))
     };
 
@@ -478,222 +334,32 @@ realPreviewMode = false;
     });
   }
 
-  updateCanvasGrid(): void {
-    if (this.gridsterOptions.api) {
-      this.gridsterOptions.minCols = this.canvasCols;
-      this.gridsterOptions.maxCols = this.canvasCols;
-      this.gridsterOptions.minRows = this.canvasRows;
-      this.gridsterOptions.maxRows = this.canvasRows;
-
-      // 重新计算网格尺寸
-      this.updateGridsterSize();
-
-      this.gridsterOptions.api.optionsChanged!();
-    }
-  }
-
-  applyGridPreset(cols: number, rows: number): void {
-    this.canvasCols = cols;
-    this.canvasRows = rows;
-    this.updateCanvasGrid();
-    this.showSuccessToast('栅格已调整', `已应用 ${cols}×${rows} 栅格布局`);
-  }
-
-  autoAdjustGrid(): void {
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
-
-    // 根据屏幕尺寸智能推荐栅格配置
-    let recommendedCols, recommendedRows;
-
-    if (screenWidth < 640) {
-      // 小屏幕推荐配置
-      recommendedCols = 8;
-      recommendedRows = 6;
-    } else if (screenWidth < 1024) {
-      // 中等屏幕推荐配置
-      recommendedCols = 12;
-      recommendedRows = 8;
-    } else if (screenWidth < 1440) {
-      // 大屏幕推荐配置
-      recommendedCols = 16;
-      recommendedRows = 12;
-    } else {
-      // 超大屏幕推荐配置
-      recommendedCols = 24;
-      recommendedRows = 18;
-    }
-
-    this.canvasCols = recommendedCols;
-    this.canvasRows = recommendedRows;
-    this.updateCanvasGrid();
-    this.showSuccessToast('自动调整完成', `已根据屏幕尺寸调整到 ${recommendedCols}×${recommendedRows} 栅格`);
-  }
-
   onDragStarted(event: CdkDragStart): void {
-    // 拖拽开始时禁用画布的自动滚动
     document.body.style.overflow = 'hidden';
   }
 
   onDragEnded(event: CdkDragEnd): void {
-    // 拖拽结束时恢复画布的自动滚动
     document.body.style.overflow = '';
   }
 
-  onComponentDrop(event: CdkDragDrop<any>): void {
-    if (event.previousContainer === event.container) {
-      return;
-    }
-
-    const componentType = event.item.data;
-    this.addComponentToCanvas(componentType);
-
-    // 显示成功提示
-    this.showSuccessToast('组件已添加', `已将组件添加到画布`);
-  }
-
-  private addComponentToCanvas(componentType: string): void {
-    this.componentCounter++;
-    const newItem: ScreenGridsterItem = {
-      x: 0,
-      y: 0,
-      cols: 4,
-      rows: 3,
-      id: `comp-${Date.now()}-${this.componentCounter}`,
-      type: componentType
-    };
-
-    this.gridsterItems.push(newItem);
-    this.saveToHistory();
-  }
-
-  private renderAllComponents(): void {
-    const hostsArray = this.componentHosts.toArray();
-
-    this.gridsterItems.forEach((item, index) => {
-      if (index < hostsArray.length && !item.componentRef) {
-        const host = hostsArray[index];
-        this.renderComponentInHost(item, host.viewContainerRef);
-      }
-    });
-  }
-
-  private renderComponentInHost(item: ScreenGridsterItem, viewContainerRef: ViewContainerRef): void {
-    if (!item.type) return;
-
-    const componentClass = this.componentRegistry.get(item.type);
-    if (!componentClass) {
-      console.error(`组件类型未找到: ${item.type}`);
-      this.showErrorToast('组件错误', `未找到组件类型: ${item.type}`);
-      return;
-    }
-
-    try {
-      viewContainerRef.clear();
-      console.log(`开始创建组件 ${item.type}`);
-
-      // 使用environmentInjector确保依赖正确注入
-      const componentRef = viewContainerRef.createComponent(
-        componentClass,
-        {
-          environmentInjector: this.environmentInjector
-        }
-      );
-
-      item.componentRef = componentRef;
-      console.log(`组件 ${item.type} 创建成功`);
-
-      // 检查组件是否成功初始化
-      if (componentRef.instance) {
-        console.log(`组件实例创建成功:`, componentRef.instance);
-      } else {
-        console.warn(`组件实例为空: ${item.type}`);
-      }
-
-    } catch (error) {
-      console.error(`创建组件 ${item.type} 失败:`, error);
-
-      // 提供更详细的错误信息
-      if (error instanceof Error) {
-        console.error('错误堆栈:', error.stack);
-
-        // 如果是依赖注入错误，提供更友好的提示
-        if (error.message.includes('NullInjectorError') || error.message.includes('No provider')) {
-          this.showErrorToast('依赖注入错误', `组件 ${item.type} 缺少必要的依赖项。请检查组件的构造函数参数。`);
-        } else {
-          this.showErrorToast('组件创建失败', `${item.type}: ${error.message}`);
-        }
-      } else {
-        this.showErrorToast('组件创建失败', `未知错误: ${error}`);
-      }
-    }
-  }
-
-  removeComponent(item: ScreenGridsterItem): void {
-    if (item.componentRef) {
-      item.componentRef.destroy();
-    }
-
-    const index = this.gridsterItems.indexOf(item);
-    if (index > -1) {
-      this.gridsterItems.splice(index, 1);
-      this.saveToHistory();
-    }
-  }
-
-  private onGridsterItemChange(item: GridsterItem): void {
-    this.saveToHistory();
-  }
-
-  // 撤销重做功能
-  private saveToHistory(): void {
-    // 删除当前索引之后的历史记录
-    this.history = this.history.slice(0, this.historyIndex + 1);
-
-    // 添加新的历史记录
-    this.history.push(JSON.parse(JSON.stringify(this.gridsterItems)));
-
-    // 限制历史记录大小
-    if (this.history.length > this.maxHistorySize) {
-      this.history.shift();
-    } else {
-      this.historyIndex++;
-    }
-  }
-
   undo(): void {
-    if (this.canUndo()) {
-      this.historyIndex--;
-      this.gridsterItems = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
-      setTimeout(() => this.renderAllComponents(), 100);
-    }
+    this.canvasService.undo();
   }
 
   redo(): void {
-    if (this.canRedo()) {
-      this.historyIndex++;
-      this.gridsterItems = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
-      setTimeout(() => this.renderAllComponents(), 100);
-    }
+    this.canvasService.redo();
   }
 
   canUndo(): boolean {
-    return this.historyIndex > 0;
+    return this.canvasService.canUndo();
   }
 
   canRedo(): boolean {
-    return this.historyIndex < this.history.length - 1;
+    return this.canvasService.canRedo();
   }
 
   toggleGridLines(): void {
-    this.showGridLines = !this.showGridLines;
-  }
-
-  private updateGridDisplay(): void {
-    this.gridsterOptions.displayGrid = this.showGridLines ? 'always' : 'none';
-    if (this.gridsterOptions.api) {
-      this.gridsterOptions.api.optionsChanged!();
-    }
+    this.canvasService.toggleGrid();
   }
 
   // Toast通知系统方法
@@ -758,112 +424,14 @@ realPreviewMode = false;
     this.toasts = [];
   }
 
-  // 预览功能
-  readonly previewDevices: Array<{ id: 'desktop' | 'tablet' | 'mobile'; name: string; width: string; height: string; icon: string }> = [
-    { id: 'desktop', name: '桌面', width: '100%', height: '100%', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-    { id: 'tablet', name: '平板', width: '768px', height: '1024px', icon: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z' },
-    { id: 'mobile', name: '手机', width: '375px', height: '667px', icon: 'M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z' }
-  ];
-
   togglePreview(): void {
     this.previewMode = !this.previewMode;
+    this.canvasService.setEditMode(this.previewMode ? 'preview' : 'edit');
 
     if (this.previewMode) {
       this.showInfoToast('预览模式', '已进入预览模式，无法编辑组件');
     } else {
-      this.previewDevice = 'desktop';
-      this.realPreviewMode = false;
       this.showInfoToast('编辑模式', '已退出预览模式');
-    }
-
-    this.updateGridsterForPreview();
-  }
-
-  setPreviewDevice(deviceId: string): void {
-    const validDevices = ['desktop', 'tablet', 'mobile'] as const;
-    if (validDevices.includes(deviceId as any)) {
-      this.previewDevice = deviceId as 'desktop' | 'tablet' | 'mobile';
-      this.showInfoToast('设备切换', `已切换到${this.getDeviceName(deviceId)}预览`);
-    }
-  }
-
-  toggleRealPreview(): void {
-    this.realPreviewMode = !this.realPreviewMode;
-
-    if (this.realPreviewMode) {
-      this.showInfoToast('真实预览', '已开启真实预览模式');
-    } else {
-      this.showInfoToast('普通预览', '已切换回普通预览模式');
-    }
-  }
-
-  getDeviceName(device: string): string {
-    const deviceConfig = this.previewDevices.find(d => d.id === device);
-    return deviceConfig?.name || '未知设备';
-  }
-
-  getCanvasStyle(): any {
-    if (this.previewMode && this.previewDevice !== 'desktop') {
-      return this.getPreviewDeviceStyle();
-    }
-
-    // 编辑模式下的画布样式
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
-
-    // 根据屏幕尺寸动态调整画布最大尺寸
-    let maxCanvasWidth, maxCanvasHeight;
-
-    if (screenWidth < 640) {
-      // 小屏幕
-      maxCanvasWidth = '95vw';
-      maxCanvasHeight = '85vh';
-    } else if (screenWidth < 1024) {
-      // 中等屏幕
-      maxCanvasWidth = '90vw';
-      maxCanvasHeight = '80vh';
-    } else {
-      // 大屏幕
-      maxCanvasWidth = '85vw';
-      maxCanvasHeight = '75vh';
-    }
-
-    return {
-      maxWidth: maxCanvasWidth,
-      maxHeight: maxCanvasHeight,
-      width: 'fit-content',
-      height: 'fit-content',
-      margin: '0 auto'
-    };
-  }
-
-  getPreviewDeviceStyle(): any {
-    if (this.previewMode && this.previewDevice !== 'desktop') {
-      const device = this.previewDevices.find(d => d.id === this.previewDevice);
-      if (device) {
-        return {
-          width: device.width,
-          height: device.height,
-          maxWidth: '90vw',
-          maxHeight: '90vh',
-          margin: '0 auto',
-          border: this.realPreviewMode ? 'none' : '2px solid #e5e7eb',
-          borderRadius: this.realPreviewMode ? '0' : '12px',
-          overflow: 'hidden',
-          boxShadow: this.realPreviewMode ? 'none' : '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-          background: this.realPreviewMode ? 'white' : '#1f2937'
-        };
-      }
-    }
-    return {};
-  }
-
-  private updateGridsterForPreview(): void {
-    this.gridsterOptions.draggable!.enabled = !this.previewMode;
-    this.gridsterOptions.resizable!.enabled = !this.previewMode;
-
-    if (this.gridsterOptions.api) {
-      this.gridsterOptions.api.optionsChanged!();
     }
   }
 }

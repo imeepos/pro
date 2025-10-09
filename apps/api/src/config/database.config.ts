@@ -2,13 +2,31 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { UserEntity } from '../entities/user.entity';
 import { WeiboAccountEntity } from '../entities/weibo-account.entity';
 import { ScreenPageEntity } from '../entities/screen-page.entity';
+import { IndustryTypeEntity } from '../entities/industry-type.entity';
+import { EventTypeEntity } from '../entities/event-type.entity';
+import { EventEntity } from '../entities/event.entity';
+import { TagEntity } from '../entities/tag.entity';
+import { EventTagEntity } from '../entities/event-tag.entity';
+import { EventAttachmentEntity } from '../entities/event-attachment.entity';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => {
+  const entities = [
+    UserEntity,
+    WeiboAccountEntity,
+    ScreenPageEntity,
+    IndustryTypeEntity,
+    EventTypeEntity,
+    EventEntity,
+    TagEntity,
+    EventTagEntity,
+    EventAttachmentEntity,
+  ];
+
   if (process.env.DATABASE_URL) {
     return {
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      entities: [UserEntity, WeiboAccountEntity, ScreenPageEntity],
+      entities,
       synchronize: true,
       logging: process.env.NODE_ENV === 'development',
     };
@@ -21,7 +39,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
     username: process.env.DATABASE_USER || 'postgres',
     password: process.env.DATABASE_PASSWORD || 'postgres123',
     database: process.env.DATABASE_NAME || 'pro',
-    entities: [UserEntity, WeiboAccountEntity, ScreenPageEntity],
+    entities,
     synchronize: true,
     logging: process.env.NODE_ENV === 'development',
   };

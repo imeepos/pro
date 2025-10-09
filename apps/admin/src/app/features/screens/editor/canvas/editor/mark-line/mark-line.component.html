@@ -1,0 +1,8 @@
+<div class="mark-line">
+  <div
+    *ngFor="let line of ['xt', 'xc', 'xb', 'yl', 'yc', 'yr']"
+    [class]="getLineClass(line)"
+    [class.visible]="isLineVisible(line)"
+    [ngStyle]="getLineStyle(line)">
+  </div>
+</div>

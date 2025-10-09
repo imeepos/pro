@@ -1,0 +1,12 @@
+<div
+  *ngIf="rect"
+  class="selection-area"
+  [style.left.px]="rect.left"
+  [style.top.px]="rect.top"
+  [style.width.px]="rect.width"
+  [style.height.px]="rect.height"
+>
+  <div *ngIf="showCount" class="selection-count">
+    已选中 {{ selectedCount }} 个组件
+  </div>
+</div>

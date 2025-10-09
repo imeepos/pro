@@ -1,0 +1,35 @@
+<div
+  class="shape-wrapper"
+  [class.active]="isActive"
+  [class.selected]="isSelected"
+  [style.left.px]="component.style.left"
+  [style.top.px]="component.style.top"
+  [style.width.px]="component.style.width"
+  [style.height.px]="component.style.height"
+  [style.transform]="getTransform()"
+  [style.z-index]="component.style.zIndex"
+  [style.opacity]="component.style.opacity">
+
+  <div class="component-content">
+    <div class="placeholder">
+      {{ component.type }}
+    </div>
+  </div>
+
+  <div class="control-bar" *ngIf="isActive">
+    <button class="delete-btn" (click)="onDelete()" title="删除">
+      ×
+    </button>
+  </div>
+
+  <div class="resize-points" *ngIf="isActive">
+    <div
+      *ngFor="let point of resizePoints"
+      [class]="'resize-point resize-point-' + point"
+      [style.cursor]="getResizePointCursor(point)"
+      (mousedown)="onResizeStart(point, $event)">
+    </div>
+  </div>
+
+  <div class="rotate-point" *ngIf="isActive" (mousedown)="onRotateStart($event)"></div>
+</div>

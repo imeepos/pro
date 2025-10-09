@@ -1,61 +1,14 @@
-import { MongoClient, Db, Collection, Document, Filter, OptionalId } from 'mongodb';
+// Module
+export * from './mongodb.module';
 
-export interface MongoDBConfig {
-  url: string;
-  dbName: string;
-}
+// Schemas
+export * from './schemas/raw-data-source.schema';
 
-export class MongoDBClient {
-  private client: MongoClient;
-  private db?: Db;
+// Services
+export * from './services/raw-data-source.service';
 
-  constructor(private config: MongoDBConfig) {
-    this.client = new MongoClient(config.url);
-  }
+// Types
+export * from './types/raw-data-source.types';
 
-  async connect(): Promise<void> {
-    await this.client.connect();
-    this.db = this.client.db(this.config.dbName);
-  }
-
-  getCollection<T extends Document = Document>(name: string): Collection<T> {
-    if (!this.db) throw new Error('Database not initialized');
-    return this.db.collection<T>(name);
-  }
-
-  async insertOne<T extends Document>(collectionName: string, doc: OptionalId<T>): Promise<string> {
-    const collection = this.getCollection<T>(collectionName);
-    const result = await collection.insertOne(doc as any);
-    return result.insertedId.toString();
-  }
-
-  async findOne<T extends Document>(collectionName: string, filter: Filter<T>): Promise<T | null> {
-    const collection = this.getCollection<T>(collectionName);
-    return collection.findOne(filter) as Promise<T | null>;
-  }
-
-  async find<T extends Document>(collectionName: string, filter: Filter<T>): Promise<T[]> {
-    const collection = this.getCollection<T>(collectionName);
-    return collection.find(filter).toArray() as Promise<T[]>;
-  }
-
-  async updateOne<T extends Document>(
-    collectionName: string,
-    filter: Filter<T>,
-    update: Partial<T>,
-  ): Promise<boolean> {
-    const collection = this.getCollection<T>(collectionName);
-    const result = await collection.updateOne(filter, { $set: update });
-    return result.modifiedCount > 0;
-  }
-
-  async deleteOne<T extends Document>(collectionName: string, filter: Filter<T>): Promise<boolean> {
-    const collection = this.getCollection<T>(collectionName);
-    const result = await collection.deleteOne(filter);
-    return result.deletedCount > 0;
-  }
-
-  async close(): Promise<void> {
-    await this.client.close();
-  }
-}
+// Utils
+export * from './utils/hash.util';

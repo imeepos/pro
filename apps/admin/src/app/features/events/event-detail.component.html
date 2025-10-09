@@ -1,0 +1,208 @@
+<div class="h-full flex flex-col bg-gray-50">
+  <!-- 头部 -->
+  <div class="bg-white border-b px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <button
+          (click)="back()"
+          class="text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          ← 返回
+        </button>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">事件详情</h1>
+        </div>
+      </div>
+      <div class="flex gap-3" *ngIf="event">
+        <button
+          (click)="edit()"
+          class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          编辑
+        </button>
+        <button
+          *ngIf="event.status === 0"
+          (click)="publish()"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          发布
+        </button>
+        <button
+          *ngIf="event.status === 1"
+          (click)="archive()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          归档
+        </button>
+        <button
+          (click)="openDeleteDialog()"
+          class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          删除
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 内容区 -->
+  <div class="flex-1 overflow-y-auto p-6">
+    <div *ngIf="loading" class="flex items-center justify-center h-full">
+      <div class="text-gray-500">加载中...</div>
+    </div>
+
+    <div *ngIf="!loading && event" class="max-w-4xl mx-auto space-y-6">
+      <!-- 基础信息 -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex items-start justify-between mb-4">
+          <h2 class="text-2xl font-bold text-gray-900">{{ event.eventName }}</h2>
+          <span [class]="getStatusClass(event.status)" class="px-3 py-1 text-sm rounded-full">
+            {{ getStatusText(event.status) }}
+          </span>
+        </div>
+
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-6">
+            <div>
+              <label class="text-sm font-medium text-gray-500">行业类型</label>
+              <p class="mt-1 text-gray-900">{{ event.industryType?.industryName || '-' }}</p>
+            </div>
+            <div>
+              <label class="text-sm font-medium text-gray-500">事件类型</label>
+              <p class="mt-1 text-gray-900">{{ event.eventType?.eventName || '-' }}</p>
+            </div>
+          </div>
+
+          <div *ngIf="event.summary">
+            <label class="text-sm font-medium text-gray-500">简介</label>
+            <p class="mt-1 text-gray-900">{{ event.summary }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 时间地点 -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">时间地点</h3>
+
+        <div class="space-y-4">
+          <div>
+            <label class="text-sm font-medium text-gray-500">发生时间</label>
+            <p class="mt-1 text-gray-900">{{ formatDate(event.occurTime) }}</p>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-gray-500">地址</label>
+            <p class="mt-1 text-gray-900">{{ fullAddress }}</p>
+          </div>
+
+          <div *ngIf="event.locationText">
+            <label class="text-sm font-medium text-gray-500">地点描述</label>
+            <p class="mt-1 text-gray-900">{{ event.locationText }}</p>
+          </div>
+
+          <div *ngIf="event.longitude && event.latitude">
+            <label class="text-sm font-medium text-gray-500">地图位置</label>
+            <div class="mt-2">
+              <app-amap-viewer
+                [longitude]="event.longitude"
+                [latitude]="event.latitude"
+                [title]="event.eventName"
+              ></app-amap-viewer>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 标签 -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6" *ngIf="event.tags && event.tags.length > 0">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">标签</h3>
+        <div class="flex flex-wrap gap-2">
+          <span
+            *ngFor="let tag of event.tags"
+            [style.background-color]="tag.tagColor"
+            class="px-3 py-1 text-white text-sm rounded-full"
+          >
+            {{ tag.tagName }}
+          </span>
+        </div>
+      </div>
+
+      <!-- 附件 -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6" *ngIf="event.attachments && event.attachments.length > 0">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">附件</h3>
+        <div class="grid grid-cols-3 gap-4">
+          <div
+            *ngFor="let attachment of event.attachments"
+            class="border border-gray-200 rounded-lg overflow-hidden"
+          >
+            <!-- 图片预览 -->
+            <div *ngIf="isImage(attachment.mimeType)" class="aspect-video bg-gray-100">
+              <img
+                [src]="attachment.fileUrl"
+                [alt]="attachment.fileName"
+                class="w-full h-full object-cover"
+              />
+            </div>
+
+            <!-- 视频预览 -->
+            <div *ngIf="isVideo(attachment.mimeType)" class="aspect-video bg-gray-100">
+              <video
+                [src]="attachment.fileUrl"
+                controls
+                class="w-full h-full"
+              ></video>
+            </div>
+
+            <!-- 文档预览 -->
+            <div
+              *ngIf="!isImage(attachment.mimeType) && !isVideo(attachment.mimeType)"
+              class="aspect-video bg-gray-100 flex items-center justify-center"
+            >
+              <div class="text-center">
+                <div class="text-4xl text-gray-400 mb-2">📄</div>
+                <div class="text-sm text-gray-600">{{ attachment.fileName }}</div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-white">
+              <p class="text-sm text-gray-900 truncate mb-1">{{ attachment.fileName }}</p>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-gray-500">
+                  {{ (attachment.fileSize / 1024 / 1024).toFixed(2) }} MB
+                </span>
+                <button
+                  (click)="downloadAttachment(attachment.fileUrl, attachment.fileName)"
+                  class="text-xs text-blue-600 hover:text-blue-700"
+                >
+                  下载
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 元数据 -->
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">元数据</h3>
+        <div class="grid grid-cols-2 gap-6 text-sm">
+          <div>
+            <label class="text-gray-500">创建时间</label>
+            <p class="mt-1 text-gray-900">{{ formatDate(event.createdAt) }}</p>
+          </div>
+          <div>
+            <label class="text-gray-500">更新时间</label>
+            <p class="mt-1 text-gray-900">{{ formatDate(event.updatedAt) }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认对话框 -->
+<app-delete-event-dialog
+  *ngIf="showDeleteDialog"
+  [event]="event"
+  (confirm)="onConfirmDelete()"
+  (cancel)="closeDeleteDialog()"
+></app-delete-event-dialog>

@@ -1,0 +1,20 @@
+.selection-area {
+  position: absolute;
+  background: rgba(64, 158, 255, 0.1);
+  border: 1px dashed #409eff;
+  pointer-events: none;
+  z-index: 9999;
+  box-sizing: border-box;
+
+  .selection-count {
+    position: absolute;
+    top: -24px;
+    left: 0;
+    padding: 4px 8px;
+    background: #409eff;
+    color: white;
+    font-size: 12px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+}

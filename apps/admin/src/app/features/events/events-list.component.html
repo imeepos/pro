@@ -1,0 +1,319 @@
+<div class="h-full flex flex-col bg-gray-50">
+  <!-- 头部搜索区域 -->
+  <div class="header-search-container">
+    <div class="header-content">
+      <div class="header-left">
+        <div class="header-title">
+          <div class="title-wrapper">
+            <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">事件管理</h1>
+              <p class="text-sm text-gray-600 mt-0.5">管理和查看所有事件信息</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <button
+          (click)="createEvent()"
+          class="create-event-btn"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          创建事件
+        </button>
+      </div>
+    </div>
+
+    <!-- 搜索和视图切换 -->
+    <div class="search-controls">
+      <div class="search-input-wrapper">
+        <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <input
+          type="text"
+          [(ngModel)]="filterParams.keyword"
+          (keyup.enter)="onSearch(filterParams.keyword || '')"
+          placeholder="搜索事件名称、描述..."
+          class="search-input"
+        />
+        <div class="search-actions">
+          <button
+            *ngIf="filterParams.keyword"
+            (click)="clearSearch()"
+            class="clear-search-btn"
+            type="button"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+          <button
+            (click)="onSearch(filterParams.keyword || '')"
+            class="search-btn"
+            type="button"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 视图切换和快速筛选 -->
+      <div class="view-controls">
+        <div class="view-switcher">
+          <button
+            [class.active]="viewMode === 'list'"
+            (click)="switchView('list')"
+            class="view-btn"
+            type="button"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+            列表
+          </button>
+          <button
+            [class.active]="viewMode === 'map'"
+            (click)="switchView('map')"
+            class="view-btn"
+            type="button"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+            </svg>
+            地图
+          </button>
+        </div>
+
+        <!-- 搜索历史提示 -->
+        <div class="search-hint" *ngIf="!filterParams.keyword && searchHistory.length > 0">
+          <span class="hint-text">最近搜索：</span>
+          <button
+            *ngFor="let term of searchHistory.slice(0, 3)"
+            (click)="onSearch(term)"
+            class="history-item"
+            type="button"
+          >
+            {{ term }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex-1 flex overflow-hidden relative">
+    <!-- 筛选面板折叠按钮 -->
+    <button
+      (click)="toggleFilterPanel()"
+      class="filter-toggle-btn"
+      [class.expanded]="!isFilterPanelCollapsed"
+      type="button"
+      [attr.title]="isFilterPanelCollapsed ? '展开筛选面板' : '折叠筛选面板'"
+    >
+      <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+      </svg>
+      <span class="filter-indicator" *ngIf="hasActiveFilters()"></span>
+    </button>
+
+    <!-- 筛选面板 -->
+    <div
+      class="filter-panel-wrapper"
+      [class.collapsed]="isFilterPanelCollapsed"
+      (click)="onBackdropClick()"
+    >
+      <app-event-filter-panel
+        *ngIf="!isFilterPanelCollapsed"
+        [filterParams]="filterParams"
+        [industryTypes]="industryTypes"
+        [eventTypes]="eventTypes"
+        [tags]="tags"
+        (filterChange)="onFilterChange($event)"
+        (reset)="onFilterReset()"
+        (click)="$event.stopPropagation()"
+      ></app-event-filter-panel>
+
+      <!-- 折叠状态下的简化筛选按钮 -->
+      <div
+        *ngIf="isFilterPanelCollapsed"
+        class="collapsed-filter-hint"
+        (click)="toggleFilterPanel()"
+      >
+        <svg class="w-6 h-6 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+        </svg>
+        <span class="text-sm text-gray-500">筛选</span>
+      </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <!-- 标签云 -->
+      <div class="tag-cloud-section">
+        <app-tag-cloud
+          [tags]="tags"
+          [selectedTagIds]="filterParams.tagIds || []"
+          (tagClick)="onTagClick($event)"
+        ></app-tag-cloud>
+      </div>
+
+      <!-- 事件列表 -->
+      <div class="flex-1 overflow-y-auto p-6" *ngIf="viewMode === 'list'">
+        <div *ngIf="loading" class="loading-state">
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            正在加载事件数据...
+          </div>
+        </div>
+
+        <div *ngIf="error" class="error-state">
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            {{ error }}
+          </div>
+        </div>
+
+        <div *ngIf="!loading && !error && events.length === 0" class="empty-state">
+          <div class="text-center">
+            <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p class="text-gray-600 font-medium">暂无事件数据</p>
+            <p class="text-gray-500 text-sm mt-1">创建您的第一个事件开始管理</p>
+          </div>
+        </div>
+
+        <div *ngIf="!loading && !error && events.length > 0" class="space-y-4">
+          <div
+            *ngFor="let event of events"
+            class="event-card"
+          >
+            <div class="event-header">
+              <div class="event-title-section">
+                <h3 class="event-title">{{ event.eventName }}</h3>
+                <span
+                  [class]="'event-status ' + getStatusClass(event.status)"
+                >
+                  {{ getStatusText(event.status) }}
+                </span>
+              </div>
+
+              <div class="event-actions">
+                <button
+                  (click)="viewDetail(event)"
+                  class="action-btn primary"
+                  type="button"
+                >
+                  查看
+                </button>
+                <button
+                  (click)="editEvent(event)"
+                  class="action-btn secondary"
+                  type="button"
+                >
+                  编辑
+                </button>
+                <button
+                  *ngIf="event.status === 0"
+                  (click)="publishEvent(event)"
+                  class="action-btn success"
+                  type="button"
+                >
+                  发布
+                </button>
+                <button
+                  *ngIf="event.status === 1"
+                  (click)="archiveEvent(event)"
+                  class="action-btn secondary"
+                  type="button"
+                >
+                  归档
+                </button>
+                <button
+                  (click)="openDeleteDialog(event)"
+                  class="action-btn danger"
+                  type="button"
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+
+            <p class="event-summary" *ngIf="event.summary">
+              {{ event.summary }}
+            </p>
+
+            <div class="event-meta">
+              <div class="meta-item">
+                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span>{{ formatDate(event.occurTime) }}</span>
+              </div>
+              <div class="meta-item">
+                <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span>{{ event.province }} {{ event.city }} <span *ngIf="event.district">{{ event.district }}</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分页 -->
+        <div *ngIf="!loading && events.length > 0" class="pagination">
+          <div class="pagination-info">
+            共 {{ total }} 条记录
+          </div>
+          <div class="pagination-controls">
+            <button
+              [disabled]="filterParams.page === 1"
+              (click)="onPageChange(filterParams.page! - 1)"
+              class="pagination-btn"
+              type="button"
+            >
+              上一页
+            </button>
+            <div class="pagination-current">
+              第 {{ filterParams.page }} 页
+            </div>
+            <button
+              [disabled]="filterParams.page! * filterParams.pageSize! >= total"
+              (click)="onPageChange(filterParams.page! + 1)"
+              class="pagination-btn"
+              type="button"
+            >
+              下一页
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 地图视图 -->
+      <div class="flex-1 overflow-hidden" *ngIf="viewMode === 'map'">
+        <div class="h-full flex items-center justify-center text-gray-500">
+          地图视图功能开发中...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认对话框 -->
+<app-delete-event-dialog
+  *ngIf="showDeleteDialog"
+  [event]="eventToDelete"
+  (confirm)="onConfirmDelete()"
+  (cancel)="closeDeleteDialog()"
+></app-delete-event-dialog>

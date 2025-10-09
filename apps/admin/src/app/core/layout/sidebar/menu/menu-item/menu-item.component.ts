@@ -41,6 +41,7 @@ export class MenuItemComponent {
 
   isChildActive(childRoute?: string): boolean {
     if (!childRoute) return false;
-    return this.router.url === childRoute || this.router.url.startsWith(childRoute + '/');
+    // 精确匹配：只匹配完全相同的路由，避免 /events 误匹配 /events/event-types
+    return this.router.url === childRoute;
   }
 }

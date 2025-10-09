@@ -1,0 +1,15 @@
+<div
+  class="editor-container"
+  cdkDropList
+  (cdkDropListDropped)="onComponentDrop($event)">
+  <app-mark-line></app-mark-line>
+  <app-area
+    [rect]="selectionArea"
+    [selectedCount]="selectedCount">
+  </app-area>
+  <app-shape
+    *ngFor="let component of componentData$ | async; trackBy: trackByComponent"
+    [component]="component"
+    [editor]="this">
+  </app-shape>
+</div>

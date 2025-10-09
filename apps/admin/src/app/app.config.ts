@@ -9,6 +9,8 @@ import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { ComponentRegistryService } from './core/services/component-registry.service';
 import { WeiboLoggedInUsersCardComponent } from './features/screens/components/weibo-logged-in-users-card.component';
 import { TestSimpleComponent } from './features/screens/components/test-simple.component';
+import { EventsStore } from './state/events.store';
+import { TagsStore } from './state/tags.store';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
   return () => {
@@ -49,6 +51,9 @@ export const appConfig: ApplicationConfig = {
       useFactory: initializeComponentRegistry,
       deps: [ComponentRegistryService],
       multi: true
-    }
+    },
+    // Akita stores
+    EventsStore,
+    TagsStore
   ]
 };

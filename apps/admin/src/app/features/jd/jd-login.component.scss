@@ -1,0 +1,175 @@
+// 京东主题色
+$jd-red: #e4393c;
+$jd-red-light: #f8d7d7;
+$jd-red-dark: #c23331;
+
+$success: #10b981;
+$error: #ef4444;
+
+.jd-login-container {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.jd-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: $jd-red;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.success-alert {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba($success, 0.1);
+  border: 1px solid rgba($success, 0.2);
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+
+  .success-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: $success;
+    flex-shrink: 0;
+  }
+
+  .success-content {
+    flex: 1;
+
+    .success-title {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: $success;
+      margin-bottom: 0.25rem;
+    }
+
+    .success-message {
+      font-size: 0.875rem;
+      color: $success;
+      margin-top: 0.25rem;
+    }
+  }
+}
+
+.qrcode-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  .qrcode-wrapper {
+    padding: 1rem;
+    background: $jd-red-light;
+    border-radius: 0.5rem;
+    border: 2px solid $jd-red;
+
+    .qrcode-image {
+      width: 12rem;
+      height: 12rem;
+      object-fit: contain;
+    }
+  }
+
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .status-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+
+      &.waiting {
+        background: $jd-red;
+        animation: pulse 2s infinite;
+      }
+
+      &.scanned {
+        background: $success;
+        animation: pulse 2s infinite;
+      }
+
+      &.error {
+        background: $error;
+      }
+    }
+
+    .status-text {
+      font-size: 0.875rem;
+      font-weight: 500;
+
+      &.waiting {
+        color: $jd-red;
+      }
+
+      &.scanned {
+        color: $success;
+      }
+
+      &.error {
+        color: $error;
+      }
+    }
+  }
+
+  .qrcode-instructions {
+    text-align: center;
+    gap: 0.25rem;
+
+    .instruction-text {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+  }
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  .jd-button {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: $jd-red;
+    color: white;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+
+    &:hover {
+      background: $jd-red-dark;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    &:active {
+      background: darken($jd-red-dark, 10%);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

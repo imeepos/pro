@@ -1,0 +1,113 @@
+<div class="h-full flex flex-col bg-gray-50">
+  <div class="bg-white border-b px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ isEditMode ? '编辑行业类型' : '新增行业类型' }}</h1>
+        <p class="text-sm text-gray-600 mt-1">{{ isEditMode ? '修改现有行业类型信息' : '创建新的行业类型' }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex-1 overflow-y-auto p-6">
+    <div class="max-w-3xl mx-auto">
+      <form [formGroup]="industryTypeForm" (ngSubmit)="onSubmit()" class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              行业代码 <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              formControlName="industryCode"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              [class.border-red-500]="isFieldInvalid('industryCode')"
+              placeholder="请输入行业代码"
+            />
+            <p *ngIf="isFieldInvalid('industryCode')" class="mt-1 text-sm text-red-500">
+              {{ getFieldError('industryCode') }}
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              行业名称 <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              formControlName="industryName"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              [class.border-red-500]="isFieldInvalid('industryName')"
+              placeholder="请输入行业名称"
+            />
+            <p *ngIf="isFieldInvalid('industryName')" class="mt-1 text-sm text-red-500">
+              {{ getFieldError('industryName') }}
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              描述
+            </label>
+            <textarea
+              formControlName="description"
+              rows="4"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              [class.border-red-500]="isFieldInvalid('description')"
+              placeholder="请输入行业描述（可选）"
+            ></textarea>
+            <p *ngIf="isFieldInvalid('description')" class="mt-1 text-sm text-red-500">
+              {{ getFieldError('description') }}
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              排序 <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              formControlName="sortOrder"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              [class.border-red-500]="isFieldInvalid('sortOrder')"
+              placeholder="请输入排序值（数字越小越靠前）"
+            />
+            <p *ngIf="isFieldInvalid('sortOrder')" class="mt-1 text-sm text-red-500">
+              {{ getFieldError('sortOrder') }}
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              状态 <span class="text-red-500">*</span>
+            </label>
+            <select
+              formControlName="status"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option [value]="1">启用</option>
+              <option [value]="0">禁用</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            (click)="cancel()"
+            class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            [disabled]="loading"
+          >
+            取消
+          </button>
+          <button
+            type="submit"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            [disabled]="loading"
+          >
+            {{ loading ? '保存中...' : (isEditMode ? '保存修改' : '创建') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
