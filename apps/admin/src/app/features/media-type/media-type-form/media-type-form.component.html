@@ -95,7 +95,7 @@
               <app-select
                 id="status"
                 [options]="statusOptions"
-                [formControl]="mediaTypeForm.get('status')!"
+                [formControl]="mediaTypeForm.get('status') as FormControl"
                 placeholder="请选择状态"
               ></app-select>
             </div>
