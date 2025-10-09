@@ -8,13 +8,14 @@ import { CanvasConfigPanelComponent } from '../canvas/config-panel/canvas-config
 import { CanvasQuery } from '../canvas/services/canvas.query';
 import { DataModuleComponent } from '../data-module/data-module.component';
 import { DataPluginInitializerService } from '../data-plugins/data-plugin-initializer.service';
+import { EventConfigPanelComponent } from './event-module/event-config-panel.component';
 
-type TabType = 'style' | 'attr' | 'data' | 'canvas';
+type TabType = 'style' | 'attr' | 'data' | 'event' | 'canvas';
 
 @Component({
   selector: 'app-right-sidebar',
   standalone: true,
-  imports: [CommonModule, StyleEditorComponent, AttrEditorComponent, CanvasConfigPanelComponent, DataModuleComponent],
+  imports: [CommonModule, StyleEditorComponent, AttrEditorComponent, CanvasConfigPanelComponent, DataModuleComponent, EventConfigPanelComponent],
   template: `
     <div
       class="right-sidebar h-full transition-all duration-300 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700"
@@ -72,6 +73,10 @@ type TabType = 'style' | 'attr' | 'data' | 'canvas';
             />
             <app-data-module
               *ngIf="activeTab === 'data'"
+              [component]="activeComponent"
+            />
+            <app-event-config-panel
+              *ngIf="activeTab === 'event'"
               [component]="activeComponent"
             />
           </div>
@@ -137,6 +142,12 @@ export class RightSidebarComponent implements OnInit, OnDestroy {
       key: 'data' as TabType,
       label: '数据',
       icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4',
+      showWhenActive: true
+    },
+    {
+      key: 'event' as TabType,
+      label: '事件',
+      icon: 'M13 10V3L4 14h7v7l9-11h-7z',
       showWhenActive: true
     },
     {
