@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ScreenPageEntity } from '../entities/screen-page.entity';
 import { CreateScreenDto, UpdateScreenDto } from './dto';
+import { ScreenDataTransformer } from './utils/screen-data-transformer';
 
 @Injectable()
 export class ScreensService {
@@ -16,10 +17,19 @@ export class ScreensService {
   ) {}
 
   async create(createScreenDto: CreateScreenDto, userId: string) {
+    // 转换布局配置格式
+    const layoutConfig = ScreenDataTransformer.transformLayoutConfig(createScreenDto.layout);
+
+    // 转换组件配置格式
+    const components = createScreenDto.components?.map(component =>
+      ScreenDataTransformer.transformScreenComponent(component)
+    ) || [];
+
     const screen = this.screenPageRepository.create({
       ...createScreenDto,
+      layout: layoutConfig,
+      components,
       createdBy: userId,
-      components: createScreenDto.components || [],
     });
 
     return this.screenPageRepository.save(screen);
@@ -56,7 +66,28 @@ export class ScreensService {
       throw new NotFoundException(`Screen page with ID ${id} not found`);
     }
 
-    return screen;
+    // 转换布局配置为前端友好格式（包含cols和rows信息）
+    const transformedLayout = ScreenDataTransformer.transformLayoutConfigToFrontend(screen.layout);
+
+    // 转换组件配置为前端友好格式
+    const transformedComponents = screen.components.map(component => {
+      const transformedComponent = ScreenDataTransformer.transformScreenComponentToFrontend(component);
+      return {
+        ...component, // 保持原始实体结构
+        config: transformedComponent.config || {}, // 确保config字段存在
+        // 可选地添加前端友好的转换数据
+        _dto: transformedComponent, // 添加DTO格式作为元数据
+      };
+    });
+
+    // 返回增强的屏幕对象，保持实体类型兼容性
+    const enhancedScreen = {
+      ...screen,
+      layout: transformedLayout,
+      components: transformedComponents,
+    } as any;
+
+    return enhancedScreen;
   }
 
   async update(id: string, updateScreenDto: UpdateScreenDto, userId: string) {
@@ -66,7 +97,25 @@ export class ScreensService {
       throw new BadRequestException('You can only update your own screens');
     }
 
-    Object.assign(screen, updateScreenDto);
+    // 转换布局配置格式（如果提供了）
+    let layoutConfig = screen.layout;
+    if (updateScreenDto.layout) {
+      layoutConfig = ScreenDataTransformer.transformLayoutConfig(updateScreenDto.layout);
+    }
+
+    // 转换组件配置格式（如果提供了）
+    let components = screen.components;
+    if (updateScreenDto.components) {
+      components = updateScreenDto.components.map(component =>
+        ScreenDataTransformer.transformScreenComponent(component)
+      );
+    }
+
+    Object.assign(screen, {
+      ...updateScreenDto,
+      layout: layoutConfig,
+      components,
+    });
 
     return this.screenPageRepository.save(screen);
   }

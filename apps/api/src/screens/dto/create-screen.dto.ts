@@ -7,9 +7,9 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
-  LayoutConfig,
-  ScreenComponent,
-} from '../../entities/screen-page.entity';
+  LayoutConfigDto,
+  ScreenComponentDto,
+} from './screen-config.dto';
 
 export class CreateScreenDto {
   @IsString()
@@ -20,11 +20,13 @@ export class CreateScreenDto {
   description?: string;
 
   @IsObject()
-  layout: LayoutConfig;
+  @ValidateNested()
+  @Type(() => LayoutConfigDto)
+  layout: LayoutConfigDto;
 
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => Object)
-  components?: ScreenComponent[];
+  @Type(() => ScreenComponentDto)
+  components?: ScreenComponentDto[];
 }
