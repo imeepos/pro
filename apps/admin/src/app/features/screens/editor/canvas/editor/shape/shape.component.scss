@@ -2,9 +2,9 @@
   position: absolute;
   cursor: move;
   user-select: none;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid transparent;
-  transition: border-color 0.2s;
+  background: rgba(64, 158, 255, 0.08);
+  border: 1px solid rgba(156, 163, 175, 0.3);
+  transition: border-color 0.2s, opacity 0.2s;
 
   &:hover {
     border-color: rgba(64, 158, 255, 0.5);
@@ -19,6 +19,42 @@
     border: 1px dashed #67c23a;
     box-shadow: 0 0 0 1px #67c23a;
   }
+
+  &.hidden {
+    opacity: 0.2;
+    pointer-events: none;
+    border-style: dashed;
+    border-color: rgba(156, 163, 175, 0.5);
+  }
+
+  // 确保组件内容可以触发拖拽事件
+  .component-content {
+    pointer-events: auto;
+  }
+
+  // 确保错误状态仍然允许选择和拖拽（除非真正需要禁用）
+  &.has-error {
+    .component-content {
+      cursor: not-allowed;
+      // 移除 pointer-events: none 以允许事件触发
+    }
+  }
+
+  &.locked {
+    cursor: not-allowed;
+    border-color: rgba(245, 108, 108, 0.5);
+    background: rgba(245, 108, 108, 0.05);
+
+    &:hover {
+      border-color: rgba(245, 108, 108, 0.7);
+    }
+  }
+
+  &.has-error {
+    border: 2px dashed #f56c6c;
+    background: rgba(245, 108, 108, 0.1);
+    cursor: not-allowed;
+  }
 }
 
 .component-content {
@@ -31,10 +67,78 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-direction: column;
     width: 100%;
     height: 100%;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(107, 114, 128, 0.8);
     font-size: 14px;
+    gap: 4px;
+  }
+
+  .group-badge,
+  .lock-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(103, 194, 58, 0.2);
+    color: #67c23a;
+    border: 1px solid #67c23a;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .lock-badge {
+    background: rgba(245, 108, 108, 0.2);
+    color: #f56c6c;
+    border-color: #f56c6c;
+  }
+}
+
+.error-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+
+  .error-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: rgba(245, 108, 108, 0.15);
+    border: 1px solid #f56c6c;
+    border-radius: 4px;
+    padding: 8px;
+    max-width: 100%;
+
+    .error-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .error-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+
+      strong {
+        color: #f56c6c;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      small {
+        color: rgba(245, 108, 108, 0.8);
+        font-size: 10px;
+        word-break: break-word;
+      }
+    }
   }
 }
 

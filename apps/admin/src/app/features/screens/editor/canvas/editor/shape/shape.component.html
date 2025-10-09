@@ -2,6 +2,9 @@
   class="shape-wrapper"
   [class.active]="isActive"
   [class.selected]="isSelected"
+  [class.hidden]="component.display === false"
+  [class.locked]="component.locked"
+  [class.has-error]="hasRenderError"
   [style.left.px]="component.style.left"
   [style.top.px]="component.style.top"
   [style.width.px]="component.style.width"
@@ -10,19 +13,31 @@
   [style.z-index]="component.style.zIndex"
   [style.opacity]="component.style.opacity">
 
-  <div class="component-content">
+  <div class="component-content" *ngIf="!hasRenderError" (mousedown)="onContentMouseDown($event)">
     <div class="placeholder">
       {{ component.type }}
+      <span *ngIf="component.isGroup" class="group-badge">组合</span>
+      <span *ngIf="component.locked" class="lock-badge">🔒</span>
     </div>
   </div>
 
-  <div class="control-bar" *ngIf="isActive">
+  <div class="error-content" *ngIf="hasRenderError">
+    <div class="error-message">
+      <span class="error-icon">⚠️</span>
+      <div class="error-text">
+        <strong>组件渲染异常</strong>
+        <small>{{ errorMessage }}</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-bar" *ngIf="isActive && !component.locked">
     <button class="delete-btn" (click)="onDelete()" title="删除">
       ×
     </button>
   </div>
 
-  <div class="resize-points" *ngIf="isActive">
+  <div class="resize-points" *ngIf="isActive && !component.locked && !hasRenderError">
     <div
       *ngFor="let point of resizePoints"
       [class]="'resize-point resize-point-' + point"
@@ -31,5 +46,17 @@
     </div>
   </div>
 
-  <div class="rotate-point" *ngIf="isActive" (mousedown)="onRotateStart($event)"></div>
+  <div
+    class="rotate-point"
+    *ngIf="isActive && !component.locked && !hasRenderError"
+    (mousedown)="onRotateStart($event)">
+  </div>
+
+  <app-context-menu
+    *ngIf="showContextMenu"
+    [items]="contextMenuItems"
+    [x]="contextMenuX"
+    [y]="contextMenuY"
+    (closed)="closeContextMenu()">
+  </app-context-menu>
 </div>
