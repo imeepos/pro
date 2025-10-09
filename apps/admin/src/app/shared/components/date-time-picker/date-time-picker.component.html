@@ -1,0 +1,345 @@
+<div class="date-time-picker" (click)="stopPropagation($event)">
+  <!-- 日期时间输入框 -->
+  <div class="picker-input">
+    <input
+      type="text"
+      class="input-field"
+      [class.disabled]="disabled"
+      [class.readonly]="readonly"
+      [placeholder]="placeholder"
+      [(ngModel)]="inputText"
+      (input)="onInputChange($event)"
+      (keydown)="onKeyDown($event)"
+      [disabled]="disabled"
+      [readonly]="readonly"
+      [required]="required"
+    />
+
+    <!-- 清除按钮 -->
+    <button
+      *ngIf="allowClear && selectedDate && !disabled && !readonly"
+      type="button"
+      class="clear-btn"
+      (click)="clearSelection()"
+      tabindex="-1"
+      aria-label="清除选中日期时间"
+    >
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+
+    <!-- 日历按钮 -->
+    <button
+      type="button"
+      class="picker-btn"
+      (click)="togglePicker()"
+      [disabled]="disabled || readonly"
+      aria-label="打开日期时间选择器"
+    >
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- 日期时间选择面板 -->
+  <div
+    *ngIf="isOpen"
+    class="picker-panel"
+    (click)="stopPropagation($event)"
+    role="dialog"
+    aria-label="日期时间选择器"
+  >
+    <div class="panel-content">
+      <!-- 快捷预设区域 -->
+      <div *ngIf="showQuickPresets" class="quick-presets-section">
+        <h4 class="section-title">快捷选择</h4>
+        <div class="presets-grid">
+          <button
+            type="button"
+            class="preset-btn"
+            *ngFor="let preset of quickPresets"
+            (click)="selectQuickPreset(preset.key)"
+            [title]="getQuickPresetRange(preset.key)"
+            [attr.aria-label]="`${preset.label} - ${getQuickPresetRange(preset.key)}`"
+          >
+            <span class="preset-icon">{{ preset.icon }}</span>
+            <span class="preset-label">{{ preset.label }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 主要选择区域：日期和时间并排显示 -->
+      <div class="main-selection-area">
+        <!-- 日期选择区域 -->
+        <div class="date-selection-section">
+          <!-- 日期导航 -->
+          <div class="date-header">
+            <button
+              type="button"
+              class="nav-btn"
+              (click)="previousMonth()"
+              aria-label="上一月"
+            >
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h3 class="month-title">{{ getMonthName() }}</h3>
+            <button
+              type="button"
+              class="nav-btn"
+              (click)="nextMonth()"
+              aria-label="下一月"
+            >
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- 星期标题 -->
+          <div class="weekdays">
+            <div
+              class="weekday"
+              *ngFor="let day of getWeekDays()"
+              role="columnheader"
+            >
+              {{ day }}
+            </div>
+          </div>
+
+          <!-- 日期网格 -->
+          <div class="days-grid" role="grid">
+            <button
+              type="button"
+              class="day-btn"
+              [class.other-month]="day && !isCurrentMonth(day)"
+              [class.today]="day && isToday(day)"
+              [class.selected]="day && isSelected(day)"
+              [class.hovered]="day && isDateHovered(day)"
+              [class.disabled]="day && isDateDisabled(day)"
+              *ngFor="let day of getCalendarDays(); trackBy: trackByDate"
+              (click)="day && selectDate(day)"
+              (mouseenter)="day && onDateHover(day)"
+              (mouseleave)="onDateHover(undefined)"
+              [disabled]="day && isDateDisabled(day)"
+              [attr.aria-label]="getAriaLabelForDate(day)"
+              [attr.aria-selected]="day && isSelected(day)"
+              [attr.aria-disabled]="day && isDateDisabled(day)"
+              role="gridcell"
+            >
+              {{ day?.getDate() }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 时间选择区域 -->
+        <div class="time-selection-section">
+          <!-- 时间预设 -->
+          <div *ngIf="showTimePresets" class="time-presets-section">
+            <h5 class="time-section-title">快捷时间</h5>
+            <div class="time-presets-grid">
+              <button
+                type="button"
+                class="time-preset-btn"
+                *ngFor="let preset of timePresets"
+                (click)="selectTimePreset(preset.key)"
+                [attr.aria-label]="preset.label"
+              >
+                {{ preset.label }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 时间输入区域 -->
+          <div class="time-inputs-section">
+            <h5 class="time-section-title">选择时间</h5>
+            <div class="time-inputs">
+              <!-- 小时输入 -->
+              <div class="time-input-group">
+                <label class="time-input-label" for="hours-input">时</label>
+                <div class="time-input-wrapper">
+                  <button
+                    type="button"
+                    class="time-adjust-btn"
+                    (click)="incrementTime('hours')"
+                    [disabled]="disabled"
+                    aria-label="增加小时"
+                  >
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                  <input
+                    id="hours-input"
+                    type="text"
+                    class="time-input"
+                    [class.active]="activeTimeInput === 'hours'"
+                    [value]="getDisplayHours() | number: '2.0-0'"
+                    (keydown)="onTimeInputKeyDown($event, 'hours')"
+                    (blur)="onTimeInputBlur($event, 'hours')"
+                    (focus)="onTimeInputFocus('hours')"
+                    [disabled]="disabled"
+                    [attr.aria-label]="'小时，当前值' + getDisplayHours()"
+                    maxlength="2"
+                  />
+                  <button
+                    type="button"
+                    class="time-adjust-btn"
+                    (click)="decrementTime('hours')"
+                    [disabled]="disabled"
+                    aria-label="减少小时"
+                  >
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 分隔符 -->
+              <div class="time-separator">:</div>
+
+              <!-- 分钟输入 -->
+              <div class="time-input-group">
+                <label class="time-input-label" for="minutes-input">分</label>
+                <div class="time-input-wrapper">
+                  <button
+                    type="button"
+                    class="time-adjust-btn"
+                    (click)="incrementTime('minutes')"
+                    [disabled]="disabled"
+                    aria-label="增加分钟"
+                  >
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                  <input
+                    id="minutes-input"
+                    type="text"
+                    class="time-input"
+                    [class.active]="activeTimeInput === 'minutes'"
+                    [value]="selectedTime.minutes | number: '2.0-0'"
+                    (keydown)="onTimeInputKeyDown($event, 'minutes')"
+                    (blur)="onTimeInputBlur($event, 'minutes')"
+                    (focus)="onTimeInputFocus('minutes')"
+                    [disabled]="disabled"
+                    [attr.aria-label]="'分钟，当前值' + selectedTime.minutes"
+                    maxlength="2"
+                  />
+                  <button
+                    type="button"
+                    class="time-adjust-btn"
+                    (click)="decrementTime('minutes')"
+                    [disabled]="disabled"
+                    aria-label="减少分钟"
+                  >
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 秒数输入（可选） -->
+              <div *ngIf="showSeconds" class="time-separator">:</div>
+              <div *ngIf="showSeconds" class="time-input-group">
+                <label class="time-input-label" for="seconds-input">秒</label>
+                <div class="time-input-wrapper">
+                  <button
+                    type="button"
+                    class="time-adjust-btn"
+                    (click)="incrementTime('seconds')"
+                    [disabled]="disabled"
+                    aria-label="增加秒数"
+                  >
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                  <input
+                    id="seconds-input"
+                    type="text"
+                    class="time-input"
+                    [class.active]="activeTimeInput === 'seconds'"
+                    [value]="selectedTime.seconds | number: '2.0-0'"
+                    (keydown)="onTimeInputKeyDown($event, 'seconds')"
+                    (blur)="onTimeInputBlur($event, 'seconds')"
+                    (focus)="onTimeInputFocus('seconds')"
+                    [disabled]="disabled"
+                    [attr.aria-label]="'秒数，当前值' + (selectedTime.seconds || 0)"
+                    maxlength="2"
+                  />
+                  <button
+                    type="button"
+                    class="time-adjust-btn"
+                    (click)="decrementTime('seconds')"
+                    [disabled]="disabled"
+                    aria-label="减少秒数"
+                  >
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- AM/PM 切换（仅12小时制） -->
+              <div *ngIf="!hour24Format" class="ampm-toggle">
+                <button
+                  type="button"
+                  class="ampm-btn"
+                  [class.active]="isAm()"
+                  (click)="toggleAmPm()"
+                  [disabled]="disabled"
+                  aria-label="切换上午/下午"
+                >
+                  AM
+                </button>
+                <button
+                  type="button"
+                  class="ampm-btn"
+                  [class.active]="!isAm()"
+                  (click)="toggleAmPm()"
+                  [disabled]="disabled"
+                  aria-label="切换上午/下午"
+                >
+                  PM
+                </button>
+              </div>
+            </div>
+
+            <!-- 当前时间显示 -->
+            <div class="current-time-display">
+              <span class="time-preview">{{ formatTime() }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部操作按钮 -->
+      <div class="panel-footer">
+        <button
+          type="button"
+          class="footer-btn today-btn"
+          (click)="selectQuickPreset('today')"
+          aria-label="选择今天"
+        >
+          今天
+        </button>
+        <div class="footer-spacer"></div>
+        <button
+          type="button"
+          class="footer-btn close-btn"
+          (click)="closePicker()"
+          aria-label="关闭选择器"
+        >
+          关闭
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

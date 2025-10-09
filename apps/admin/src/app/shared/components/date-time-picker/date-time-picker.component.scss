@@ -1,0 +1,1163 @@
+.date-time-picker {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+// 输入区域
+.picker-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-field {
+  flex: 1;
+  width: 100%;
+  padding: 10px 50px 10px 12px;
+  border: 1px solid theme('colors.gray.300');
+  border-radius: theme('borderRadius.lg');
+  font-size: theme('fontSize.sm');
+  line-height: theme('lineHeight.tight');
+  color: theme('colors.gray.900');
+  background-color: theme('colors.white');
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  box-shadow: theme('boxShadow.sm');
+
+  &:focus {
+    outline: none;
+    border-color: theme('colors.primary.DEFAULT');
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), theme('boxShadow.md');
+    background-color: theme('colors.white');
+  }
+
+  &:hover:not(:focus):not(:disabled):not(.readonly) {
+    border-color: theme('colors.gray.400');
+    background-color: theme('colors.white');
+  }
+
+  &:disabled,
+  &.disabled {
+    background-color: theme('colors.gray.100');
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  &.readonly {
+    background-color: theme('colors.gray.50');
+    cursor: default;
+  }
+
+  &::placeholder {
+    color: theme('colors.gray.500');
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background-color: theme('colors.gray.800');
+    border-color: theme('colors.gray.600');
+    color: theme('colors.white');
+
+    &:focus {
+      border-color: theme('colors.primary.DEFAULT');
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+      background-color: theme('colors.gray.700');
+    }
+
+    &:hover:not(:focus):not(:disabled):not(.readonly) {
+      border-color: theme('colors.gray.500');
+      background-color: theme('colors.gray.700');
+    }
+
+    &:disabled,
+    &.disabled {
+      background-color: theme('colors.gray.900);
+    }
+
+    &.readonly {
+      background-color: theme('colors.gray.800');
+    }
+
+    &::placeholder {
+      color: theme('colors.gray.400');
+    }
+  }
+}
+
+.clear-btn {
+  position: absolute;
+  right: 45px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  color: theme('colors.gray.500');
+  cursor: pointer;
+  border-radius: theme('borderRadius.md');
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  z-index: 2;
+
+  &:hover {
+    background-color: theme('colors.gray.100');
+    color: theme('colors.gray.700');
+  }
+
+  &:active {
+    background-color: theme('colors.gray.200');
+    color: theme('colors.gray.900);
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    color: theme('colors.gray.400');
+
+    &:hover {
+      background-color: theme('colors.gray.700');
+      color: theme('colors.gray.200);
+    }
+
+    &:active {
+      background-color: theme('colors.gray.600');
+      color: theme('colors.white');
+    }
+  }
+}
+
+.picker-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  color: theme('colors.gray.500');
+  cursor: pointer;
+  border-radius: theme('borderRadius.md');
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+
+  &:hover:not(:disabled) {
+    background-color: theme('colors.gray.100');
+    color: theme('colors.primary.DEFAULT');
+  }
+
+  &:active:not(:disabled) {
+    background-color: theme('colors.primary.50');
+    color: theme('colors.primary.600');
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    color: theme('colors.gray.400');
+
+    &:hover:not(:disabled) {
+      background-color: theme('colors.gray.700');
+      color: theme('colors.primary.400');
+    }
+
+    &:active:not(:disabled) {
+      background-color: theme('colors.primary.900');
+      color: theme('colors.primary.300');
+    }
+  }
+}
+
+// 选择面板
+.picker-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  min-width: 600px;
+  max-width: 90vw;
+  background-color: theme('colors.white');
+  border: 1px solid theme('colors.gray.200');
+  border-radius: theme('borderRadius.xl');
+  box-shadow: theme('boxShadow.xl'), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  margin-top: 8px;
+  backdrop-filter: blur(8px);
+  animation: slideDown 0.2s ease-out;
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background-color: theme('colors.gray.800');
+    border-color: theme('colors.gray.700');
+    box-shadow: theme('boxShadow.xl'), 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+// 快捷预设区域
+.quick-presets-section {
+  padding: theme('spacing.4');
+  border-bottom: 1px solid theme('colors.gray.100');
+  background: linear-gradient(135deg, theme('colors.gray.50') 0%, theme('colors.white') 100%);
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    border-bottom-color: theme('colors.gray.700');
+    background: linear-gradient(135deg, theme('colors.gray.900') 0%, theme('colors.gray.800') 100%);
+  }
+}
+
+.section-title {
+  font-size: theme('fontSize.xs');
+  font-weight: theme('fontWeight.semibold');
+  color: theme('colors.gray.600');
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: theme('spacing.2');
+  display: flex;
+  align-items: center;
+  gap: theme('spacing.1');
+
+  &::before {
+    content: '';
+    width: 3px;
+    height: 12px;
+    background-color: theme('colors.primary.DEFAULT');
+    border-radius: 2px;
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    color: theme('colors.gray.400');
+  }
+}
+
+.presets-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: theme('spacing.2');
+}
+
+.preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: theme('spacing.2') theme('spacing.3');
+  background: theme('colors.white');
+  border: 1px solid theme('colors.gray.200');
+  border-radius: theme('borderRadius.lg');
+  cursor: pointer;
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  font-size: theme('fontSize.xs');
+  font-weight: theme('fontWeight.medium');
+  color: theme('colors.gray.700');
+  box-shadow: theme('boxShadow.sm');
+
+  &:hover {
+    background-color: theme('colors.primary.50');
+    border-color: theme('colors.primary.300');
+    color: theme('colors.primary.700');
+    transform: translateY(-2px);
+    box-shadow: theme('boxShadow.md'), 0 4px 12px rgba(59, 130, 246, 0.15);
+  }
+
+  &:active {
+    background-color: theme('colors.primary.100');
+    transform: translateY(0);
+    box-shadow: theme('boxShadow.sm');
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background-color: theme('colors.gray.700');
+    border-color: theme('colors.gray.600');
+    color: theme('colors.gray.300');
+
+    &:hover {
+      background-color: theme('colors.primary.900');
+      border-color: theme('colors.primary.600');
+      color: theme('colors.primary.300');
+      box-shadow: theme('boxShadow.md'), 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    &:active {
+      background-color: theme('colors.primary.800');
+    }
+  }
+}
+
+.preset-icon {
+  font-size: theme('fontSize.base');
+  margin-bottom: 2px;
+  transition: transform theme('transitionDuration.150') theme('transitionTimingFunction.default');
+}
+
+.preset-btn:hover .preset-icon {
+  transform: scale(1.1);
+}
+
+.preset-label {
+  font-weight: theme('fontWeight.medium');
+  color: inherit;
+  text-align: center;
+}
+
+// 主要选择区域：日期和时间并排显示
+.main-selection-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+// 日期选择区域
+.date-selection-section {
+  flex: 1;
+  padding: theme('spacing.4');
+  border-right: 1px solid theme('colors.gray.100');
+  display: flex;
+  flex-direction: column;
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    border-right-color: theme('colors.gray.700);
+  }
+}
+
+.date-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: theme('spacing.3');
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: theme('colors.white');
+  border: 1px solid theme('colors.gray.300');
+  color: theme('colors.gray.600');
+  cursor: pointer;
+  border-radius: theme('borderRadius.full');
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  font-weight: theme('fontWeight.medium');
+  box-shadow: theme('boxShadow.sm');
+
+  &:hover {
+    background-color: theme('colors.primary.50');
+    border-color: theme('colors.primary.300');
+    color: theme('colors.primary.DEFAULT');
+    transform: scale(1.05);
+    box-shadow: theme('boxShadow.md');
+  }
+
+  &:active {
+    background-color: theme('colors.primary.100');
+    transform: scale(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid theme('colors.primary.DEFAULT');
+    outline-offset: 2px;
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background-color: theme('colors.gray.700');
+    border-color: theme('colors.gray.600');
+    color: theme('colors.gray.400');
+
+    &:hover {
+      background-color: theme('colors.primary.900');
+      border-color: theme('colors.primary.600');
+      color: theme('colors.primary.400);
+    }
+
+    &:active {
+      background-color: theme('colors.primary.800');
+    }
+  }
+}
+
+.month-title {
+  font-size: theme('fontSize.sm');
+  font-weight: theme('fontWeight.semibold');
+  color: theme('colors.gray.900');
+  text-align: center;
+  min-width: 100px;
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    color: theme('colors.white');
+  }
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: theme('spacing.1');
+}
+
+.weekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  font-size: theme('fontSize.xs');
+  font-weight: theme('fontWeight.semibold');
+  color: theme('colors.gray.600');
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    color: theme('colors.gray.400');
+  }
+}
+
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  flex: 1;
+}
+
+.day-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: theme('borderRadius.lg');
+  font-size: theme('fontSize.sm');
+  font-weight: theme('fontWeight.medium');
+  color: theme('colors.gray.700');
+  cursor: pointer;
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  position: relative;
+  overflow: hidden;
+
+  &:hover:not(.disabled):not(.selected) {
+    background-color: theme('colors.gray.100');
+    color: theme('colors.gray.900');
+    transform: scale(1.05);
+    box-shadow: theme('boxShadow.sm');
+  }
+
+  &.other-month {
+    color: theme('colors.gray.400);
+    opacity: 0.6;
+
+    &:hover:not(.disabled) {
+      color: theme('colors.gray.600);
+      background-color: theme('colors.gray.50');
+    }
+  }
+
+  &.today {
+    background: linear-gradient(135deg, theme('colors.primary.50') 0%, theme('colors.primary.100') 100%);
+    color: theme('colors.primary.700');
+    font-weight: theme('fontWeight.semibold');
+    border-color: theme('colors.primary.300');
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 6px;
+      height: 6px;
+      background-color: theme('colors.primary.DEFAULT');
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px theme('colors.white');
+    }
+
+    &:hover:not(.selected) {
+      background: linear-gradient(135deg, theme('colors.primary.100') 0%, theme('colors.primary.200') 100%);
+      transform: scale(1.05);
+      box-shadow: theme('boxShadow.md'), 0 0 0 1px theme('colors.primary.300');
+    }
+  }
+
+  &.selected {
+    background: linear-gradient(135deg, theme('colors.primary.DEFAULT') 0%, theme('colors.primary.600') 100%);
+    color: theme('colors.white');
+    font-weight: theme('fontWeight.semibold');
+    border-color: theme('colors.primary.500');
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    transform: scale(1.05);
+
+    &::before {
+      content: '✓';
+      position: absolute;
+      top: 1px;
+      right: 4px;
+      font-size: 10px;
+      font-weight: theme('fontWeight.bold');
+      color: theme('colors.white');
+    }
+
+    &:hover {
+      background: linear-gradient(135deg, theme('colors.primary.hover') 0%, theme('colors.primary.700') 100%);
+      transform: scale(1.08);
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    }
+  }
+
+  &.hovered:not(.selected):not(.disabled):not(.today) {
+    background-color: theme('colors.primary.50');
+    color: theme('colors.primary.700');
+    border-color: theme('colors.primary.200');
+  }
+
+  &.disabled {
+    color: theme('colors.gray.300');
+    cursor: not-allowed;
+    opacity: 0.4;
+
+    &:hover {
+      background-color: transparent;
+      transform: none;
+      box-shadow: none;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid theme('colors.primary.DEFAULT');
+    outline-offset: 2px;
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    color: theme('colors.gray.300');
+
+    &:hover:not(.disabled):not(.selected) {
+      background-color: theme('colors.gray.700');
+      color: theme('colors.white');
+    }
+
+    &.other-month {
+      color: theme('colors.gray.600);
+
+      &:hover:not(.disabled) {
+        color: theme('colors.gray.400);
+        background-color: theme('colors.gray.800');
+      }
+    }
+
+    &.today {
+      background: linear-gradient(135deg, theme('colors.primary.900') 0%, theme('colors.primary.800') 100%);
+      color: theme('colors.primary.300');
+      border-color: theme('colors.primary.600');
+
+      &::before {
+        box-shadow: 0 0 0 2px theme('colors.gray.800');
+      }
+
+      &:hover:not(.selected) {
+        background: linear-gradient(135deg, theme('colors.primary.800') 0%, theme('colors.primary.700') 100%);
+      }
+    }
+
+    &.selected {
+      background: linear-gradient(135deg, theme('colors.primary.600') 0%, theme('colors.primary.700') 100%);
+      color: theme('colors.white');
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    &.disabled {
+      color: theme('colors.gray.600);
+    }
+  }
+}
+
+// 时间选择区域
+.time-selection-section {
+  flex: 1;
+  padding: theme('spacing.4');
+  display: flex;
+  flex-direction: column;
+  gap: theme('spacing.4');
+}
+
+.time-presets-section {
+  margin-bottom: theme('spacing.2');
+}
+
+.time-section-title {
+  font-size: theme('fontSize.xs');
+  font-weight: theme('fontWeight.semibold');
+  color: theme('colors.gray.600');
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: theme('spacing.2');
+  display: flex;
+  align-items: center;
+  gap: theme('spacing.1');
+
+  &::before {
+    content: '';
+    width: 3px;
+    height: 12px;
+    background-color: theme('colors.info.DEFAULT');
+    border-radius: 2px;
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    color: theme('colors.gray.400');
+  }
+}
+
+.time-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: theme('spacing.2');
+}
+
+.time-preset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: theme('spacing.2') theme('spacing.3');
+  background: theme('colors.white');
+  border: 1px solid theme('colors.gray.200');
+  border-radius: theme('borderRadius.md');
+  cursor: pointer;
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  font-size: theme('fontSize.xs');
+  font-weight: theme('fontWeight.medium');
+  color: theme('colors.gray.700');
+  box-shadow: theme('boxShadow.sm');
+
+  &:hover {
+    background-color: theme('colors.info.50');
+    border-color: theme('colors.info.300');
+    color: theme('colors.info.700);
+    transform: translateY(-1px);
+    box-shadow: theme('boxShadow.md');
+  }
+
+  &:active {
+    background-color: theme('colors.info.100');
+    transform: translateY(0);
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background-color: theme('colors.gray.700');
+    border-color: theme('colors.gray.600');
+    color: theme('colors.gray.300');
+
+    &:hover {
+      background-color: theme('colors.info.900');
+      border-color: theme('colors.info.600');
+      color: theme('colors.info.300');
+    }
+  }
+}
+
+.time-inputs-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.time-inputs {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: theme('spacing.2');
+  flex-wrap: wrap;
+}
+
+.time-input-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: theme('spacing.1);
+}
+
+.time-input-label {
+  font-size: theme('fontSize.xs');
+  font-weight: theme('fontWeight.medium');
+  color: theme('colors.gray.600);
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    color: theme('colors.gray.400');
+  }
+}
+
+.time-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: theme('spacing.1');
+}
+
+.time-adjust-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+  background: theme('colors.white');
+  border: 1px solid theme('colors.gray.300');
+  color: theme('colors.gray.600);
+  cursor: pointer;
+  border-radius: theme('borderRadius.sm');
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+
+  &:hover:not(:disabled) {
+    background-color: theme('colors.info.50');
+    border-color: theme('colors.info.300');
+    color: theme('colors.info.DEFAULT');
+    transform: scale(1.05);
+  }
+
+  &:active:not(:disabled) {
+    background-color: theme('colors.info.100');
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background-color: theme('colors.gray.700');
+    border-color: theme('colors.gray.600');
+    color: theme('colors.gray.400);
+
+    &:hover:not(:disabled) {
+      background-color: theme('colors.info.900');
+      border-color: theme('colors.info.600');
+      color: theme('colors.info.400');
+    }
+  }
+}
+
+.time-input {
+  width: 50px;
+  height: 36px;
+  text-align: center;
+  border: 2px solid theme('colors.gray.300');
+  border-radius: theme('borderRadius.md');
+  font-size: theme('fontSize.sm');
+  font-weight: theme('fontWeight.semibold');
+  color: theme('colors.gray.900');
+  background-color: theme('colors.white');
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+
+  &:focus {
+    outline: none;
+    border-color: theme('colors.info.DEFAULT');
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+    background-color: theme('colors.info.50');
+  }
+
+  &.active {
+    border-color: theme('colors.info.DEFAULT');
+    background-color: theme('colors.info.50');
+    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+  }
+
+  &:hover:not(:focus):not(:disabled) {
+    border-color: theme('colors.gray.400');
+    background-color: theme('colors.gray.50');
+  }
+
+  &:disabled {
+    background-color: theme('colors.gray.100');
+    color: theme('colors.gray.500');
+    cursor: not-allowed;
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background-color: theme('colors.gray.700');
+    border-color: theme('colors.gray.600');
+    color: theme('colors.white');
+
+    &:focus,
+    &.active {
+      border-color: theme('colors.info.DEFAULT');
+      background-color: theme('colors.info.900');
+      box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25);
+    }
+
+    &:hover:not(:focus):not(:disabled) {
+      border-color: theme('colors.gray.500');
+      background-color: theme('colors.gray.600');
+    }
+
+    &:disabled {
+      background-color: theme('colors.gray.800');
+      color: theme('colors.gray.600);
+    }
+  }
+}
+
+.time-separator {
+  font-size: theme('fontSize.lg');
+  font-weight: theme('fontWeight.bold');
+  color: theme('colors.gray.600');
+  margin-top: theme('spacing.5');
+  user-select: none;
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    color: theme('colors.gray.400');
+  }
+}
+
+.ampm-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: theme('spacing.1);
+  margin-top: theme('spacing.1');
+}
+
+.ampm-btn {
+  padding: theme('spacing.1') theme('spacing.2');
+  min-width: 40px;
+  height: 32px;
+  background: theme('colors.white');
+  border: 1px solid theme('colors.gray.300');
+  border-radius: theme('borderRadius.md');
+  font-size: theme('fontSize.xs');
+  font-weight: theme('fontWeight.semibold');
+  color: theme('colors.gray.600');
+  cursor: pointer;
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+
+  &:hover:not(:disabled) {
+    background-color: theme('colors.gray.50');
+    border-color: theme('colors.gray.400');
+    color: theme('colors.gray.800');
+  }
+
+  &.active {
+    background-color: theme('colors.info.DEFAULT');
+    border-color: theme('colors.info.DEFAULT');
+    color: theme('colors.white');
+    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background-color: theme('colors.gray.700');
+    border-color: theme('colors.gray.600');
+    color: theme('colors.gray.400);
+
+    &:hover:not(:disabled) {
+      background-color: theme('colors.gray.600');
+      border-color: theme('colors.gray.500');
+      color: theme('colors.gray.200);
+    }
+
+    &.active {
+      background-color: theme('colors.info.600');
+      border-color: theme('colors.info.600');
+      color: theme('colors.white');
+    }
+  }
+}
+
+.current-time-display {
+  display: flex;
+  justify-content: center;
+  padding: theme('spacing.2');
+  background: linear-gradient(135deg, theme('colors.info.50') 0%, theme('colors.info.100') 100%);
+  border-radius: theme('borderRadius.lg');
+  border: 1px solid theme('colors.info.200);
+  margin-top: theme('spacing.2');
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background: linear-gradient(135deg, theme('colors.info.900') 0%, theme('colors.info.800') 100%);
+    border-color: theme('colors.info.700');
+  }
+}
+
+.time-preview {
+  font-size: theme('fontSize.sm');
+  font-weight: theme('fontWeight.semibold');
+  color: theme('colors.info.700');
+  font-family: theme('fontFamily.mono');
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    color: theme('colors.info.300');
+  }
+}
+
+// 底部操作按钮
+.panel-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: theme('spacing.3') theme('spacing.4');
+  border-top: 1px solid theme('colors.gray.100');
+  background: linear-gradient(135deg, theme('colors.gray.50') 0%, theme('colors.white') 100%);
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    border-top-color: theme('colors.gray.700');
+    background: linear-gradient(135deg, theme('colors.gray.900') 0%, theme('colors.gray.800') 100%);
+  }
+}
+
+.footer-spacer {
+  flex: 1;
+}
+
+.footer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: theme('spacing.2') theme('spacing.4');
+  font-size: theme('fontSize.sm');
+  font-weight: theme('fontWeight.medium');
+  border: 1px solid theme('colors.gray.300');
+  border-radius: theme('borderRadius.lg');
+  background-color: theme('colors.white');
+  color: theme('colors.gray.700');
+  cursor: pointer;
+  transition: all theme('transitionDuration.150') theme('transitionTimingFunction.default');
+  box-shadow: theme('boxShadow.sm');
+  min-width: 70px;
+
+  &:hover {
+    background-color: theme('colors.gray.50');
+    border-color: theme('colors.gray.400');
+    color: theme('colors.gray.900');
+    transform: translateY(-1px);
+    box-shadow: theme('boxShadow.md');
+  }
+
+  &:active {
+    background-color: theme('colors.gray.100');
+    transform: translateY(0);
+    box-shadow: theme('boxShadow.sm');
+  }
+
+  &:focus-visible {
+    outline: 2px solid theme('colors.primary.DEFAULT');
+    outline-offset: 2px;
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background-color: theme('colors.gray.700');
+    border-color: theme('colors.gray.600');
+    color: theme('colors.gray.300);
+
+    &:hover {
+      background-color: theme('colors.gray.600');
+      border-color: theme('colors.gray.500');
+      color: theme('colors.white');
+    }
+
+    &:active {
+      background-color: theme('colors.gray.800');
+    }
+  }
+}
+
+.today-btn {
+  background: linear-gradient(135deg, theme('colors.primary.DEFAULT') 0%, theme('colors.primary.600') 100%);
+  color: theme('colors.white');
+  border-color: theme('colors.primary.DEFAULT');
+  font-weight: theme('fontWeight.semibold');
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+
+  &:hover {
+    background: linear-gradient(135deg, theme('colors.primary.hover') 0%, theme('colors.primary.700') 100%);
+    border-color: theme('colors.primary.hover');
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35);
+  }
+
+  &:active {
+    background: linear-gradient(135deg, theme('colors.primary.700') 0%, theme('colors.primary.800') 100%);
+    transform: translateY(0);
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    background: linear-gradient(135deg, theme('colors.primary.600') 0%, theme('colors.primary.700') 100%);
+    border-color: theme('colors.primary.600');
+
+    &:hover {
+      background: linear-gradient(135deg, theme('colors.primary.500') 0%, theme('colors.primary.600') 100%);
+    }
+  }
+}
+
+.close-btn {
+  border-color: theme('colors.gray.300');
+  color: theme('colors.gray.600);
+
+  &:hover {
+    background-color: theme('colors.gray.50');
+    border-color: theme('colors.gray.400');
+    color: theme('colors.gray.800);
+  }
+
+  // 暗色模式
+  @media (prefers-color-scheme: dark) {
+    border-color: theme('colors.gray.600');
+    color: theme('colors.gray.400);
+
+    &:hover {
+      background-color: theme('colors.gray.700');
+      border-color: theme('colors.gray.500');
+      color: theme('colors.gray.200);
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .picker-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 95vw;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    margin-top: 0;
+  }
+
+  .main-selection-area {
+    flex-direction: column;
+  }
+
+  .date-selection-section {
+    border-right: none;
+    border-bottom: 1px solid theme('colors.gray.100');
+
+    // 暗色模式
+    @media (prefers-color-scheme: dark) {
+      border-bottom-color: theme('colors.gray.700');
+    }
+  }
+
+  .presets-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .time-presets-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .time-inputs {
+    flex-direction: column;
+    align-items: center;
+    gap: theme('spacing.3');
+  }
+
+  .ampm-toggle {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: theme('spacing.2');
+  }
+
+  .day-btn {
+    width: 32px;
+    height: 32px;
+    font-size: theme('fontSize.xs');
+  }
+
+  .nav-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .month-title {
+    font-size: theme('fontSize.xs');
+  }
+}
+
+// 减少动画偏好支持
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+// 高对比度模式支持
+@media (prefers-contrast: high) {
+  .day-btn,
+  .nav-btn,
+  .footer-btn {
+    border-width: 2px;
+
+    &.selected {
+      border-color: theme('colors.black');
+    }
+
+    &.today {
+      border-color: theme('colors.primary.DEFAULT');
+    }
+  }
+
+  .time-input {
+    border-width: 2px;
+
+    &:focus,
+    &.active {
+      border-color: theme('colors.black');
+    }
+  }
+
+  .ampm-btn {
+    border-width: 2px;
+
+    &.active {
+      border-color: theme('colors.black');
+    }
+  }
+}

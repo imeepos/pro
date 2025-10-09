@@ -19,6 +19,7 @@ import {
   TagSelectorComponent,
   AttachmentUploaderComponent
 } from './components';
+import { DateTimePickerComponent } from '../../shared/components/date-time-picker';
 
 @Component({
   selector: 'app-event-editor',
@@ -30,7 +31,8 @@ import {
     AddressCascaderComponent,
     AmapPickerComponent,
     TagSelectorComponent,
-    AttachmentUploaderComponent
+    AttachmentUploaderComponent,
+    DateTimePickerComponent
   ],
   templateUrl: './event-editor.component.html',
   host: { class: 'block h-full' }
@@ -137,7 +139,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
           eventTypeId: event.eventTypeId,
           industryTypeId: event.industryTypeId,
           summary: event.summary,
-          occurTime: event.occurTime,
+          occurTime: event.occurTime ? new Date(event.occurTime) : null,
           province: event.province,
           city: event.city,
           district: event.district,
@@ -220,12 +222,20 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   private save(): void {
     const formValue = this.eventForm.value;
 
+    // 转换日期格式
+    const processedValue = {
+      ...formValue,
+      occurTime: formValue.occurTime instanceof Date
+        ? formValue.occurTime.toISOString()
+        : formValue.occurTime
+    };
+
     this.loading = true;
 
     if (this.isEditMode && this.eventId) {
       const updateDto: UpdateEventDto = {
         id: this.eventId!,
-        ...formValue,
+        ...processedValue,
         tagIds: this.selectedTagIds
       };
 
@@ -241,7 +251,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
       });
     } else {
       const createDto: CreateEventDto = {
-        ...formValue,
+        ...processedValue,
         tagIds: this.selectedTagIds
       };
 
