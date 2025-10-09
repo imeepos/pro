@@ -191,9 +191,25 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
    * 动态创建组件实例
    */
   ngAfterViewInit(): void {
+    // 如果已有渲染错误，跳过组件创建
     if (this.hasRenderError) {
       return;
     }
+
+    // 确保 componentHost 已正确初始化
+    if (!this.componentHost) {
+      console.warn('[ShapeComponent] componentHost 未在 ngAfterViewInit 中初始化，延迟创建组件');
+      // 使用 setTimeout 延迟执行，给 Angular 更多的时间完成初始化
+      setTimeout(() => {
+        if (!this.hasRenderError && this.componentHost) {
+          this.createComponent();
+        } else if (!this.componentHost) {
+          this.setRenderError('组件容器初始化失败', 'render');
+        }
+      }, 0);
+      return;
+    }
+
     this.createComponent();
   }
 
@@ -205,6 +221,18 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     try {
+      // 优雅地检查 componentHost 是否已初始化
+      if (!this.componentHost) {
+        this.setRenderError('组件容器未初始化，请稍后重试', 'render');
+        return;
+      }
+
+      // 检查 viewContainerRef 是否可用
+      if (!this.componentHost.viewContainerRef) {
+        this.setRenderError('组件视图容器未准备就绪，请稍后重试', 'render');
+        return;
+      }
+
       const viewContainerRef = this.componentHost.viewContainerRef;
       viewContainerRef.clear();
 
@@ -221,10 +249,10 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
         this.componentRef.changeDetectorRef.detectChanges();
       }
     } catch (error) {
-      this.setRenderError(
-        error instanceof Error ? error.message : '组件创建失败',
-        'render'
-      );
+      // 提供更详细的错误信息以便调试
+      const errorMessage = error instanceof Error ? error.message : '组件创建失败';
+      console.error(`[ShapeComponent] 创建组件失败 (${this.component.type}):`, error);
+      this.setRenderError(errorMessage, 'render');
     }
   }
 
