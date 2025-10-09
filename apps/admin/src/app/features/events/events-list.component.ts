@@ -5,7 +5,9 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { EventsService } from '../../state/events.service';
 import { EventsQuery } from '../../state/events.query';
-import { Event, EventQueryParams, EventStatus, IndustryType, EventType } from '@pro/sdk';
+import { TagsService } from '../../state/tags.service';
+import { TagsQuery } from '../../state/tags.query';
+import { Event, EventQueryParams, EventStatus, IndustryType, EventType, Tag } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
 import {
   EventFilterPanelComponent,
@@ -28,6 +30,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
   events: Event[] = [];
   industryTypes: IndustryType[] = [];
   eventTypes: EventType[] = [];
+  tags: Tag[] = [];
   loading = false;
   error: string | null = null;
   total = 0;
@@ -49,6 +52,8 @@ export class EventsListComponent implements OnInit, OnDestroy {
   constructor(
     private eventsService: EventsService,
     private eventsQuery: EventsQuery,
+    private tagsService: TagsService,
+    private tagsQuery: TagsQuery,
     private router: Router,
     private toastService: ToastService
   ) {}
@@ -78,8 +83,15 @@ export class EventsListComponent implements OnInit, OnDestroy {
       this.total = total;
     });
 
+    this.tagsQuery.tags$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(tags => {
+      this.tags = tags;
+    });
+
     this.loadEvents();
     this.loadFilterData();
+    this.loadTags();
   }
 
   ngOnDestroy(): void {
@@ -111,6 +123,16 @@ export class EventsListComponent implements OnInit, OnDestroy {
       { id: '2', eventName: '市场活动' },
       { id: '3', eventName: '技术更新' }
     ] as EventType[];
+  }
+
+  loadTags(): void {
+    this.tagsService.loadTags().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      error: (error) => {
+        console.error('加载标签列表失败:', error);
+      }
+    });
   }
 
   toggleFilterPanel(): void {
