@@ -380,12 +380,194 @@ await page.click('.home-button');
   - 让 Claude 直接控制浏览器
   - 连接 Playwright 到 Claude 的 computer use 能力
 
+## 微博场景技术选型建议
+
+基于以上分析，针对微博自动化操作的最佳实践：
+
+### 推荐方案：混合架构
+
+```
+Microsoft Playwright MCP (Accessibility Tree)
+    +
+Stagehand 混合模式 (代码 + AI)
+    +
+自建反爬虫策略（微博相对温和）
+```
+
+### 具体实现建议
+
+#### 1. 页面分析层：使用 Accessibility Tree
+```typescript
+// 获取微博首页的可交互元素
+const snapshot = await page.locator('body').ariaSnapshot();
+
+// 输出示例（精简的 YAML 结构）：
+// - navigation
+//   - link "首页" [ref=1]
+//   - link "热搜" [ref=2]
+// - main
+//   - article [ref=3]
+//     - link "用户名" [ref=4]
+//     - button "点赞" [ref=5]
+//     - button "评论" [ref=6]
+```
+
+**优势**：
+- 减少 90% 的数据传输（相比完整 HTML）
+- AI 分析速度提升 5-10 倍
+- 自动过滤广告、统计脚本等无关元素
+
+#### 2. 操作执行层：使用混合模式
+
+**场景一：登录（已知流程）→ 用代码**
+```typescript
+await page.goto('https://weibo.com/login');
+await page.fill('input[name="username"]', username);
+await page.fill('input[name="password"]', password);
+await page.click('button[type="submit"]');
+await page.waitForNavigation();
+```
+
+**场景二：搜索热搜话题（动态变化）→ 用 AI**
+```typescript
+const snapshot = await page.locator('body').ariaSnapshot();
+// 发送给 AI 分析
+const action = await askAI({
+  snapshot,
+  task: "找到热搜榜单中关于'人工智能'的话题并点击"
+});
+// AI 返回：{ type: 'click', ref: 15 }
+await page.click(`[aria-ref="${action.ref}"]`);
+```
+
+**场景三：数据采集（结构化提取）→ 用 extract**
+```typescript
+const posts = await page.extract({
+  instruction: "提取当前页面所有微博的内容、作者、点赞数、评论数",
+  schema: z.object({
+    posts: z.array(z.object({
+      author: z.string(),
+      content: z.string(),
+      likes: z.number(),
+      comments: z.number(),
+      publishTime: z.string()
+    }))
+  })
+});
+```
+
+#### 3. 反爬虫层：自建方案（微博够用）
+
+```typescript
+// Cookie 管理
+const context = await browser.newContext({
+  storageState: 'weibo-cookies.json', // 持久化 Cookie
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...',
+  viewport: { width: 1920, height: 1080 },
+  locale: 'zh-CN'
+});
+
+// 行为模拟
+async function humanClick(page, selector) {
+  const element = await page.locator(selector);
+  const box = await element.boundingBox();
+
+  // 鼠标移动到元素
+  await page.mouse.move(
+    box.x + box.width / 2,
+    box.y + box.height / 2,
+    { steps: 10 }
+  );
+
+  // 随机延迟
+  await page.waitForTimeout(Math.random() * 500 + 200);
+
+  // 点击
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+}
+
+// 频率控制
+const delay = () => new Promise(r =>
+  setTimeout(r, Math.random() * 3000 + 2000)
+);
+```
+
+**微博反爬虫特点**：
+- ✅ 主要依赖 Cookie 验证（已有 Cookie 可直接使用）
+- ✅ 频率限制相对宽松（2-3秒间隔即可）
+- ⚠️ 注意避免：短时间大量操作（如连续点赞100条）
+- ⚠️ 需要处理：登录状态过期（定期刷新 Cookie）
+
+### MCP Server 架构设计
+
+```typescript
+// packages/mcp-weibo/src/index.ts
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { chromium } from 'playwright';
+
+class WeiboMCPServer {
+  private browser: Browser;
+  private context: BrowserContext;
+
+  async initialize() {
+    this.browser = await chromium.launch();
+    this.context = await this.browser.newContext({
+      storageState: './weibo-cookies.json'
+    });
+  }
+
+  // Tool 1: 获取页面状态（Accessibility Tree）
+  async getPageState(url: string) {
+    const page = await this.context.newPage();
+    await page.goto(url);
+    const snapshot = await page.locator('body').ariaSnapshot();
+    return snapshot;
+  }
+
+  // Tool 2: 执行操作
+  async performAction(action: { type: string, ref: string, value?: string }) {
+    const page = this.context.pages()[0];
+
+    switch (action.type) {
+      case 'click':
+        await page.click(`[aria-ref="${action.ref}"]`);
+        break;
+      case 'input':
+        await page.fill(`[aria-ref="${action.ref}"]`, action.value);
+        break;
+      case 'scroll':
+        await page.evaluate(() => window.scrollBy(0, 500));
+        break;
+    }
+
+    return { success: true };
+  }
+
+  // Tool 3: 提取数据
+  async extractData(instruction: string, schema: any) {
+    // 使用 Stagehand 的 extract 或自定义实现
+    const page = this.context.pages()[0];
+    const html = await page.content();
+
+    // 发送给 AI 分析并提取
+    const result = await askAI({
+      html,
+      instruction,
+      schema
+    });
+
+    return result;
+  }
+}
+```
+
 ## 技术栈
 
 - **MCP SDK**：@modelcontextprotocol/sdk
 - **Playwright**：浏览器自动化
 - **TypeScript**：类型安全
 - **Zod**：参数验证
+- **可选**：@browserbasehq/stagehand（混合模式支持）
 
 ## 注意事项
 
@@ -395,18 +577,76 @@ await page.click('.home-button');
 4. **资源管理**：及时关闭浏览器实例，避免内存泄漏
 5. **日志记录**：记录所有操作和决策过程，便于调试
 
+## 技术决策总结
+
+基于以上研究，我们已经明确了以下技术选型：
+
+| 决策点 | 选择 | 理由 |
+|--------|------|------|
+| MCP Server 位置 | ✅ 独立包（packages/mcp-weibo） | 便于独立部署和维护 |
+| 页面分析方案 | ✅ Accessibility Tree（YAML） | 比 HTML 轻量 90%，速度快 5-10 倍 |
+| AI 执行模式 | ✅ 混合模式（代码 + AI） | 已知流程用代码，未知流程用 AI |
+| 反爬虫方案 | ✅ 自建（Cookie + 频率控制） | 微博反爬虫温和，无需付费服务 |
+| 浏览器实例 | ✅ 长期保持 BrowserContext | 保持登录状态，减少重复登录 |
+| Cookie 存储 | ✅ JSON 文件 + 加密 | 简单且支持持久化 |
+
 ## 待讨论问题
 
-1. MCP Server 是独立服务还是集成到现有项目？
-2. 浏览器实例是长期保持还是按需创建？
-3. Cookie 存储方式和更新机制？
-4. 如何定义"任务完成"的标准？
-5. 需要支持多账号并发操作吗？
-6. 是否需要验证码处理机制？
+### 1. Cookie 更新机制 ⚠️
+- **问题**：Cookie 过期后如何自动刷新？
+- **选项**：
+  - A. 定时任务自动访问微博刷新（推荐）
+  - B. 失败后提示用户重新登录
+  - C. 集成自动登录（需要处理验证码）
 
-## 下一步
+### 2. 多账号支持 🤔
+- **问题**：是否需要支持多个微博账号同时操作？
+- **影响**：
+  - 单账号：简单，一个 BrowserContext
+  - 多账号：复杂，需要管理多个 Context 和 Cookie
 
-请确认：
-1. 这个方案是否符合你的预期？
-2. 有哪些需要调整或补充的地方？
-3. 优先级最高的是哪个部分？
+### 3. 验证码处理 🔐
+- **问题**：登录时遇到验证码怎么办？
+- **选项**：
+  - A. 不处理（使用已有 Cookie，避免登录）
+  - B. 人工介入（暂停等待用户输入）
+  - C. 第三方验证码识别服务（成本高）
+
+### 4. 任务完成标准 🎯
+- **问题**：如何判断一个任务是否完成？
+- **建议**：
+  - 简单任务：操作成功即完成（如点赞）
+  - 复杂任务：AI 观察页面状态判断（如"发布微博并确认成功"）
+
+### 5. 错误恢复策略 🔄
+- **问题**：操作失败后如何处理？
+- **建议**：
+  - 元素找不到：重试 3 次，间隔 1 秒
+  - 网络错误：重试 3 次，指数退避
+  - Cookie 过期：触发 Cookie 更新流程
+  - 页面结构变化：切换到 AI 模式尝试
+
+## 下一步行动
+
+### 阶段一优先级（建议从这里开始）：
+
+1. **创建基础 MCP Server 框架** ⭐⭐⭐
+   - 初始化 packages/mcp-weibo 项目
+   - 集成 Playwright + MCP SDK
+   - 实现 Cookie 加载功能
+
+2. **实现 Accessibility Tree 获取** ⭐⭐⭐
+   - 测试 `ariaSnapshot()` API
+   - 验证 YAML 输出格式
+   - 确认对微博页面的支持程度
+
+3. **验证反爬虫策略** ⭐⭐
+   - 使用已有 Cookie 访问微博
+   - 测试不同频率的操作
+   - 确认是否触发风控
+
+### 请确认：
+
+1. **技术选型是否认可？** 特别是 Accessibility Tree + 混合模式的组合
+2. **待讨论问题的优先级？** 哪些需要立即决策，哪些可以后续迭代
+3. **下一步从哪里开始？** 是否从"阶段一优先级"的任务开始实施
