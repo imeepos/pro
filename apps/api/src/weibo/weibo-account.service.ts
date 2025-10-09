@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  forwardRef,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
@@ -9,6 +11,7 @@ import {
   WeiboAccountEntity,
   WeiboAccountStatus,
 } from '../entities/weibo-account.entity';
+import { ScreensGateway } from '../screens/screens.gateway';
 
 /**
  * 微博账号管理服务
@@ -19,6 +22,8 @@ export class WeiboAccountService {
   constructor(
     @InjectRepository(WeiboAccountEntity)
     private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
+    @Inject(forwardRef(() => ScreensGateway))
+    private readonly screensGateway: ScreensGateway,
   ) {}
 
   /**
@@ -64,6 +69,9 @@ export class WeiboAccountService {
 
     await this.weiboAccountRepo.delete(accountId);
 
+    // 推送微博用户统计更新
+    await this.notifyWeiboStatsUpdate();
+
     return { success: true };
   }
 
@@ -97,5 +105,18 @@ export class WeiboAccountService {
       todayNew,
       online,
     };
+  }
+
+  /**
+   * 推送微博用户统计更新
+   * 在账号数据变化时主动推送最新统计
+   */
+  private async notifyWeiboStatsUpdate() {
+    try {
+      const stats = await this.getLoggedInUsersStats();
+      this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
+    } catch (error) {
+      console.error('推送微博用户统计更新失败:', error);
+    }
   }
 }

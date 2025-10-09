@@ -1,9 +1,10 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
 import { Subject, Observable } from 'rxjs';
 import { WeiboAccountEntity } from '../entities/weibo-account.entity';
+import { ScreensGateway } from '../screens/screens.gateway';
 
 /**
  * SSE 消息事件类型
@@ -59,6 +60,8 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @InjectRepository(WeiboAccountEntity)
     private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
+    @Inject(forwardRef(() => ScreensGateway))
+    private readonly screensGateway: ScreensGateway,
   ) {}
 
   /**
@@ -420,6 +423,8 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       where: { userId, weiboUid: userInfo.uid },
     });
 
+    let savedAccount: WeiboAccountEntity;
+
     if (existing) {
       // 更新现有账号
       existing.weiboNickname = userInfo.nickname;
@@ -428,21 +433,26 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       existing.status = 'active' as any;
       existing.lastCheckAt = new Date();
 
-      return await this.weiboAccountRepo.save(existing);
+      savedAccount = await this.weiboAccountRepo.save(existing);
+    } else {
+      // 创建新账号
+      const account = this.weiboAccountRepo.create({
+        userId,
+        weiboUid: userInfo.uid,
+        weiboNickname: userInfo.nickname,
+        weiboAvatar: userInfo.avatar,
+        cookies: JSON.stringify(cookies),
+        status: 'active' as any,
+        lastCheckAt: new Date(),
+      });
+
+      savedAccount = await this.weiboAccountRepo.save(account);
     }
 
-    // 创建新账号
-    const account = this.weiboAccountRepo.create({
-      userId,
-      weiboUid: userInfo.uid,
-      weiboNickname: userInfo.nickname,
-      weiboAvatar: userInfo.avatar,
-      cookies: JSON.stringify(cookies),
-      status: 'active' as any,
-      lastCheckAt: new Date(),
-    });
+    // 推送微博用户统计更新
+    await this.notifyWeiboStatsUpdate();
 
-    return await this.weiboAccountRepo.save(account);
+    return savedAccount;
   }
 
   /**
@@ -468,5 +478,38 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
 
     // 移除会话
     this.loginSessions.delete(sessionId);
+  }
+
+  /**
+   * 推送微博用户统计更新
+   * 在账号数据变化时主动推送最新统计
+   */
+  private async notifyWeiboStatsUpdate() {
+    try {
+      // 获取微博用户统计
+      const total = await this.weiboAccountRepo.count();
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const todayNew = await this.weiboAccountRepo.count({
+        where: {
+          createdAt: {
+            $gte: today,
+          } as any,
+        },
+      });
+
+      const online = await this.weiboAccountRepo.count({
+        where: {
+          status: 'active' as any,
+        },
+      });
+
+      const stats = { total, todayNew, online };
+      this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
+    } catch (error) {
+      this.logger.error('推送微博用户统计更新失败:', error);
+    }
   }
 }

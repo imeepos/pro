@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WeiboAccountEntity, WeiboAccountStatus } from '../entities/weibo-account.entity';
 import axios, { AxiosError } from 'axios';
+import { ScreensGateway } from '../screens/screens.gateway';
 
 /**
  * 账号检查结果接口
@@ -58,6 +59,8 @@ export class WeiboHealthCheckService {
   constructor(
     @InjectRepository(WeiboAccountEntity)
     private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
+    @Inject(forwardRef(() => ScreensGateway))
+    private readonly screensGateway: ScreensGateway,
   ) {}
 
   /**
@@ -189,6 +192,11 @@ export class WeiboHealthCheckService {
         `账号 ${accountId} 检查完成: ${oldStatus} -> ${newStatus}${statusChanged ? ' (状态已变更)' : ''}`,
       );
 
+      // 如果状态发生变化，推送统计更新
+      if (statusChanged) {
+        await this.notifyWeiboStatsUpdate();
+      }
+
       return {
         accountId: account.id,
         weiboUid: account.weiboUid,
@@ -307,6 +315,39 @@ export class WeiboHealthCheckService {
 
     this.logger.log(`批量检查完成: ${JSON.stringify(summary)}`);
     return summary;
+  }
+
+  /**
+   * 推送微博用户统计更新
+   * 在账号状态变化时主动推送最新统计
+   */
+  private async notifyWeiboStatsUpdate() {
+    try {
+      // 获取微博用户统计
+      const total = await this.weiboAccountRepo.count();
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const todayNew = await this.weiboAccountRepo.count({
+        where: {
+          createdAt: {
+            $gte: today,
+          } as any,
+        },
+      });
+
+      const online = await this.weiboAccountRepo.count({
+        where: {
+          status: WeiboAccountStatus.ACTIVE,
+        },
+      });
+
+      const stats = { total, todayNew, online };
+      this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
+    } catch (error) {
+      this.logger.error('推送微博用户统计更新失败:', error);
+    }
   }
 
   /**

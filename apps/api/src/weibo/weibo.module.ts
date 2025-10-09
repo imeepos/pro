@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { WeiboAccountEntity } from '../entities/weibo-account.entity';
@@ -10,6 +10,7 @@ import { WeiboHealthCheckService } from './weibo-health-check.service';
 import { WeiboHealthCheckScheduler } from './weibo-health-check.scheduler';
 import { WeiboSearchTaskController } from './weibo-search-task.controller';
 import { WeiboSearchTaskService } from './weibo-search-task.service';
+import { ScreensModule } from '../screens/screens.module';
 
 /**
  * 微博模块
@@ -22,6 +23,7 @@ import { WeiboSearchTaskService } from './weibo-search-task.service';
       WeiboSearchTaskEntity,
     ]),
     ScheduleModule.forRoot(),
+    forwardRef(() => ScreensModule),
   ],
   controllers: [
     WeiboController,

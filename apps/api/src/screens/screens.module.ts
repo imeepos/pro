@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ScreensController } from './screens.controller';
@@ -13,7 +13,7 @@ import { getJwtConfig } from '../config';
   imports: [
     TypeOrmModule.forFeature([ScreenPageEntity]),
     JwtModule.register(getJwtConfig()),
-    WeiboModule,
+    forwardRef(() => WeiboModule),
   ],
   controllers: [ScreensController],
   providers: [ScreensService, ScreensGateway, ScreensStatsScheduler],
