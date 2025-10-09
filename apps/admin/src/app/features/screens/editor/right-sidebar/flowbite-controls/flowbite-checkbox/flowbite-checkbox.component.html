@@ -1,0 +1,45 @@
+<div class="flowbite-checkbox-wrapper" [class]="containerClasses">
+  <div class="flex items-center h-5">
+    <input
+      [id]="checkboxId"
+      type="checkbox"
+      [class]="checkboxClasses"
+      [checked]="checked"
+      [indeterminate]="indeterminate"
+      [disabled]="disabled"
+      [readonly]="readonly"
+      [required]="required"
+      [attr.aria-required]="required"
+      [attr.aria-disabled]="disabled"
+      [attr.aria-readonly]="readonly"
+      [attr.aria-invalid]="!!errorText"
+      (change)="onCheckboxChange($event)"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+    />
+
+    @if (label) {
+      <label
+        [for]="checkboxId"
+        [class]="labelClasses"
+        [class.text-red-600]="errorText"
+        (click)="onToggle()"
+      >
+        {{ label }}
+        @if (required) {
+          <span class="text-red-500 ml-1">*</span>
+        }
+      </label>
+    }
+  </div>
+
+  <!-- Helper Text -->
+  @if (helperText && !errorText) {
+    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 ml-6">{{ helperText }}</p>
+  }
+
+  <!-- Error Text -->
+  @if (errorText) {
+    <p class="mt-1 text-xs text-red-600 dark:text-red-400 ml-6">{{ errorText }}</p>
+  }
+</div>

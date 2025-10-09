@@ -94,12 +94,12 @@
         </div>
 
         <!-- Percentage Display -->
-        <span [class]="minMaxClasses">{{ Math.round(percentage) }}%</span>
+        <span [class]="minMaxClasses">{{ roundedPercentage }}%</span>
       </div>
     }
 
     <!-- Mark Labels -->
-    @if (marks && marks.some(mark => mark.label)) {
+    @if (hasMarkLabels) {
       <div class="relative mt-4">
         <div class="flex justify-between">
           @for (mark of marks; track mark.value) {

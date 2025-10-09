@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, forwardRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, forwardRef, ChangeDetectionStrategy, ElementRef, Renderer2, HostListener } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 export interface SelectOption {
@@ -43,6 +43,8 @@ export class FlowbiteSelectComponent implements ControlValueAccessor {
   @Input() clearable: boolean = false;
   @Input() multiple: boolean = false;
   @Input() maxDisplayValues: number = 3;
+
+  constructor(private elementRef: ElementRef) {}
 
   private _options: (SelectOption | SelectGroup)[] = [];
   @Input()
@@ -367,5 +369,15 @@ export class FlowbiteSelectComponent implements ControlValueAccessor {
 
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.elementRef.nativeElement.contains(event.target)) {
+      if (this.isDropdownOpen) {
+        this.isDropdownOpen = false;
+        this.close.emit();
+      }
+    }
   }
 }

@@ -14,7 +14,8 @@
   [style.opacity]="component.style.opacity">
 
   <div class="component-content" *ngIf="!hasRenderError" (mousedown)="onContentMouseDown($event)">
-    <div class="placeholder">
+    <ng-container appComponentHost></ng-container>
+    <div class="placeholder" *ngIf="!getComponentClass()">
       {{ component.type }}
       <span *ngIf="component.isGroup" class="group-badge">组合</span>
       <span *ngIf="component.locked" class="lock-badge">🔒</span>

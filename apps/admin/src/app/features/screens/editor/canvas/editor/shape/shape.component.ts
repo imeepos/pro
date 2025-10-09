@@ -1,4 +1,4 @@
-import { Component, Input, HostListener, ElementRef, OnInit, OnDestroy, ErrorHandler } from '@angular/core';
+import { Component, Input, HostListener, ElementRef, OnInit, OnDestroy, ErrorHandler, ViewChild, AfterViewInit, ComponentRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, combineLatest } from 'rxjs';
 import { CanvasService } from '../../services/canvas.service';
@@ -6,6 +6,8 @@ import { CanvasQuery } from '../../services/canvas.query';
 import { RulerGridService } from '../../services/ruler-grid.service';
 import { ErrorBoundaryService } from '../../services/error-boundary.service';
 import { ComponentEventHandlerService } from '../../../services/component-event-handler.service';
+import { ComponentRegistryService } from '../../../../core/services/component-registry.service';
+import { ComponentHostDirective } from '../../component-host.directive';
 import { ComponentItem, ComponentStyle, Point, ComponentErrorInfo } from '../../../models/component.model';
 import { throttleFrame } from '../../../utils/throttle.util';
 import { GeometryUtil } from '../../../utils/geometry.util';
@@ -14,11 +16,12 @@ import { ContextMenuComponent, MenuItem } from '../context-menu/context-menu.com
 @Component({
   selector: 'app-shape',
   standalone: true,
-  imports: [CommonModule, ContextMenuComponent],
+  imports: [CommonModule, ContextMenuComponent, ComponentHostDirective],
   templateUrl: './shape.component.html',
   styleUrls: ['./shape.component.scss']
 })
-export class ShapeComponent implements OnInit, OnDestroy {
+export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild(ComponentHostDirective, { static: true }) componentHost!: ComponentHostDirective;
   @Input() component!: ComponentItem;
   @Input() editor?: any;
 
@@ -38,13 +41,16 @@ export class ShapeComponent implements OnInit, OnDestroy {
   errorMessage = '';
   showErrorDetails = false;
 
+  private componentRef: ComponentRef<any> | null = null;
+
   constructor(
     private canvasService: CanvasService,
     private query: CanvasQuery,
     private rulerGridService: RulerGridService,
     private errorBoundary: ErrorBoundaryService,
     private elementRef: ElementRef,
-    private eventHandler: ComponentEventHandlerService
+    private eventHandler: ComponentEventHandlerService,
+    private componentRegistry: ComponentRegistryService
   ) {}
 
   isSelected = false;
@@ -135,6 +141,10 @@ export class ShapeComponent implements OnInit, OnDestroy {
     });
 
     this.validateComponent();
+
+    if (!this.hasRenderError) {
+      this.createComponent();
+    }
   }
 
   toggleErrorDetails(): void {
@@ -163,9 +173,67 @@ export class ShapeComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * 从注册表中获取组件类
+   */
+  getComponentClass(): Type<any> | undefined {
+    return this.componentRegistry.get(this.component.type);
+  }
+
+  /**
+   * 获取组件配置参数
+   */
+  getComponentInputs(): Record<string, any> {
+    return this.component.config || {};
+  }
+
+  /**
+   * 动态创建组件实例
+   */
+  ngAfterViewInit(): void {
+    if (this.hasRenderError) {
+      return;
+    }
+    this.createComponent();
+  }
+
+  private createComponent(): void {
+    const componentClass = this.getComponentClass();
+    if (!componentClass) {
+      this.setRenderError(`组件类型 "${this.component.type}" 未注册`, 'render');
+      return;
+    }
+
+    try {
+      const viewContainerRef = this.componentHost.viewContainerRef;
+      viewContainerRef.clear();
+
+      this.componentRef = viewContainerRef.createComponent(componentClass);
+
+      const inputs = this.getComponentInputs();
+      Object.entries(inputs).forEach(([key, value]) => {
+        if (this.componentRef) {
+          this.componentRef.setInput(key, value);
+        }
+      });
+
+      this.componentRef.changeDetectorRef.detectChanges();
+    } catch (error) {
+      this.setRenderError(
+        error instanceof Error ? error.message : '组件创建失败',
+        'render'
+      );
+    }
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+
+    if (this.componentRef) {
+      this.componentRef.destroy();
+      this.componentRef = null;
+    }
   }
 
   @HostListener('mousedown', ['$event'])

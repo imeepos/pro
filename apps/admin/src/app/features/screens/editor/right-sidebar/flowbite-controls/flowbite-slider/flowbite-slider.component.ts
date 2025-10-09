@@ -107,6 +107,18 @@ export class FlowbiteSliderComponent implements ControlValueAccessor {
     return ((this.value - this.min) / range) * 100;
   }
 
+  get roundedPercentage(): number {
+    return Math.round(this.percentage);
+  }
+
+  // 检查marks中是否有标签
+  get hasMarkLabels(): boolean {
+    if (!this.marks || this.marks.length === 0) {
+      return false;
+    }
+    return this.marks.some(mark => mark.label !== undefined && mark.label !== null && mark.label !== '');
+  }
+
   get sliderStyles(): { [key: string]: string } {
     if (this.vertical) {
       return {

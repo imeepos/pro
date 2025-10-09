@@ -1,4 +1,4 @@
-<div class="flowbite-select-wrapper" [class]="containerClasses" cdkOverlayOrigin>
+<div class="flowbite-select-wrapper" [class]="containerClasses">
   @if (label) {
     <label
       [for]="selectId"
@@ -65,12 +65,7 @@
     @if (isDropdownOpen) {
       <div
         [class]="dropdownClasses"
-        cdkConnectedOverlay
-        [cdkConnectedOverlayOrigin]="overlayOrigin"
-        [cdkConnectedOverlayOpen]="isDropdownOpen"
-        [cdkConnectedOverlayHasBackdrop]="true"
-        (backdropClick)="onToggleDropdown()"
-        (detach)="isDropdownOpen = false"
+        (click)="$event.stopPropagation()"
       >
         <!-- Search Input -->
         @if (searchable) {
