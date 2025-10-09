@@ -13,6 +13,13 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
 
+  // Screen Editor - 全屏页面，不使用布局
+  {
+    path: 'screens/editor/:id',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/screens/editor/screen-editor.component').then(m => m.ScreenEditorComponent)
+  },
+
   // 主应用 - 使用布局
   {
     path: '',
@@ -23,10 +30,6 @@ export const routes: Routes = [
       {
         path: 'screens',
         loadComponent: () => import('./features/screens/screens-list.component').then(m => m.ScreensListComponent)
-      },
-      {
-        path: 'screens/editor/:id',
-        loadComponent: () => import('./features/screens/editor/screen-editor.component').then(m => m.ScreenEditorComponent)
       },
       {
         path: 'weibo/accounts',

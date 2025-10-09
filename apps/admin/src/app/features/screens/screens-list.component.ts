@@ -69,7 +69,9 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   }
 
   loadScreens(): void {
-    this.screensService.loadScreens().subscribe({
+    this.screensService.loadScreens().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       error: (error) => {
         console.error('加载页面列表失败:', error);
       }
@@ -85,7 +87,9 @@ export class ScreensListComponent implements OnInit, OnDestroy {
 
     if (!dto) return;
 
-    this.screensService.createScreen(dto).subscribe({
+    this.screensService.createScreen(dto).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (screen) => {
         this.toastService.success('大屏页面创建成功');
         this.router.navigate(['/screens/editor', screen.id]);
@@ -136,7 +140,9 @@ export class ScreensListComponent implements OnInit, OnDestroy {
     const screenName = this.screenToDelete?.name || '未知页面';
     const isDefaultScreen = this.screenToDelete?.isDefault || false;
 
-    this.screensService.deleteScreen(this.screenToDelete.id).subscribe({
+    this.screensService.deleteScreen(this.screenToDelete.id).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success(`页面 "${screenName}" 删除成功`);
 
@@ -171,7 +177,9 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   }
 
   copyScreen(screen: ScreenPage): void {
-    this.screensService.copyScreen(screen.id).subscribe({
+    this.screensService.copyScreen(screen.id).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success('页面复制成功');
       },
@@ -183,7 +191,9 @@ export class ScreensListComponent implements OnInit, OnDestroy {
 
   toggleStatus(screen: ScreenPage): void {
     if (screen.status === 'draft') {
-      this.screensService.publishScreen(screen.id).subscribe({
+      this.screensService.publishScreen(screen.id).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
         next: () => {
           this.toastService.success('页面发布成功');
         },
@@ -192,7 +202,9 @@ export class ScreensListComponent implements OnInit, OnDestroy {
         }
       });
     } else {
-      this.screensService.draftScreen(screen.id).subscribe({
+      this.screensService.draftScreen(screen.id).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
         next: () => {
           this.toastService.success('已设为草稿');
         },
@@ -204,7 +216,9 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   }
 
   setDefault(screen: ScreenPage): void {
-    this.screensService.setDefaultScreen(screen.id).subscribe({
+    this.screensService.setDefaultScreen(screen.id).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success('默认页面设置成功');
       },

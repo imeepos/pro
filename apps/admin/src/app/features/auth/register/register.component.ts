@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../../state/auth.service';
 import { AuthQuery } from '../../../state/auth.query';
 import { validateEmail, validateUsername, validatePassword } from '@pro/utils';
@@ -14,10 +14,11 @@ import { validateEmail, validateUsername, validatePassword } from '@pro/utils';
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.scss']
 })
-export class RegisterComponent implements OnInit {
+export class RegisterComponent implements OnInit, OnDestroy {
   registerForm!: FormGroup;
   loading$!: Observable<boolean>;
   error$!: Observable<string | null>;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private fb: FormBuilder,
@@ -29,6 +30,11 @@ export class RegisterComponent implements OnInit {
     this.initForm();
     this.loading$ = this.authQuery.loading$;
     this.error$ = this.authQuery.error$;
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private initForm(): void {
@@ -81,7 +87,9 @@ export class RegisterComponent implements OnInit {
 
     const { username, email, password } = this.registerForm.value;
 
-    this.authService.register({ username, email, password }).subscribe();
+    this.authService.register({ username, email, password }).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe();
   }
 
   getFieldError(fieldName: string): string {

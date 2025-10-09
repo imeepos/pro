@@ -60,7 +60,9 @@ export class MediaTypeFormComponent implements OnInit, OnDestroy {
     if (!this.mediaTypeId) return;
 
     this.loading = true;
-    this.mediaTypesService.loadMediaTypeById(this.mediaTypeId).subscribe({
+    this.mediaTypesService.loadMediaTypeById(this.mediaTypeId).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (mediaType) => {
         this.mediaTypeForm.patchValue({
           typeCode: mediaType.typeCode,
@@ -102,7 +104,9 @@ export class MediaTypeFormComponent implements OnInit, OnDestroy {
 
   createMediaType(dto: CreateMediaTypeDto): void {
     this.loading = true;
-    this.mediaTypesService.createMediaType(dto).subscribe({
+    this.mediaTypesService.createMediaType(dto).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success('媒体类型创建成功');
         this.router.navigate(['/media-type']);
@@ -118,7 +122,9 @@ export class MediaTypeFormComponent implements OnInit, OnDestroy {
     if (!this.mediaTypeId) return;
 
     this.loading = true;
-    this.mediaTypesService.updateMediaType(this.mediaTypeId, dto).subscribe({
+    this.mediaTypesService.updateMediaType(this.mediaTypeId, dto).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success('媒体类型更新成功');
         this.router.navigate(['/media-type']);

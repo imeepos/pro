@@ -92,7 +92,7 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
 
   // 加载任务列表
   loadTasks(): void {
-    this.service.findAll();
+    this.service.findAll().pipe(takeUntil(this.destroy$)).subscribe();
   }
 
   // 应用筛选条件
@@ -153,7 +153,7 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
 
   // 暂停任务
   pauseTask(task: WeiboSearchTask): void {
-    this.service.pause(task.id).subscribe({
+    this.service.pause(task.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         // 成功处理在 service 中完成
       },
@@ -165,7 +165,7 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
 
   // 恢复任务
   resumeTask(task: WeiboSearchTask): void {
-    this.service.resume(task.id).subscribe({
+    this.service.resume(task.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         // 成功处理在 service 中完成
       },
@@ -177,7 +177,7 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
 
   // 立即执行任务
   runTaskNow(task: WeiboSearchTask): void {
-    this.service.runNow(task.id).subscribe({
+    this.service.runNow(task.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         // 成功处理在 service 中完成
       },
@@ -189,7 +189,7 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
 
   // 删除任务
   deleteTask(task: WeiboSearchTask): void {
-    this.service.delete(task.id).subscribe({
+    this.service.delete(task.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         // 成功处理在 service 中完成
       },

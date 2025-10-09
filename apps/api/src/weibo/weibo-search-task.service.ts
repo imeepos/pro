@@ -115,8 +115,9 @@ export class WeiboSearchTaskService {
       queryBuilder.andWhere('task.enabled = :enabled', { enabled });
     }
 
-    // 排序
-    queryBuilder.orderBy(`task.${sortBy}`, sortOrder);
+    // 排序（转换为大写）
+    const order = (sortOrder?.toUpperCase() || 'DESC') as 'ASC' | 'DESC';
+    queryBuilder.orderBy(`task.${sortBy}`, order);
 
     // 分页
     const offset = (page - 1) * limit;

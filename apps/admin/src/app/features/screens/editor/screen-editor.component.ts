@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DragDropModule, CdkDragDrop, CdkDragStart, CdkDragEnd } from '@angular/cdk/drag-drop';
 import { Subject, takeUntil } from 'rxjs';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { ScreensService } from '../../../state/screens.service';
@@ -28,7 +27,7 @@ interface ToastMessage {
 @Component({
   selector: 'app-screen-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, CanvasComponent, LayerPanelComponent],
+  imports: [CommonModule, FormsModule, CanvasComponent, LayerPanelComponent],
   templateUrl: './screen-editor.component.html',
   styleUrls: ['./screen-editor.component.scss'],
   animations: [
@@ -54,8 +53,6 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   screenId: string = '';
   screen: ScreenPage | null = null;
   loading = false;
-  saving = false;
-  autoSaving = false;
   previewMode = false;
 
   pageName = '';
@@ -66,6 +63,7 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
 
   leftPanelCollapsed = false;
   rightPanelCollapsed = false;
+  layerPanelCollapsed = false;
   searchQuery = '';
   selectedCategory = '全部';
   isDragOver = false;
@@ -73,11 +71,19 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   toasts: Array<ToastMessage> = [];
   private toastCounter = 0;
   private destroy$ = new Subject<void>();
-  private autoSaveTimer?: number;
+  private fallbackSaveTimer?: number;
+  private savingToastTimer?: number;
 
   componentData$ = this.canvasQuery.componentData$;
   selectedComponentIds$ = this.canvasQuery.selectedComponentIds$;
   showGrid$ = this.canvasQuery.showGrid$;
+  snapToGrid$ = this.canvasQuery.snapToGrid$;
+  showMarkLine$ = this.canvasQuery.showMarkLine$;
+  darkTheme$ = this.canvasQuery.darkTheme$;
+
+  // 新增的保存状态流
+  isDirty$ = this.canvasQuery.isDirty$;
+  saveStatus$ = this.canvasQuery.saveStatus$;
 
   private readonly keyboardService = inject(KeyboardService);
 
@@ -97,7 +103,10 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
 
     this.loadAvailableComponents();
     this.loadScreen();
-    this.setupAutoSave();
+    this.setupFallbackSave();
+    this.setupBeforeUnloadListener();
+    this.setupSaveStatusListener();
+    this.setupKeyboardShortcuts();
     this.keyboardService.startListening();
   }
 
@@ -105,8 +114,11 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
     this.keyboardService.stopListening();
     this.destroy$.next();
     this.destroy$.complete();
-    if (this.autoSaveTimer) {
-      clearInterval(this.autoSaveTimer);
+    if (this.fallbackSaveTimer) {
+      clearInterval(this.fallbackSaveTimer);
+    }
+    if (this.savingToastTimer) {
+      clearTimeout(this.savingToastTimer);
     }
   }
 
@@ -185,132 +197,215 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
     this.rightPanelCollapsed = !this.rightPanelCollapsed;
   }
 
+  toggleLayerPanel(): void {
+    this.layerPanelCollapsed = !this.layerPanelCollapsed;
+  }
+
   private loadScreen(): void {
     this.loading = true;
-    this.screensQuery.selectEntity(this.screenId)
+
+    // 1. 先发起详情请求获取完整数据
+    this.screensService.loadScreen(this.screenId)
       .pipe(takeUntil(this.destroy$))
-      .subscribe(screen => {
-        if (screen) {
-          this.screen = screen;
-          this.pageName = screen.name;
+      .subscribe({
+        next: (screen) => {
+          if (screen) {
+            this.screen = screen;
+            this.pageName = screen.name;
 
-          this.canvasService.clearCanvas();
+            // 2. 根据页面配置设置画布尺寸
+            if (screen.layout) {
+              // 使用新的布局配置
+              const canvasWidth = screen.layout.cols * 50; // 每列50px
+              const canvasHeight = screen.layout.rows * 50; // 每行50px
+              this.canvasService.setCanvasSize(canvasWidth, canvasHeight);
+            }
 
-          const componentItems: ComponentItem[] = screen.components.map(comp => ({
-            id: comp.id,
-            type: comp.type,
-            component: comp.type,
-            style: {
-              top: comp.position.y,
-              left: comp.position.x,
-              width: comp.position.width,
-              height: comp.position.height,
-              rotate: 0,
-              zIndex: comp.position.zIndex || 1
-            },
-            config: comp.config || {}
-          }));
+            // 3. 清空画布并加载组件
+            this.canvasService.clearCanvas();
 
-          componentItems.forEach(item => {
-            this.canvasService.addComponent(item);
-          });
+            const componentItems: ComponentItem[] = screen.components.map(comp => ({
+              id: comp.id,
+              type: comp.type,
+              component: comp.type,
+              style: {
+                top: comp.position.y,
+                left: comp.position.x,
+                width: comp.position.width,
+                height: comp.position.height,
+                rotate: 0,
+                zIndex: comp.position.zIndex || 1
+              },
+              config: comp.config || {},
+              dataSource: comp.dataSource,
+              locked: false,
+              display: true,
+              isGroup: false
+            }));
 
+            componentItems.forEach(item => {
+              this.canvasService.addComponent(item);
+            });
+
+            this.loading = false;
+          }
+        },
+        error: (err) => {
           this.loading = false;
+          this.showErrorToast('加载失败', '无法加载页面详情');
+          console.error('Failed to load screen:', err);
         }
       });
-
-    this.screensService.loadScreens().subscribe();
   }
 
-  private setupAutoSave(): void {
-    this.autoSaveTimer = window.setInterval(() => {
-      if (!this.saving && !this.previewMode) {
-        this.autoSave();
+  private setupFallbackSave(): void {
+    // 5分钟兜底保存定时器
+    this.fallbackSaveTimer = window.setInterval(() => {
+      if (this.canvasQuery.getValue().isDirty && !this.previewMode) {
+        this.canvasService.triggerImmediateSave(this.getCurrentPageName());
       }
-    }, 30000);
+    }, 300000); // 5分钟
   }
 
-  backToList(): void {
+  private setupBeforeUnloadListener(): void {
+    // 监听页面离开事件
+    window.addEventListener('beforeunload', (event) => {
+      if (this.canvasQuery.getValue().isDirty) {
+        // 显示浏览器默认的离开提示
+        event.preventDefault();
+        event.returnValue = '您有未保存的更改，确定要离开吗？';
+        return event.returnValue;
+      }
+    });
+  }
+
+  private setupSaveStatusListener(): void {
+    // 监听保存状态变化
+    this.canvasQuery.saveStatus$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(status => {
+      this.handleSaveStatusChange(status);
+    });
+  }
+
+  private handleSaveStatusChange(status: 'saved' | 'saving' | 'unsaved' | 'error'): void {
+    switch (status) {
+      case 'saved':
+        // 只在从保存中或错误状态恢复时显示成功提示
+        const currentStatus = this.canvasQuery.getValue().saveStatus;
+        if (currentStatus === 'saving' || currentStatus === 'error') {
+          this.clearSaveToasts();
+          this.showSuccessToast('保存成功', '页面已自动保存');
+        }
+        break;
+      case 'saving':
+        // 只在长时间保存时才显示提示
+        this.showSavingToastWithDelay();
+        break;
+      case 'error':
+        // 显示保存失败提示
+        this.clearSaveToasts();
+        this.showErrorToast('保存失败', '网络异常，请检查连接后重试');
+        break;
+      case 'unsaved':
+        // 脏数据状态，不需要特别提示
+        break;
+    }
+  }
+
+  private showSavingToast(): void {
+    // 移除之前的保存中提示
+    this.clearSaveToasts();
+    this.showToast({
+      type: 'info',
+      title: '正在保存',
+      message: '页面数据正在保存中...',
+      persistent: true,
+      duration: 0
+    });
+  }
+
+  private showSavingToastWithDelay(): void {
+    // 清除之前的延迟定时器
+    if (this.savingToastTimer) {
+      clearTimeout(this.savingToastTimer);
+    }
+
+    // 如果保存时间超过1秒才显示提示
+    this.savingToastTimer = setTimeout(() => {
+      this.showSavingToast();
+    }, 1000);
+  }
+
+  private clearSaveToasts(): void {
+    // 清除保存中提示的定时器
+    if (this.savingToastTimer) {
+      clearTimeout(this.savingToastTimer);
+      this.savingToastTimer = undefined;
+    }
+
+    // 清除所有与保存相关的toast
+    this.toasts = this.toasts.filter(toast =>
+      !['正在保存', '保存成功', '保存失败'].includes(toast.title)
+    );
+  }
+
+  private setupKeyboardShortcuts(): void {
+    // 添加Ctrl+S 保存快捷键
+    const saveShortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        this.save();
+      }
+    };
+
+    document.addEventListener('keydown', saveShortcut);
+
+    // 确保在组件销毁时移除事件监听器
+    this.destroy$.subscribe(() => {
+      document.removeEventListener('keydown', saveShortcut);
+    });
+  }
+
+  async backToList(): Promise<void> {
+    if (this.canvasQuery.getValue().isDirty) {
+      // 如果有未保存的更改，先保存
+      this.canvasService.triggerImmediateSave(this.getCurrentPageName());
+      // 等待保存完成
+      await this.waitForSaveComplete();
+    }
     this.router.navigate(['/screens']);
   }
 
+  private waitForSaveComplete(): Promise<void> {
+    return new Promise((resolve) => {
+      const checkSaveStatus = () => {
+        if (this.canvasQuery.getValue().saveStatus !== 'saving') {
+          resolve();
+        } else {
+          setTimeout(checkSaveStatus, 100);
+        }
+      };
+      checkSaveStatus();
+    });
+  }
+
   save(): void {
-    if (this.saving) return;
-
-    this.saving = true;
-    const components = this.canvasQuery.getValue().componentData;
-
-    const dto: UpdateScreenDto = {
-      name: this.pageName,
-      layout: {
-        cols: 24,
-        rows: 24
-      },
-      components: components.map(item => ({
-        id: item.id,
-        type: item.type,
-        position: {
-          x: Math.round(item.style.left),
-          y: Math.round(item.style.top),
-          width: Math.round(item.style.width),
-          height: Math.round(item.style.height),
-          zIndex: item.style.zIndex || 1
-        },
-        config: item.config
-      }))
-    };
-
-    this.screensService.updateScreen(this.screenId, dto).subscribe({
-      next: () => {
-        this.saving = false;
-        this.showSuccessToast('保存成功', '页面已成功保存');
-      },
-      error: (error) => {
-        this.saving = false;
-        this.showErrorToast('保存失败', error.message || '保存页面时发生错误');
-      }
-    });
+    // 触发立即保存，包含页面名称
+    this.canvasService.triggerImmediateSave(this.getCurrentPageName());
   }
 
-  private autoSave(): void {
-    if (!this.screen) return;
-
-    this.autoSaving = true;
-    const components = this.canvasQuery.getValue().componentData;
-
-    const dto: UpdateScreenDto = {
-      layout: {
-        cols: 24,
-        rows: 24
-      },
-      components: components.map(item => ({
-        id: item.id,
-        type: item.type,
-        position: {
-          x: Math.round(item.style.left),
-          y: Math.round(item.style.top),
-          width: Math.round(item.style.width),
-          height: Math.round(item.style.height),
-          zIndex: item.style.zIndex || 1
-        },
-        config: item.config
-      }))
-    };
-
-    this.screensService.updateScreen(this.screenId, dto).subscribe({
-      next: () => {
-        this.autoSaving = false;
-      },
-      error: () => {
-        this.autoSaving = false;
-      }
-    });
+  // 为CanvasService提供页面名称
+  private getCurrentPageName(): string {
+    return this.pageName.trim() || this.screen?.name || '未命名页面';
   }
+
+  // 移除原有的autoSave方法，使用CanvasService的智能保存机制
 
   publish(): void {
     this.showWarningToast('确认发布', '正在发布页面...');
 
-    this.screensService.publishScreen(this.screenId).subscribe({
+    this.screensService.publishScreen(this.screenId).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.showSuccessToast('发布成功', '页面已成功发布到生产环境');
       },
@@ -326,25 +421,28 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const dto: UpdateScreenDto = {
-      name: this.pageName
-    };
-
-    this.screensService.updateScreen(this.screenId, dto).subscribe({
-      next: () => {
-        this.showSuccessToast('名称已更新', '页面名称已成功更新');
-      },
-      error: (error) => {
-        this.showErrorToast('更新失败', error.message || '更新页面名称时发生错误');
-      }
-    });
+    // 触发立即保存，包含新的页面名称
+    this.canvasService.triggerImmediateSave(this.getCurrentPageName());
+    this.showSuccessToast('名称已更新', '页面名称正在保存...');
   }
 
-  onDragStarted(event: CdkDragStart): void {
+  onComponentDragStart(event: DragEvent, comp: { type: string; name: string; icon: string; category: string }): void {
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'copy';
+      event.dataTransfer.setData('componentType', comp.type);
+      event.dataTransfer.setData('componentName', comp.name);
+
+      // 创建拖拽时的预览图像
+      const dragImage = event.currentTarget as HTMLElement;
+      if (dragImage) {
+        event.dataTransfer.setDragImage(dragImage, 50, 25);
+      }
+    }
+
     document.body.style.overflow = 'hidden';
   }
 
-  onDragEnded(event: CdkDragEnd): void {
+  onComponentDragEnd(event: DragEvent): void {
     document.body.style.overflow = '';
   }
 
@@ -366,6 +464,18 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
 
   toggleGridLines(): void {
     this.canvasService.toggleGrid();
+  }
+
+  toggleTheme(): void {
+    this.canvasService.toggleTheme();
+  }
+
+  toggleSnapToGrid(): void {
+    this.canvasService.toggleSnapToGrid();
+  }
+
+  toggleMarkLine(): void {
+    this.canvasService.toggleMarkLine();
   }
 
   // Toast通知系统方法

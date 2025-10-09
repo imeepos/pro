@@ -70,6 +70,42 @@
   }
 }
 
+// 保存状态指示器样式
+.save-status-indicator {
+  border-radius: 6px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+  }
+
+  // 保存中状态
+  &:has(.text-blue-600) {
+    background: #eff6ff;
+    border-color: #3b82f6;
+  }
+
+  // 错误状态
+  &:has(.text-red-600) {
+    background: #fef2f2;
+    border-color: #ef4444;
+  }
+
+  // 未保存状态
+  &:has(.text-orange-600) {
+    background: #fff7ed;
+    border-color: #f97316;
+  }
+
+  // 已保存状态
+  &:has(.text-green-600) {
+    background: #f0fdf4;
+    border-color: #22c55e;
+  }
+}
 
 // 旋转动画
 @keyframes spin {

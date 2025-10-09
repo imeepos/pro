@@ -102,7 +102,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   loadEvents(): void {
-    this.eventsService.loadEvents(this.filterParams).subscribe({
+    this.eventsService.loadEvents(this.filterParams).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       error: (error) => {
         console.error('加载事件列表失败:', error);
       }
@@ -110,7 +112,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   loadPopularTags(): void {
-    this.tagsService.loadPopularTags(20).subscribe({
+    this.tagsService.loadPopularTags(20).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       error: (error) => {
         console.error('加载热门标签失败:', error);
       }
@@ -239,7 +243,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.eventsService.deleteEvent(this.eventToDelete.id).subscribe({
+    this.eventsService.deleteEvent(this.eventToDelete.id).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success('事件删除成功');
         this.closeDeleteDialog();
@@ -252,7 +258,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   publishEvent(event: Event): void {
-    this.eventsService.publishEvent(event.id).subscribe({
+    this.eventsService.publishEvent(event.id).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success('事件发布成功');
       },
@@ -263,7 +271,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   archiveEvent(event: Event): void {
-    this.eventsService.archiveEvent(event.id).subscribe({
+    this.eventsService.archiveEvent(event.id).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success('事件归档成功');
       },

@@ -1,7 +1,7 @@
 <div
   class="editor-container"
-  cdkDropList
-  (cdkDropListDropped)="onComponentDrop($event)">
+  (drop)="onComponentDrop($event)"
+  (dragover)="onDragOver($event)">
   <app-mark-line></app-mark-line>
   <app-area
     [rect]="selectionArea"
@@ -12,4 +12,12 @@
     [component]="component"
     [editor]="this">
   </app-shape>
+
+  <app-context-menu
+    *ngIf="showContextMenu"
+    [items]="multiSelectContextMenuItems"
+    [x]="contextMenuX"
+    [y]="contextMenuY"
+    (closed)="closeContextMenu()">
+  </app-context-menu>
 </div>

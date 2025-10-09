@@ -1,22 +1,47 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { CanvasStore } from './canvas.store';
 import { CanvasQuery } from './canvas.query';
 import { SnapshotService } from './snapshot.service';
 import { ComponentItem, ComponentStyle } from '../../models/component.model';
 import { EditMode } from '../../models/canvas.model';
+import { Subject, BehaviorSubject, Observable, merge, timer } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, takeUntil, tap, catchError } from 'rxjs/operators';
+import { ScreenApiService, UpdateScreenDto } from '../../../../../core/services/screen-api.service';
 
 @Injectable({ providedIn: 'root' })
-export class CanvasService {
+export class CanvasService implements OnDestroy {
   private clipboard: ComponentItem[] = [];
+  private destroy$ = new Subject<void>();
+  private saveTrigger$ = new Subject<void>();
+  private immediateSave$ = new Subject<void>();
+  private currentPageId: string | null = null;
+  private readonly DEBOUNCE_TIME = 2500; // 2.5秒防抖时间
 
   constructor(
     private store: CanvasStore,
     private query: CanvasQuery,
-    private snapshotService: SnapshotService
-  ) {}
+    private snapshotService: SnapshotService,
+    private screenApi: ScreenApiService
+  ) {
+    this.initAutoSave();
+  }
 
   initPage(pageId: string): void {
+    this.currentPageId = pageId;
     this.snapshotService.setPageId(pageId);
+    this.setDirty(false);
+    this.setSaveStatus('saved');
+  }
+
+  setCanvasSize(width: number, height: number): void {
+    this.store.update(state => ({
+      canvasStyle: {
+        ...state.canvasStyle,
+        width,
+        height
+      }
+    }));
+    this.triggerAutoSave();
   }
 
   addComponent(component: ComponentItem): void {
@@ -24,6 +49,7 @@ export class CanvasService {
       componentData: [...state.componentData, component]
     }));
     this.recordSnapshot();
+    this.triggerAutoSave();
   }
 
   removeComponent(id: string): void {
@@ -32,6 +58,7 @@ export class CanvasService {
       activeComponentId: state.activeComponentId === id ? null : state.activeComponentId
     }));
     this.recordSnapshot();
+    this.triggerAutoSave();
   }
 
   updateComponent(id: string, updates: Partial<ComponentItem>): void {
@@ -40,6 +67,7 @@ export class CanvasService {
         comp.id === id ? { ...comp, ...updates } : comp
       )
     }));
+    this.triggerAutoSave();
   }
 
   updateComponentStyle(id: string, style: Partial<ComponentStyle>): void {
@@ -50,6 +78,7 @@ export class CanvasService {
           : comp
       )
     }));
+    this.triggerAutoSave();
   }
 
   activateComponent(id: string): void {
@@ -80,6 +109,28 @@ export class CanvasService {
 
   toggleGrid(): void {
     this.store.update((state) => ({ showGrid: !state.showGrid }));
+  }
+
+  toggleTheme(): void {
+    this.store.update((state) => ({ darkTheme: !state.darkTheme }));
+  }
+
+  toggleSnapToGrid(): void {
+    this.store.update((state) => ({ snapToGrid: !state.snapToGrid }));
+  }
+
+  toggleMarkLine(): void {
+    this.store.update((state) => ({ showMarkLine: !state.showMarkLine }));
+  }
+
+  setGridSize(size: number): void {
+    this.store.update({ gridSize: Math.max(1, Math.min(100, size)) });
+  }
+
+  snapToGrid(value: number): number {
+    const state = this.query.getValue();
+    if (!state.snapToGrid) return value;
+    return Math.round(value / state.gridSize) * state.gridSize;
   }
 
   clearCanvas(): void {
@@ -118,6 +169,7 @@ export class CanvasService {
       activeComponentId: ids.includes(state.activeComponentId ?? '') ? null : state.activeComponentId,
       selectedComponentIds: []
     }));
+    this.triggerAutoSave();
   }
 
   batchAlign(ids: string[], type: 'left' | 'right' | 'top' | 'bottom' | 'centerH' | 'centerV'): void {
@@ -189,6 +241,7 @@ export class CanvasService {
         }));
         break;
     }
+    this.triggerAutoSave();
   }
 
   distributeHorizontally(ids: string[]): void {
@@ -214,6 +267,7 @@ export class CanvasService {
         return c;
       })
     }));
+    this.triggerAutoSave();
   }
 
   distributeVertically(ids: string[]): void {
@@ -239,6 +293,7 @@ export class CanvasService {
         return c;
       })
     }));
+    this.triggerAutoSave();
   }
 
   recordSnapshot(): void {
@@ -280,6 +335,7 @@ export class CanvasService {
       )
     }));
     this.recordSnapshot();
+    this.triggerAutoSave();
   }
 
   toggleComponentLock(id: string): void {
@@ -289,6 +345,7 @@ export class CanvasService {
       )
     }));
     this.recordSnapshot();
+    this.triggerAutoSave();
   }
 
   duplicateComponent(id: string): void {
@@ -346,6 +403,7 @@ export class CanvasService {
     const newIds = newComponents.map(c => c.id);
     this.selectMultipleComponents(newIds);
     this.recordSnapshot();
+    this.triggerAutoSave();
   }
 
   cutComponents(): void {
@@ -437,6 +495,7 @@ export class CanvasService {
     }));
 
     this.recordSnapshot();
+    this.triggerAutoSave();
   }
 
   decomposeComponent(groupId: string): void {
@@ -464,6 +523,7 @@ export class CanvasService {
     }));
 
     this.recordSnapshot();
+    this.triggerAutoSave();
   }
 
   selectAll(): void {
@@ -507,5 +567,114 @@ export class CanvasService {
       left: component.style.left + deltaX,
       top: component.style.top + deltaY
     });
+    this.triggerAutoSave();
+  }
+
+  // 状态管理方法
+  setDirty(isDirty: boolean): void {
+    this.store.update({ isDirty });
+    if (isDirty) {
+      this.setSaveStatus('unsaved');
+    }
+  }
+
+  setSaveStatus(status: 'saved' | 'saving' | 'unsaved' | 'error'): void {
+    this.store.update({ saveStatus: status });
+  }
+
+  // 自动保存相关方法
+  private initAutoSave(): void {
+    // 合并防抖保存和立即保存触发器
+    merge(
+      this.saveTrigger$.pipe(
+        debounceTime(this.DEBOUNCE_TIME),
+        tap(() => console.log('防抖保存触发'))
+      ),
+      this.immediateSave$.pipe(
+        tap(() => console.log('立即保存触发'))
+      )
+    ).pipe(
+      distinctUntilChanged(),
+      switchMap(() => {
+        const pendingPageName = (this as any).pendingPageName;
+        // 清除待保存的页面名称
+        delete (this as any).pendingPageName;
+        return this.performSave(pendingPageName);
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe();
+  }
+
+  triggerAutoSave(): void {
+    if (!this.currentPageId) return;
+
+    this.setDirty(true);
+    this.saveTrigger$.next();
+  }
+
+  triggerImmediateSave(pageName?: string): void {
+    if (!this.currentPageId) return;
+
+    this.setDirty(true);
+    // 将页面名称保存在临时属性中，供performSave使用
+    if (pageName) {
+      (this as any).pendingPageName = pageName;
+    }
+    this.immediateSave$.next();
+  }
+
+  private performSave(pageName?: string): Observable<unknown> {
+    if (!this.currentPageId) {
+      return new Observable(observer => {
+        observer.error(new Error('未设置页面ID'));
+      });
+    }
+
+    const state = this.query.getValue();
+
+    // 转换画布数据为API格式
+    const updateDto: UpdateScreenDto = {
+      name: pageName,
+      layout: {
+        cols: Math.floor(state.canvasStyle.width / 50), // 假设每列50px
+        rows: Math.floor(state.canvasStyle.height / 50) // 假设每行50px
+      },
+      components: this.convertComponentsToApiFormat(state.componentData)
+    };
+
+    this.setSaveStatus('saving');
+
+    return this.screenApi.updateScreen(this.currentPageId, updateDto).pipe(
+      tap(() => {
+        this.setDirty(false);
+        this.setSaveStatus('saved');
+        console.log('画布保存成功');
+      }),
+      catchError(error => {
+        this.setSaveStatus('error');
+        console.error('画布保存失败:', error);
+        throw error;
+      })
+    );
+  }
+
+  private convertComponentsToApiFormat(components: ComponentItem[]): any[] {
+    return components.map(comp => ({
+      id: comp.id,
+      type: comp.type,
+      position: {
+        x: comp.style.left,
+        y: comp.style.top,
+        width: comp.style.width,
+        height: comp.style.height,
+        zIndex: comp.style.zIndex || 0
+      },
+      config: comp.config
+    }));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

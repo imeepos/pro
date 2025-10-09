@@ -85,7 +85,6 @@ export class WeiboSearchTaskEntity {
   /**
    * 任务执行状态
    */
-  @Index()
   @Column({
     type: 'enum',
     enum: WeiboSearchTaskStatus,
@@ -97,7 +96,6 @@ export class WeiboSearchTaskEntity {
    * 任务是否启用
    * 禁用后broker不会调度此任务
    */
-  @Index()
   @Column({ type: 'boolean', default: true })
   enabled: boolean;
 

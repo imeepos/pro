@@ -14,6 +14,12 @@ export class CanvasQuery extends Query<CanvasState> {
   canvasStyle$ = this.select('canvasStyle');
   editMode$ = this.select('editMode');
   showGrid$ = this.select('showGrid');
+  snapToGrid$ = this.select('snapToGrid');
+  gridSize$ = this.select('gridSize');
+  darkTheme$ = this.select('darkTheme');
+  showMarkLine$ = this.select(state => state.showMarkLine);
+  isDirty$ = this.select('isDirty');
+  saveStatus$ = this.select('saveStatus');
 
   activeComponent$ = this.select(
     state => state.componentData.find(comp => comp.id === state.activeComponentId)

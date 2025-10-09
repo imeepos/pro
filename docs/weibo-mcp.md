@@ -645,8 +645,80 @@ class WeiboMCPServer {
    - 测试不同频率的操作
    - 确认是否触发风控
 
+## ⭐ 针对你的项目的最佳方案
+
+基于你现有的架构分析（NestJS + TypeORM + 微博账号管理系统），推荐：
+
+### 方案：轻量级 MCP Server（集成现有系统）
+
+**不使用 Stagehand**，原因：
+- ❌ 你已有完整的微博业务逻辑（账号、Cookie、任务）
+- ❌ Stagehand 是独立框架，无法复用你的数据库
+- ❌ 引入额外复杂度
+
+**使用**：
+- ✅ 创建 `packages/mcp-weibo`（独立包）
+- ✅ Playwright + Accessibility Tree（轻量）
+- ✅ 调用 `apps/api` 的接口获取 Cookie
+- ✅ 复用现有的 `WeiboAccountEntity` 和账号管理逻辑
+
+### 核心架构
+
+```
+现有系统                        新增能力
+────────────────────────────────────────
+apps/api/weibo-account.service → 提供 Cookie
+apps/api/weibo-search-task     → AI 执行任务
+
+packages/mcp-weibo (新建)      → MCP Server
+  ├─ 调用 API 获取账号          → GET /weibo/accounts/:id
+  ├─ Playwright 加载 Cookie    → 复用数据库 Cookie
+  ├─ Accessibility Tree         → 获取页面状态
+  └─ 执行操作                   → 点击/输入/滚动
+```
+
+### 技术栈（最小化）
+
+```json
+{
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "playwright": "^1.42.0",
+    "axios": "^1.6.0"  // 调用你的 API
+  }
+}
+```
+
+**不需要**：Stagehand、browser-use、LangGraph
+
+### 优势对比
+
+| 对比项 | Stagehand | 轻量级 MCP ✅ |
+|--------|-----------|--------------|
+| Cookie 管理 | 需重新实现 | 读数据库 |
+| 多账号支持 | 需额外配置 | 已有体系 |
+| NestJS 集成 | 困难 | 无缝集成 |
+| 部署 | 独立服务 | monorepo |
+
+### 实施步骤（优先级排序）
+
+1. **创建 packages/mcp-weibo 基础框架** ⭐⭐⭐
+   - 初始化 TypeScript 项目
+   - 集成 Playwright + MCP SDK
+   - 实现 Cookie 加载（调用 API）
+
+2. **实现核心 MCP Tools** ⭐⭐⭐
+   - `tool_getPageState`：获取 Accessibility Tree
+   - `tool_performAction`：执行操作（点击/输入）
+   - `tool_extractData`：提取数据
+
+3. **与 apps/api 集成** ⭐⭐
+   - 新增 API：`GET /weibo/mcp/accounts/:id/cookies`
+   - 权限验证（只能访问自己的账号）
+   - Cookie 刷新机制
+
 ### 请确认：
 
-1. **技术选型是否认可？** 特别是 Accessibility Tree + 混合模式的组合
-2. **待讨论问题的优先级？** 哪些需要立即决策，哪些可以后续迭代
-3. **下一步从哪里开始？** 是否从"阶段一优先级"的任务开始实施
+1. **方案是否认可？** 轻量级 MCP + 复用现有系统
+2. **是否立即开始？** 从步骤 1 开始创建 packages/mcp-weibo
+3. **待讨论问题优先级？** Cookie 更新机制（A 方案：定时刷新）

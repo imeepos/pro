@@ -134,6 +134,22 @@ export class ScreensService {
     );
   }
 
+  loadScreen(id: string): Observable<ScreenPage> {
+    this.setLoading(true);
+    this.setError(null);
+
+    return this.api.getScreen(id).pipe(
+      tap(screen => {
+        this.store.upsert(id, screen);
+      }),
+      catchError(error => {
+        this.setError(error.message || '加载页面详情失败');
+        return throwError(() => error);
+      }),
+      finalize(() => this.setLoading(false))
+    );
+  }
+
   setDefaultScreen(id: string): Observable<ScreenPage> {
     this.setLoading(true);
     this.setError(null);

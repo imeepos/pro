@@ -5,7 +5,6 @@ import { CanvasQuery } from '../services/canvas.query';
 import { ShapeComponent } from './shape/shape.component';
 import { MarkLineComponent } from './mark-line/mark-line.component';
 import { AreaComponent } from './area/area.component';
-import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { ComponentItem, ComponentStyle, Rect } from '../../models/component.model';
 import { GeometryUtil } from '../../utils/geometry.util';
 import { ContextMenuComponent, MenuItem } from './context-menu/context-menu.component';
@@ -13,7 +12,7 @@ import { ContextMenuComponent, MenuItem } from './context-menu/context-menu.comp
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, ShapeComponent, MarkLineComponent, AreaComponent, DragDropModule, ContextMenuComponent],
+  imports: [CommonModule, ShapeComponent, MarkLineComponent, AreaComponent, ContextMenuComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss']
 })
@@ -37,30 +36,30 @@ export class EditorComponent {
     private elementRef: ElementRef<HTMLElement>
   ) {}
 
-  onComponentDrop(event: CdkDragDrop<any>): void {
-    const componentData = event.item.data;
-    if (!componentData) return;
+  onComponentDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
 
-    // 从组件库拖拽过来的数据格式: { type, name, icon, category }
-    const componentType = componentData.type || componentData;
-    const dropPoint = event.dropPoint;
-    const editorRect = (event.event.target as HTMLElement)
-      .closest('.editor-container')
-      ?.getBoundingClientRect();
+    if (!event.dataTransfer) return;
 
-    if (!editorRect) return;
+    const componentType = event.dataTransfer.getData('componentType');
+    if (!componentType) return;
 
+    // 获取画布容器的位置
+    const editorRect = this.elementRef.nativeElement.getBoundingClientRect();
     const scale = this.query.getValue().scale;
-    const x = (dropPoint.x - editorRect.left) / scale;
-    const y = (dropPoint.y - editorRect.top) / scale;
+
+    // 计算组件在画布中的位置（考虑缩放）
+    const x = (event.clientX - editorRect.left) / scale;
+    const y = (event.clientY - editorRect.top) / scale;
 
     const newComponent: ComponentItem = {
       id: this.generateId(),
       type: componentType,
       component: componentType,
       style: {
-        top: Math.max(0, y),
-        left: Math.max(0, x),
+        top: Math.max(0, Math.round(y)),
+        left: Math.max(0, Math.round(x)),
         width: 200,
         height: 150,
         rotate: 0,
@@ -70,6 +69,15 @@ export class EditorComponent {
     };
 
     this.canvasService.addComponent(newComponent);
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
   }
 
   private getNextZIndex(): number {

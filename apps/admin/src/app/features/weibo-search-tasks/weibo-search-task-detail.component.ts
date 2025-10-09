@@ -173,7 +173,7 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   // 暂停任务
   pauseTask(): void {
     if (this.task) {
-      this.service.pause(this.task.id).subscribe({
+      this.service.pause(this.task.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           // 成功处理在 service 中完成
         },
@@ -187,7 +187,7 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   // 恢复任务
   resumeTask(): void {
     if (this.task) {
-      this.service.resume(this.task.id).subscribe({
+      this.service.resume(this.task.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           // 成功处理在 service 中完成
         },
@@ -201,7 +201,7 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   // 立即执行
   runNow(): void {
     if (this.task) {
-      this.service.runNow(this.task.id).subscribe({
+      this.service.runNow(this.task.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           // 成功处理在 service 中完成
         },
@@ -215,7 +215,7 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   // 删除任务
   deleteTask(): void {
     if (this.task && confirm('确定要删除这个任务吗？此操作不可恢复。')) {
-      this.service.delete(this.task.id).subscribe({
+      this.service.delete(this.task.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.router.navigate(['/weibo-search-tasks']);
         },

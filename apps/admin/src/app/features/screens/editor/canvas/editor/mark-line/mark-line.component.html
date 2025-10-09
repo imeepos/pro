@@ -4,5 +4,10 @@
     [class]="getLineClass(line)"
     [class.visible]="isLineVisible(line)"
     [ngStyle]="getLineStyle(line)">
+    <span
+      *ngIf="shouldShowDistance(line)"
+      class="distance-label">
+      {{ getDistance(line) }}px
+    </span>
   </div>
 </div>

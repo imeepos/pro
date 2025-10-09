@@ -1,6 +1,7 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { UserEntity } from '../entities/user.entity';
 import { WeiboAccountEntity } from '../entities/weibo-account.entity';
+import { WeiboSearchTaskEntity } from '../entities/weibo-search-task.entity';
 import { JdAccountEntity } from '../entities/jd-account.entity';
 import { ScreenPageEntity } from '../entities/screen-page.entity';
 import { IndustryTypeEntity } from '../entities/industry-type.entity';
@@ -9,11 +10,13 @@ import { EventEntity } from '../entities/event.entity';
 import { TagEntity } from '../entities/tag.entity';
 import { EventTagEntity } from '../entities/event-tag.entity';
 import { EventAttachmentEntity } from '../entities/event-attachment.entity';
+import { MediaTypeEntity } from '../entities/media-type.entity';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => {
   const entities = [
     UserEntity,
     WeiboAccountEntity,
+    WeiboSearchTaskEntity,
     JdAccountEntity,
     ScreenPageEntity,
     IndustryTypeEntity,
@@ -22,6 +25,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
     TagEntity,
     EventTagEntity,
     EventAttachmentEntity,
+    MediaTypeEntity,
   ];
 
   if (process.env.DATABASE_URL) {

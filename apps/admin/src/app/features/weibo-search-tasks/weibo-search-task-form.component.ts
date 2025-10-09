@@ -163,7 +163,7 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
       enableAccountRotation: formValue.enableAccountRotation
     };
 
-    this.service.create(dto).subscribe({
+    this.service.create(dto).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.router.navigate(['/weibo-search-tasks']);
       },
@@ -184,7 +184,7 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
       enabled: formValue.enabled
     };
 
-    this.service.update(id, updates).subscribe({
+    this.service.update(id, updates).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.router.navigate(['/weibo-search-tasks']);
       },

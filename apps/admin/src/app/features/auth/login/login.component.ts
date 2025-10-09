@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../../state/auth.service';
 import { AuthQuery } from '../../../state/auth.query';
 import { validateEmail, validatePassword } from '@pro/utils';
@@ -15,10 +15,11 @@ import { ToastService } from '../../../shared/services/toast.service';
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, OnDestroy {
   loginForm!: FormGroup;
   loading$!: Observable<boolean>;
   error$!: Observable<string | null>;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private fb: FormBuilder,
@@ -31,6 +32,11 @@ export class LoginComponent implements OnInit {
     this.initForm();
     this.loading$ = this.authQuery.loading$;
     this.error$ = this.authQuery.error$;
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private initForm(): void {
@@ -66,7 +72,9 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    this.authService.login(this.loginForm.value).subscribe({
+    this.authService.login(this.loginForm.value).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success('登录成功');
       },

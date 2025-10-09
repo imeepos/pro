@@ -63,7 +63,9 @@ export class MediaTypeListComponent implements OnInit, OnDestroy {
   }
 
   loadMediaTypes(): void {
-    this.mediaTypesService.loadMediaTypes().subscribe({
+    this.mediaTypesService.loadMediaTypes().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       error: (error) => {
         console.error('加载媒体类型列表失败:', error);
       }
@@ -91,7 +93,9 @@ export class MediaTypeListComponent implements OnInit, OnDestroy {
   }
 
   onSearch(): void {
+    console.log('搜索按钮被点击，关键词:', this.searchKeyword);
     this.applyFilter();
+    console.log('过滤后的结果数量:', this.filteredMediaTypes.length);
   }
 
   onStatusChange(): void {
@@ -108,7 +112,9 @@ export class MediaTypeListComponent implements OnInit, OnDestroy {
 
   toggleStatus(mediaType: MediaType): void {
     const newStatus = mediaType.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    this.mediaTypesService.updateMediaType(mediaType.id, { status: newStatus }).subscribe({
+    this.mediaTypesService.updateMediaType(mediaType.id, { status: newStatus }).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success(`媒体类型已${newStatus === 'ACTIVE' ? '启用' : '禁用'}`);
       },
@@ -135,7 +141,9 @@ export class MediaTypeListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.mediaTypesService.deleteMediaType(this.mediaTypeToDelete.id).subscribe({
+    this.mediaTypesService.deleteMediaType(this.mediaTypeToDelete.id).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: () => {
         this.toastService.success('媒体类型删除成功');
         this.closeDeleteDialog();

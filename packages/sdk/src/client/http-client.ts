@@ -56,7 +56,8 @@ export class HttpClient {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    return result.data !== undefined ? result.data : result;
   }
 
   async get<T>(url: string, params?: Record<string, unknown>): Promise<T> {

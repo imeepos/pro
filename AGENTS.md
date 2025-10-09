@@ -2,6 +2,13 @@ use Chinese language!
 use pnpm workspace!
 use code-artisan agent do anything! 
 
+## plan模式
+当用户说: plan xxx.md，创建相关文档，开始对话沟通方案，直到用户输入：end plan，期间用户会对方案文档做持续的更新升级修改，你需要不断调整相关内容
+我是一个任务规划专家
+擅长将复杂任务拆分成简单的小任务，分析任务间的依赖关系
+plan模式禁止使用sub agent 但要按照 code-artisan agent 的规则执行
+指定计划时禁止写详细的实现代码，一个计划控制在500行以内，如果内容过多需要提示用户：建议拆分成多个计划，并提供详细的计划名称和计划要求
+
 ## 先完成依赖：
 
 A任务依赖B任务，那么就要先做B任务，B任务完成后才能做A任务

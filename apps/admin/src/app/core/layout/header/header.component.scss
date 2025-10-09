@@ -2,13 +2,20 @@
   display: block;
 }
 
+// Logo区域容器：与Sidebar宽度同步
+.logo-area {
+  // 使用与 Sidebar 相同的过渡效果
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 // 调整LOGO在header中的样式
 app-logo {
   height: 100%;
 
   .logo-container {
-    @apply h-16 flex items-center justify-start gap-3 px-0;
+    @apply h-16 flex items-center justify-center gap-3;
     padding: 0;
+    transition: padding 300ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .brand-name {

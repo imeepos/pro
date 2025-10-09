@@ -1,145 +1,13 @@
-.page-container {
-  padding: 24px;
-  background: #f0f2f5;
-  min-height: 100vh;
-}
+/**
+ * 微博搜索任务表单组件样式
+ * 保留必要的 Ant Design 组件样式覆盖
+ */
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-
-  h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
-    color: #262626;
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 12px;
-  }
-}
-
-.form-card {
-  background: #fff;
-  margin-bottom: 24px;
-}
-
-.form-section {
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #f0f0f0;
-
-  &:last-of-type {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-  }
-
-  .section-title {
-    margin: 0 0 24px 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #262626;
-    position: relative;
-    padding-left: 12px;
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 4px;
-      height: 18px;
-      background: #1890ff;
-      border-radius: 2px;
-    }
-  }
-}
-
-.form-help {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #8c8c8c;
-  line-height: 1.4;
-}
-
-.form-errors {
-  margin: 24px 0;
-}
-
-.form-actions {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid #f0f0f0;
-  text-align: center;
-}
-
-.info-card {
-  background: #fff;
-
-  :host ::ng-deep .ant-card-head {
-    background: #f6ffed;
-    border-bottom: 1px solid #b7eb8f;
-
-    .ant-card-head-title {
-      color: #52c41a;
-      font-weight: 600;
-    }
-  }
-}
-
-.info-content {
-  h4 {
-    margin: 16px 0 12px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #262626;
-
-    &:first-child {
-      margin-top: 0;
-    }
-  }
-
-  ol, ul {
-    margin: 0;
-    padding-left: 20px;
-
-    li {
-      margin-bottom: 8px;
-      font-size: 14px;
-      color: #595959;
-      line-height: 1.5;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-  }
-
-  ol {
-    li {
-      margin-bottom: 12px;
-
-      strong {
-        color: #262626;
-      }
-    }
-  }
-}
-
-// 表单样式优化
+// Ant Design 表单组件样式优化
 :host ::ng-deep {
+  // 表单项样式
   .ant-form-item {
-    margin-bottom: 24px;
-
     .ant-form-item-label {
-      padding-bottom: 8px;
-
       label {
         font-weight: 500;
         color: #262626;
@@ -147,24 +15,20 @@
     }
 
     .ant-form-item-control {
+      // 输入框、选择器、日期选择器样式
       .ant-input,
       .ant-select-selector,
       .ant-picker {
         border-radius: 6px;
-        border: 1px solid #d9d9d9;
         transition: all 0.3s;
-
-        &:hover {
-          border-color: #40a9ff;
-        }
 
         &:focus,
         &.ant-select-focused {
-          border-color: #1890ff;
           box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
         }
       }
 
+      // 开关组件样式
       .ant-switch {
         &.ant-switch-checked {
           background-color: #52c41a;
@@ -172,125 +36,58 @@
       }
     }
 
+    // 错误提示样式
     .ant-form-item-explain-error {
       font-size: 12px;
     }
   }
 
+  // 下拉菜单样式
   .ant-select-dropdown {
     border-radius: 6px;
   }
 
+  // 日期选择器下拉样式
   .ant-picker-dropdown {
     border-radius: 6px;
   }
-}
 
-// 按钮样式优化
-:host ::ng-deep .ant-btn {
-  border-radius: 6px;
-  font-weight: 500;
+  // 按钮样式优化
+  .ant-btn {
+    border-radius: 6px;
+    font-weight: 500;
 
-  &.ant-btn-primary {
-    background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-    border: none;
-    box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+    &.ant-btn-primary {
+      background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+      border: none;
+      box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
 
-    &:hover {
-      background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
-      box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
-    }
+      &:hover {
+        background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+        box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
+      }
 
-    &:disabled {
-      background: #f5f5f5;
-      box-shadow: none;
-    }
-  }
-}
-
-// 响应式设计
-@media (max-width: 768px) {
-  .page-container {
-    padding: 16px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-
-    h1 {
-      text-align: center;
-    }
-
-    .header-actions {
-      justify-content: center;
-    }
-  }
-
-  .form-section {
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-  }
-
-  .section-title {
-    font-size: 16px;
-  }
-
-  .form-actions {
-    text-align: center;
-
-    .ant-space {
-      flex-direction: column;
-      width: 100%;
-
-      .ant-space-item {
-        width: 100%;
-
-        .ant-btn {
-          width: 100%;
-        }
+      &:disabled {
+        background: #f5f5f5;
+        box-shadow: none;
       }
     }
   }
 
-  :host ::ng-deep {
-    .ant-form-item {
-      margin-bottom: 20px;
-    }
+  // 加载状态样式
+  .ant-spin-container {
+    min-height: 400px;
   }
-}
 
-// 加载状态
-:host ::ng-deep .ant-spin-container {
-  min-height: 400px;
-}
-
-// 表单验证状态
-:host ::ng-deep {
+  // 表单验证状态样式
   .ant-form-item-has-error {
     .ant-input,
     .ant-select-selector,
     .ant-picker {
-      border-color: #ff4d4f;
-
-      &:hover {
-        border-color: #ff4d4f;
-      }
-
       &:focus,
       &.ant-select-focused {
-        border-color: #ff4d4f;
         box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
       }
-    }
-  }
-
-  .ant-form-item-has-success {
-    .ant-input,
-    .ant-select-selector,
-    .ant-picker {
-      border-color: #52c41a;
     }
   }
 }

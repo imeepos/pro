@@ -8,6 +8,7 @@
     "build": "ng-packagr -p ng-package.json",
     "dev": "ng-packagr -p ng-package.json --watch",
     "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\""
   },
   "keywords": [

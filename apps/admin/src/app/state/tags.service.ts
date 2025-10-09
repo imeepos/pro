@@ -20,22 +20,18 @@ export class TagsService {
     this.setLoading(true);
     this.setError(null);
 
-    return new Observable(observer => {
-      from(this.api.getTags(params)).pipe(
-        tap(response => {
-          this.store.set(response.data);
-          this.store.update({ total: response.total });
-          observer.next();
-          observer.complete();
-        }),
-        catchError(error => {
-          this.setError(error.message || '加载标签列表失败');
-          observer.error(error);
-          return throwError(() => error);
-        }),
-        finalize(() => this.setLoading(false))
-      ).subscribe();
-    });
+    return from(this.api.getTags(params)).pipe(
+      tap(response => {
+        this.store.set(response.data);
+        this.store.update({ total: response.total });
+      }),
+      catchError(error => {
+        this.setError(error.message || '加载标签列表失败');
+        return throwError(() => error);
+      }),
+      finalize(() => this.setLoading(false)),
+      tap(() => {})
+    ) as unknown as Observable<void>;
   }
 
   loadPopularTags(limit = 20): Observable<Tag[]> {

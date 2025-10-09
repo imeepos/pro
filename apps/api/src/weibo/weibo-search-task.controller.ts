@@ -54,10 +54,16 @@ export class WeiboSearchTaskController {
   async findAll(@Request() req, @Query() query: QueryTaskDto) {
     const userId = req.user.userId;
     const result = await this.taskService.findAll(userId, query);
+
+    // 计算总页数
+    const totalPages = Math.ceil(result.total / result.limit);
+
     return {
-      success: true,
-      data: result,
-      message: '获取任务列表成功',
+      data: result.tasks,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages,
     };
   }
 

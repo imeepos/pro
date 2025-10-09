@@ -8,6 +8,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\""
   },
   "keywords": ["sdk", "api", "interfaces"],

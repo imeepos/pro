@@ -13,7 +13,12 @@ export interface CanvasState {
   selectedComponentIds: string[];
   scale: number;
   showGrid: boolean;
+  snapToGrid: boolean;
+  gridSize: number;
   darkTheme: boolean;
+  showMarkLine: boolean;
+  isDirty: boolean;
+  saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
 }
 
 function createInitialState(): CanvasState {
@@ -31,7 +36,12 @@ function createInitialState(): CanvasState {
     selectedComponentIds: [],
     scale: 1,
     showGrid: true,
-    darkTheme: false
+    snapToGrid: false,
+    gridSize: 10,
+    darkTheme: false,
+    showMarkLine: true,
+    isDirty: false,
+    saveStatus: 'saved'
   };
 }
 

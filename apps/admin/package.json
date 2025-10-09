@@ -9,7 +9,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:e2e": "playwright test",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "typecheck": "tsc --noEmit"
   },
   "private": true,
   "dependencies": {

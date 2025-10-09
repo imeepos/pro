@@ -25,21 +25,17 @@ export class MediaTypesService {
     this.setLoading(true);
     this.setError(null);
 
-    return new Observable(observer => {
-      from(this.sdk.getMediaTypeList()).pipe(
-        tap(result => {
-          this.store.set(result.list);
-          observer.next();
-          observer.complete();
-        }),
-        catchError(error => {
-          this.setError(error.message || '加载媒体类型列表失败');
-          observer.error(error);
-          return throwError(() => error);
-        }),
-        finalize(() => this.setLoading(false))
-      ).subscribe();
-    });
+    return from(this.sdk.getMediaTypeList()).pipe(
+      tap(result => {
+        this.store.set(result.list);
+      }),
+      catchError(error => {
+        this.setError(error.message || '加载媒体类型列表失败');
+        return throwError(() => error);
+      }),
+      finalize(() => this.setLoading(false)),
+      tap(() => {}),
+    ) as unknown as Observable<void>;
   }
 
   loadMediaTypeById(id: number): Observable<MediaType> {
