@@ -34,13 +34,13 @@ const DEFAULT_CONFIG: WeiboUsersCardConfig = {
   template: `
     <div class="weibo-stats-card h-full p-6 rounded-xl shadow-lg backdrop-blur-sm transition-all duration-300"
          [ngClass]="getThemeClasses()"
-         [class.hover-scale]="config?.enableAnimation">
+         [class.hover-scale]="config.enableAnimation">
 
       <!-- 标题区域 -->
       <div class="card-header mb-6 flex items-center justify-between">
         <h3 class="text-xl font-bold m-0 flex items-center gap-2">
-          <span *ngIf="config?.showIcons" class="icon-title">📊</span>
-          {{ config?.title }}
+          <span *ngIf="config.showIcons" class="icon-title">📊</span>
+          {{ config.title }}
         </h3>
         <div *ngIf="isLoading" class="loading-indicator">
           <span class="animate-spin inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full"></span>
@@ -60,10 +60,10 @@ const DEFAULT_CONFIG: WeiboUsersCardConfig = {
       <div *ngIf="!errorMessage" class="stats-container">
         <div class="stats-grid" [ngClass]="getStatsGridClass()">
           <!-- 总用户数 -->
-          <div *ngIf="config?.showTotal"
+          <div *ngIf="config.showTotal"
                class="stat-item group cursor-pointer"
-               [class.animate-in]="config?.enableAnimation && stats?.total">
-            <div class="stat-icon" *ngIf="config?.showIcons">
+               [class.animate-in]="config.enableAnimation && stats?.total">
+            <div class="stat-icon" *ngIf="config.showIcons">
               <span class="text-2xl">👥</span>
             </div>
             <div class="stat-value" [ngClass]="getValueClass('total')">
@@ -81,10 +81,10 @@ const DEFAULT_CONFIG: WeiboUsersCardConfig = {
           </div>
 
           <!-- 今日新增 -->
-          <div *ngIf="config?.showTodayNew"
+          <div *ngIf="config.showTodayNew"
                class="stat-item group cursor-pointer"
-               [class.animate-in]="config?.enableAnimation && stats?.todayNew">
-            <div class="stat-icon" *ngIf="config?.showIcons">
+               [class.animate-in]="config.enableAnimation && stats?.todayNew">
+            <div class="stat-icon" *ngIf="config.showIcons">
               <span class="text-2xl">🆕</span>
             </div>
             <div class="stat-value" [ngClass]="getValueClass('todayNew')">
@@ -97,10 +97,10 @@ const DEFAULT_CONFIG: WeiboUsersCardConfig = {
           </div>
 
           <!-- 在线用户 -->
-          <div *ngIf="config?.showOnline"
+          <div *ngIf="config.showOnline"
                class="stat-item group cursor-pointer"
-               [class.animate-in]="config?.enableAnimation && stats?.online">
-            <div class="stat-icon" *ngIf="config?.showIcons">
+               [class.animate-in]="config.enableAnimation && stats?.online">
+            <div class="stat-icon" *ngIf="config.showIcons">
               <span class="text-2xl">🟢</span>
             </div>
             <div class="stat-value" [ngClass]="getValueClass('online')">
@@ -238,7 +238,7 @@ const DEFAULT_CONFIG: WeiboUsersCardConfig = {
   `]
 })
 export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScreenComponent {
-  @Input() config?: WeiboUsersCardConfig;
+  @Input() config: WeiboUsersCardConfig = DEFAULT_CONFIG;
 
   stats: LoggedInUsersStats | null = null;
   lastStats: LoggedInUsersStats | null = null;
@@ -317,7 +317,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   private setupRefreshTimer(): void {
     this.refreshTimer$.next();
 
-    if (!this.config?.refreshInterval || this.config.refreshInterval <= 0) {
+    if (!this.config.refreshInterval || this.config.refreshInterval <= 0) {
       return;
     }
 
@@ -342,7 +342,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   }
 
   getThemeClasses(): string {
-    const theme = this.config?.theme || 'default';
+    const theme = this.config.theme || 'default';
     const baseClasses = 'relative';
 
     const themeClasses = {
@@ -358,16 +358,16 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
 
   getStatsGridClass(): string {
     const visibleFields = [
-      this.config?.showTotal,
-      this.config?.showTodayNew,
-      this.config?.showOnline
+      this.config.showTotal,
+      this.config.showTodayNew,
+      this.config.showOnline
     ].filter(Boolean).length;
 
     return `cols-${visibleFields}`;
   }
 
   getValueClass(field: keyof LoggedInUsersStats): string {
-    const theme = this.config?.theme || 'default';
+    const theme = this.config.theme || 'default';
     const baseClass = 'transition-all duration-300';
 
     const colorClasses = {
