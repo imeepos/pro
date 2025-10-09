@@ -380,7 +380,7 @@ input[type="range"] {
   input[type="range"] {
     @apply h-48 w-2;
     writing-mode: bt-lr; // IE
-    @apply -webkit-appearance: slider-vertical; // WebKit
+    -webkit-appearance: slider-vertical; // WebKit
 
     &::-webkit-slider-track {
       @apply w-2 h-full;
