@@ -1,83 +1,83 @@
-<div class="h-full flex flex-col bg-gray-50">
-  <div class="bg-white border-b px-6 py-4">
+<div class="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+  <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ isEditMode ? '编辑事件类型' : '新增事件类型' }}</h1>
-        <p class="text-sm text-gray-600 mt-1">{{ isEditMode ? '修改现有事件类型信息' : '创建新的事件类型' }}</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ isEditMode ? '编辑事件类型' : '新增事件类型' }}</h1>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{ isEditMode ? '修改现有事件类型信息' : '创建新的事件类型' }}</p>
       </div>
     </div>
   </div>
 
   <div class="flex-1 overflow-y-auto p-6">
     <div class="max-w-3xl mx-auto">
-      <form [formGroup]="eventTypeForm" (ngSubmit)="onSubmit()" class="bg-white rounded-lg border border-gray-200 p-6">
+      <form [formGroup]="eventTypeForm" (ngSubmit)="onSubmit()" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div class="space-y-6">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
               事件代码 <span class="text-red-500">*</span>
             </label>
             <input
               type="text"
               formControlName="eventCode"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               [class.border-red-500]="isFieldInvalid('eventCode')"
               placeholder="请输入事件代码"
             />
-            <p *ngIf="isFieldInvalid('eventCode')" class="mt-1 text-sm text-red-500">
+            <p *ngIf="isFieldInvalid('eventCode')" class="mt-1 text-sm text-red-600 dark:text-red-400">
               {{ getFieldError('eventCode') }}
             </p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
               事件名称 <span class="text-red-500">*</span>
             </label>
             <input
               type="text"
               formControlName="eventName"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               [class.border-red-500]="isFieldInvalid('eventName')"
               placeholder="请输入事件名称"
             />
-            <p *ngIf="isFieldInvalid('eventName')" class="mt-1 text-sm text-red-500">
+            <p *ngIf="isFieldInvalid('eventName')" class="mt-1 text-sm text-red-600 dark:text-red-400">
               {{ getFieldError('eventName') }}
             </p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
               描述
             </label>
             <textarea
               formControlName="description"
               rows="4"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="block w-full p-2.5 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               [class.border-red-500]="isFieldInvalid('description')"
               placeholder="请输入事件描述（可选）"
             ></textarea>
-            <p *ngIf="isFieldInvalid('description')" class="mt-1 text-sm text-red-500">
+            <p *ngIf="isFieldInvalid('description')" class="mt-1 text-sm text-red-600 dark:text-red-400">
               {{ getFieldError('description') }}
             </p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
               排序 <span class="text-red-500">*</span>
             </label>
             <input
               type="number"
               formControlName="sortOrder"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               [class.border-red-500]="isFieldInvalid('sortOrder')"
               placeholder="请输入排序值（数字越小越靠前）"
             />
-            <p *ngIf="isFieldInvalid('sortOrder')" class="mt-1 text-sm text-red-500">
+            <p *ngIf="isFieldInvalid('sortOrder')" class="mt-1 text-sm text-red-600 dark:text-red-400">
               {{ getFieldError('sortOrder') }}
             </p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
               状态 <span class="text-red-500">*</span>
             </label>
             <app-select
@@ -88,18 +88,18 @@
           </div>
         </div>
 
-        <div class="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+        <div class="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
           <button
             type="button"
             (click)="cancel()"
-            class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
             [disabled]="loading"
           >
             取消
           </button>
           <button
             type="submit"
-            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
             [disabled]="loading"
           >
             {{ loading ? '保存中...' : (isEditMode ? '保存修改' : '创建') }}
