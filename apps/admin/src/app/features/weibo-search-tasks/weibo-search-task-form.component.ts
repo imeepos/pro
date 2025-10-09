@@ -136,12 +136,6 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
 
   // 提交表单
   submitForm(): void {
-    console.log('表单提交开始', {
-      valid: this.validateForm.valid,
-      value: this.validateForm.value,
-      errors: this.getFormErrors()
-    });
-
     if (this.validateForm.valid) {
       const formValue = this.validateForm.value;
 
@@ -151,7 +145,6 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
         this.createTask(formValue);
       }
     } else {
-      console.log('表单验证失败', this.validateForm);
       Object.values(this.validateForm.controls).forEach(control => {
         if (control.invalid) {
           control.markAsDirty();
@@ -159,18 +152,6 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
         }
       });
     }
-  }
-
-  // 获取表单错误信息（调试用）
-  private getFormErrors(): any {
-    const errors: any = {};
-    Object.keys(this.validateForm.controls).forEach(key => {
-      const control = this.validateForm.get(key);
-      if (control && control.errors) {
-        errors[key] = control.errors;
-      }
-    });
-    return errors;
   }
 
   // 创建任务
