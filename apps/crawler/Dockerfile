@@ -205,6 +205,7 @@ EXPOSE 3001
 
 # 设置环境变量
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--experimental-global-webcrypto"
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
