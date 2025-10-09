@@ -13,20 +13,20 @@ import { FLOWBITE_CONTROLS } from '../flowbite-controls';
       <!-- 顶级表单项（非分组） -->
       <ng-container *ngFor="let item of config">
         <!-- 分组项目 - 使用增强的Flowbite Card/Accordion -->
-        <div *ngIf="item.type === 'group'" class="flowbite-accordion">
+        <div *ngIf="isItemGroup(item)" class="flowbite-accordion">
           <div class="group relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all duration-300">
             <!-- Card Header -->
             <button
-              (click)="toggleGroup(item.key as string)"
+              (click)="toggleGroup(getItemKey(item))"
               class="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
-              [attr.aria-expanded]="isGroupExpanded(item.key as string)"
-              [attr.aria-controls]="'group-content-' + (item.key as string)"
+              [attr.aria-expanded]="isGroupExpanded(getItemKey(item))"
+              [attr.aria-controls]="'group-content-' + getItemKey(item)"
             >
               <div class="flex items-center space-x-3">
                 <!-- 展开图标 -->
                 <div class="flex-shrink-0">
                   <svg
-                    [class]="'w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200 ' + (isGroupExpanded(item.key as string) ? 'rotate-90' : '')"
+                    [class]="'w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200 ' + (isGroupExpanded(getItemKey(item)) ? 'rotate-90' : '')"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -40,15 +40,15 @@ import { FLOWBITE_CONTROLS } from '../flowbite-controls';
                   <!-- 根据分组类型显示不同图标 -->
                   <div class="flex-shrink-0">
                     <!-- 基础属性图标 -->
-                    <svg *ngIf="item.key === 'common'" class="w-5 h-5 text-blue-500 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg *ngIf="getItemKey(item) === 'common'" class="w-5 h-5 text-blue-500 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                     </svg>
                     <!-- 配置属性图标 -->
-                    <svg *ngIf="item.key === 'config'" class="w-5 h-5 text-green-500 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg *ngIf="getItemKey(item) === 'config'" class="w-5 h-5 text-green-500 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
                     </svg>
                     <!-- 默认图标 -->
-                    <svg *ngIf="item.key !== 'common' && item.key !== 'config'" class="w-5 h-5 text-purple-500 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg *ngIf="getItemKey(item) !== 'common' && getItemKey(item) !== 'config'" class="w-5 h-5 text-purple-500 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
                     </svg>
                   </div>
@@ -58,7 +58,7 @@ import { FLOWBITE_CONTROLS } from '../flowbite-controls';
                       {{ item.label }}
                     </h4>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {{ getItemTypeDescription(item.key as string) }}
+                      {{ getItemTypeDescription(getItemKey(item)) }}
                     </p>
                   </div>
                 </div>
@@ -71,7 +71,7 @@ import { FLOWBITE_CONTROLS } from '../flowbite-controls';
                   </span>
 
                   <!-- 加载状态指示器 -->
-                  <div *ngIf="isLoadingGroup(item.key as string)" class="flex items-center space-x-2">
+                  <div *ngIf="isLoadingGroup(getItemKey(item))" class="flex items-center space-x-2">
                     <div class="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
                   </div>
                 </div>
@@ -80,13 +80,13 @@ import { FLOWBITE_CONTROLS } from '../flowbite-controls';
 
             <!-- Card Content -->
             <div
-              [id]="'group-content-' + (item.key as string)"
+              [id]="'group-content-' + getItemKey(item)"
               class="border-t border-gray-100 dark:border-gray-700"
-              [class.hidden]="!isGroupExpanded(item.key as string)"
+              [class.hidden]="!isGroupExpanded(getItemKey(item))"
             >
               <div class="p-4 space-y-4 bg-gray-50 dark:bg-gray-900/50">
                 <!-- 骨架屏效果 -->
-                <div *ngIf="isLoadingGroup(item.key as string)" class="space-y-4">
+                <div *ngIf="isLoadingGroup(getItemKey(item))" class="space-y-4">
                   <div class="animate-pulse space-y-3">
                     <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
                     <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
@@ -98,7 +98,7 @@ import { FLOWBITE_CONTROLS } from '../flowbite-controls';
                 </div>
 
                 <!-- 实际内容 -->
-                <ng-container *ngIf="!isLoadingGroup(item.key as string)">
+                <ng-container *ngIf="!isLoadingGroup(getItemKey(item))">
                   <div class="space-y-4">
                     <app-form-item
                       *ngFor="let child of item.children"
@@ -233,7 +233,7 @@ export class FormContainerComponent implements OnInit {
     this.config.forEach(item => {
       if (item.type === 'group') {
         // 默认展开所有分组
-        this.expandedGroups.add(item.key as string);
+        this.expandedGroups.add(this.getItemKey(item));
       }
     });
   }
@@ -280,12 +280,36 @@ export class FormContainerComponent implements OnInit {
   }
 
   /**
+   * 获取项目的键值（处理string | string[]类型）
+   */
+  getItemKey(item: FormMetadata): string {
+    return Array.isArray(item.key) ? item.key[0] : item.key;
+  }
+
+  /**
+   * 检查项目是否为分组
+   */
+  isItemGroup(item: FormMetadata): boolean {
+    return item.type === 'group';
+  }
+
+  /**
+   * 检查项目是否正在加载（模板用）
+   */
+  isItemLoading(item: FormMetadata): boolean {
+    if (!this.isItemGroup(item)) {
+      return false;
+    }
+    return this.isLoadingGroup(this.getItemKey(item));
+  }
+
+  /**
    * 展开所有分组
    */
   expandAll(): void {
     this.config.forEach(item => {
       if (item.type === 'group') {
-        this.expandedGroups.add(item.key as string);
+        this.expandedGroups.add(this.getItemKey(item));
       }
     });
   }
@@ -310,7 +334,7 @@ export class FormContainerComponent implements OnInit {
   getGroupStats(): { total: number; expanded: number; collapsed: number } {
     const groups = this.config.filter(item => item.type === 'group');
     const total = groups.length;
-    const expanded = groups.filter(item => this.expandedGroups.has(item.key as string)).length;
+    const expanded = groups.filter(item => this.expandedGroups.has(this.getItemKey(item))).length;
     const collapsed = total - expanded;
 
     return { total, expanded, collapsed };
