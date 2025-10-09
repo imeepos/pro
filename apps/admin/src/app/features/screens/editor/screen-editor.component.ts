@@ -72,7 +72,7 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   private toastCounter = 0;
   private destroy$ = new Subject<void>();
   private fallbackSaveTimer?: number;
-  private savingToastTimer?: number;
+  private savingToastTimer?: ReturnType<typeof setTimeout>;
 
   componentData$ = this.canvasQuery.componentData$;
   selectedComponentIds$ = this.canvasQuery.selectedComponentIds$;
@@ -288,7 +288,7 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  private handleSaveStatusChange(status: 'saved' | 'saving' | 'unsaved' | 'error'): void {
+  private handleSaveStatusChange(status: 'saved' | 'saving' | 'unsaved' | 'error' | 'retrying'): void {
     switch (status) {
       case 'saved':
         // 只在从保存中或错误状态恢复时显示成功提示
@@ -309,6 +309,17 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
         break;
       case 'unsaved':
         // 脏数据状态，不需要特别提示
+        break;
+      case 'retrying':
+        // 重试保存状态，显示重试提示
+        this.clearSaveToasts();
+        this.showToast({
+          type: 'info',
+          title: '正在重试保存',
+          message: '网络恢复后正在重新保存...',
+          persistent: true,
+          duration: 0
+        });
         break;
     }
   }

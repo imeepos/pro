@@ -18,7 +18,18 @@ export interface CanvasState {
   darkTheme: boolean;
   showMarkLine: boolean;
   isDirty: boolean;
-  saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
+  saveStatus: 'saved' | 'saving' | 'unsaved' | 'error' | 'retrying';
+  lastSaveError: SaveError | null;
+  retryCount: number;
+  isOnline: boolean;
+  networkStatus: 'online' | 'offline' | 'checking';
+}
+
+export interface SaveError {
+  type: 'network' | 'server' | 'permission' | 'timeout' | 'unknown';
+  message: string;
+  timestamp: number;
+  retryable: boolean;
 }
 
 function createInitialState(): CanvasState {
@@ -41,7 +52,11 @@ function createInitialState(): CanvasState {
     darkTheme: false,
     showMarkLine: true,
     isDirty: false,
-    saveStatus: 'saved'
+    saveStatus: 'saved',
+    lastSaveError: null,
+    retryCount: 0,
+    isOnline: navigator.onLine,
+    networkStatus: 'online'
   };
 }
 

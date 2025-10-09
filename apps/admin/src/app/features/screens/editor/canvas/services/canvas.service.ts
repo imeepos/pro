@@ -1,11 +1,11 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { CanvasStore } from './canvas.store';
+import { CanvasStore, SaveError } from './canvas.store';
 import { CanvasQuery } from './canvas.query';
 import { SnapshotService } from './snapshot.service';
 import { ComponentItem, ComponentStyle } from '../../models/component.model';
 import { EditMode } from '../../models/canvas.model';
-import { Subject, BehaviorSubject, Observable, merge, timer } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap, takeUntil, tap, catchError } from 'rxjs/operators';
+import { Subject, BehaviorSubject, Observable, merge, timer, EMPTY, throwError } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, takeUntil, tap, catchError, delay, retryWhen, scan, finalize } from 'rxjs/operators';
 import { ScreenApiService, UpdateScreenDto } from '../../../../../core/services/screen-api.service';
 
 @Injectable({ providedIn: 'root' })
@@ -14,8 +14,13 @@ export class CanvasService implements OnDestroy {
   private destroy$ = new Subject<void>();
   private saveTrigger$ = new Subject<void>();
   private immediateSave$ = new Subject<void>();
+  private manualRetry$ = new Subject<void>();
   private currentPageId: string | null = null;
   private readonly DEBOUNCE_TIME = 2500; // 2.5秒防抖时间
+  private readonly MAX_RETRY_COUNT = 3; // 最大重试次数
+  private readonly RETRY_DELAYS = [1000, 2000, 4000]; // 重试延迟：1秒、2秒、4秒
+  private pendingSaveData: { pageName?: string } | null = null; // 待保存的数据
+  private isRetryInProgress = false; // 是否正在重试
 
   constructor(
     private store: CanvasStore,
@@ -23,12 +28,14 @@ export class CanvasService implements OnDestroy {
     private snapshotService: SnapshotService,
     private screenApi: ScreenApiService
   ) {
+    this.initNetworkMonitoring();
     this.initAutoSave();
   }
 
   initPage(pageId: string): void {
     this.currentPageId = pageId;
     this.snapshotService.setPageId(pageId);
+    this.clearErrorState();
     this.setDirty(false);
     this.setSaveStatus('saved');
   }
@@ -578,13 +585,134 @@ export class CanvasService implements OnDestroy {
     }
   }
 
-  setSaveStatus(status: 'saved' | 'saving' | 'unsaved' | 'error'): void {
+  setSaveStatus(status: 'saved' | 'saving' | 'unsaved' | 'error' | 'retrying'): void {
     this.store.update({ saveStatus: status });
+  }
+
+  // 错误状态管理
+  setErrorState(error: SaveError): void {
+    this.store.update({
+      lastSaveError: error,
+      retryCount: this.query.getValue().retryCount + 1
+    });
+  }
+
+  clearErrorState(): void {
+    this.store.update({
+      lastSaveError: null,
+      retryCount: 0
+    });
+  }
+
+  // 网络状态管理
+  updateNetworkStatus(isOnline: boolean, status: 'online' | 'offline' | 'checking'): void {
+    this.store.update({
+      isOnline,
+      networkStatus: status
+    });
+  }
+
+  // 错误分类和处理
+  private classifyError(error: any): SaveError {
+    const timestamp = Date.now();
+
+    if (error.name === 'HttpErrorResponse') {
+      if (error.status === 0) {
+        return {
+          type: 'network',
+          message: '网络连接失败，请检查网络设置',
+          timestamp,
+          retryable: true
+        };
+      } else if (error.status === 401 || error.status === 403) {
+        return {
+          type: 'permission',
+          message: '权限不足，请重新登录',
+          timestamp,
+          retryable: false
+        };
+      } else if (error.status >= 500) {
+        return {
+          type: 'server',
+          message: '服务器错误，请稍后重试',
+          timestamp,
+          retryable: true
+        };
+      } else if (error.status === 408) {
+        return {
+          type: 'timeout',
+          message: '请求超时，请检查网络连接',
+          timestamp,
+          retryable: true
+        };
+      }
+    }
+
+    if (error.name === 'TimeoutError') {
+      return {
+        type: 'timeout',
+        message: '请求超时，请稍后重试',
+        timestamp,
+        retryable: true
+      };
+    }
+
+    return {
+      type: 'unknown',
+      message: error.message || '未知错误',
+      timestamp,
+      retryable: true
+    };
+  }
+
+  // 网络状态监听
+  private initNetworkMonitoring(): void {
+    this.updateNetworkStatus(navigator.onLine, 'online');
+
+    const handleOnline = () => {
+      this.updateNetworkStatus(true, 'online');
+      console.log('网络连接已恢复');
+      // 网络恢复后检查是否有未保存的数据
+      this.retryPendingSave();
+    };
+
+    const handleOffline = () => {
+      this.updateNetworkStatus(false, 'offline');
+      console.log('网络连接已断开');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    this.destroy$.subscribe(() => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    });
+
+    // 定期检查网络状态
+    timer(0, 30000).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.checkNetworkStatus();
+    });
+  }
+
+  private checkNetworkStatus(): void {
+    this.updateNetworkStatus(navigator.onLine, 'checking');
+  }
+
+  // 网络恢复后重试保存
+  private retryPendingSave(): void {
+    const state = this.query.getValue();
+    if (state.isDirty && state.saveStatus === 'error' && !this.isRetryInProgress) {
+      console.log('网络恢复，重试保存未保存的数据');
+      this.triggerImmediateSave();
+    }
   }
 
   // 自动保存相关方法
   private initAutoSave(): void {
-    // 合并防抖保存和立即保存触发器
+    // 合并防抖保存、立即保存和手动重试触发器
     merge(
       this.saveTrigger$.pipe(
         debounceTime(this.DEBOUNCE_TIME),
@@ -592,14 +720,17 @@ export class CanvasService implements OnDestroy {
       ),
       this.immediateSave$.pipe(
         tap(() => console.log('立即保存触发'))
+      ),
+      this.manualRetry$.pipe(
+        tap(() => console.log('手动重试保存触发'))
       )
     ).pipe(
       distinctUntilChanged(),
       switchMap(() => {
-        const pendingPageName = (this as any).pendingPageName;
-        // 清除待保存的页面名称
-        delete (this as any).pendingPageName;
-        return this.performSave(pendingPageName);
+        const pageName = this.pendingSaveData?.pageName;
+        // 清除待保存的数据
+        this.pendingSaveData = null;
+        return this.performSaveWithRetry(pageName);
       }),
       takeUntil(this.destroy$)
     ).subscribe();
@@ -616,18 +747,124 @@ export class CanvasService implements OnDestroy {
     if (!this.currentPageId) return;
 
     this.setDirty(true);
-    // 将页面名称保存在临时属性中，供performSave使用
-    if (pageName) {
-      (this as any).pendingPageName = pageName;
-    }
+    // 保存待保存的数据
+    this.pendingSaveData = { pageName };
     this.immediateSave$.next();
+  }
+
+  // 手动重试保存
+  manualRetrySave(): void {
+    if (!this.currentPageId) {
+      console.warn('未设置页面ID，无法重试保存');
+      return;
+    }
+
+    const state = this.query.getValue();
+    if (state.saveStatus !== 'error') {
+      console.log('当前没有错误状态，无需重试');
+      return;
+    }
+
+    this.clearErrorState();
+    this.manualRetry$.next();
+  }
+
+  // 强制保存（忽略错误）
+  forceSave(): void {
+    if (!this.currentPageId) {
+      console.warn('未设置页面ID，无法强制保存');
+      return;
+    }
+
+    this.clearErrorState();
+    this.setDirty(true);
+    const pageName: string | undefined = this.pendingSaveData?.pageName;
+    this.pendingSaveData = null;
+    this.performSave(pageName).subscribe({
+      error: (error) => {
+        console.error('强制保存失败:', error);
+        this.setSaveStatus('error');
+      }
+    });
+  }
+
+  // 带重试机制的保存方法
+  private performSaveWithRetry(pageName?: string): Observable<unknown> {
+    if (!this.currentPageId) {
+      return throwError(() => new Error('未设置页面ID'));
+    }
+
+    const state = this.query.getValue();
+
+    // 检查网络状态
+    if (!state.isOnline) {
+      const networkError: SaveError = {
+        type: 'network',
+        message: '网络连接不可用，请检查网络设置',
+        timestamp: Date.now(),
+        retryable: true
+      };
+      this.setErrorState(networkError);
+      this.setSaveStatus('error');
+      return EMPTY; // 网络不可用时不执行保存
+    }
+
+    this.setSaveStatus('saving');
+
+    return this.performSave(pageName).pipe(
+      retryWhen(errors =>
+        errors.pipe(
+          scan((errorCount, error) => {
+            const saveError = this.classifyError(error);
+
+            // 如果错误不可重试，直接抛出错误
+            if (!saveError.retryable) {
+              this.setErrorState(saveError);
+              this.setSaveStatus('error');
+              throw error;
+            }
+
+            // 如果超过最大重试次数，抛出错误
+            if (errorCount >= this.MAX_RETRY_COUNT) {
+              console.error(`保存失败，已达到最大重试次数 ${this.MAX_RETRY_COUNT}`);
+              saveError.message = `保存失败，已重试 ${this.MAX_RETRY_COUNT} 次，请检查网络或手动重试`;
+              this.setErrorState(saveError);
+              this.setSaveStatus('error');
+              throw error;
+            }
+
+            // 更新重试状态
+            this.setSaveStatus('retrying');
+            this.isRetryInProgress = true;
+
+            // 计算延迟时间（指数退避）
+            const delay = this.RETRY_DELAYS[errorCount];
+            console.log(`保存失败，${delay}ms 后进行第 ${errorCount + 1} 次重试...`);
+
+            return errorCount + 1;
+          }, 0),
+          switchMap(errorCount => {
+            const delay = this.RETRY_DELAYS[errorCount - 1] || 1000;
+            return timer(delay);
+          }),
+          finalize(() => {
+            this.isRetryInProgress = false;
+          })
+        )
+      ),
+      catchError(error => {
+        const saveError = this.classifyError(error);
+        this.setErrorState(saveError);
+        this.setSaveStatus('error');
+        console.error('保存失败:', error);
+        return EMPTY; // 返回空流，避免中断订阅
+      })
+    );
   }
 
   private performSave(pageName?: string): Observable<unknown> {
     if (!this.currentPageId) {
-      return new Observable(observer => {
-        observer.error(new Error('未设置页面ID'));
-      });
+      return throwError(() => new Error('未设置页面ID'));
     }
 
     const state = this.query.getValue();
@@ -642,18 +879,15 @@ export class CanvasService implements OnDestroy {
       components: this.convertComponentsToApiFormat(state.componentData)
     };
 
-    this.setSaveStatus('saving');
-
     return this.screenApi.updateScreen(this.currentPageId, updateDto).pipe(
       tap(() => {
+        this.clearErrorState();
         this.setDirty(false);
         this.setSaveStatus('saved');
         console.log('画布保存成功');
       }),
       catchError(error => {
-        this.setSaveStatus('error');
-        console.error('画布保存失败:', error);
-        throw error;
+        throw error; // 让重试机制处理错误
       })
     );
   }
@@ -671,6 +905,75 @@ export class CanvasService implements OnDestroy {
       },
       config: comp.config
     }));
+  }
+
+  // 公共方法 - 获取错误状态信息
+  getErrorState(): SaveError | null {
+    return this.query.getValue().lastSaveError;
+  }
+
+  // 公共方法 - 获取重试次数
+  getRetryCount(): number {
+    return this.query.getValue().retryCount;
+  }
+
+  // 公共方法 - 获取网络状态
+  getNetworkStatus(): { isOnline: boolean; status: 'online' | 'offline' | 'checking' } {
+    const state = this.query.getValue();
+    return {
+      isOnline: state.isOnline,
+      status: state.networkStatus
+    };
+  }
+
+  // 公共方法 - 获取保存状态
+  getSaveStatus(): 'saved' | 'saving' | 'unsaved' | 'error' | 'retrying' {
+    return this.query.getValue().saveStatus;
+  }
+
+  // 公共方法 - 获取用户友好的错误提示
+  getUserFriendlyErrorMessage(): string {
+    const error = this.getErrorState();
+    if (!error) return '';
+
+    const retryCount = this.getRetryCount();
+    let message = error.message;
+
+    if (retryCount > 0) {
+      message += ` (已重试 ${retryCount} 次)`;
+    }
+
+    if (error.retryable && retryCount < this.MAX_RETRY_COUNT) {
+      message += ' 系统将自动重试。';
+    } else if (!error.retryable) {
+      message += ' 请重新登录后再试。';
+    } else {
+      message += ' 请手动重试或检查网络。';
+    }
+
+    return message;
+  }
+
+  // 公共方法 - 检查是否可以重试
+  canRetry(): boolean {
+    const state = this.query.getValue();
+    const error = state.lastSaveError;
+
+    if (!error || !error.retryable) {
+      return false;
+    }
+
+    // 检查是否已达到最大重试次数
+    if (state.retryCount >= this.MAX_RETRY_COUNT) {
+      return false;
+    }
+
+    return state.saveStatus === 'error';
+  }
+
+  // 公共方法 - 检查是否正在重试
+  isRetrying(): boolean {
+    return this.query.getValue().saveStatus === 'retrying' || this.isRetryInProgress;
   }
 
   ngOnDestroy(): void {
