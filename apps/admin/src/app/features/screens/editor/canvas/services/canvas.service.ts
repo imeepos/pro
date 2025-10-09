@@ -51,6 +51,60 @@ export class CanvasService implements OnDestroy {
     this.triggerAutoSave();
   }
 
+  updateCanvasStyle(updates: Partial<import('../../models/canvas.model').CanvasStyle>): void {
+    this.store.update(state => ({
+      canvasStyle: {
+        ...state.canvasStyle,
+        ...updates
+      }
+    }));
+    this.triggerAutoSave();
+  }
+
+  setCanvasBackground(background: string | import('../../models/canvas.model').BackgroundStyle): void {
+    this.store.update(state => ({
+      canvasStyle: {
+        ...state.canvasStyle,
+        background
+      }
+    }));
+    this.triggerAutoSave();
+  }
+
+  setCanvasClassName(className: string): void {
+    this.store.update(state => ({
+      canvasStyle: {
+        ...state.canvasStyle,
+        className
+      }
+    }));
+    this.triggerAutoSave();
+  }
+
+  setCanvasDataAttrs(dataAttrs: Record<string, string>): void {
+    this.store.update(state => ({
+      canvasStyle: {
+        ...state.canvasStyle,
+        dataAttrs
+      }
+    }));
+    this.triggerAutoSave();
+  }
+
+  setCanvasDescription(description: string): void {
+    this.store.update(state => ({
+      canvasStyle: {
+        ...state.canvasStyle,
+        description
+      }
+    }));
+    this.triggerAutoSave();
+  }
+
+  applyResolutionPreset(width: number, height: number): void {
+    this.setCanvasSize(width, height);
+  }
+
   addComponent(component: ComponentItem): void {
     this.store.update((state) => ({
       componentData: [...state.componentData, component]
@@ -978,6 +1032,16 @@ export class CanvasService implements OnDestroy {
   // 公共方法 - 检查是否正在重试
   isRetrying(): boolean {
     return this.query.getValue().saveStatus === 'retrying' || this.isRetryInProgress;
+  }
+
+  setFullscreenState(isFullscreen: boolean): void {
+    this.store.update({ isFullscreen });
+
+    if (isFullscreen) {
+      this.setEditMode('preview');
+    } else {
+      this.setEditMode('edit');
+    }
   }
 
   ngOnDestroy(): void {
