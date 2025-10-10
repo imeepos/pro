@@ -31,7 +31,7 @@ export class ApiKeyEntity {
   /**
    * 关联的用户ID
    */
-  @Column({ type: 'varchar', length: 36, name: 'user_id' })
+  @Column({ type: 'varchar', name: 'user_id' })
   userId: string;
 
   /**
