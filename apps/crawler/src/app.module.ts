@@ -20,7 +20,7 @@ import { defaultCrawlerConfig, defaultRabbitMQConfig, defaultMongoDBConfig, defa
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const uri = configService.get<string>('MONGODB_URI', 'mongodb://localhost:27017/pro');
+        const uri = configService.get<string>('MONGODB_URL', 'mongodb://localhost:27017/pro');
         return {
           uri,
           connectionFactory: (connection) => {

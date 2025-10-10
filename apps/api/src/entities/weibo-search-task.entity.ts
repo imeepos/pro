@@ -157,8 +157,8 @@ export class WeiboSearchTaskEntity {
   @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 
-  @Column({ type: 'varchar', name: 'user_id' })
-  userId: string;
+  @Column({ type: 'varchar', name: 'user_id', nullable: true })
+  userId?: string;
 
   @ManyToOne(() => WeiboAccountEntity, { nullable: true })
   @JoinColumn({ name: 'weibo_account_id' })

@@ -33,7 +33,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
       type: 'postgres',
       url: process.env.DATABASE_URL,
       entities,
-      synchronize: true,
+      synchronize: false,
       logging: process.env.NODE_ENV === 'development',
     };
   }
@@ -46,7 +46,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
     password: process.env.DATABASE_PASSWORD || 'postgres123',
     database: process.env.DATABASE_NAME || 'pro',
     entities,
-    synchronize: true,
+    synchronize: false,
     logging: process.env.NODE_ENV === 'development',
   };
 };

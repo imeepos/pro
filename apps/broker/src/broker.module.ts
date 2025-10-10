@@ -7,6 +7,7 @@ import { TaskMonitor } from './weibo/task-monitor.service';
 import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
 import { WeiboSearchTaskEntity } from './entities/weibo-search-task.entity';
 import { getDatabaseConfig } from './config/database.config';
+import { AppController } from './app.controller';
 
 /**
  * Broker 主模块
@@ -29,6 +30,7 @@ import { getDatabaseConfig } from './config/database.config';
     // 实体模块
     TypeOrmModule.forFeature([WeiboSearchTaskEntity]),
   ],
+  controllers: [AppController],
   providers: [
     // RabbitMQ 配置服务
     RabbitMQConfigService,

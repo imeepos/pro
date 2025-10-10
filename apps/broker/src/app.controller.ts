@@ -4,14 +4,14 @@ import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
 import { TaskMonitor } from './weibo/task-monitor.service';
 
 // @ApiTags('broker')
-@Controller('broker')
+@Controller()
 export class AppController {
   constructor(
     private readonly taskScanner: TaskScannerScheduler,
     private readonly taskMonitor: TaskMonitor,
   ) {}
 
-  @Post('scan')
+  @Post('broker/scan')
   // @ApiOperation({ summary: '手动触发任务扫描' })
   // @ApiResponse({ status: HttpStatus.OK, description: '扫描成功' })
   async triggerScan() {
@@ -19,7 +19,7 @@ export class AppController {
     return { message: '任务扫描已触发' };
   }
 
-  @Post('monitor')
+  @Post('broker/monitor')
   // @ApiOperation({ summary: '手动触发任务监控' })
   // @ApiResponse({ status: HttpStatus.OK, description: '监控成功' })
   async triggerMonitor() {
@@ -27,7 +27,7 @@ export class AppController {
     return { message: '任务监控已触发' };
   }
 
-  @Get('stats')
+  @Get('broker/stats')
   // @ApiOperation({ summary: '获取任务统计信息' })
   // @ApiResponse({ status: HttpStatus.OK, description: '获取成功' })
   async getStats() {
@@ -47,7 +47,7 @@ export class AppController {
     };
   }
 
-  @Post('reset/:taskId')
+  @Post('broker/reset/:taskId')
   // @ApiOperation({ summary: '重置失败任务' })
   // @ApiResponse({ status: HttpStatus.OK, description: '重置成功' })
   // @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '任务不存在或状态不允许重置' })
