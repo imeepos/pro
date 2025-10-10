@@ -1,464 +1,224 @@
 /* 模态框背景 */
 .modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
+  @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4;
 }
 
 /* 模态框容器 */
 .modal-container {
-  position: relative;
-  width: 100%;
-  max-width: 48rem; /* 768px */
-  max-height: 90vh;
-  overflow: hidden;
-  background: white;
-  border-radius: 1rem;
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
+  @apply relative w-full max-w-2xl max-h-[90vh] bg-white rounded-lg shadow-2xl overflow-hidden;
 }
 
 /* 模态框头部 */
 .modal-header {
-  padding: 2rem;
-  border-bottom: 1px solid rgb(226 232 240);
-  background: linear-gradient(to right, rgb(102 126 234), rgb(67 56 202));
-  color: white;
+  @apply p-8 border-b border-slate-200 text-white bg-gradient-to-r from-primary to-primary-dark;
 }
 
 .modal-header.danger {
-  background: linear-gradient(to right, rgb(220 38 38), rgb(185 28 28));
+  @apply from-red-600 to-red-800;
 }
 
 .modal-header.success {
-  background: linear-gradient(to right, rgb(34 197 94), rgb(22 163 74));
+  @apply from-green-600 to-green-800;
 }
 
 .modal-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 0.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  @apply text-2xl font-bold mb-1 flex items-center gap-3;
 }
 
 .modal-description {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.875rem;
+  @apply text-sm opacity-80;
 }
 
 /* 关闭按钮 */
 .close-button {
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.close-button:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
+  @apply w-8 h-8 flex items-center justify-center rounded-full bg-white/20 border-none text-white cursor-pointer transition-all hover:bg-white/30 hover:scale-110;
 }
 
 /* 模态框内容 */
 .modal-content {
-  padding: 2rem;
-  max-height: calc(90vh - 8rem);
-  overflow-y: auto;
-}
-
-.modal-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.modal-content::-webkit-scrollbar-track {
-  background: rgb(241 245 249);
-  border-radius: 3px;
-}
-
-.modal-content::-webkit-scrollbar-thumb {
-  background: rgb(148 163 184);
-  border-radius: 3px;
-}
-
-.modal-content::-webkit-scrollbar-thumb:hover {
-  background: rgb(100 116 139);
+  @apply p-8 max-h-[calc(90vh-8rem)] overflow-y-auto;
 }
 
 /* API Key 信息卡片 */
 .api-key-info {
-  padding: 1rem;
-  background-color: rgb(248 250 252);
-  border: 1px solid rgb(226 232 240);
-  border-radius: 0.5rem;
-  margin-bottom: 1.5rem;
+  @apply p-4 bg-slate-50 border border-slate-200 rounded-lg mb-6;
 }
 
 .api-key-name {
-  font-weight: 600;
-  color: rgb(30 41 59);
+  @apply font-semibold text-slate-800;
 }
 
 .api-key-description {
-  color: rgb(71 85 105);
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
+  @apply text-slate-600 text-sm mt-1;
 }
 
 .api-key-meta {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 0.5rem;
+  @apply flex items-center gap-4 mt-2;
 }
 
 .api-key-stats {
-  text-align: right;
+  @apply text-right;
 }
 
 .api-key-usage-count {
-  font-size: 0.875rem;
-  color: rgb(71 85 105);
+  @apply text-sm text-slate-600;
 }
 
 .api-key-usage-number {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: rgb(30 41 59);
+  @apply text-lg font-semibold text-slate-800;
 }
 
 /* 徽章样式 */
 .badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  @apply px-2 py-1 rounded-full text-xs font-medium;
 }
 
 .badge-read-only {
-  background-color: rgb(219 234 254);
-  color: rgb(29 78 216);
+  @apply bg-blue-100 text-blue-800;
 }
 
 .badge-read-write {
-  background-color: rgb(233 213 255);
-  color: rgb(109 40 217);
+  @apply bg-purple-100 text-purple-800;
 }
 
 .badge-admin {
-  background-color: rgb(254 202 202);
-  color: rgb(185 28 28);
+  @apply bg-red-100 text-red-800;
 }
 
 .badge-active {
-  background-color: rgb(220 252 231);
-  color: rgb(22 101 52);
+  @apply bg-green-100 text-green-800;
 }
 
 .badge-inactive {
-  background-color: rgb(254 240 138);
-  color: rgb(120 113 108);
+  @apply bg-yellow-100 text-yellow-800;
 }
 
 .badge-expired {
-  background-color: rgb(254 202 202);
-  color: rgb(153 27 27);
+  @apply bg-red-100 text-red-700;
 }
 
 .badge-revoked {
-  background-color: rgb(229 231 235);
-  color: rgb(75 85 99);
+  @apply bg-gray-100 text-gray-700;
 }
 
 /* 警告和提示框 */
 .alert {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  margin-bottom: 1.5rem;
+  @apply p-4 rounded-lg mb-6;
 }
 
 .alert-warning {
-  background-color: rgb(254 243 199);
-  border: 1px solid rgb(252 211 77);
-  color: rgb(120 113 108);
+  @apply bg-yellow-50 border border-yellow-300 text-yellow-800;
 }
 
 .alert-danger {
-  background-color: rgb(254 226 226);
-  border: 1px solid rgb(248 180 180);
-  color: rgb(127 29 29);
+  @apply bg-red-50 border border-red-300 text-red-800;
 }
 
 .alert-info {
-  background-color: rgb(219 234 254);
-  border: 1px solid rgb(147 197 253);
-  color: rgb(30 58 138);
+  @apply bg-blue-50 border border-blue-300 text-blue-800;
 }
 
 .alert-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
+  @apply flex items-start gap-3;
 }
 
 .alert-icon {
-  font-size: 1.125rem;
+  @apply text-lg;
 }
 
 .alert-title {
-  font-weight: 500;
-  font-size: 0.875rem;
-  margin-bottom: 0.25rem;
+  @apply font-medium text-sm mb-1;
 }
 
 .alert-message {
-  font-size: 0.875rem;
-  line-height: 1.5;
+  @apply text-sm leading-6;
 }
 
 .alert-list {
-  margin-top: 0.5rem;
-  margin-left: 1.25rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.alert-list li {
-  margin-bottom: 0.25rem;
+  @apply mt-2 ml-5 text-sm leading-6 list-disc;
 }
 
 /* API Key 显示区域 */
 .api-key-display {
-  margin-bottom: 1.5rem;
+  @apply mb-6;
 }
 
 .api-key-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: rgb(30 41 59);
-  margin-bottom: 0.5rem;
+  @apply block text-sm font-medium text-slate-800 mb-2;
 }
 
 .api-key-input-group {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  @apply flex items-center gap-2;
 }
 
 .api-key-input {
-  flex: 1;
-  padding: 1rem;
-  background-color: rgb(241 245 249);
-  border: 2px solid rgb(203 213 225);
-  border-radius: 0.5rem;
-  font-family: 'Courier New', monospace;
-  font-size: 0.875rem;
-  color: rgb(30 41 59);
-  word-break: break-all;
+  @apply flex-1 p-4 bg-slate-100 border-2 border-slate-300 rounded-lg font-mono text-sm text-slate-800 break-all;
 }
 
 .api-key-button {
-  padding: 0.625rem 1rem;
-  font-size: 0.875rem;
-  border-radius: 0.5rem;
-  border: 1px solid;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+  @apply px-4 py-2.5 text-sm rounded-lg border cursor-pointer transition-all whitespace-nowrap;
 }
 
 .api-key-button-secondary {
-  color: rgb(71 85 105);
-  background-color: rgb(226 232 240);
-  border-color: rgb(203 213 225);
-}
-
-.api-key-button-secondary:hover {
-  background-color: rgb(203 213 225);
+  @apply text-slate-600 bg-slate-200 border-slate-300 hover:bg-slate-300;
 }
 
 .api-key-button-primary {
-  color: rgb(67 56 202);
-  background-color: rgb(238 242 255);
-  border-color: rgb(165 180 252);
-}
-
-.api-key-button-primary:hover {
-  background-color: rgb(224 231 255);
+  @apply text-indigo-700 bg-indigo-100 border-indigo-300 hover:bg-indigo-200;
 }
 
 /* 按钮组 */
 .button-group {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
+  @apply flex justify-end gap-4 mt-8;
 }
 
 .button {
-  padding: 0.625rem 1.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  @apply px-6 py-2.5 text-sm font-medium rounded-lg cursor-pointer transition-all border-2 no-underline inline-flex items-center justify-center gap-2;
 }
 
 .button-secondary {
-  color: rgb(71 85 105);
-  background-color: white;
-  border-color: rgb(203 213 225);
-}
-
-.button-secondary:hover:not(:disabled) {
-  background-color: rgb(248 250 252);
+  @apply text-slate-600 bg-white border-slate-300 hover:bg-slate-50;
 }
 
 .button-danger {
-  color: white;
-  background-color: rgb(220 38 38);
-  border-color: rgb(220 38 38);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
-}
-
-.button-danger:hover:not(:disabled) {
-  background-color: rgb(185 28 28);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
+  @apply text-white bg-red-600 border-red-600 shadow-lg hover:bg-red-700 hover:-translate-y-0.5 hover:shadow-xl;
 }
 
 .button-warning {
-  color: white;
-  background-color: rgb(217 119 6);
-  border-color: rgb(217 119 6);
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
-}
-
-.button-warning:hover:not(:disabled) {
-  background-color: rgb(180 83 9);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.6);
+  @apply text-white bg-orange-600 border-orange-600 shadow-lg hover:bg-orange-700 hover:-translate-y-0.5 hover:shadow-xl;
 }
 
 .button-success {
-  color: white;
-  background-color: rgb(34 197 94);
-  border-color: rgb(34 197 94);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
-}
-
-.button-success:hover:not(:disabled) {
-  background-color: rgb(22 163 74);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+  @apply text-white bg-green-600 border-green-600 shadow-lg hover:bg-green-700 hover:-translate-y-0.5 hover:shadow-xl;
 }
 
 .button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none !important;
+  @apply opacity-60 cursor-not-allowed;
 }
 
-/* 加载状态 */
 .loading-spinner {
-  display: inline-block;
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  @apply inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .modal-container {
-    margin: 0.5rem;
-    max-height: 95vh;
+    @apply mx-2 max-h-[95vh];
   }
-
   .modal-header,
   .modal-content {
-    padding: 1.5rem;
+    @apply p-6;
   }
-
   .modal-title {
-    font-size: 1.25rem;
+    @apply text-xl;
   }
-
   .api-key-input-group {
-    flex-direction: column;
-    align-items: stretch;
+    @apply flex-col items-stretch;
   }
-
   .button-group {
-    flex-direction: column;
+    @apply flex-col;
   }
-
   .button {
-    width: 100%;
+    @apply w-full;
   }
-}
-
-/* 动画 */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.2s ease-out;
-}
-
-.slide-up {
-  animation: slideUp 0.3s ease-out;
-}
-
-/* 焦点样式 */
-.focus-ring {
-  outline: none;
-}
-
-.focus-ring:focus-visible {
-  box-shadow: 0 0 0 4px rgba(67, 56, 202, 0.5);
-  border-radius: 0.5rem;
 }
