@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewIni
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import AMapLoader from '@amap/amap-jsapi-loader';
+import { ConfigService } from '../../../core/services/config.service';
 
 export interface LocationData {
   longitude: number;
@@ -75,9 +76,10 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() latitude?: number;
   @Input() city?: string;
   @Input() height = '400px';
-  @Input() amapKey = 'YOUR_AMAP_KEY'; // 应从环境变量获取
 
   @Output() locationPick = new EventEmitter<LocationData>();
+
+  constructor(private configService: ConfigService) {}
 
   mapId = `amap-picker-${Math.random().toString(36).substr(2, 9)}`;
   searchKeyword = '';
@@ -115,8 +117,13 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   async initMap(): Promise<void> {
     try {
+      const amapKey = this.configService.getAmapApiKey();
+      if (!this.configService.hasValidAmapKey()) {
+        throw new Error('高德地图API Key未配置或无效，请检查环境变量 AMAP_API_KEY');
+      }
+
       this.AMap = await AMapLoader.load({
-        key: this.amapKey,
+        key: amapKey,
         version: '2.0',
         plugins: ['AMap.Geocoder', 'AMap.PlaceSearch', 'AMap.AutoComplete']
       });

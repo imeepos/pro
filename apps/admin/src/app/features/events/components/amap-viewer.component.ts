@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import AMapLoader from '@amap/amap-jsapi-loader';
+import { ConfigService } from '../../../core/services/config.service';
 
 export interface EventMarker {
   id: number;
@@ -39,7 +40,8 @@ export class AmapViewerComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() height = '400px';
   @Input() zoom = 13;
   @Input() enableClustering = false;
-  @Input() amapKey = 'YOUR_AMAP_KEY';
+
+  constructor(private configService: ConfigService) {}
 
   mapId = `amap-viewer-${Math.random().toString(36).substr(2, 9)}`;
   mapInitialized = false;
@@ -67,13 +69,18 @@ export class AmapViewerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   async initMap(): Promise<void> {
     try {
+      const amapKey = this.configService.getAmapApiKey();
+      if (!this.configService.hasValidAmapKey()) {
+        throw new Error('高德地图API Key未配置或无效，请检查环境变量 AMAP_API_KEY');
+      }
+
       const plugins = ['AMap.Geocoder'];
       if (this.enableClustering) {
         plugins.push('AMap.MarkerCluster');
       }
 
       this.AMap = await AMapLoader.load({
-        key: this.amapKey,
+        key: amapKey,
         version: '2.0',
         plugins
       });
