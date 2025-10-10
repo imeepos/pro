@@ -172,7 +172,7 @@ export class ImageUploadComponent implements OnDestroy {
           reject(new Error('上传已取消'));
         });
 
-        xhr.open('POST', `${environment.apiUrl}/api/events/${this.eventId}/attachments`);
+        xhr.open('POST', `${environment.apiUrl}/events/${this.eventId}/attachments`);
 
         const token = localStorage.getItem('token');
         if (token) {
