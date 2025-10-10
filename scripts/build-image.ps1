@@ -1,23 +1,23 @@
-# 简化的Docker构建脚本 (PowerShell版本)
-# 使用方法: .\scripts\build-image.ps1 [service]
-# 如果不指定服务，则构建所有服务
+# Simplified Docker Build Script (PowerShell Version)
+# Usage: .\scripts\build-image.ps1 [service]
+# If no service specified, builds all services
 
 param(
     [Parameter(Position=0)]
     [string]$Service = "all"
 )
 
-# 错误时停止执行
+# Stop execution on error
 $ErrorActionPreference = "Stop"
 
-# 获取git commit hash
+# Get git commit hash
 $GitCommit = git rev-parse --short HEAD
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ 错误: 无法获取Git commit hash" -ForegroundColor Red
+    Write-Host "ERROR: Cannot get Git commit hash" -ForegroundColor Red
     exit 1
 }
 
-# 服务配置函数
+# Service configuration function
 function Get-ServiceConfig {
     param([string]$ServiceName)
 
@@ -46,12 +46,12 @@ function Get-ServiceConfig {
     }
 }
 
-# 获取所有服务列表
+# Get all services list
 function Get-AllServices {
     return @("api", "web", "admin", "broker", "crawler", "cleaner")
 }
 
-# 检查是否存在旧镜像作为缓存源
+# Check if old image exists as cache source
 function Check-CacheSource {
     param([string]$ServiceName)
 
@@ -63,56 +63,56 @@ function Check-CacheSource {
     $imageName = ($config -split '\|')[0]
     $latestImageName = "$($imageName.Substring(0, $imageName.LastIndexOf(':'))):latest"
 
-    # 去除 docker.io/ 前缀
+    # Remove docker.io/ prefix
     $shortImageName = $imageName -replace "^docker.io/", ""
     $shortLatestImageName = $latestImageName -replace "^docker.io/", ""
 
-    Write-Host "🔍 检查缓存镜像..." -ForegroundColor Yellow
-    Write-Host "📋 完整名称: $latestImageName" -ForegroundColor Gray
-    Write-Host "📋 短名称: $shortLatestImageName" -ForegroundColor Gray
+    Write-Host "Checking cache images..." -ForegroundColor Yellow
+    Write-Host "Full name: $latestImageName" -ForegroundColor Gray
+    Write-Host "Short name: $shortLatestImageName" -ForegroundColor Gray
 
-    # 获取本地镜像列表
+    # Get local images list
     $images = docker images --format "{{.Repository}}:{{.Tag}}"
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ 无法获取Docker镜像列表" -ForegroundColor Red
+        Write-Host "ERROR: Cannot get Docker images list" -ForegroundColor Red
         return $null
     }
 
-    # 检查是否存在 latest 标签的镜像（先尝试短名称）
+    # Check if latest tag image exists (try short name first)
     if ($images -contains $shortLatestImageName) {
-        Write-Host "🎯 发现缓存镜像: $shortLatestImageName" -ForegroundColor Green
+        Write-Host "Found cache image: $shortLatestImageName" -ForegroundColor Green
         return $shortLatestImageName
     }
 
-    # 再尝试完整名称
+    # Try full name
     if ($images -contains $latestImageName) {
-        Write-Host "🎯 发现缓存镜像: $latestImageName" -ForegroundColor Green
+        Write-Host "Found cache image: $latestImageName" -ForegroundColor Green
         return $latestImageName
     }
 
-    # 检查是否存在其他版本的镜像
+    # Check if other versions exist
     $imageBase = $shortImageName.Substring(0, $shortImageName.LastIndexOf(':'))
     $matchingImages = $images | Where-Object { $_ -like "$imageBase`:*" }
 
     if ($matchingImages) {
         $latestTag = $matchingImages | Select-Object -First 1
-        Write-Host "🎯 发现缓存镜像: $latestTag" -ForegroundColor Green
+        Write-Host "Found cache image: $latestTag" -ForegroundColor Green
         return $latestTag
     }
 
-    Write-Host "❌ 未找到缓存镜像" -ForegroundColor Red
+    Write-Host "No cache image found" -ForegroundColor Red
     return $null
 }
 
-# 构建单个服务
+# Build single service
 function Build-Service {
     param([string]$ServiceName)
 
     $config = Get-ServiceConfig $ServiceName
 
     if ([string]::IsNullOrEmpty($config)) {
-        Write-Host "❌ 错误: 不支持的服务 '$ServiceName'" -ForegroundColor Red
-        Write-Host "支持的服务: api, web, admin, broker, crawler, cleaner, all" -ForegroundColor Yellow
+        Write-Host "ERROR: Unsupported service '$ServiceName'" -ForegroundColor Red
+        Write-Host "Supported services: api, web, admin, broker, crawler, cleaner, all" -ForegroundColor Yellow
         exit 1
     }
 
@@ -120,33 +120,33 @@ function Build-Service {
     $dockerfile = ($config -split '\|')[1]
     $buildContext = ($config -split '\|')[2]
 
-    Write-Host "🚀 开始构建 $ServiceName 服务..." -ForegroundColor Blue
-    Write-Host "📦 镜像名称: $imageName" -ForegroundColor Gray
-    Write-Host "📄 Dockerfile: $dockerfile" -ForegroundColor Gray
-    Write-Host "📁 构建上下文: $buildContext" -ForegroundColor Gray
+    Write-Host "Building $ServiceName service..." -ForegroundColor Blue
+    Write-Host "Image name: $imageName" -ForegroundColor Gray
+    Write-Host "Dockerfile: $dockerfile" -ForegroundColor Gray
+    Write-Host "Build context: $buildContext" -ForegroundColor Gray
 
-    # 检查Dockerfile是否存在
+    # Check if Dockerfile exists
     if (-not (Test-Path $dockerfile)) {
-        Write-Host "❌ 错误: Dockerfile不存在: $dockerfile" -ForegroundColor Red
+        Write-Host "ERROR: Dockerfile not found: $dockerfile" -ForegroundColor Red
         return $false
     }
 
-    # 设置缓存参数
+    # Set cache parameters
     $buildFromBase = "node:20-alpine"
     $cacheArgs = @()
 
-    # 检查缓存源
+    # Check cache source
     $cacheSource = Check-CacheSource $ServiceName
 
     if ($cacheSource) {
-        Write-Host "🚀 使用缓存镜像: $cacheSource" -ForegroundColor Green
+        Write-Host "Using cache image: $cacheSource" -ForegroundColor Green
         $cacheArgs += @("--cache-from", $cacheSource)
         $buildFromBase = $cacheSource
     } else {
-        Write-Host "🔧 使用基础镜像: node:20-alpine" -ForegroundColor Yellow
+        Write-Host "Using base image: node:20-alpine" -ForegroundColor Yellow
     }
 
-    # 构建命令参数
+    # Build command parameters
     $buildArgs = @(
         "buildx", "build",
         "--platform", "linux/amd64",
@@ -157,40 +157,40 @@ function Build-Service {
         $buildContext
     )
 
-    # 执行构建
-    Write-Host "执行: docker $($buildArgs -join ' ')" -ForegroundColor Gray
+    # Execute build
+    Write-Host "Executing: docker $($buildArgs -join ' ')" -ForegroundColor Gray
     docker $buildArgs
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ 构建失败" -ForegroundColor Red
+        Write-Host "Build failed" -ForegroundColor Red
         return $false
     }
 
-    # 添加 latest 标签
+    # Add latest tag
     $latestImageName = "$($imageName.Substring(0, $imageName.LastIndexOf(':'))):latest"
     docker tag $imageName $latestImageName
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ 标签添加失败" -ForegroundColor Red
+        Write-Host "Tag addition failed" -ForegroundColor Red
         return $false
     }
 
-    Write-Host "✅ $ServiceName 服务构建完成！" -ForegroundColor Green
-    Write-Host "📦 标签: $imageName, $latestImageName" -ForegroundColor Gray
+    Write-Host "$ServiceName service build completed!" -ForegroundColor Green
+    Write-Host "Tags: $imageName, $latestImageName" -ForegroundColor Gray
     Write-Host ""
 
     return $true
 }
 
-# 主逻辑
+# Main logic
 if ($Service -eq "all") {
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-    Write-Host "🚀 开始构建所有服务 Docker 镜像" -ForegroundColor Cyan
-    Write-Host "🔖 Git Commit: $GitCommit" -ForegroundColor Cyan
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host "============================================" -ForegroundColor Cyan
+    Write-Host "Building all services Docker images" -ForegroundColor Cyan
+    Write-Host "Git Commit: $GitCommit" -ForegroundColor Cyan
+    Write-Host "============================================" -ForegroundColor Cyan
     Write-Host ""
 
-    # 构建所有服务
+    # Build all services
     $services = Get-AllServices
     $successCount = 0
 
@@ -200,10 +200,10 @@ if ($Service -eq "all") {
         }
     }
 
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-    Write-Host "🎉 所有服务构建完成！成功: $successCount/$($services.Count)" -ForegroundColor Cyan
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-    Write-Host "📋 可用镜像:" -ForegroundColor Yellow
+    Write-Host "============================================" -ForegroundColor Cyan
+    Write-Host "All services build completed! Success: $successCount/$($services.Count)" -ForegroundColor Cyan
+    Write-Host "============================================" -ForegroundColor Cyan
+    Write-Host "Available images:" -ForegroundColor Yellow
 
     foreach ($serviceName in $services) {
         $config = Get-ServiceConfig $serviceName
@@ -214,31 +214,31 @@ if ($Service -eq "all") {
     }
     Write-Host ""
 } else {
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-    Write-Host "🚀 开始构建 Docker 镜像" -ForegroundColor Cyan
-    Write-Host "🔖 Git Commit: $GitCommit" -ForegroundColor Cyan
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host "============================================" -ForegroundColor Cyan
+    Write-Host "Building Docker image" -ForegroundColor Cyan
+    Write-Host "Git Commit: $GitCommit" -ForegroundColor Cyan
+    Write-Host "============================================" -ForegroundColor Cyan
     Write-Host ""
 
-    # 构建指定服务
+    # Build specified service
     if (Build-Service $Service) {
         $config = Get-ServiceConfig $Service
         $imageName = ($config -split '\|')[0]
         $latestImageName = "$($imageName.Substring(0, $imageName.LastIndexOf(':'))):latest"
 
-        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-        Write-Host "🎉 构建完成！" -ForegroundColor Cyan
-        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-        Write-Host "📋 可用镜像:" -ForegroundColor Yellow
+        Write-Host "============================================" -ForegroundColor Cyan
+        Write-Host "Build completed!" -ForegroundColor Cyan
+        Write-Host "============================================" -ForegroundColor Cyan
+        Write-Host "Available images:" -ForegroundColor Yellow
         Write-Host "   - $imageName" -ForegroundColor Gray
         Write-Host "   - $latestImageName" -ForegroundColor Gray
         Write-Host ""
 
-        Write-Host "🏃 运行示例:" -ForegroundColor Yellow
-        Write-Host "   使用 commit hash: docker run -p 3000:3000 $imageName" -ForegroundColor Gray
-        Write-Host "   使用 latest 标签: docker run -p 3000:3000 $latestImageName" -ForegroundColor Gray
+        Write-Host "Run examples:" -ForegroundColor Yellow
+        Write-Host "   Using commit hash: docker run -p 3000:3000 $imageName" -ForegroundColor Gray
+        Write-Host "   Using latest tag: docker run -p 3000:3000 $latestImageName" -ForegroundColor Gray
     } else {
-        Write-Host "❌ 构建失败" -ForegroundColor Red
+        Write-Host "Build failed" -ForegroundColor Red
         exit 1
     }
 }
