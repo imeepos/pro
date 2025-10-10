@@ -20,6 +20,9 @@ export * from './types/industry-type.types';
 export * from './types/event-type.types';
 export * from './types/config.types';
 
+// HTTP 客户端导出
+export { HttpClient } from './client/http-client';
+
 // 事件管理系统 API 导出
 import { EventApi } from './api/event-api';
 import { TagApi } from './api/tag-api';

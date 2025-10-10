@@ -34,3 +34,25 @@ export interface UploadAttachmentDto {
   eventId: string;
   file: File;
 }
+
+/**
+ * 上传选项
+ */
+export interface UploadOptions {
+  /** 上传进度回调 (0-100) */
+  onProgress?: (progress: number) => void;
+  /** 上传成功回调 */
+  onSuccess?: (response: Attachment) => void;
+  /** 上传失败回调 */
+  onError?: (error: Error) => void;
+}
+
+/**
+ * 排序数据
+ */
+export interface SortData {
+  /** 附件 ID */
+  id: number;
+  /** 排序顺序 */
+  sortOrder: number;
+}

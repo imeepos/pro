@@ -76,6 +76,60 @@ export class HttpClient {
     return this.request<T>('DELETE', url, undefined, params);
   }
 
+  /**
+   * 上传文件，支持进度回调
+   */
+  async upload<T>(
+    url: string,
+    formData: FormData,
+    onProgress?: (progress: number) => void
+  ): Promise<T> {
+    const fullUrl = new URL(url, this.baseUrl);
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            onProgress(percentComplete);
+          }
+        });
+      }
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            resolve(result.data !== undefined ? result.data : result);
+          } catch (error) {
+            reject(new Error('解析响应失败'));
+          }
+        } else {
+          reject(new Error(`HTTP error! status: ${xhr.status}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        reject(new Error('网络请求失败'));
+      });
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error('请求已取消'));
+      });
+
+      xhr.open('POST', fullUrl.toString());
+
+      const token = this.getToken();
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+
+      xhr.send(formData);
+    });
+  }
+
   private getToken(): string | null {
     if (typeof localStorage !== 'undefined') {
       return localStorage.getItem(this.tokenKey);
