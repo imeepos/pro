@@ -8,6 +8,8 @@ import {
   Request,
   ParseIntPipe,
   Sse,
+  Headers,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { WeiboAccountService } from './weibo-account.service';
@@ -102,5 +104,44 @@ export class WeiboController {
   @UseGuards(JwtAuthGuard)
   async getLoggedInUsersStats() {
     return this.weiboAccountService.getLoggedInUsersStats();
+  }
+
+  /**
+   * 内部接口：获取包含cookies的微博账号列表
+   * POST /api/internal/weibo/accounts/with-cookies
+   * 供爬虫服务使用
+   */
+  @Post('internal/weibo/accounts/with-cookies')
+  async getAccountsWithCookies(@Headers() headers) {
+    // 验证内部服务调用
+    const internalToken = headers['authorization']?.replace('Bearer ', '');
+    const expectedToken = process.env.INTERNAL_API_TOKEN || 'internal-token';
+
+    if (internalToken !== expectedToken) {
+      throw new ForbiddenException('无权访问此接口');
+    }
+
+    return this.weiboAccountService.getAccountsWithCookies();
+  }
+
+  /**
+   * 内部接口：标记账号为banned状态
+   * POST /api/internal/weibo/accounts/:id/mark-banned
+   * 供爬虫服务使用
+   */
+  @Post('internal/weibo/accounts/:id/mark-banned')
+  async markAccountBanned(
+    @Param('id', ParseIntPipe) id: number,
+    @Headers() headers
+  ) {
+    // 验证内部服务调用
+    const internalToken = headers['authorization']?.replace('Bearer ', '');
+    const expectedToken = process.env.INTERNAL_API_TOKEN || 'internal-token';
+
+    if (internalToken !== expectedToken) {
+      throw new ForbiddenException('无权访问此接口');
+    }
+
+    return this.weiboAccountService.markAccountBanned(id);
   }
 }
