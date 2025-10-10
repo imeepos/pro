@@ -1,0 +1,112 @@
+# ========================================
+# 增量构建版本：基于前一版本镜像构建
+# ========================================
+ARG BASE_VERSION=latest
+FROM microinfra-api:${BASE_VERSION} AS base
+
+# 设置构建参数
+ARG BUILD_VERSION=1.0.0
+ARG BUILD_TIME
+ARG GIT_COMMIT
+ARG BUILD_TYPE=incremental
+
+# 添加构建元数据标签
+LABEL version="${BUILD_VERSION}" \
+      build-time="${BUILD_TIME}" \
+      git-commit="${GIT_COMMIT}" \
+      build-type="${BUILD_TYPE}" \
+      base-version="${BASE_VERSION}"
+
+# 设置工作目录
+WORKDIR /app
+
+# 切换到非root用户进行更新操作
+USER nestjs
+
+# ========================================
+# 增量更新阶段：只更新变化的部分
+# ========================================
+
+# 1. 更新 package.json 文件（如果依赖有变化）
+COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY --chown=nestjs:nodejs packages/*/package.json ./packages/*/
+COPY --chown=nestjs:nodejs apps/api/package.json ./apps/api/
+
+# 2. 如果有新的依赖，重新安装（可选，通过构建参数控制）
+ARG UPDATE_DEPENDENCIES=false
+RUN if [ "$UPDATE_DEPENDENCIES" = "true" ]; then \
+      echo "正在更新依赖..." && \
+      pnpm install --frozen-lockfile; \
+    else \
+      echo "跳过依赖更新，使用现有依赖"; \
+    fi
+
+# 3. 增量更新源代码和构建产物
+# 注意：这里假设我们是在开发环境中构建完成后更新生产镜像
+
+# 更新 types 包
+COPY --chown=nestjs:nodejs packages/types/src ./packages/types/src
+RUN if [ -d "packages/types/src" ]; then \
+      echo "构建 types 包..." && \
+      pnpm --filter @pro/types build; \
+    fi
+
+# 更新 config 包
+COPY --chown=nestjs:nodejs packages/config/src ./packages/config/src
+RUN if [ -d "packages/config/src" ]; then \
+      echo "构建 config 包..." && \
+      pnpm --filter @pro/config build; \
+    fi
+
+# 更新 utils 包
+COPY --chown=nestjs:nodejs packages/utils/src ./packages/utils/src
+RUN if [ -d "packages/utils/src" ]; then \
+      echo "构建 utils 包..." && \
+      pnpm --filter @pro/utils build; \
+    fi
+
+# 更新其他 packages（按需）
+COPY --chown=nestjs:nodejs packages/redis/src ./packages/redis/src
+COPY --chown=nestjs:nodejs packages/mongodb/src ./packages/mongodb/src
+COPY --chown=nestjs:nodejs packages/rabbitmq/src ./packages/rabbitmq/src
+COPY --chown=nestjs:nodejs packages/minio/src ./packages/minio/src
+
+RUN if [ -d "packages/redis/src" ]; then pnpm --filter @pro/redis build; fi && \
+    if [ -d "packages/mongodb/src" ]; then pnpm --filter @pro/mongodb build; fi && \
+    if [ -d "packages/rabbitmq/src" ]; then pnpm --filter @pro/rabbitmq build; fi && \
+    if [ -d "packages/minio/src" ]; then pnpm --filter @pro/minio build; fi
+
+# 4. 更新主应用源代码
+COPY --chown=nestjs:nodejs apps/api/src ./apps/api/src
+RUN if [ -d "apps/api/src" ]; then \
+      echo "构建主应用..." && \
+      pnpm --filter @pro/api build; \
+    fi
+
+# 5. 验证构建结果
+RUN echo "验证构建产物..." && \
+    ls -la apps/api/dist/ && \
+    echo "增量构建完成！"
+
+# 切换回 root 用户进行最终的设置
+USER root
+
+# 更新版本信息文件
+RUN echo "{ \
+      \"version\": \"${BUILD_VERSION}\", \
+      \"buildTime\": \"${BUILD_TIME}\", \
+      \"gitCommit\": \"${GIT_COMMIT}\", \
+      \"baseVersion\": \"${BASE_VERSION}\", \
+      \"buildType\": \"${BUILD_TYPE}\" \
+    }" > /app/build-info.json
+
+# 切换回运行用户
+USER nestjs
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# 启动命令保持不变
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "apps/api/dist/main.js"]
