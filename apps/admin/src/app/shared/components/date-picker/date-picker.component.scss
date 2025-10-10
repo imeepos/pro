@@ -52,7 +52,7 @@
   }
 
   // 暗色模式支持
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: theme('colors.gray.800');
     border-color: theme('colors.gray.600');
     color: theme('colors.white');
@@ -106,7 +106,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: theme('colors.gray.400');
 
     &:hover {
@@ -154,7 +154,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: theme('colors.gray.400');
 
     &:hover:not(:disabled) {
@@ -185,7 +185,7 @@
   animation: slideDown 0.2s ease-out;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: theme('colors.gray.800');
     border-color: theme('colors.gray.700');
     box-shadow: theme('boxShadow.xl'), 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
@@ -210,7 +210,7 @@
   background: linear-gradient(135deg, theme('colors.gray.50') 0%, theme('colors.white') 100%);
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     border-bottom-color: theme('colors.gray.700');
     background: linear-gradient(135deg, theme('colors.gray.900') 0%, theme('colors.gray.800') 100%);
   }
@@ -236,7 +236,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: theme('colors.gray.400');
   }
 }
@@ -277,7 +277,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: theme('colors.gray.700');
     border-color: theme('colors.gray.600');
     color: theme('colors.gray.300');
@@ -320,7 +320,7 @@
   background-color: theme('colors.white');
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     border-bottom-color: theme('colors.gray.700');
     background-color: theme('colors.gray.800');
   }
@@ -360,7 +360,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: theme('colors.gray.700');
     border-color: theme('colors.gray.600');
     color: theme('colors.gray.400');
@@ -385,7 +385,7 @@
   min-width: 120px;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: theme('colors.white');
   }
 }
@@ -398,7 +398,7 @@
   border-bottom: 1px solid theme('colors.gray.100');
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background: linear-gradient(135deg, theme('colors.gray.900') 0%, theme('colors.gray.800') 100%);
     border-bottom-color: theme('colors.gray.700');
   }
@@ -416,7 +416,7 @@
   letter-spacing: 0.05em;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: theme('colors.gray.400');
   }
 }
@@ -544,7 +544,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: theme('colors.gray.300');
 
     &:hover:not(.disabled):not(.selected) {
@@ -597,7 +597,7 @@
   gap: theme('spacing.2');
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     border-top-color: theme('colors.gray.700');
     background: linear-gradient(135deg, theme('colors.gray.900') 0%, theme('colors.gray.800') 100%);
   }
@@ -639,7 +639,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: theme('colors.gray.700');
     border-color: theme('colors.gray.600');
     color: theme('colors.gray.300');
@@ -676,7 +676,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background: linear-gradient(135deg, theme('colors.primary.600') 0%, theme('colors.primary.700') 100%);
     border-color: theme('colors.primary.600');
 
@@ -697,7 +697,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     border-color: theme('colors.gray.600');
     color: theme('colors.gray.400');
 
@@ -795,7 +795,7 @@
 }
 
 // 暗色模式滚动条
-@media (prefers-color-scheme: dark) {
+.dark & {
   .date-picker-calendar::-webkit-scrollbar-track {
     background: theme('colors.gray.700');
   }
@@ -842,7 +842,7 @@
   padding: theme('spacing.4');
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     border-top-color: theme('colors.gray.700');
     background: linear-gradient(135deg, theme('colors.gray.900') 0%, theme('colors.gray.800') 100%);
   }
@@ -872,7 +872,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: theme('colors.gray.400');
   }
 }
@@ -912,7 +912,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: theme('colors.gray.700');
     border-color: theme('colors.gray.600');
     color: theme('colors.gray.300');
@@ -952,7 +952,7 @@
   color: theme('colors.gray.600');
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: theme('colors.gray.400');
   }
 }
@@ -995,7 +995,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: theme('colors.gray.700');
     border-color: theme('colors.gray.600');
     color: theme('colors.gray.400');
@@ -1045,7 +1045,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: theme('colors.gray.700');
     border-color: theme('colors.gray.600');
     color: theme('colors.white');
@@ -1077,7 +1077,7 @@
   user-select: none;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: theme('colors.gray.400');
   }
 }
@@ -1121,7 +1121,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: theme('colors.gray.700');
     border-color: theme('colors.gray.600');
     color: theme('colors.gray.400');
@@ -1149,7 +1149,7 @@
   border: 1px solid theme('colors.primary.200');
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background: linear-gradient(135deg, theme('colors.primary.900') 0%, theme('colors.primary.800') 100%);
     border-color: theme('colors.primary.700');
   }
@@ -1162,7 +1162,7 @@
   font-family: theme('fontFamily.mono');
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: theme('colors.primary.300');
   }
 }
@@ -1180,7 +1180,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background: linear-gradient(135deg, theme('colors.cyan.600') 0%, theme('colors.cyan.700') 100%);
     border-color: theme('colors.cyan.600');
 

@@ -53,7 +53,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: #374151;
     border-color: #4b5563;
     color: #ffffff;
@@ -108,7 +108,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: #9ca3af;
 
     &:hover {
@@ -156,7 +156,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: #9ca3af;
 
     &:hover:not(:disabled) {
@@ -188,7 +188,7 @@
   display: flex;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: #1f2937;
     border-color: #374151;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
@@ -216,7 +216,7 @@
   flex-direction: column;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     border-right-color: #374151;
   }
 }
@@ -262,7 +262,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: #374151;
     border-color: #4b5563;
     color: #9ca3af;
@@ -287,7 +287,7 @@
   min-width: 120px;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: #ffffff;
   }
 }
@@ -300,7 +300,7 @@
   border-bottom: 1px solid #f3f4f6;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
     border-bottom-color: #374151;
   }
@@ -318,7 +318,7 @@
   letter-spacing: 0.05em;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: #9ca3af;
   }
 }
@@ -446,7 +446,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: #d1d5db;
 
     &:hover:not(.disabled):not(.selected) {
@@ -519,7 +519,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: #9ca3af;
   }
 }
@@ -559,7 +559,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: #374151;
     border-color: #4b5563;
     color: #d1d5db;
@@ -599,7 +599,7 @@
   color: #6b7280;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: #9ca3af;
   }
 }
@@ -641,7 +641,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: #374151;
     border-color: #4b5563;
     color: #9ca3af;
@@ -691,7 +691,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: #374151;
     border-color: #4b5563;
     color: #ffffff;
@@ -723,7 +723,7 @@
   user-select: none;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: #9ca3af;
   }
 }
@@ -767,7 +767,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: #374151;
     border-color: #4b5563;
     color: #9ca3af;
@@ -796,7 +796,7 @@
   margin-top: 8px;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
     border-color: #2563eb;
   }
@@ -809,7 +809,7 @@
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     color: #93c5fd;
   }
 }
@@ -825,7 +825,7 @@
   gap: 8px;
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     border-top-color: #374151;
     background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
   }
@@ -867,7 +867,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background-color: #374151;
     border-color: #4b5563;
     color: #d1d5db;
@@ -904,7 +904,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     border-color: #2563eb;
 
@@ -925,7 +925,7 @@
   }
 
   // 暗色模式
-  @media (prefers-color-scheme: dark) {
+  .dark & {
     border-color: #4b5563;
     color: #9ca3af;
 
@@ -957,7 +957,7 @@
     border-bottom: 1px solid #f3f4f6;
 
     // 暗色模式
-    @media (prefers-color-scheme: dark) {
+    .dark & {
       border-bottom-color: #374151;
     }
   }
