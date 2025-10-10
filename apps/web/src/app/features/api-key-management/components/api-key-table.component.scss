@@ -1,229 +1,50 @@
-/* 表格样式 */
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
+table { border-collapse: collapse; width: 100%; }
+tbody tr { @apply transition-colors; }
+.bg-blue-50 { background-color: rgb(239 246 255); }
 
-/* 行悬停效果 */
-tbody tr {
-  transition: background-color 0.15s ease;
-}
+.status-badge, .type-badge { @apply transition-transform hover:scale-105; }
+.actions-group { @apply flex items-center gap-1; }
+.action-button { @apply transition-all relative overflow-hidden; }
 
-/* 选中行样式 */
-.bg-blue-50 {
-  background-color: rgb(239 246 255);
-}
+.api-key-display { @apply font-mono text-xs bg-slate-100 px-2 py-1 rounded transition-colors hover:bg-slate-200; }
+.visibility-button, .copy-button { @apply transition-transform hover:scale-110; }
 
-/* 徽章样式 */
-.status-badge,
-.type-badge {
-  transition: all 0.2s ease;
-}
+.pagination-container { @apply bg-slate-50; }
+.pagination-button { @apply min-w-10 transition-all; }
+.pagination-button:not(:disabled):hover { @apply -translate-y-px shadow; }
+.pagination-button.active { @apply bg-primary text-white border-primary; }
+.pagination-button:disabled { @apply opacity-50 cursor-not-allowed; }
 
-.status-badge:hover,
-.type-badge:hover {
-  transform: scale(1.05);
-}
+.page-size-select { @apply transition-all; }
+.page-size-select:focus { @apply border-primary shadow-[0_0_0_3px_rgba(102,126,234,0.1)]; }
 
-/* 按钮组样式 */
-.actions-group {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
+.empty-state { @apply p-12; }
+.empty-state-icon { @apply animate-bounce; }
 
-.action-button {
-  transition: all 0.15s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.action-button:before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.1);
-  transform: translate(-50%, -50%);
-  transition: width 0.3s ease, height 0.3s ease;
-}
-
-.action-button:hover:before {
-  width: 100%;
-  height: 100%;
-}
-
-/* API Key 显示区域 */
-.api-key-display {
-  font-family: 'Courier New', monospace;
-  font-size: 0.75rem;
-  background-color: rgb(241 245 249);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  transition: all 0.2s ease;
-}
-
-.api-key-display:hover {
-  background-color: rgb(226 232 240);
-}
-
-/* 复制和显示按钮 */
-.visibility-button,
-.copy-button {
-  transition: all 0.2s ease;
-}
-
-.visibility-button:hover,
-.copy-button:hover {
-  transform: scale(1.1);
-}
-
-/* 分页控件样式 */
-.pagination-container {
-  background-color: rgb(248 250 252);
-}
-
-.pagination-button {
-  min-width: 2.5rem;
-  transition: all 0.15s ease;
-}
-
-.pagination-button:not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.pagination-button.active {
-  background-color: rgb(102 126 234);
-  color: white;
-  border-color: rgb(102 126 234);
-}
-
-.pagination-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* 每页显示数量选择器 */
-.page-size-select {
-  transition: all 0.15s ease;
-}
-
-.page-size-select:focus {
-  border-color: rgb(102 126 234);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-/* 表格滚动条样式 */
-.overflow-x-auto::-webkit-scrollbar {
-  height: 6px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-track {
-  background: rgb(241 245 249);
-  border-radius: 3px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-thumb {
-  background: rgb(148 163 184);
-  border-radius: 3px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-thumb:hover {
-  background: rgb(100 116 139);
-}
-
-/* 空状态样式 */
-.empty-state {
-  padding: 3rem 1.5rem;
-}
-
-.empty-state-icon {
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-}
-
-/* 工具提示样式 */
-.tooltip {
-  position: relative;
-}
-
+.tooltip { @apply relative; }
 .tooltip:hover::after {
   content: attr(title);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgb(31 41 55);
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  z-index: 50;
-  margin-bottom: 0.25rem;
+  @apply absolute bottom-full left-1/2 -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs whitespace-nowrap z-50 mb-1;
 }
 
-/* 响应式设计 */
-@media (max-width: 1024px) {
-  .actions-group {
-    flex-wrap: wrap;
-  }
+.selected-row { @apply bg-blue-50 border-l-4 border-primary; }
 
-  .action-button {
-    min-width: 2rem;
-    min-height: 2rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .api-key-display {
-    font-size: 0.625rem;
-  }
-
-  .status-badge,
-  .type-badge {
-    font-size: 0.625rem;
-    padding: 0.125rem 0.375rem;
-  }
-
-  .action-button span {
-    font-size: 0.75rem;
-  }
-}
-
-/* 加载状态 */
-.loading-skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-}
-
-@keyframes loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* 选中行高亮 */
-.selected-row {
-  background-color: rgb(239 246 255);
-  border-left: 3px solid rgb(102 126 234);
-}
-
-/* 状态颜色 */
 .status-active { color: rgb(22 163 74); }
 .status-inactive { color: rgb(245 158 11); }
 .status-expired { color: rgb(239 68 68); }
 .status-revoked { color: rgb(107 114 128); }
 
-/* 类型颜色 */
 .type-readonly { color: rgb(59 130 246); }
 .type-readwrite { color: rgb(147 51 234); }
 .type-admin { color: rgb(239 68 68); }
+
+@media (max-width: 1024px) {
+  .actions-group { @apply flex-wrap; }
+  .action-button { @apply min-w-8 min-h-8; }
+}
+
+@media (max-width: 768px) {
+  .api-key-display { @apply text-[10px]; }
+  .status-badge, .type-badge { @apply text-[10px] px-1.5 py-0.5; }
+  .action-button span { @apply text-xs; }
+}
