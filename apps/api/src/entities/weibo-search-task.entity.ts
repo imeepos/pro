@@ -168,6 +168,34 @@ export class WeiboSearchTaskEntity {
   weiboAccount?: WeiboAccountEntity;
 
   /**
+   * 经度
+   * 地理坐标精度：10位整数，7位小数
+   */
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  longitude?: number;
+
+  /**
+   * 纬度
+   * 地理坐标精度：10位整数，7位小数
+   */
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  latitude?: number;
+
+  /**
+   * 位置地址
+   * 详细地址描述，最多500字符
+   */
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'location_address' })
+  locationAddress?: string;
+
+  /**
+   * 位置名称
+   * 地点名称，最多200字符
+   */
+  @Column({ type: 'varchar', length: 200, nullable: true, name: 'location_name' })
+  locationName?: string;
+
+  /**
    * 检查是否需要执行首次抓取
    */
   get needsInitialCrawl(): boolean {

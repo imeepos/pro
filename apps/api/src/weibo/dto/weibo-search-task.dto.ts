@@ -9,6 +9,8 @@ import {
   Min,
   Max,
   Matches,
+  IsNumber,
+  IsDecimal,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { WeiboSearchTaskStatus } from '../../entities/weibo-search-task.entity';
@@ -52,6 +54,28 @@ export class CreateWeiboSearchTaskDto {
   @Min(0, { message: '最大重试次数不能为负数' })
   @Max(5, { message: '最大重试次数不能超过5' })
   maxRetries?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: '经度必须是数字' })
+  @Min(-180, { message: '经度范围必须在-180到180之间' })
+  @Max(180, { message: '经度范围必须在-180到180之间' })
+  longitude?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: '纬度必须是数字' })
+  @Min(-90, { message: '纬度范围必须在-90到90之间' })
+  @Max(90, { message: '纬度范围必须在-90到90之间' })
+  latitude?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: '位置地址长度不能超过500个字符' })
+  locationAddress?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200, { message: '位置名称长度不能超过200个字符' })
+  locationName?: string;
 }
 
 /**
@@ -118,6 +142,28 @@ export class UpdateWeiboSearchTaskDto {
   @IsInt({ message: '总段数必须是整数' })
   @Min(0, { message: '总段数不能为负数' })
   totalSegments?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: '经度必须是数字' })
+  @Min(-180, { message: '经度范围必须在-180到180之间' })
+  @Max(180, { message: '经度范围必须在-180到180之间' })
+  longitude?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: '纬度必须是数字' })
+  @Min(-90, { message: '纬度范围必须在-90到90之间' })
+  @Max(90, { message: '纬度范围必须在-90到90之间' })
+  latitude?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: '位置地址长度不能超过500个字符' })
+  locationAddress?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200, { message: '位置名称长度不能超过200个字符' })
+  locationName?: string;
 }
 
 /**

@@ -25,6 +25,10 @@ export interface WeiboSearchTask {
   retryCount: number;
   maxRetries: number;
   errorMessage?: string;
+  longitude?: number;
+  latitude?: number;
+  locationAddress?: string;
+  locationName?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +39,10 @@ export interface CreateWeiboSearchTaskDto {
   crawlInterval?: string;
   weiboAccountId?: number;
   enableAccountRotation?: boolean;
+  longitude?: number;
+  latitude?: number;
+  locationAddress?: string;
+  locationName?: string;
 }
 
 export interface UpdateWeiboSearchTaskDto {
@@ -44,6 +52,10 @@ export interface UpdateWeiboSearchTaskDto {
   weiboAccountId?: number;
   enableAccountRotation?: boolean;
   enabled?: boolean;
+  longitude?: number;
+  latitude?: number;
+  locationAddress?: string;
+  locationName?: string;
 }
 
 export interface WeiboSearchTaskFilters {
