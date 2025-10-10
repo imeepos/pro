@@ -13,8 +13,16 @@ COPY packages ./packages
 # 安装依赖
 RUN pnpm install --frozen-lockfile
 
+# 复制源码
+COPY apps/admin ./apps/admin
+
 # 暴露端口
 EXPOSE 4201
+
+# 设置环境变量
+ARG AMAP_API_KEY
+ENV AMAP_API_KEY=${AMAP_API_KEY:-YOUR_AMAP_KEY}
+RUN echo "AMAP_API_KEY=${AMAP_API_KEY}" >> apps/admin/.env
 
 # 启动开发服务器
 CMD ["pnpm", "--filter", "@pro/admin", "dev", "--host", "0.0.0.0"]

@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "scripts": {
     "ng": "ng",
-    "dev": "ng serve --port 4201",
-    "start": "ng serve --port 4201",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "set-env": "node scripts/set-env.js",
+    "dev": "npm run set-env && ng serve --port 4201",
+    "start": "npm run set-env && ng serve --port 4201",
+    "build": "npm run set-env && ng build",
+    "watch": "npm run set-env && ng build --watch --configuration development",
+    "test": "npm run set-env && ng test",
     "test:e2e": "playwright test",
     "lint": "ng lint",
     "typecheck": "tsc --noEmit"

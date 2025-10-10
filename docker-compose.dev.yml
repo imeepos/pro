@@ -334,6 +334,8 @@ services:
     build:
       context: .
       dockerfile: apps/admin/Dockerfile.dev
+      args:
+        AMAP_API_KEY: ${AMAP_API_KEY:-YOUR_AMAP_KEY}
     container_name: pro-admin-dev
     ports:
       - "${ADMIN_DEV_PORT:-4201}:4201"

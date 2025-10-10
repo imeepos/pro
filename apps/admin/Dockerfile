@@ -16,6 +16,9 @@ RUN pnpm install --frozen-lockfile
 
 # 复制源码并构建
 COPY apps/admin ./apps/admin
+ARG AMAP_API_KEY
+ENV AMAP_API_KEY=${AMAP_API_KEY:-YOUR_AMAP_KEY}
+RUN echo "AMAP_API_KEY=${AMAP_API_KEY}" >> apps/admin/.env.production
 RUN pnpm --filter @pro/admin build
 
 # 第二阶段：运行
