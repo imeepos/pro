@@ -128,13 +128,13 @@ build_service() {
         echo "🔧 使用基础镜像: node:20-alpine"
     fi
 
-    # 构建镜像，启用 inline cache 和外部缓存源
+    # 构建镜像，启用 inline cache
+    # 如果使用缓存镜像，避免从远程仓库导入缓存以解决权限问题
     docker buildx build \
         --platform linux/amd64 \
         -f $DOCKERFILE \
         -t $IMAGE_NAME \
         --build-arg BUILD_FROM_BASE="$BUILD_FROM_BASE" \
-        $CACHE_ARGS \
         --cache-to type=inline,mode=max \
         $BUILD_CONTEXT
 

@@ -6,11 +6,20 @@
 ARG BUILD_FROM_BASE=node:20-alpine
 FROM $BUILD_FROM_BASE AS base
 
+# 创建非 root 用户（修复权限问题）
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+
 # 安装 pnpm（全局，可被后续阶段复用）
 RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
 
-# 设置工作目录
+# 设置工作目录并确保权限正确
 WORKDIR /app
+
+# 创建 pnpm 缓存目录并设置权限
+RUN mkdir -p /root/.local/share/pnpm/store && \
+    chown -R nestjs:nodejs /app && \
+    chown -R nestjs:nodejs /root/.local/share/pnpm
 
 # ========================================
 # 依赖声明层：复制所有 package.json 文件
@@ -32,18 +41,14 @@ COPY packages/rabbitmq/package.json ./packages/rabbitmq/
 COPY apps/broker/package.json ./apps/broker/
 
 # ========================================
-# 依赖安装层：实际安装依赖
-# 目的：利用 BuildKit cache mount 加速依赖下载
-# 缓存策略：使用持久化缓存，避免重复下载
-# 增量构建：当使用缓存镜像时，跳过依赖安装
+# 依赖安装层：安装所有依赖
+# 目的：为开发和构建提供完整的依赖环境
 # ========================================
-ARG BUILD_FROM_BASE=node:20-alpine
-RUN if [ "$BUILD_FROM_BASE" = "node:20-alpine" ]; then \
-        echo "🔧 安装依赖..."; \
-        pnpm install --frozen-lockfile; \
-    else \
-        echo "✅ 使用缓存镜像，跳过依赖安装"; \
-    fi
+RUN --mount=type=cache,id=pnpm-base,target=/root/.local/share/pnpm/store \
+    echo "🔧 安装所有依赖..." && \
+    chown -R nestjs:nodejs /app && \
+    chown -R nestjs:nodejs /root/.local/share/pnpm && \
+    pnpm install --frozen-lockfile
 
 # ========================================
 # 开发阶段：基于依赖层，添加源代码热重载
@@ -67,12 +72,7 @@ CMD ["pnpm", "--filter", "@pro/broker", "start:dev"]
 # ============================================
 FROM base AS builder
 
-# 当使用缓存镜像时，确保依赖可用
-ARG BUILD_FROM_BASE=node:20-alpine
-RUN if [ "$BUILD_FROM_BASE" != "node:20-alpine" ]; then \
-        echo "✅ 确保缓存镜像中的依赖可用"; \
-        pnpm install --frozen-lockfile --prefer-frozen-lockfile; \
-    fi
+# Builder 阶段直接使用 base 阶段安装的依赖
 
 # ============================================
 # 基础配置层：TypeScript 配置（变化频率极低）
@@ -131,9 +131,8 @@ COPY apps/broker/src ./apps/broker/src
 RUN pnpm --filter @pro/broker build
 
 # ========================================
-# 生产阶段：最小化运行时镜像
-# 目的：基于构建产物创建轻量级生产镜像
-# 优化策略：始终使用干净的基础镜像确保生产环境纯净
+# 生产阶段：运行时镜像
+# 目的：基于构建产物创建包含所有依赖的运行时镜像
 # ========================================
 FROM node:20-alpine AS production
 
@@ -153,11 +152,10 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # ========================================
-# 生产依赖层：仅安装生产依赖
-# 目的：基于依赖声明安装最小化的生产依赖
-# 缓存策略：利用 BuildKit cache mount 避免重复下载
+# 依赖层：安装所有依赖（生产和开发）
+# 目的：简化依赖管理，确保运行时环境完整
 # ========================================
-# 复制依赖声明文件（不复制源代码）
+# 复制依赖声明文件
 COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY --chown=nestjs:nodejs packages/types/package.json ./packages/types/
 COPY --chown=nestjs:nodejs packages/config/package.json ./packages/config/
@@ -167,9 +165,9 @@ COPY --chown=nestjs:nodejs packages/redis/package.json ./packages/redis/
 COPY --chown=nestjs:nodejs packages/rabbitmq/package.json ./packages/rabbitmq/
 COPY --chown=nestjs:nodejs apps/broker/package.json ./apps/broker/
 
-# 安装生产依赖（使用缓存优化）
-RUN --mount=type=cache,id=pnpm-prod,target=/root/.local/share/pnpm/store \
-    pnpm install --prod --frozen-lockfile
+# 安装所有依赖（包括开发依赖）
+RUN --mount=type=cache,id=pnpm-all,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 # ========================================
 # 构建产物层：复制编译后的代码
