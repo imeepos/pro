@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +15,7 @@ import { UpdateAttachmentSortDto } from './dto/attachment.dto';
 
 @Injectable()
 export class AttachmentService {
+  private readonly logger = new Logger(AttachmentService.name);
   private minioClient: MinIOClient;
   private bucketName: string;
 
@@ -40,7 +42,7 @@ export class AttachmentService {
     try {
       await this.minioClient.makeBucket(this.bucketName);
     } catch (error) {
-      console.error('Failed to initialize MinIO bucket:', error);
+      this.logger.error('初始化 MinIO 存储桶失败', error);
     }
   }
 
@@ -54,43 +56,126 @@ export class AttachmentService {
     }
   }
 
+  private getMaxFileSize(fileType: FileType): number {
+    switch (fileType) {
+      case FileType.IMAGE:
+        return parseInt(
+          this.configService.get<string>('UPLOAD_MAX_SIZE_IMAGE') || '10485760',
+          10,
+        );
+      case FileType.VIDEO:
+        return parseInt(
+          this.configService.get<string>('UPLOAD_MAX_SIZE_VIDEO') || '524288000',
+          10,
+        );
+      case FileType.DOCUMENT:
+        return parseInt(
+          this.configService.get<string>('UPLOAD_MAX_SIZE_DOCUMENT') || '52428800',
+          10,
+        );
+    }
+  }
+
+  private getAllowedMimeTypes(fileType: FileType): string[] {
+    const typesConfig = {
+      [FileType.IMAGE]: this.configService.get<string>('UPLOAD_ALLOWED_IMAGE_TYPES') || 'image/jpeg,image/png,image/gif,image/webp',
+      [FileType.VIDEO]: this.configService.get<string>('UPLOAD_ALLOWED_VIDEO_TYPES') || 'video/mp4,video/avi,video/mov',
+      [FileType.DOCUMENT]: this.configService.get<string>('UPLOAD_ALLOWED_DOCUMENT_TYPES') || 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    };
+
+    return typesConfig[fileType].split(',').map(type => type.trim());
+  }
+
+  private validateFile(file: Express.Multer.File): void {
+    const fileType = this.getFileType(file.mimetype);
+    const maxSize = this.getMaxFileSize(fileType);
+    const allowedTypes = this.getAllowedMimeTypes(fileType);
+
+    if (file.size > maxSize) {
+      const sizeMB = (maxSize / 1024 / 1024).toFixed(0);
+      this.logger.warn(`文件验证失败: 文件大小超限 - ${file.originalname} (${file.size} bytes > ${maxSize} bytes)`);
+      throw new BadRequestException(`文件大小不能超过 ${sizeMB}MB`);
+    }
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      this.logger.warn(`文件验证失败: 不支持的文件类型 - ${file.originalname} (${file.mimetype})`);
+      throw new BadRequestException(`不支持的文件类型: ${file.mimetype}`);
+    }
+
+    const ext = path.extname(file.originalname).toLowerCase();
+    const mimeTypeExtMap: Record<string, string[]> = {
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/gif': ['.gif'],
+      'image/webp': ['.webp'],
+      'video/mp4': ['.mp4'],
+      'video/avi': ['.avi'],
+      'video/mov': ['.mov'],
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    };
+
+    const expectedExts = mimeTypeExtMap[file.mimetype] || [];
+    if (expectedExts.length > 0 && !expectedExts.includes(ext)) {
+      this.logger.warn(`文件验证失败: 文件扩展名与类型不匹配 - ${file.originalname} (ext: ${ext}, mime: ${file.mimetype})`);
+      throw new BadRequestException('文件扩展名与类型不匹配');
+    }
+  }
+
   async uploadAttachment(
     eventId: string,
     file: Express.Multer.File,
   ): Promise<EventAttachmentEntity> {
+    this.validateFile(file);
+
     const ext = path.extname(file.originalname);
     const objectName = `${eventId}/${uuidv4()}${ext}`;
 
-    await this.minioClient.uploadBuffer(
-      this.bucketName,
-      objectName,
-      file.buffer,
-    );
+    try {
+      await this.minioClient.uploadBuffer(
+        this.bucketName,
+        objectName,
+        file.buffer,
+      );
 
-    const fileUrl = await this.minioClient.getPresignedUrl(
-      this.bucketName,
-      objectName,
-    );
+      const fileUrl = await this.minioClient.getPresignedUrl(
+        this.bucketName,
+        objectName,
+      );
 
-    const maxSortOrder = await this.attachmentRepository
-      .createQueryBuilder('attachment')
-      .where('attachment.eventId = :eventId', { eventId })
-      .select('MAX(attachment.sortOrder)', 'maxSort')
-      .getRawOne();
+      const maxSortOrder = await this.attachmentRepository
+        .createQueryBuilder('attachment')
+        .where('attachment.eventId = :eventId', { eventId })
+        .select('MAX(attachment.sortOrder)', 'maxSort')
+        .getRawOne();
 
-    const attachment = this.attachmentRepository.create({
-      eventId,
-      fileName: file.originalname,
-      fileUrl,
-      bucketName: this.bucketName,
-      objectName,
-      fileType: this.getFileType(file.mimetype),
-      fileSize: file.size,
-      mimeType: file.mimetype,
-      sortOrder: (maxSortOrder?.maxSort || 0) + 1,
-    });
+      const attachment = this.attachmentRepository.create({
+        eventId,
+        fileName: file.originalname,
+        fileUrl,
+        bucketName: this.bucketName,
+        objectName,
+        fileType: this.getFileType(file.mimetype),
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        sortOrder: (maxSortOrder?.maxSort || 0) + 1,
+      });
 
-    return this.attachmentRepository.save(attachment);
+      const savedAttachment = await this.attachmentRepository.save(attachment);
+
+      this.logger.log(
+        `文件上传成功 - eventId: ${eventId}, 文件名: ${file.originalname}, 大小: ${file.size} bytes, 类型: ${file.mimetype}`,
+      );
+
+      return savedAttachment;
+    } catch (error) {
+      this.logger.error(
+        `文件上传失败 - eventId: ${eventId}, 文件名: ${file.originalname}`,
+        error instanceof Error ? error.stack : error,
+      );
+      throw new BadRequestException('文件上传失败');
+    }
   }
 
   async getAttachments(eventId: string): Promise<EventAttachmentEntity[]> {
@@ -106,6 +191,7 @@ export class AttachmentService {
     });
 
     if (!attachment) {
+      this.logger.warn(`删除附件失败: 附件不存在 - eventId: ${eventId}, attachmentId: ${attachmentId}`);
       throw new NotFoundException('附件不存在');
     }
 
@@ -114,11 +200,18 @@ export class AttachmentService {
         attachment.bucketName,
         attachment.objectName,
       );
-    } catch (error) {
-      console.error('Failed to delete file from MinIO:', error);
-    }
+      await this.attachmentRepository.remove(attachment);
 
-    await this.attachmentRepository.remove(attachment);
+      this.logger.log(
+        `附件删除成功 - eventId: ${eventId}, attachmentId: ${attachmentId}, 文件名: ${attachment.fileName}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `删除附件失败 - eventId: ${eventId}, attachmentId: ${attachmentId}`,
+        error instanceof Error ? error.stack : error,
+      );
+      throw new BadRequestException('附件删除失败');
+    }
   }
 
   async updateAttachmentsSort(
