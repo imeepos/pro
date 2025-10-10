@@ -69,7 +69,7 @@ export class WeiboSearchTasksService {
 
     return this.api.create(dto).pipe(
       tap(task => {
-        const currentTasks = this.query.tasks;
+        const currentTasks = this.query.tasks || [];
         this.store.update({
           tasks: [task, ...currentTasks],
           selectedTask: task
