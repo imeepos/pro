@@ -1,220 +1,332 @@
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-  <div class="page-header">
-    <div class="header-left">
-      <button class="btn btn-text" (click)="goBack()">
-        ← 返回列表
-      </button>
-      <h1 *ngIf="task">{{ task.keyword }} - 任务详情</h1>
-    </div>
-    <div class="header-actions">
-      <div class="action-group">
-        <button class="btn" (click)="editTask()">
-          ✏️ 编辑
+<div class="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+  <!-- 页面头部 -->
+  <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <button
+          (click)="goBack()"
+          class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </button>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white" *ngIf="task">{{ task.keyword }} - 任务详情</h1>
+        </div>
+      </div>
+      <div class="flex gap-3" *ngIf="task">
+        <button
+          (click)="editTask()"
+          class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+          编辑
         </button>
 
-        <!-- 暂停/恢复 -->
         <button
           *ngIf="canPauseTask()"
-          class="btn"
           (click)="pauseTask()"
+          class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
-          ⏸️ 暂停
+          <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          暂停
         </button>
 
         <button
           *ngIf="canResumeTask()"
-          class="btn"
           (click)="resumeTask()"
+          class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
-          ▶️ 恢复
+          <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          恢复
         </button>
 
-        <!-- 立即执行 -->
         <button
           *ngIf="canRunNowTask()"
-          class="btn btn-primary"
           (click)="runNow()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          ⚡ 立即执行
+          <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+          立即执行
         </button>
 
-        <!-- 删除 -->
         <button
-          class="btn btn-danger"
           (click)="deleteTask()"
+          class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
-          🗑️ 删除
+          <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+          删除
         </button>
       </div>
     </div>
   </div>
 
-  <div class="loading" *ngIf="loading$ | async">
-    加载中...
-  </div>
-
-  <div class="content-container" *ngIf="task && !(loading$ | async)">
-    <!-- 警告信息 -->
-    <div class="alert alert-warning" *ngIf="shouldShowWarning()">
-      ⚠️ {{ getWarningMessage() }}
+  <!-- 加载状态 -->
+  <div class="flex-1 overflow-y-auto p-6">
+    <div *ngIf="loading$ | async" class="flex items-center justify-center h-full">
+      <div class="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+        <div class="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
+        <span>加载中...</span>
+      </div>
     </div>
 
-    <!-- 任务概览 -->
-    <div class="overview-section">
-      <div class="stats-grid">
+    <!-- 内容区 -->
+    <div *ngIf="task && !(loading$ | async)" class="max-w-7xl mx-auto space-y-6">
+      <!-- 警告信息 -->
+      <div
+        *ngIf="shouldShowWarning()"
+        class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-400 px-4 py-3 rounded-lg flex items-start gap-3"
+      >
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+        </svg>
+        <div>{{ getWarningMessage() }}</div>
+      </div>
+
+      <!-- 任务概览 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <!-- 任务状态 -->
-        <div class="stat-card">
-          <div class="stat-value status-{{ task.status }}">
-            {{ getStatusText(task.status) }}
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">当前状态</div>
+          <div class="flex items-center gap-2">
+            <span
+              class="px-3 py-1 text-sm font-medium rounded-full"
+              [ngClass]="{
+                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': task.status === taskStatus.PENDING,
+                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300': task.status === taskStatus.RUNNING,
+                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': task.status === taskStatus.PAUSED,
+                'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': task.status === taskStatus.FAILED || task.status === taskStatus.TIMEOUT
+              }"
+            >
+              {{ getStatusText(task.status) }}
+            </span>
           </div>
-          <div class="stat-label">当前状态</div>
         </div>
 
         <!-- 完成进度 -->
-        <div class="stat-card">
-          <div class="stat-value">{{ getCompletionRate() }}%</div>
-          <div class="stat-label">完成进度</div>
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="getCompletionRate()"></div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">完成进度</div>
+          <div class="text-2xl font-bold text-gray-900 dark:text-white mb-3">{{ getCompletionRate() }}%</div>
+          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div
+              class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              [style.width.%]="getCompletionRate()"
+            ></div>
           </div>
         </div>
 
         <!-- 已完成段数 -->
-        <div class="stat-card">
-          <div class="stat-value">{{ task.progress }}</div>
-          <div class="stat-label">已完成段数</div>
-          <div class="stat-sub">总共 {{ task.totalSegments }} 段</div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">已完成段数</div>
+          <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ task.progress }}</div>
+          <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">总共 {{ task.totalSegments }} 段</div>
         </div>
 
         <!-- 抓取间隔 -->
-        <div class="stat-card">
-          <div class="stat-value">{{ task.crawlInterval }}</div>
-          <div class="stat-label">抓取间隔</div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">抓取间隔</div>
+          <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ task.crawlInterval }}</div>
         </div>
       </div>
-    </div>
 
-    <!-- 详细信息 -->
-    <div class="details-section">
-      <div class="detail-cards">
+      <!-- 详细信息 -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- 基本信息 -->
-        <div class="detail-card">
-          <h3>基本信息</h3>
-          <div class="detail-item">
-            <span class="label">搜索关键词</span>
-            <span class="value">{{ task.keyword }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">监控起始日期</span>
-            <span class="value">{{ task.startDate | date:'yyyy-MM-dd' }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">启用状态</span>
-            <span class="value">
-              <span class="status-tag" [class.enabled]="task.enabled" [class.disabled]="!task.enabled">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">基本信息</h3>
+          <div class="space-y-4">
+            <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">搜索关键词</span>
+              <span class="text-sm text-gray-900 dark:text-white">{{ task.keyword }}</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">监控起始日期</span>
+              <span class="text-sm text-gray-900 dark:text-white">{{ task.startDate | date:'yyyy-MM-dd' }}</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">启用状态</span>
+              <span
+                class="px-2 py-1 text-xs font-medium rounded-full"
+                [ngClass]="{
+                  'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': task.enabled,
+                  'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': !task.enabled
+                }"
+              >
                 {{ task.enabled ? '启用' : '禁用' }}
               </span>
-            </span>
-          </div>
-          <div class="detail-item">
-            <span class="label">账号轮换</span>
-            <span class="value">
-              <span class="status-tag" [class.enabled]="task.enableAccountRotation" [class.disabled]="!task.enableAccountRotation">
+            </div>
+            <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">账号轮换</span>
+              <span
+                class="px-2 py-1 text-xs font-medium rounded-full"
+                [ngClass]="{
+                  'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': task.enableAccountRotation,
+                  'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': !task.enableAccountRotation
+                }"
+              >
                 {{ task.enableAccountRotation ? '开启' : '关闭' }}
               </span>
-            </span>
-          </div>
-          <div class="detail-item">
-            <span class="label">指定账号</span>
-            <span class="value">{{ task.weiboAccountId ? '账号ID: ' + task.weiboAccountId : '随机选择' }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">重试次数</span>
-            <span class="value">{{ task.retryCount }} / {{ task.maxRetries }}</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">指定账号</span>
+              <span class="text-sm text-gray-900 dark:text-white">
+                {{ task.weiboAccountId ? '账号ID: ' + task.weiboAccountId : '随机选择' }}
+              </span>
+            </div>
+            <div class="flex justify-between py-2">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">重试次数</span>
+              <span class="text-sm text-gray-900 dark:text-white">{{ task.retryCount }} / {{ task.maxRetries }}</span>
+            </div>
           </div>
         </div>
 
         <!-- 时间信息 -->
-        <div class="detail-card">
-          <h3>时间信息</h3>
-          <div class="detail-item">
-            <span class="label">创建时间</span>
-            <span class="value">
-              {{ formatTime(task.createdAt) }}
-              <div class="relative-time">{{ formatRelativeTime(task.createdAt) }}</div>
-            </span>
-          </div>
-          <div class="detail-item">
-            <span class="label">更新时间</span>
-            <span class="value">
-              {{ formatTime(task.updatedAt) }}
-              <div class="relative-time">{{ formatRelativeTime(task.updatedAt) }}</div>
-            </span>
-          </div>
-          <div class="detail-item">
-            <span class="label">当前抓取时间</span>
-            <span class="value">
-              <span *ngIf="task.currentCrawlTime">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">时间信息</h3>
+          <div class="space-y-4">
+            <div class="py-2 border-b border-gray-100 dark:border-gray-700">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">创建时间</div>
+              <div class="text-sm text-gray-900 dark:text-white">{{ formatTime(task.createdAt) }}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ formatRelativeTime(task.createdAt) }}</div>
+            </div>
+            <div class="py-2 border-b border-gray-100 dark:border-gray-700">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">更新时间</div>
+              <div class="text-sm text-gray-900 dark:text-white">{{ formatTime(task.updatedAt) }}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ formatRelativeTime(task.updatedAt) }}</div>
+            </div>
+            <div class="py-2 border-b border-gray-100 dark:border-gray-700">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">当前抓取时间</div>
+              <div *ngIf="task.currentCrawlTime" class="text-sm text-gray-900 dark:text-white">
                 {{ formatTime(task.currentCrawlTime) }}
-                <div class="relative-time">{{ formatRelativeTime(task.currentCrawlTime) }}</div>
-              </span>
-              <span *ngIf="!task.currentCrawlTime" class="text-muted">未开始</span>
-            </span>
-          </div>
-          <div class="detail-item">
-            <span class="label">最新数据时间</span>
-            <span class="value">
-              <span *ngIf="task.latestCrawlTime">
+              </div>
+              <div *ngIf="task.currentCrawlTime" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {{ formatRelativeTime(task.currentCrawlTime) }}
+              </div>
+              <div *ngIf="!task.currentCrawlTime" class="text-sm text-gray-500 dark:text-gray-400">未开始</div>
+            </div>
+            <div class="py-2 border-b border-gray-100 dark:border-gray-700">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">最新数据时间</div>
+              <div *ngIf="task.latestCrawlTime" class="text-sm text-gray-900 dark:text-white">
                 {{ formatTime(task.latestCrawlTime) }}
-                <div class="relative-time">{{ formatRelativeTime(task.latestCrawlTime) }}</div>
-              </span>
-              <span *ngIf="!task.latestCrawlTime" class="text-muted">无数据</span>
-            </span>
-          </div>
-          <div class="detail-item">
-            <span class="label">下次执行时间</span>
-            <span class="value">
-              <span *ngIf="task.nextRunAt && task.enabled">
+              </div>
+              <div *ngIf="task.latestCrawlTime" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {{ formatRelativeTime(task.latestCrawlTime) }}
+              </div>
+              <div *ngIf="!task.latestCrawlTime" class="text-sm text-gray-500 dark:text-gray-400">无数据</div>
+            </div>
+            <div class="py-2">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">下次执行时间</div>
+              <div *ngIf="task.nextRunAt && task.enabled" class="text-sm text-gray-900 dark:text-white">
                 {{ formatTime(task.nextRunAt) }}
-                <div class="relative-time">{{ formatRelativeTime(task.nextRunAt) }}</div>
-              </span>
-              <span *ngIf="!task.nextRunAt || !task.enabled" class="text-muted">-</span>
-            </span>
+              </div>
+              <div *ngIf="task.nextRunAt && task.enabled" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {{ formatRelativeTime(task.nextRunAt) }}
+              </div>
+              <div *ngIf="!task.nextRunAt || !task.enabled" class="text-sm text-gray-500 dark:text-gray-400">-</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 执行时间线 -->
-    <div class="timeline-section">
-      <h3>执行时间线</h3>
-      <div class="timeline">
-        <div
-          *ngFor="let item of timeline"
-          class="timeline-item timeline-{{ item.type }}"
-        >
-          <div class="timeline-content">
-            <div class="timeline-header">
-              <span class="timeline-title">{{ item.title }}</span>
-              <span class="timeline-time">{{ formatTime(item.time) }}</span>
+      <!-- 执行时间线 -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">执行时间线</h3>
+        <div class="space-y-6">
+          <div
+            *ngFor="let item of timeline; let last = last"
+            class="relative"
+            [class.pb-6]="!last"
+          >
+            <!-- 时间线连接线 -->
+            <div
+              *ngIf="!last"
+              class="absolute left-4 top-8 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"
+            ></div>
+
+            <!-- 时间线节点 -->
+            <div class="relative flex items-start gap-4">
+              <div
+                class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                [ngClass]="{
+                  'bg-green-100 dark:bg-green-900': item.type === 'success',
+                  'bg-red-100 dark:bg-red-900': item.type === 'error',
+                  'bg-yellow-100 dark:bg-yellow-900': item.type === 'warning',
+                  'bg-blue-100 dark:bg-blue-900': item.type === 'info'
+                }"
+              >
+                <svg
+                  *ngIf="item.type === 'success'"
+                  class="w-4 h-4 text-green-600 dark:text-green-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <svg
+                  *ngIf="item.type === 'error'"
+                  class="w-4 h-4 text-red-600 dark:text-red-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+                <svg
+                  *ngIf="item.type === 'warning'"
+                  class="w-4 h-4 text-yellow-600 dark:text-yellow-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                </svg>
+                <svg
+                  *ngIf="item.type === 'info'"
+                  class="w-4 h-4 text-blue-600 dark:text-blue-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                </svg>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                  <h4 class="text-sm font-semibold text-gray-900 dark:text-white">{{ item.title }}</h4>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatTime(item.time) }}</span>
+                </div>
+                <p *ngIf="item.description" class="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  {{ item.description }}
+                </p>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatRelativeTime(item.time) }}</span>
+              </div>
             </div>
-            <div *ngIf="item.description" class="timeline-description">
-              {{ item.description }}
-            </div>
-            <div class="timeline-relative">{{ formatRelativeTime(item.time) }}</div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 错误信息 -->
-    <div class="error-section" *ngIf="task.errorMessage">
-      <h3>错误信息</h3>
-      <div class="alert alert-error">
-        🚫 {{ task.errorMessage }}
-      </div>
-      <div class="error-help">
-        请检查任务配置或网络连接，必要时联系管理员
+      <!-- 错误信息 -->
+      <div *ngIf="task.errorMessage" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">错误信息</h3>
+        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg flex items-start gap-3">
+          <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+          </svg>
+          <div>{{ task.errorMessage }}</div>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-3">
+          请检查任务配置或网络连接，必要时联系管理员
+        </p>
       </div>
     </div>
   </div>
