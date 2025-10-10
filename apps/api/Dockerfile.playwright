@@ -44,7 +44,34 @@ EXPOSE 3000
 CMD ["pnpm", "--filter", "@pro/api", "start:dev"]
 
 # ========================================
-# 生产阶段
+# 依赖安装阶段
+# ========================================
+FROM base AS deps
+
+WORKDIR /app
+
+# 复制 workspace 配置文件
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+
+# 复制所有 packages 的 package.json
+COPY packages/types/package.json ./packages/types/
+COPY packages/config/package.json ./packages/config/
+COPY packages/utils/package.json ./packages/utils/
+COPY packages/redis/package.json ./packages/redis/
+COPY packages/mongodb/package.json ./packages/mongodb/
+COPY packages/rabbitmq/package.json ./packages/rabbitmq/
+COPY packages/minio/package.json ./packages/minio/
+COPY packages/sdk/package.json ./packages/sdk/
+
+# 复制 api 应用的 package.json
+COPY apps/api/package.json ./apps/api/
+
+# 安装生产依赖
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --prod --no-frozen-lockfile
+
+# ========================================
+# 生产阶段：只复制产物
 # ========================================
 FROM base AS production
 
@@ -59,10 +86,11 @@ RUN groupadd -g 1001 nodejs && \
 
 WORKDIR /app
 
-# 复制 workspace 配置文件
-COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+# 从 deps 阶段复制 node_modules（pnpm workspace 只有根 node_modules）
+COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules
 
-# 复制所有 packages 的 package.json
+# 复制 package.json（用于 node 查找模块）
+COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json ./
 COPY --chown=nestjs:nodejs packages/types/package.json ./packages/types/
 COPY --chown=nestjs:nodejs packages/config/package.json ./packages/config/
 COPY --chown=nestjs:nodejs packages/utils/package.json ./packages/utils/
@@ -71,13 +99,7 @@ COPY --chown=nestjs:nodejs packages/mongodb/package.json ./packages/mongodb/
 COPY --chown=nestjs:nodejs packages/rabbitmq/package.json ./packages/rabbitmq/
 COPY --chown=nestjs:nodejs packages/minio/package.json ./packages/minio/
 COPY --chown=nestjs:nodejs packages/sdk/package.json ./packages/sdk/
-
-# 复制 api 应用的 package.json
 COPY --chown=nestjs:nodejs apps/api/package.json ./apps/api/
-
-# 安装生产依赖
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --prod --no-frozen-lockfile
 
 # 复制构建好的代码（从宿主机的相对路径，因为 context 是项目根目录）
 COPY --chown=nestjs:nodejs ./packages/types/dist ./packages/types/dist
