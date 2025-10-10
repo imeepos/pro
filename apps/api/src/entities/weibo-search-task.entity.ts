@@ -153,7 +153,10 @@ export class WeiboSearchTaskEntity {
   updatedAt: Date;
 
   // 关联关系
-  @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
+  @ManyToOne(() => UserEntity, {
+    onDelete: 'CASCADE',
+    nullable: true
+  })
   @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 

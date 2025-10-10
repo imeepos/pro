@@ -93,6 +93,9 @@ export class WeiboSearchTaskEntity {
   @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   updatedAt: Date;
 
+  @Column({ type: 'varchar', name: 'user_id', nullable: true })
+  userId?: string;
+
   // 计算属性方法
   get needsInitialCrawl(): boolean {
     return this.currentCrawlTime === null;
