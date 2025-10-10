@@ -372,13 +372,13 @@ git tag -a v1.2.3 -m "update"
 git status
 
 # 确保所有测试通过
-pnpm test
+bun test
 
 # 确保类型检查通过
-pnpm run --filter=@pro/api typecheck
+bun run --filter=@pro/api typecheck
 
 # 确保代码格式正确
-pnpm run lint
+bun run lint
 ```
 
 ### 4. 镜像标签策略
@@ -571,7 +571,7 @@ git tag -a v1.2.4 -m "版本说明"
        ▼
 ┌─────────────┐
 │ 运行测试     │
-│ pnpm test   │
+│ bun test    │
 └──────┬──────┘
        │
        ▼

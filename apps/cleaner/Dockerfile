@@ -3,14 +3,14 @@
 # ========================================
 FROM node:18-alpine AS development
 
-# 安装 pnpm
-RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
+# 安装 bun
+RUN curl -fsSL https://bun.sh/install | bash
 
 # 设置工作目录
 WORKDIR /app
 
 # 复制 workspace 配置文件
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml package.json bun.lockb ./
 
 # 复制所有 packages 的 package.json
 COPY packages/types/package.json ./packages/types/
@@ -25,22 +25,22 @@ COPY packages/minio/package.json ./packages/minio/
 COPY apps/cleaner/package.json ./apps/cleaner/
 
 # 安装依赖
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 # 暴露端口
 EXPOSE 3002
 
 # 启动开发服务器
-CMD ["pnpm", "--filter", "@pro/cleaner", "start:dev"]
+CMD ["bun", "--filter", "@pro/cleaner", "start:dev"]
 
 # ============================================
 # 构建阶段：安装依赖并构建 NestJS 应用
 # ============================================
 FROM node:18-alpine AS builder
 
-# 安装 pnpm
-RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
+# 安装 bun
+RUN curl -fsSL https://bun.sh/install | bash
 
 # 设置工作目录
 WORKDIR /app
@@ -51,7 +51,7 @@ WORKDIR /app
 # ============================================
 
 # 复制 workspace 配置文件
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml package.json bun.lockb ./
 
 # 复制所有 packages 的 package.json
 COPY packages/types/package.json ./packages/types/
@@ -70,8 +70,8 @@ COPY apps/cleaner/package.json ./apps/cleaner/
 # 使用 BuildKit cache mount 加速依赖下载
 # 只有 package.json 或 lockfile 变化时才会重新执行
 # ============================================
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 # ============================================
 # 第三层：复制基础 TypeScript 配置
@@ -84,7 +84,7 @@ COPY tsconfig.base.json* ./
 # ============================================
 COPY packages/types/tsconfig.json ./packages/types/
 COPY packages/types/src ./packages/types/src
-RUN pnpm --filter @pro/types build
+RUN bun --filter @pro/types build
 
 # ============================================
 # 第五层：构建 @pro/config
@@ -93,7 +93,7 @@ RUN pnpm --filter @pro/types build
 # ============================================
 COPY packages/config/tsconfig.json ./packages/config/
 COPY packages/config/src ./packages/config/src
-RUN pnpm --filter @pro/config build
+RUN bun --filter @pro/config build
 
 # ============================================
 # 第六层：构建 @pro/utils
@@ -101,7 +101,7 @@ RUN pnpm --filter @pro/config build
 # ============================================
 COPY packages/utils/tsconfig.json ./packages/utils/
 COPY packages/utils/src ./packages/utils/src
-RUN pnpm --filter @pro/utils build
+RUN bun --filter @pro/utils build
 
 # ============================================
 # 第七层：构建 @pro/redis
@@ -110,7 +110,7 @@ RUN pnpm --filter @pro/utils build
 # ============================================
 COPY packages/redis/tsconfig.json ./packages/redis/
 COPY packages/redis/src ./packages/redis/src
-RUN pnpm --filter @pro/redis build
+RUN bun --filter @pro/redis build
 
 # ============================================
 # 第八层：构建 @pro/mongodb
@@ -119,7 +119,7 @@ RUN pnpm --filter @pro/redis build
 # ============================================
 COPY packages/mongodb/tsconfig.json ./packages/mongodb/
 COPY packages/mongodb/src ./packages/mongodb/src
-RUN pnpm --filter @pro/mongodb build
+RUN bun --filter @pro/mongodb build
 
 # ============================================
 # 第九层：构建 @pro/rabbitmq
@@ -128,7 +128,7 @@ RUN pnpm --filter @pro/mongodb build
 # ============================================
 COPY packages/rabbitmq/tsconfig.json ./packages/rabbitmq/
 COPY packages/rabbitmq/src ./packages/rabbitmq/src
-RUN pnpm --filter @pro/rabbitmq build
+RUN bun --filter @pro/rabbitmq build
 
 # ============================================
 # 第十层：构建 @pro/minio
@@ -137,7 +137,7 @@ RUN pnpm --filter @pro/rabbitmq build
 # ============================================
 COPY packages/minio/tsconfig.json ./packages/minio/
 COPY packages/minio/src ./packages/minio/src
-RUN pnpm --filter @pro/minio build
+RUN bun --filter @pro/minio build
 
 # ============================================
 # 第十一层：构建 @pro/cleaner 应用
@@ -148,15 +148,15 @@ COPY apps/cleaner/tsconfig.json ./apps/cleaner/
 COPY apps/cleaner/tsconfig.build.json* ./apps/cleaner/
 COPY apps/cleaner/nest-cli.json* ./apps/cleaner/
 COPY apps/cleaner/src ./apps/cleaner/src
-RUN pnpm --filter @pro/cleaner build
+RUN bun --filter @pro/cleaner build
 
 # ========================================
 # 生产阶段
 # ========================================
 FROM node:18-alpine AS production
 
-# 安装 pnpm 和 dumb-init
-RUN corepack enable && corepack prepare pnpm@10.18.1 --activate && \
+# 安装 bun 和 dumb-init
+RUN curl -fsSL https://bun.sh/install | bash && \
     apk add --no-cache dumb-init
 
 # 创建非 root 用户
@@ -167,7 +167,7 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # 复制 workspace 配置文件
-COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json bun.lockb ./
 
 # 复制 packages 的 package.json
 COPY --chown=nestjs:nodejs packages/types/package.json ./packages/types/
@@ -182,8 +182,8 @@ COPY --chown=nestjs:nodejs packages/minio/package.json ./packages/minio/
 COPY --chown=nestjs:nodejs apps/cleaner/package.json ./apps/cleaner/
 
 # 安装生产依赖（使用 BuildKit cache mount）
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --prod --frozen-lockfile
+RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 # 从构建阶段复制编译后的代码
 COPY --from=builder --chown=nestjs:nodejs /app/packages/types/dist ./packages/types/dist
@@ -205,6 +205,8 @@ EXPOSE 3002
 
 # 设置环境变量
 ENV NODE_ENV=production
+ENV BUN_INSTALL_ROOT=/root/.bun
+ENV PATH=/root/.bun/bin:$PATH
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \

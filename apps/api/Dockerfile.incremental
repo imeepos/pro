@@ -28,7 +28,7 @@ USER nestjs
 # ========================================
 
 # 1. 更新 package.json 文件（如果依赖有变化）
-COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json bun.lockb ./
 COPY --chown=nestjs:nodejs packages/*/package.json ./packages/*/
 COPY --chown=nestjs:nodejs apps/api/package.json ./apps/api/
 
@@ -36,7 +36,7 @@ COPY --chown=nestjs:nodejs apps/api/package.json ./apps/api/
 ARG UPDATE_DEPENDENCIES=false
 RUN if [ "$UPDATE_DEPENDENCIES" = "true" ]; then \
       echo "正在更新依赖..." && \
-      pnpm install --frozen-lockfile; \
+      bun install --frozen-lockfile; \
     else \
       echo "跳过依赖更新，使用现有依赖"; \
     fi
@@ -48,21 +48,21 @@ RUN if [ "$UPDATE_DEPENDENCIES" = "true" ]; then \
 COPY --chown=nestjs:nodejs packages/types/src ./packages/types/src
 RUN if [ -d "packages/types/src" ]; then \
       echo "构建 types 包..." && \
-      pnpm --filter @pro/types build; \
+      bun --filter @pro/types build; \
     fi
 
 # 更新 config 包
 COPY --chown=nestjs:nodejs packages/config/src ./packages/config/src
 RUN if [ -d "packages/config/src" ]; then \
       echo "构建 config 包..." && \
-      pnpm --filter @pro/config build; \
+      bun --filter @pro/config build; \
     fi
 
 # 更新 utils 包
 COPY --chown=nestjs:nodejs packages/utils/src ./packages/utils/src
 RUN if [ -d "packages/utils/src" ]; then \
       echo "构建 utils 包..." && \
-      pnpm --filter @pro/utils build; \
+      bun --filter @pro/utils build; \
     fi
 
 # 更新其他 packages（按需）
@@ -71,16 +71,16 @@ COPY --chown=nestjs:nodejs packages/mongodb/src ./packages/mongodb/src
 COPY --chown=nestjs:nodejs packages/rabbitmq/src ./packages/rabbitmq/src
 COPY --chown=nestjs:nodejs packages/minio/src ./packages/minio/src
 
-RUN if [ -d "packages/redis/src" ]; then pnpm --filter @pro/redis build; fi && \
-    if [ -d "packages/mongodb/src" ]; then pnpm --filter @pro/mongodb build; fi && \
-    if [ -d "packages/rabbitmq/src" ]; then pnpm --filter @pro/rabbitmq build; fi && \
-    if [ -d "packages/minio/src" ]; then pnpm --filter @pro/minio build; fi
+RUN if [ -d "packages/redis/src" ]; then bun --filter @pro/redis build; fi && \
+    if [ -d "packages/mongodb/src" ]; then bun --filter @pro/mongodb build; fi && \
+    if [ -d "packages/rabbitmq/src" ]; then bun --filter @pro/rabbitmq build; fi && \
+    if [ -d "packages/minio/src" ]; then bun --filter @pro/minio build; fi
 
 # 4. 更新主应用源代码
 COPY --chown=nestjs:nodejs apps/api/src ./apps/api/src
 RUN if [ -d "apps/api/src" ]; then \
       echo "构建主应用..." && \
-      pnpm --filter @pro/api build; \
+      bun --filter @pro/api build; \
     fi
 
 # 5. 验证构建结果

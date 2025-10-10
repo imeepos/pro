@@ -3,20 +3,21 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 安装 pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# 安装 bun
+RUN curl -fsSL https://bun.sh/install | bash
 
 # 复制依赖文件
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml bun.lockb ./
 COPY apps/web/package.json ./apps/web/
 COPY packages ./packages
 
 # 安装依赖
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 # 复制源码并构建
 COPY apps/web ./apps/web
-RUN pnpm --filter @pro/web build
+RUN bun --filter @pro/web build
 
 # 第二阶段：运行
 FROM nginx:alpine

@@ -3,23 +3,24 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 安装 pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# 安装 bun
+RUN curl -fsSL https://bun.sh/install | bash
 
 # 复制依赖文件
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml bun.lockb ./
 COPY apps/admin/package.json ./apps/admin/
 COPY packages ./packages
 
 # 安装依赖
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 # 复制源码并构建
 COPY apps/admin ./apps/admin
 ARG AMAP_API_KEY
 ENV AMAP_API_KEY=${AMAP_API_KEY:-YOUR_AMAP_KEY}
 RUN echo "AMAP_API_KEY=${AMAP_API_KEY}" >> apps/admin/.env.production
-RUN pnpm --filter @pro/admin build
+RUN bun --filter @pro/admin build
 
 # 第二阶段：运行
 FROM nginx:alpine

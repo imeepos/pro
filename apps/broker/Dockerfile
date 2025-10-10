@@ -10,16 +10,16 @@ FROM $BUILD_FROM_BASE AS base
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
-# 安装 pnpm（全局，可被后续阶段复用）
-RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
+# 安装 bun（全局，可被后续阶段复用）
+RUN curl -fsSL https://bun.sh/install | bash
 
 # 设置工作目录并确保权限正确
 WORKDIR /app
 
-# 创建 pnpm 缓存目录并设置权限
-RUN mkdir -p /root/.local/share/pnpm/store && \
+# 创建 bun 缓存目录并设置权限
+RUN mkdir -p /root/.bun/install/cache && \
     chown -R nestjs:nodejs /app && \
-    chown -R nestjs:nodejs /root/.local/share/pnpm
+    chown -R nestjs:nodejs /root/.bun
 
 # ========================================
 # 依赖声明层：复制所有 package.json 文件
@@ -27,7 +27,7 @@ RUN mkdir -p /root/.local/share/pnpm/store && \
 # 变化频率：低（仅在依赖变更时重建）
 # ========================================
 # 复制 workspace 配置文件
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml package.json bun.lockb ./
 
 # 复制所有 packages 的 package.json（按依赖关系排序）
 COPY packages/types/package.json ./packages/types/
@@ -44,11 +44,11 @@ COPY apps/broker/package.json ./apps/broker/
 # 依赖安装层：安装所有依赖
 # 目的：为开发和构建提供完整的依赖环境
 # ========================================
-RUN --mount=type=cache,id=pnpm-base,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=bun-base,target=/root/.bun/install/cache \
     echo "🔧 安装所有依赖..." && \
     chown -R nestjs:nodejs /app && \
-    chown -R nestjs:nodejs /root/.local/share/pnpm && \
-    pnpm install --frozen-lockfile
+    chown -R nestjs:nodejs /root/.bun && \
+    bun install --frozen-lockfile
 
 # ========================================
 # 开发阶段：基于依赖层，添加源代码热重载
@@ -63,7 +63,7 @@ COPY apps/ ./apps/
 EXPOSE 3003
 
 # 启动开发服务器
-CMD ["pnpm", "--filter", "@pro/broker", "start:dev"]
+CMD ["bun", "--filter", "@pro/broker", "start:dev"]
 
 # ============================================
 # 构建阶段：基于依赖层，按依赖关系逐层构建
@@ -90,37 +90,37 @@ COPY tsconfig.base.json* ./
 # 目的：最底层包，types 变化只影响此层及所有后续层
 COPY packages/types/tsconfig.json ./packages/types/
 COPY packages/types/src ./packages/types/src
-RUN pnpm --filter @pro/types build
+RUN bun --filter @pro/types build
 
 # 第二层：@pro/config（配置管理，依赖 types）
 # 目的：config 变化只影响此层及依赖它的后续层
 COPY packages/config/tsconfig.json ./packages/config/
 COPY packages/config/src ./packages/config/src
-RUN pnpm --filter @pro/config build
+RUN bun --filter @pro/config build
 
 # 第三层：@pro/mongodb（MongoDB 封装，独立依赖）
 # 目的：mongodb 变化只影响此层及依赖它的后续层
 COPY packages/mongodb/tsconfig.json ./packages/mongodb/
 COPY packages/mongodb/src ./packages/mongodb/src
-RUN pnpm --filter @pro/mongodb build
+RUN bun --filter @pro/mongodb build
 
 # 第四层：@pro/utils（工具函数，独立依赖）
 # 目的：utils 变化只影响此层及依赖它的后续层
 COPY packages/utils/tsconfig.json ./packages/utils/
 COPY packages/utils/src ./packages/utils/src
-RUN pnpm --filter @pro/utils build
+RUN bun --filter @pro/utils build
 
 # 第五层：@pro/redis（Redis 封装，依赖 config）
 # 目的：redis 变化只影响此层及依赖它的后续层
 COPY packages/redis/tsconfig.json ./packages/redis/
 COPY packages/redis/src ./packages/redis/src
-RUN pnpm --filter @pro/redis build
+RUN bun --filter @pro/redis build
 
 # 第六层：@pro/rabbitmq（RabbitMQ 封装，依赖 config）
 # 目的：rabbitmq 变化只影响此层及依赖它的后续层
 COPY packages/rabbitmq/tsconfig.json ./packages/rabbitmq/
 COPY packages/rabbitmq/src ./packages/rabbitmq/src
-RUN pnpm --filter @pro/rabbitmq build
+RUN bun --filter @pro/rabbitmq build
 
 # 第七层：@pro/broker 应用（顶层应用，依赖所有 packages）
 # 目的：broker 变化只影响此层，最大化缓存利用
@@ -128,7 +128,7 @@ COPY apps/broker/tsconfig.json ./apps/broker/
 COPY apps/broker/tsconfig.build.json* ./apps/broker/
 COPY apps/broker/nest-cli.json* ./apps/broker/
 COPY apps/broker/src ./apps/broker/src
-RUN pnpm --filter @pro/broker build
+RUN bun --filter @pro/broker build
 
 # ========================================
 # 生产阶段：运行时镜像
@@ -140,8 +140,8 @@ FROM node:20-alpine AS production
 # 运行时准备层：安装系统依赖和配置用户
 # 目的：配置安全的运行环境，避免使用 root 用户
 # ========================================
-# 安装 pnpm 和 dumb-init（信号处理）
-RUN corepack enable && corepack prepare pnpm@10.18.1 --activate && \
+# 安装 bun 和 dumb-init（信号处理）
+RUN curl -fsSL https://bun.sh/install | bash && \
     apk add --no-cache dumb-init
 
 # 创建非 root 用户（安全最佳实践）
@@ -156,7 +156,7 @@ WORKDIR /app
 # 目的：简化依赖管理，确保运行时环境完整
 # ========================================
 # 复制依赖声明文件
-COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json bun.lockb ./
 COPY --chown=nestjs:nodejs packages/types/package.json ./packages/types/
 COPY --chown=nestjs:nodejs packages/config/package.json ./packages/config/
 COPY --chown=nestjs:nodejs packages/utils/package.json ./packages/utils/
@@ -166,8 +166,8 @@ COPY --chown=nestjs:nodejs packages/rabbitmq/package.json ./packages/rabbitmq/
 COPY --chown=nestjs:nodejs apps/broker/package.json ./apps/broker/
 
 # 安装所有依赖（包括开发依赖）
-RUN --mount=type=cache,id=pnpm-all,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=bun-all,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 # ========================================
 # 构建产物层：复制编译后的代码
@@ -198,6 +198,8 @@ EXPOSE 3003
 # 设置生产环境变量
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--experimental-global-webcrypto"
+ENV BUN_INSTALL_ROOT=/root/.bun
+ENV PATH=/root/.bun/bin:$PATH
 
 # 健康检查（确保服务可用性）
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
