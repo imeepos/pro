@@ -72,8 +72,8 @@ export class HttpClient {
     return this.request<T>('PUT', url, data);
   }
 
-  async delete<T>(url: string): Promise<T> {
-    return this.request<T>('DELETE', url);
+  async delete<T>(url: string, params?: Record<string, unknown>): Promise<T> {
+    return this.request<T>('DELETE', url, undefined, params);
   }
 
   private getToken(): string | null {

@@ -18,6 +18,7 @@ export * from './types/tag.types';
 export * from './types/attachment.types';
 export * from './types/industry-type.types';
 export * from './types/event-type.types';
+export * from './types/config.types';
 
 // 事件管理系统 API 导出
 import { EventApi } from './api/event-api';
@@ -25,12 +26,14 @@ import { TagApi } from './api/tag-api';
 import { AttachmentApi } from './api/attachment-api';
 import { IndustryTypeApi } from './api/industry-type-api';
 import { EventTypeApi } from './api/event-type-api';
+import { ConfigApi } from './api/config-api';
 
 export { EventApi } from './api/event-api';
 export { TagApi } from './api/tag-api';
 export { AttachmentApi } from './api/attachment-api';
 export { IndustryTypeApi } from './api/industry-type-api';
 export { EventTypeApi } from './api/event-type-api';
+export { ConfigApi } from './api/config-api';
 
 /**
  * SDK 主类
@@ -41,6 +44,7 @@ export class SkerSDK {
   public attachment: AttachmentApi;
   public industryType: IndustryTypeApi;
   public eventType: EventTypeApi;
+  public config: ConfigApi;
 
   constructor(baseUrl: string) {
     this.event = new EventApi(baseUrl);
@@ -48,5 +52,6 @@ export class SkerSDK {
     this.attachment = new AttachmentApi(baseUrl);
     this.industryType = new IndustryTypeApi(baseUrl);
     this.eventType = new EventTypeApi(baseUrl);
+    this.config = new ConfigApi(baseUrl);
   }
 }
