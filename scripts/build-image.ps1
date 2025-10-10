@@ -157,12 +157,37 @@ function Build-Service {
         $buildContext
     )
 
-    # Execute build
-    Write-Host "Executing: docker $($buildArgs -join ' ')" -ForegroundColor Gray
-    docker $buildArgs
+    # Execute build with progress display
+    Write-Host "Starting Docker build process..." -ForegroundColor Yellow
+    Write-Host "This will show real-time Docker output and may take several minutes." -ForegroundColor Gray
+    Write-Host "Build command: docker $($buildArgs -join ' ')" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Tip: Press Ctrl+C to cancel the build if needed" -ForegroundColor Cyan
+    Write-Host ""
 
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Build failed" -ForegroundColor Red
+    # Record start time
+    $startTime = Get-Date
+
+    # Execute docker build directly - this will show real-time output
+    try {
+        docker $buildArgs
+        $endTime = Get-Date
+        $duration = $endTime - $startTime
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host ""
+            Write-Host "Build failed with exit code: $LASTEXITCODE" -ForegroundColor Red
+            Write-Host "Build time: $($duration.ToString('hh\:mm\:ss'))" -ForegroundColor Gray
+            return $false
+        } else {
+            Write-Host ""
+            Write-Host "Build completed successfully!" -ForegroundColor Green
+            Write-Host "Build time: $($duration.ToString('hh\:mm\:ss'))" -ForegroundColor Gray
+        }
+    }
+    catch {
+        Write-Host ""
+        Write-Host "Build interrupted or failed: $($_.Exception.Message)" -ForegroundColor Red
         return $false
     }
 
