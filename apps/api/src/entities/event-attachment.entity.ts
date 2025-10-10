@@ -50,6 +50,10 @@ export class EventAttachmentEntity {
   mimeType: string;
 
   @Index()
+  @Column({ type: 'varchar', length: 32, nullable: true, name: 'file_md5' })
+  fileMd5: string;
+
+  @Index()
   @Column({ type: 'integer', default: 0, name: 'sort_order' })
   sortOrder: number;
 
