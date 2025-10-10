@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval } from 'rxjs';
 import { IScreenComponent } from '../../../shared/interfaces/screen-component.interface';
-import { WeiboService, LoggedInUsersStats } from '../../../core/services/weibo.service';
+import { SkerSDK, LoggedInUsersStats } from '@pro/sdk';
 import { WebSocketService } from '../../../core/services/websocket.service';
 
 export interface WeiboUsersCardConfig {
@@ -248,10 +248,13 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   private destroy$ = new Subject<void>();
   private refreshTimer$ = new Subject<void>();
 
+  private sdk: SkerSDK;
+
   constructor(
-    private weiboService: WeiboService,
     private wsService: WebSocketService
-  ) {}
+  ) {
+    this.sdk = new SkerSDK('');
+  }
 
   ngOnInit(): void {
     this.initConfig();
@@ -286,7 +289,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     this.isLoading = true;
     this.errorMessage = '';
 
-    this.weiboService.getLoggedInUsersStats().pipe(
+    this.sdk.weibo.getLoggedInUsersStats().pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (stats) => {

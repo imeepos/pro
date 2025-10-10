@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { IScreenComponent } from '../../../shared/interfaces/screen-component.interface';
-import { WeiboService, LoggedInUsersStats } from '../../../core/services/weibo.service';
+import { SkerSDK, LoggedInUsersStats } from '@pro/sdk';
 import { WebSocketService } from '../../../core/services/websocket.service';
 
 @Component({
@@ -41,13 +41,16 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   config?: any;
   private destroy$ = new Subject<void>();
 
+  private sdk: SkerSDK;
+
   constructor(
-    private weiboService: WeiboService,
     private wsService: WebSocketService
-  ) {}
+  ) {
+    this.sdk = new SkerSDK('');
+  }
 
   ngOnInit(): void {
-    this.weiboService.getLoggedInUsersStats().pipe(
+    this.sdk.weibo.getLoggedInUsersStats().pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (stats) => {
