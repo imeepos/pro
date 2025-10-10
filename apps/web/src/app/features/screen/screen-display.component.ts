@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { ScreenApiService, ScreenPage, Component as ScreenComponent } from '../../core/services/screen-api.service';
+import { ScreenPage, Component as ScreenComponent, SkerSDK } from '@pro/sdk';
 import { WebSocketService } from '../../core/services/websocket.service';
 import { ComponentRegistryService } from '../../core/services/component-registry.service';
 import { IScreenComponent } from '../../shared/interfaces/screen-component.interface';
@@ -131,7 +131,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
-    private screenApi: ScreenApiService,
+    private sdk: SkerSDK,
     private wsService: WebSocketService,
     private componentRegistry: ComponentRegistryService,
     private cdr: ChangeDetectorRef
@@ -161,7 +161,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
 
-    this.screenApi.getScreen(id)
+    this.sdk.screen.getScreen$(id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (config) => {
@@ -182,7 +182,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
 
-    this.screenApi.getDefaultScreen()
+    this.sdk.screen.getDefaultScreen$()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (config) => {

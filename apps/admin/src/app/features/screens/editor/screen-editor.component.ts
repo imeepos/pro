@@ -6,7 +6,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { ScreensService } from '../../../state/screens.service';
 import { ScreensQuery } from '../../../state/screens.query';
-import { ScreenPage, UpdateScreenDto } from '../../../core/services/screen-api.service';
+import { ScreenPage, UpdateScreenDto } from '@pro/sdk';
 import { ComponentRegistryService } from '../../../core/services/component-registry.service';
 import { CanvasComponent } from './canvas/canvas.component';
 import { LayerPanelComponent } from './canvas/layer-panel/layer-panel.component';

@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { ScreensService } from '../../state/screens.service';
 import { ScreensQuery } from '../../state/screens.query';
-import { ScreenPage, CreateScreenDto } from '../../core/services/screen-api.service';
+import { ScreenPage, CreateScreenDto } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
 import { CreateScreenDialogComponent } from './components/create-screen-dialog.component';
 import { DeleteConfirmDialogComponent } from './components/delete-confirm-dialog.component';

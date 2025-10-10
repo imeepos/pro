@@ -2,14 +2,14 @@ import { Injectable } from '@angular/core';
 import { Observable, tap, catchError, throwError, finalize } from 'rxjs';
 import { ScreensStore } from './screens.store';
 import { ScreensQuery } from './screens.query';
-import { ScreenApiService, ScreenPage, CreateScreenDto, UpdateScreenDto } from '../core/services/screen-api.service';
+import { ScreenPage, CreateScreenDto, UpdateScreenDto, SkerSDK } from '@pro/sdk';
 
 @Injectable({ providedIn: 'root' })
 export class ScreensService {
   constructor(
     private store: ScreensStore,
     private query: ScreensQuery,
-    private api: ScreenApiService
+    private sdk: SkerSDK
   ) {}
 
   loadScreens(page = 1, limit = 20): Observable<void> {
@@ -17,7 +17,7 @@ export class ScreensService {
     this.setError(null);
 
     return new Observable(observer => {
-      this.api.getScreens(page, limit).pipe(
+      this.sdk.screen.getScreens$(page, limit).pipe(
         tap(response => {
           this.store.set(response.items);
           this.store.update({
@@ -42,7 +42,7 @@ export class ScreensService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.api.createScreen(dto).pipe(
+    return this.sdk.screen.createScreen$(dto).pipe(
       tap(screen => {
         this.store.add(screen);
       }),
@@ -58,7 +58,7 @@ export class ScreensService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.api.updateScreen(id, dto).pipe(
+    return this.sdk.screen.updateScreen$(id, dto).pipe(
       tap(screen => {
         this.store.update(id, screen);
       }),
@@ -74,7 +74,7 @@ export class ScreensService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.api.deleteScreen(id).pipe(
+    return this.sdk.screen.deleteScreen$(id).pipe(
       tap(() => {
         this.store.remove(id);
       }),
@@ -90,7 +90,7 @@ export class ScreensService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.api.copyScreen(id).pipe(
+    return this.sdk.screen.copyScreen$(id).pipe(
       tap(screen => {
         this.store.add(screen);
       }),
@@ -106,7 +106,7 @@ export class ScreensService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.api.publishScreen(id).pipe(
+    return this.sdk.screen.publishScreen$(id).pipe(
       tap(screen => {
         this.store.update(id, screen);
       }),
@@ -122,7 +122,7 @@ export class ScreensService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.api.draftScreen(id).pipe(
+    return this.sdk.screen.draftScreen$(id).pipe(
       tap(screen => {
         this.store.update(id, screen);
       }),
@@ -138,7 +138,7 @@ export class ScreensService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.api.getScreen(id).pipe(
+    return this.sdk.screen.getScreen$(id).pipe(
       tap(screen => {
         this.store.upsert(id, screen);
       }),
@@ -154,7 +154,7 @@ export class ScreensService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.api.setDefaultScreen(id).pipe(
+    return this.sdk.screen.setDefaultScreen$(id).pipe(
       tap(screen => {
         const screens = this.query.getAll();
         screens.forEach(s => {

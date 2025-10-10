@@ -1,7 +1,7 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { CreateScreenDto } from '../../../core/services/screen-api.service';
+import { CreateScreenDto } from '@pro/sdk';
 
 @Component({
   selector: 'app-create-screen-dialog',

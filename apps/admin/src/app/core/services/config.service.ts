@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, from, of, EMPTY } from 'rxjs';
 import { catchError, map, shareReplay, take } from 'rxjs/operators';
 import { SkerSDK } from '@pro/sdk';
@@ -14,7 +14,7 @@ interface CachedConfig {
   providedIn: 'root'
 })
 export class ConfigService {
-  private readonly sdk: SkerSDK;
+  private readonly sdk = inject(SkerSDK);
   private amapApiKeyCache: CachedConfig | null = null;
   private readonly amapApiKeySubject = new BehaviorSubject<string>('');
   private readonly amapApiKey$ = this.amapApiKeySubject.asObservable().pipe(
@@ -22,8 +22,6 @@ export class ConfigService {
   );
 
   constructor() {
-    this.sdk = new SkerSDK(environment.apiUrl);
-
     // 如果环境变量中有有效的API Key，则使用它作为初始值
     const envApiKey = environment.amapApiKey || '';
     if (envApiKey && envApiKey !== 'YOUR_AMAP_KEY') {

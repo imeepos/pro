@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { QueryEntity } from '@datorama/akita';
 import { ScreensStore, ScreensState } from './screens.store';
 import { Observable } from 'rxjs';
-import { ScreenPage } from '../core/services/screen-api.service';
+import { ScreenPage } from '@pro/sdk';
 
 @Injectable({ providedIn: 'root' })
 export class ScreensQuery extends QueryEntity<ScreensState> {

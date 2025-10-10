@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { EntityState, EntityStore, StoreConfig } from '@datorama/akita';
-import { ScreenPage } from '../core/services/screen-api.service';
+import { ScreenPage } from '@pro/sdk';
 
 export interface ScreensState extends EntityState<ScreenPage> {
   loading: boolean;

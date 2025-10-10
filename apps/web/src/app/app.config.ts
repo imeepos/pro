@@ -6,6 +6,8 @@ import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { ComponentRegistryService } from './core/services/component-registry.service';
 import { WeiboLoggedInUsersCardComponent } from './features/screen/components/weibo-logged-in-users-card.component';
+import { SkerSDK } from '@pro/sdk';
+import { environment } from '../environments/environment';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
   return () => {
@@ -32,6 +34,11 @@ export const appConfig: ApplicationConfig = {
       useFactory: initializeComponentRegistry,
       deps: [ComponentRegistryService],
       multi: true
+    },
+    // SDK
+    {
+      provide: SkerSDK,
+      useFactory: () => new SkerSDK(environment.apiUrl)
     }
   ]
 };

@@ -11,6 +11,7 @@ import { WeiboLoggedInUsersCardComponent } from './features/screens/components/w
 import { TestSimpleComponent } from './features/screens/components/test-simple.component';
 import { EventsStore } from './state/events.store';
 import { TagsStore } from './state/tags.store';
+import { UserService } from './state/user.service';
 import { SkerSDK } from '@pro/sdk';
 import { environment } from '../environments/environment';
 
@@ -57,6 +58,8 @@ export const appConfig: ApplicationConfig = {
     // Akita stores
     EventsStore,
     TagsStore,
+    // Services
+    UserService,
     // SDK
     {
       provide: SkerSDK,

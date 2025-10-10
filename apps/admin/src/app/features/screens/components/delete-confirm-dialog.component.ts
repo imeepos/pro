@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, HostListener, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ScreenPage } from '../../../core/services/screen-api.service';
+import { ScreenPage } from '@pro/sdk';
 
 @Component({
   selector: 'app-delete-confirm-dialog',

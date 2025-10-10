@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval } from 'rxjs';
 import { IScreenComponent } from '../../../shared/interfaces/screen-component.interface';
@@ -248,13 +248,11 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   private destroy$ = new Subject<void>();
   private refreshTimer$ = new Subject<void>();
 
-  private sdk: SkerSDK;
+  private readonly sdk = inject(SkerSDK);
 
   constructor(
     private wsService: WebSocketService
-  ) {
-    this.sdk = new SkerSDK('');
-  }
+  ) {}
 
   ngOnInit(): void {
     this.initConfig();

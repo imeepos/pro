@@ -6,7 +6,7 @@ import { ComponentItem, ComponentStyle } from '../../models/component.model';
 import { EditMode } from '../../models/canvas.model';
 import { Subject, BehaviorSubject, Observable, merge, timer, EMPTY, throwError } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, takeUntil, tap, catchError, delay, retryWhen, scan, finalize } from 'rxjs/operators';
-import { ScreenApiService, UpdateScreenDto } from '../../../../../core/services/screen-api.service';
+import { UpdateScreenDto, SkerSDK } from '@pro/sdk';
 
 @Injectable({ providedIn: 'root' })
 export class CanvasService implements OnDestroy {
@@ -27,7 +27,7 @@ export class CanvasService implements OnDestroy {
     private store: CanvasStore,
     private query: CanvasQuery,
     private snapshotService: SnapshotService,
-    private screenApi: ScreenApiService
+    private sdk: SkerSDK
   ) {
     this.initNetworkMonitoring();
     this.initAutoSave();
@@ -944,7 +944,7 @@ export class CanvasService implements OnDestroy {
       components: this.convertComponentsToApiFormat(state.componentData)
     };
 
-    return this.screenApi.updateScreen(this.currentPageId, updateDto).pipe(
+    return this.sdk.screen.updateScreen$(this.currentPageId, updateDto).pipe(
       tap(() => {
         this.clearErrorState();
         this.setDirty(false);
