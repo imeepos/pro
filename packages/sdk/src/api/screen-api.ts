@@ -5,7 +5,6 @@ import {
   ScreenPage,
   CreateScreenDto,
   UpdateScreenDto,
-  ScreenApiResponse,
   ScreenListResponse,
   normalizeScreenPageData
 } from '../types/screen.types';
@@ -28,18 +27,18 @@ export class ScreenApi {
    * @returns 屏幕列表响应
    */
   async getScreens(page = 1, limit = 20): Promise<ScreenListResponse> {
-    const response = await this.httpClient.get<ScreenApiResponse<ScreenListResponse>>(
+    const response = await this.httpClient.get<ScreenListResponse>(
       '/api/screens',
       { page: page.toString(), limit: limit.toString() }
     );
 
-    if (!response.success || !response.data) {
-      throw new Error('API返回数据格式错误');
+    if (!response) {
+      throw new Error('API返回数据为空');
     }
 
     return {
-      ...response.data,
-      items: response.data.items.map(item => normalizeScreenPageData(item))
+      ...response,
+      items: response.items.map(item => normalizeScreenPageData(item))
     };
   }
 
@@ -49,13 +48,13 @@ export class ScreenApi {
    * @returns 屏幕详情
    */
   async getScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.get<ScreenApiResponse<ScreenPage>>(`/api/screens/${id}`);
+    const response = await this.httpClient.get<ScreenPage>(`/api/screens/${id}`);
 
-    if (!response.success || !response.data) {
-      throw new Error('API返回数据格式错误');
+    if (!response) {
+      throw new Error('API返回数据为空');
     }
 
-    return normalizeScreenPageData(response.data);
+    return normalizeScreenPageData(response);
   }
 
   /**
@@ -64,13 +63,13 @@ export class ScreenApi {
    * @returns 创建的屏幕详情
    */
   async createScreen(dto: CreateScreenDto): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>('/api/screens', dto);
+    const response = await this.httpClient.post<ScreenPage>('/api/screens', dto);
 
-    if (!response.success || !response.data) {
-      throw new Error('API返回数据格式错误');
+    if (!response) {
+      throw new Error('API返回数据为空');
     }
 
-    return normalizeScreenPageData(response.data);
+    return normalizeScreenPageData(response);
   }
 
   /**
@@ -80,13 +79,13 @@ export class ScreenApi {
    * @returns 更新后的屏幕详情
    */
   async updateScreen(id: string, dto: UpdateScreenDto): Promise<ScreenPage> {
-    const response = await this.httpClient.put<ScreenApiResponse<ScreenPage>>(`/api/screens/${id}`, dto);
+    const response = await this.httpClient.put<ScreenPage>(`/api/screens/${id}`, dto);
 
-    if (!response.success || !response.data) {
-      throw new Error('API返回数据格式错误');
+    if (!response) {
+      throw new Error('API返回数据为空');
     }
 
-    return normalizeScreenPageData(response.data);
+    return normalizeScreenPageData(response);
   }
 
   /**
@@ -103,13 +102,13 @@ export class ScreenApi {
    * @returns 复制后的屏幕详情
    */
   async copyScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>(`/api/screens/${id}/copy`, {});
+    const response = await this.httpClient.post<ScreenPage>(`/api/screens/${id}/copy`, {});
 
-    if (!response.success || !response.data) {
-      throw new Error('API返回数据格式错误');
+    if (!response) {
+      throw new Error('API返回数据为空');
     }
 
-    return normalizeScreenPageData(response.data);
+    return normalizeScreenPageData(response);
   }
 
   /**
@@ -118,13 +117,13 @@ export class ScreenApi {
    * @returns 发布后的屏幕详情
    */
   async publishScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>(`/api/screens/${id}/publish`, {});
+    const response = await this.httpClient.post<ScreenPage>(`/api/screens/${id}/publish`, {});
 
-    if (!response.success || !response.data) {
-      throw new Error('API返回数据格式错误');
+    if (!response) {
+      throw new Error('API返回数据为空');
     }
 
-    return normalizeScreenPageData(response.data);
+    return normalizeScreenPageData(response);
   }
 
   /**
@@ -133,13 +132,13 @@ export class ScreenApi {
    * @returns 草稿状态的屏幕详情
    */
   async draftScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>(`/api/screens/${id}/draft`, {});
+    const response = await this.httpClient.post<ScreenPage>(`/api/screens/${id}/draft`, {});
 
-    if (!response.success || !response.data) {
-      throw new Error('API返回数据格式错误');
+    if (!response) {
+      throw new Error('API返回数据为空');
     }
 
-    return normalizeScreenPageData(response.data);
+    return normalizeScreenPageData(response);
   }
 
   /**
@@ -148,13 +147,13 @@ export class ScreenApi {
    * @returns 设置为默认后的屏幕详情
    */
   async setDefaultScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.put<ScreenApiResponse<ScreenPage>>(`/api/screens/default/${id}`, {});
+    const response = await this.httpClient.put<ScreenPage>(`/api/screens/default/${id}`, {});
 
-    if (!response.success || !response.data) {
-      throw new Error('API返回数据格式错误');
+    if (!response) {
+      throw new Error('API返回数据为空');
     }
 
-    return normalizeScreenPageData(response.data);
+    return normalizeScreenPageData(response);
   }
 
   /**
@@ -162,13 +161,13 @@ export class ScreenApi {
    * @returns 默认屏幕详情
    */
   async getDefaultScreen(): Promise<ScreenPage> {
-    const response = await this.httpClient.get<ScreenApiResponse<ScreenPage>>('/api/screens/default');
+    const response = await this.httpClient.get<ScreenPage>('/api/screens/default');
 
-    if (!response.success || !response.data) {
-      throw new Error('API返回数据格式错误');
+    if (!response) {
+      throw new Error('API返回数据为空');
     }
 
-    return normalizeScreenPageData(response.data);
+    return normalizeScreenPageData(response);
   }
 
   // 以下为兼容 RxJS Observable 的方法，用于 Angular 项目
