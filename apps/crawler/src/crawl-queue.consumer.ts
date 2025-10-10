@@ -43,7 +43,19 @@ export class CrawlQueueConsumer implements OnModuleInit {
     let subTask: SubTaskMessage;
 
     try {
+      // 检查消息是否为空或无效
+      if (!message) {
+        this.logger.error('收到空消息，跳过处理');
+        return;
+      }
+
       subTask = message;
+
+      // 检查taskId是否存在
+      if (!subTask.taskId) {
+        this.logger.error('消息缺少taskId，跳过处理', message);
+        return;
+      }
 
       this.logger.log(`收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}, ` +
                      `时间范围=${this.formatDate(subTask.start)}~${this.formatDate(subTask.end)}, ` +
