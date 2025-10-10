@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
+import { inject } from '@angular/core';
 import { Observable, tap, catchError, throwError, finalize } from 'rxjs';
 import { WeiboSearchTasksStore } from './weibo-search-tasks.store';
 import { WeiboSearchTasksQuery } from './weibo-search-tasks.query';
-import { WeiboSearchTasksApiService } from '../core/services/weibo-search-tasks-api.service';
+import { SkerSDK } from '@pro/sdk';
 import {
   WeiboSearchTask,
   CreateWeiboSearchTaskDto,
@@ -13,11 +14,13 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class WeiboSearchTasksService {
+  private readonly sdk: SkerSDK;
   constructor(
     private store: WeiboSearchTasksStore,
-    private query: WeiboSearchTasksQuery,
-    private api: WeiboSearchTasksApiService
-  ) {}
+    private query: WeiboSearchTasksQuery
+  ) {
+    this.sdk = inject(SkerSDK);
+  }
 
   // 获取任务列表
   findAll(filters?: WeiboSearchTaskFilters): Observable<any> {
@@ -26,7 +29,7 @@ export class WeiboSearchTasksService {
 
     const currentFilters = { ...this.query.filters, ...filters };
 
-    return this.api.findAll(currentFilters).pipe(
+    return this.sdk.weiboSearchTasks.findAll(currentFilters).pipe(
       tap(response => {
         this.store.update({
           tasks: response.data,
@@ -50,7 +53,7 @@ export class WeiboSearchTasksService {
     this.updateLoading(true);
     this.updateError(null);
 
-    return this.api.findOne(id).pipe(
+    return this.sdk.weiboSearchTasks.findOne(id).pipe(
       tap(task => {
         this.store.update({ selectedTask: task });
       }),
@@ -67,7 +70,7 @@ export class WeiboSearchTasksService {
     this.updateLoading(true);
     this.updateError(null);
 
-    return this.api.create(dto).pipe(
+    return this.sdk.weiboSearchTasks.create(dto).pipe(
       tap(task => {
         const currentTasks = this.query.tasks || [];
         this.store.update({
@@ -88,7 +91,7 @@ export class WeiboSearchTasksService {
     this.updateLoading(true);
     this.updateError(null);
 
-    return this.api.update(id, updates).pipe(
+    return this.sdk.weiboSearchTasks.update(id, updates).pipe(
       tap(updatedTask => {
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
@@ -112,7 +115,7 @@ export class WeiboSearchTasksService {
     this.updateLoading(true);
     this.updateError(null);
 
-    return this.api.delete(id).pipe(
+    return this.sdk.weiboSearchTasks.delete(id).pipe(
       tap(() => {
         this.store.update(state => ({
           tasks: state.tasks.filter(task => task.id !== id),
@@ -131,7 +134,7 @@ export class WeiboSearchTasksService {
   pause(id: number): Observable<void> {
     this.updateLoading(true);
 
-    return this.api.pause(id).pipe(
+    return this.sdk.weiboSearchTasks.pause(id).pipe(
       tap(() => {
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
@@ -151,7 +154,7 @@ export class WeiboSearchTasksService {
   resume(id: number): Observable<void> {
     this.updateLoading(true);
 
-    return this.api.resume(id).pipe(
+    return this.sdk.weiboSearchTasks.resume(id).pipe(
       tap(() => {
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
@@ -171,7 +174,7 @@ export class WeiboSearchTasksService {
   runNow(id: number): Observable<void> {
     this.updateLoading(true);
 
-    return this.api.runNow(id).pipe(
+    return this.sdk.weiboSearchTasks.runNow(id).pipe(
       tap(() => {
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
@@ -189,7 +192,7 @@ export class WeiboSearchTasksService {
 
   // 获取任务统计
   getStats(): Observable<any> {
-    return this.api.getStats();
+    return this.sdk.weiboSearchTasks.getStats();
   }
 
   // 更新筛选条件
