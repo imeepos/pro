@@ -1,0 +1,208 @@
+<div class="image-upload-container">
+  <!-- 上传区域 -->
+  <div
+    *ngIf="canUploadMore"
+    class="upload-area"
+    [class.dragging]="isDragging"
+    [class.disabled]="disabled"
+    (click)="!disabled && fileInput.click()"
+    (drop)="onDrop($event)"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+  >
+    <input
+      #fileInput
+      type="file"
+      [accept]="accept"
+      [multiple]="multiple"
+      (change)="onFileSelect($event)"
+      hidden
+    />
+
+    <div class="upload-content">
+      <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+        />
+      </svg>
+
+      <p class="upload-text">点击或拖拽图片到此处上传</p>
+      <p class="upload-hint">
+        支持 JPG、PNG、GIF 等格式，单个文件不超过 {{ formatFileSize(maxSize) }}
+      </p>
+      <p class="upload-limit" *ngIf="remainingSlots < maxCount">
+        还可上传 {{ remainingSlots }} 张图片
+      </p>
+    </div>
+  </div>
+
+  <!-- 已存在的图片列表 -->
+  <div class="image-grid" *ngIf="existingImages.length > 0">
+    <div
+      *ngFor="let attachment of existingImages"
+      class="image-item existing"
+    >
+      <div class="image-wrapper">
+        <img [src]="attachment.fileUrl" [alt]="attachment.fileName" />
+
+        <div class="image-overlay">
+          <button
+            *ngIf="!disabled"
+            type="button"
+            class="action-btn delete-btn"
+            (click)="deleteExistingImage(attachment)"
+            title="删除"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            class="action-btn preview-btn"
+            (click)="$event.stopPropagation()"
+            title="预览"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="image-info">
+        <p class="image-name" [title]="attachment.fileName">{{ attachment.fileName }}</p>
+        <p class="image-size">{{ formatFileSize(attachment.fileSize) }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 上传中/已上传的图片列表 -->
+  <div class="image-grid" *ngIf="uploadingImages.length > 0">
+    <div
+      *ngFor="let img of uploadingImages"
+      class="image-item"
+      [class.uploading]="img.status === 'uploading'"
+      [class.success]="img.status === 'success'"
+      [class.error]="img.status === 'error'"
+    >
+      <div class="image-wrapper">
+        <img [src]="img.preview" [alt]="img.file.name" />
+
+        <!-- 上传进度条 -->
+        <div class="progress-overlay" *ngIf="img.status === 'uploading'">
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="img.progress"></div>
+          </div>
+          <span class="progress-text">{{ img.progress }}%</span>
+        </div>
+
+        <!-- 成功状态 -->
+        <div class="status-overlay success-overlay" *ngIf="img.status === 'success'">
+          <svg class="status-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="3"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+        </div>
+
+        <!-- 错误状态 -->
+        <div class="status-overlay error-overlay" *ngIf="img.status === 'error'">
+          <svg class="status-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="image-overlay" *ngIf="img.status !== 'uploading'">
+          <button
+            type="button"
+            class="action-btn delete-btn"
+            (click)="deleteImage(img)"
+            [title]="img.status === 'error' ? '移除' : '删除'"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
+
+          <button
+            *ngIf="img.status === 'error'"
+            type="button"
+            class="action-btn retry-btn"
+            (click)="retryUpload(img)"
+            title="重试"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="image-info">
+        <p class="image-name" [title]="img.file.name">{{ img.file.name }}</p>
+        <p class="image-size" *ngIf="img.status !== 'error'">
+          {{ formatFileSize(img.file.size) }}
+        </p>
+        <p class="error-text" *ngIf="img.status === 'error' && img.error">
+          {{ img.error }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 空状态提示 -->
+  <div
+    class="empty-state"
+    *ngIf="existingImages.length === 0 && uploadingImages.length === 0 && !canUploadMore"
+  >
+    <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+      />
+    </svg>
+    <p class="empty-text">暂无图片</p>
+  </div>
+</div>
