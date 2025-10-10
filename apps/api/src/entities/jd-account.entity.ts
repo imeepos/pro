@@ -31,7 +31,7 @@ export class JdAccountEntity {
   id: number;
 
   @Index()
-  @Column({ type: 'varchar', length: 255, name: 'user_id' })
+  @Column({ type: 'uuid', name: 'user_id' })
   userId: string;
 
   @Column({ type: 'varchar', length: 50, name: 'jd_uid' })
