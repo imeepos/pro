@@ -109,8 +109,72 @@ export class CrawlQueueConsumer implements OnModuleInit {
     }
   }
 
-  private formatDate(date: Date): string {
-    return date.toISOString().split('T')[0];
+  private formatDate(date: any): string {
+    if (!date) {
+      return '未知日期';
+    }
+
+    // 如果是字符串，尝试转换为Date对象
+    if (typeof date === 'string') {
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) {
+        return '无效日期';
+      }
+      return parsedDate.toISOString().split('T')[0];
+    }
+
+    // 如果是Date对象，检查有效性
+    if (date instanceof Date) {
+      if (isNaN(date.getTime())) {
+        return '无效日期';
+      }
+      return date.toISOString().split('T')[0];
+    }
+
+    // 其他类型，尝试转换
+    try {
+      const convertedDate = new Date(date);
+      if (isNaN(convertedDate.getTime())) {
+        return '无效日期';
+      }
+      return convertedDate.toISOString().split('T')[0];
+    } catch {
+      return '无效日期';
+    }
+  }
+
+  private formatDateTime(date: any): string {
+    if (!date) {
+      return '未知时间';
+    }
+
+    // 如果是字符串，尝试转换为Date对象
+    if (typeof date === 'string') {
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) {
+        return '无效时间';
+      }
+      return parsedDate.toISOString();
+    }
+
+    // 如果是Date对象，检查有效性
+    if (date instanceof Date) {
+      if (isNaN(date.getTime())) {
+        return '无效时间';
+      }
+      return date.toISOString();
+    }
+
+    // 其他类型，尝试转换
+    try {
+      const convertedDate = new Date(date);
+      if (isNaN(convertedDate.getTime())) {
+        return '无效时间';
+      }
+      return convertedDate.toISOString();
+    } catch {
+      return '无效时间';
+    }
   }
 
   private async handleCrawlResult(subTask: SubTaskMessage, result: CrawlResult): Promise<void> {
@@ -119,8 +183,12 @@ export class CrawlQueueConsumer implements OnModuleInit {
       return;
     }
 
+    // 安全处理日期时间显示
+    const firstPostTimeStr = this.formatDateTime(result.firstPostTime);
+    const lastPostTimeStr = this.formatDateTime(result.lastPostTime);
+
     this.logger.log(`爬取任务成功完成: taskId=${subTask.taskId}, pageCount=${result.pageCount}, ` +
-                   `首条时间=${result.firstPostTime?.toISOString()}, 末条时间=${result.lastPostTime?.toISOString()}`);
+                   `首条时间=${firstPostTimeStr}, 末条时间=${lastPostTimeStr}`);
 
     // 状态更新逻辑已移至 WeiboSearchCrawlerService.handleTaskResult()
     // 这里只做日志记录和失败处理
