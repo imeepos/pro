@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { DropdownItem, Color, Size } from '../interfaces/component-base.interface';
+import { BadgeComponent } from '../badge/badge.component';
 
 @Component({
   selector: 'pro-dropdown',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, BadgeComponent],
   template: `
     <div class="dropdown-container">
       <!-- Trigger -->

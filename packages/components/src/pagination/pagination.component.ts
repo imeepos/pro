@@ -55,8 +55,7 @@ import { CommonModule } from '@angular/common';
         <!-- Page Numbers -->
         <div class="pagination-pages">
           <button
-            *ngFor="let page of visiblePages"
-            [key]="page"
+            *ngFor="let page of visiblePages; trackBy: trackByPage"
             [class]="getPageButtonClasses(page)"
             (click)="goToPage(page)">
             {{ page }}
@@ -285,5 +284,9 @@ export class PaginationComponent implements OnChanges {
       this.goToPage(this.jumpPage!);
     }
     this.jumpPage = null;
+  }
+
+  trackByPage(_index: number, page: number): number {
+    return page;
   }
 }

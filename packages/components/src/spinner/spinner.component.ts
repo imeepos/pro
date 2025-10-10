@@ -30,9 +30,9 @@ import type { ComponentBase, Color, Size } from '../interfaces/component-base.in
       <!-- Dots Spinner -->
       <div *ngIf="type === 'dots'" [class]="dotsContainerClasses">
         <div
-          *ngFor="let dot of [].constructor(dotCount)"
+          *ngFor="let dot of [].constructor(dotCount); let i = index"
           [class]="dotClasses"
-          [style.animation-delay]="'.' + $index + 's'"
+          [style.animation-delay]="'.' + i + 's'"
         ></div>
       </div>
 
@@ -44,9 +44,9 @@ import type { ComponentBase, Color, Size } from '../interfaces/component-base.in
       <!-- Bars Spinner -->
       <div *ngIf="type === 'bars'" [class]="barsContainerClasses">
         <div
-          *ngFor="let bar of [].constructor(barCount)"
+          *ngFor="let bar of [].constructor(barCount); let i = index"
           [class]="barClasses"
-          [style.animation-delay]="'.' + $index + 's'"
+          [style.animation-delay]="'.' + i + 's'"
         ></div>
       </div>
 

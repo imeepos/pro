@@ -142,12 +142,13 @@ export class InputComponent implements ControlValueAccessor, FormElement {
   @Input() prefixIcon = '';
   @Input() suffixIcon = '';
   @Input() ariaLabel = '';
+  @Input() name = '';
 
   @Output() valueChange = new EventEmitter<string>();
   @Output() focus = new EventEmitter<FocusEvent>();
   @Output() blur = new EventEmitter<FocusEvent>();
 
-  private _value = '';
+  protected _value = '';
   private onChange = (_value: any) => {};
   private onTouched = () => {};
 

@@ -26,7 +26,15 @@ export const routes: Routes = [
     component: LayoutComponent,
     canActivate: [authGuard],
     children: [
-      { path: '', redirectTo: 'screens', pathMatch: 'full' },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
+      },
+      {
+        path: 'api-keys',
+        loadComponent: () => import('./features/api-keys/api-keys.component').then(m => m.ApiKeysComponent)
+      },
       {
         path: 'screens',
         loadComponent: () => import('./features/screens/screens-list.component').then(m => m.ScreensListComponent)

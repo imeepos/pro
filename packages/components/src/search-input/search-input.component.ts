@@ -1,11 +1,13 @@
 import { Component, Input, Output, EventEmitter, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { FormElement, Color, Size } from '../interfaces/component-base.interface';
+import { SpinnerComponent } from '../spinner/spinner.component';
+import { BadgeComponent } from '../badge/badge.component';
 
 @Component({
   selector: 'pro-search-input',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SpinnerComponent, BadgeComponent],
   template: `
     <div class="search-input-container">
       <!-- Search Icon -->
@@ -25,7 +27,7 @@ import type { FormElement, Color, Size } from '../interfaces/component-base.inte
         [required]="required"
         [attr.aria-label]="ariaLabel"
         [attr.aria-expanded]="showSuggestions"
-        [attr.aria-activedescendant]="highlightedSuggestion ? 'suggestion-' + highlightedIndex : null"
+        [attr.aria-activedescendant]="highlightedIndex >= 0 ? 'suggestion-' + highlightedIndex : null"
         [attr.aria-autocomplete]="suggestions.length > 0 ? 'list' : null"
         [attr.aria-owns]="suggestions.length > 0 ? 'suggestions-list' : null"
         [class]="inputClasses"

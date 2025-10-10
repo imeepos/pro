@@ -9,6 +9,18 @@ export interface MenuItem {
 
 export const MENU_ITEMS: MenuItem[] = [
   {
+    id: 'dashboard',
+    label: '仪表盘',
+    icon: 'home',
+    route: '/dashboard'
+  },
+  {
+    id: 'api-keys',
+    label: 'API Key管理',
+    icon: 'key',
+    route: '/api-keys'
+  },
+  {
     id: 'screens',
     label: '大屏管理',
     icon: 'monitor',

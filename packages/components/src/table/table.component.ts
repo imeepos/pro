@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableColumn, TableAction } from '../interfaces/component-base.interface';
+import { SpinnerComponent } from '../spinner/spinner.component';
 
 export interface SortConfig {
   key: string;
@@ -10,7 +11,7 @@ export interface SortConfig {
 @Component({
   selector: 'pro-table',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SpinnerComponent],
   template: `
     <div class="table-container">
       <!-- Loading Overlay -->

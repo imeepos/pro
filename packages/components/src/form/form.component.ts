@@ -2,10 +2,12 @@ import { Component, Input, Output, EventEmitter, ContentChildren, QueryList, Aft
 import { CommonModule } from '@angular/common';
 import { FormGroup, FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { FormField, ComponentBase } from '../interfaces/component-base.interface';
+import { InputComponent } from '../input/input.component';
+import { ButtonComponent } from '../button/button.component';
 
 export interface FormConfig {
   fields: FormField[];
-  layout?: 'vertical' | 'horizontal' | 'grid';
+  layout?: 'vertical' | 'horizontal' | 'grid' | 'inline';
   gridColumns?: number;
   submitText?: string;
   resetText?: string;
@@ -18,7 +20,7 @@ export interface FormConfig {
 @Component({
   selector: 'pro-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, InputComponent, ButtonComponent],
   template: `
     <form [formGroup]="form" [class]="formClasses" (ngSubmit)="handleSubmit($event)">
       <!-- Form Header -->
@@ -372,7 +374,7 @@ export class FormComponent implements AfterContentInit, ComponentBase {
   @Input() title = '';
   @Input() description = '';
   @Input() footerText = '';
-  @Input() layout: 'vertical' | 'horizontal' | 'grid' = 'vertical';
+  @Input() layout: 'vertical' | 'horizontal' | 'grid' | 'inline' = 'vertical';
   @Input() gridColumns = 1;
   @Input() submitText = '';
   @Input() resetText = '';
@@ -480,7 +482,8 @@ export class FormComponent implements AfterContentInit, ComponentBase {
     const widthClasses = {
       horizontal: 'w-48',
       vertical: '',
-      grid: ''
+      grid: '',
+      inline: ''
     };
     return `inline-label ${widthClasses[this.layout]}`;
   }
