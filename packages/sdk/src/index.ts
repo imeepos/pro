@@ -78,5 +78,6 @@ export class SkerSDK {
     this.user = new UserApi(baseUrl);
     this.weibo = new WeiboApi();
     this.weiboSearchTasks = new WeiboSearchTasksApi(baseUrl);
+    this.screen = new ScreenApi();
   }
 }
