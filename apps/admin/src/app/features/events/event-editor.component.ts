@@ -19,6 +19,7 @@ import {
   TagSelectorComponent,
   AttachmentUploaderComponent
 } from './components';
+import type { LocationData } from './components/amap-picker.component';
 import { DateTimePickerComponent } from '../../shared/components/date-time-picker';
 
 @Component({
@@ -176,7 +177,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  onLocationPick(location: { longitude: number; latitude: number; address?: string }): void {
+  onLocationPick(location: LocationData): void {
     this.eventForm.patchValue({
       longitude: location.longitude,
       latitude: location.latitude
