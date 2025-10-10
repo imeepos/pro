@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "description": "Pro monorepo workspace root",
-  "packageManager": "pnpm@10.18.1",
+  "packageManager": "bun@latest",
   "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=8.0.0"
+    "node": ">=20.0.0"
   },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
@@ -28,10 +31,8 @@
     "turbo": "^2.3.3",
     "typescript": "~5.8.0"
   },
-  "pnpm": {
-    "overrides": {
-      "undici": "^5.28.0"
-    }
+  "resolutions": {
+    "undici": "^5.28.0"
   },
   "dependencies": {
     "passport-headerapikey": "^1.2.2"

@@ -4,11 +4,11 @@
   "scripts": {
     "ng": "ng",
     "set-env": "node scripts/set-env.js",
-    "dev": "npm run set-env && ng serve --port 4201",
-    "start": "npm run set-env && ng serve --port 4201",
-    "build": "npm run set-env && ng build",
-    "watch": "npm run set-env && ng build --watch --configuration development",
-    "test": "npm run set-env && ng test",
+    "dev": "bun run set-env && ng serve --port 4201",
+    "start": "bun run set-env && ng serve --port 4201",
+    "build": "bun run set-env && ng build",
+    "watch": "bun run set-env && ng build --watch --configuration development",
+    "test": "bun run set-env && ng test",
     "test:e2e": "playwright test",
     "lint": "ng lint",
     "typecheck": "tsc --noEmit"
