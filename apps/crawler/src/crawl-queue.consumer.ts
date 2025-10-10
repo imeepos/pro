@@ -42,84 +42,37 @@ export class CrawlQueueConsumer implements OnModuleInit {
     const startTime = Date.now();
     let subTask: SubTaskMessage;
 
-    try {
-      // 检查消息是否为空或无效
-      if (!message) {
-        this.logger.error('收到空消息，跳过处理');
-        return;
-      }
+    // 检查消息是否为空或无效
+    if (!message) {
+      this.logger.error('收到空消息，跳过处理');
+      throw new Error('Invalid message: message is null or undefined');
+    }
 
-      subTask = message;
+    subTask = message;
 
-      // 检查taskId是否存在
-      if (!subTask.taskId) {
-        this.logger.error('消息缺少taskId，跳过处理', message);
-        return;
-      }
+    // 检查taskId是否存在
+    if (!subTask.taskId) {
+      this.logger.error('消息缺少taskId，跳过处理', message);
+      throw new Error('Invalid message: missing taskId');
+    }
 
-      this.logger.log(`收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}, ` +
-                     `时间范围=${this.formatDate(subTask.start)}~${this.formatDate(subTask.end)}, ` +
-                     `isInitialCrawl=${subTask.isInitialCrawl}`);
+    this.logger.log(`收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}, ` +
+                   `时间范围=${this.formatDate(subTask.start)}~${this.formatDate(subTask.end)}, ` +
+                   `isInitialCrawl=${subTask.isInitialCrawl}`);
 
-      const result = await this.weiboSearchCrawlerService.crawl(subTask);
+    const result = await this.weiboSearchCrawlerService.crawl(subTask);
 
-      await this.handleCrawlResult(subTask, result);
+    await this.handleCrawlResult(subTask, result);
 
-      const duration = Date.now() - startTime;
-      this.logger.log(`任务完成: taskId=${subTask.taskId}, 耗时=${duration}ms, 成功=${result.success}`);
+    const duration = Date.now() - startTime;
+    this.logger.log(`任务完成: taskId=${subTask.taskId}, 耗时=${duration}ms, 成功=${result.success}`);
 
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.logger.error(`处理任务失败: taskId=${subTask?.taskId}, 耗时=${duration}ms, 错误=`, error);
-
-      if (subTask) {
-        await this.handleTaskFailure(subTask, error instanceof Error ? error.message : '未知错误');
-
-        // 重试逻辑 - 如果是网络错误或临时错误，可以重新入队
-        if (this.shouldRetry(error) && subTask.isInitialCrawl) {
-          await this.scheduleRetry(subTask, error instanceof Error ? error.message : '未知错误');
-        }
-      }
+    // 如果爬取失败，抛出异常触发 RabbitMQ 重试机制
+    if (!result.success) {
+      throw new Error(`爬取失败: ${result.error || '未知错误'}`);
     }
   }
 
-  private shouldRetry(error: any): boolean {
-    const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
-
-    // 网络相关错误可以重试
-    const retryableErrors = [
-      'timeout',
-      'network',
-      'connection',
-      'etimedout',
-      'enotfound',
-      'econnreset'
-    ];
-
-    return retryableErrors.some(err => errorMessage.includes(err));
-  }
-
-  private async scheduleRetry(subTask: SubTaskMessage, errorMessage: string): Promise<void> {
-    const retryDelay = 5 * 60 * 1000; // 5分钟后重试
-
-    try {
-      // 延迟重试消息
-      setTimeout(async () => {
-        try {
-          await this.rabbitMQClient.publish(this.rabbitmqConfig.queues.crawlQueue, {
-            ...subTask,
-            retryCount: (subTask as any).retryCount ? (subTask as any).retryCount + 1 : 1
-          });
-          this.logger.log(`已重新安排任务重试: taskId=${subTask.taskId}, 重试次数=${(subTask as any).retryCount ? (subTask as any).retryCount + 1 : 1}`);
-        } catch (error) {
-          this.logger.error(`重试任务安排失败: taskId=${subTask.taskId}`, error);
-        }
-      }, retryDelay);
-
-    } catch (error) {
-      this.logger.error(`安排重试失败: taskId=${subTask.taskId}`, error);
-    }
-  }
 
   private formatDate(date: any): string {
     if (!date) {
@@ -190,11 +143,6 @@ export class CrawlQueueConsumer implements OnModuleInit {
   }
 
   private async handleCrawlResult(subTask: SubTaskMessage, result: CrawlResult): Promise<void> {
-    if (!result.success) {
-      await this.handleTaskFailure(subTask, result.error || '爬取失败');
-      return;
-    }
-
     // 安全处理日期时间显示
     const firstPostTimeStr = this.formatDateTime(result.firstPostTime);
     const lastPostTimeStr = this.formatDateTime(result.lastPostTime);
@@ -203,22 +151,6 @@ export class CrawlQueueConsumer implements OnModuleInit {
                    `首条时间=${firstPostTimeStr}, 末条时间=${lastPostTimeStr}`);
 
     // 状态更新逻辑已移至 WeiboSearchCrawlerService.handleTaskResult()
-    // 这里只做日志记录和失败处理
-  }
-
-  private async handleTaskFailure(subTask: SubTaskMessage, errorMessage: string): Promise<void> {
-    this.logger.error(`任务执行失败: taskId=${subTask.taskId}, keyword=${subTask.keyword}, 错误=${errorMessage}`);
-
-    // 发布失败状态更新消息
-    try {
-      await this.rabbitMQClient.publish(this.rabbitmqConfig.queues.statusQueue, {
-        taskId: subTask.taskId,
-        status: 'failed',
-        errorMessage: errorMessage,
-        updatedAt: new Date()
-      });
-    } catch (error) {
-      this.logger.error(`发布失败状态更新消息失败: taskId=${subTask.taskId}`, error);
-    }
+    // 这里只做日志记录
   }
 }
