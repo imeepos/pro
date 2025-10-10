@@ -1,0 +1,50 @@
+table { border-collapse: collapse; width: 100%; }
+tbody tr { @apply transition-colors; }
+.bg-blue-50 { background-color: rgb(239 246 255); }
+
+.status-badge, .type-badge { @apply transition-transform hover:scale-105; }
+.actions-group { @apply flex items-center gap-1; }
+.action-button { @apply transition-all; }
+
+.api-key-display { @apply font-mono text-xs bg-slate-100 px-2 py-1 rounded transition-colors hover:bg-slate-200; }
+.visibility-button, .copy-button { @apply transition-transform hover:scale-110; }
+
+.pagination-container { @apply bg-slate-50; }
+.pagination-button { @apply min-w-10 transition-all; }
+.pagination-button:not(:disabled):hover { @apply -translate-y-px shadow; }
+.pagination-button.active { @apply bg-primary text-white border-primary; }
+.pagination-button:disabled { @apply opacity-50 cursor-not-allowed; }
+
+.page-size-select { @apply transition-all; }
+.page-size-select:focus { @apply border-primary shadow-[0_0_0_3px_rgba(102,126,234,0.1)]; }
+
+.empty-state { @apply p-12; }
+.empty-state-icon { @apply animate-bounce; }
+
+.tooltip { @apply relative; }
+.tooltip:hover::after {
+  content: attr(title);
+  @apply absolute bottom-full left-1/2 -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs whitespace-nowrap z-50 mb-1;
+}
+
+.selected-row { @apply bg-blue-50 border-l-4 border-primary; }
+
+.status-active { color: rgb(22 163 74); }
+.status-inactive { color: rgb(245 158 11); }
+.status-expired { color: rgb(239 68 68); }
+.status-revoked { color: rgb(107 114 128); }
+
+.type-readonly { color: rgb(59 130 246); }
+.type-readwrite { color: rgb(147 51 234); }
+.type-admin { color: rgb(239 68 68); }
+
+@media (max-width: 1024px) {
+  .actions-group { @apply flex-wrap; }
+  .action-button { @apply min-w-8 min-h-8; }
+}
+
+@media (max-width: 768px) {
+  .api-key-display { @apply text-[10px]; }
+  .status-badge, .type-badge { @apply text-[10px] px-1.5 py-0.5; }
+  .action-button span { @apply text-xs; }
+}

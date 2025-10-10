@@ -1,0 +1,242 @@
+<!-- 模态框背景 -->
+<div class="fixed inset-0 z-50 flex items-center justify-center"
+     *ngIf="visible"
+     (click)="onBackdropClick($event)"
+     (keydown)="onKeydown($event)"
+     tabindex="-1">
+
+  <!-- 背景遮罩 -->
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"></div>
+
+  <!-- 模态框容器 -->
+  <div class="relative w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden animate-[slideUp_0.3s_ease-out]"
+       (click)="onModalClick($event)">
+
+    <!-- 创建/编辑表单 -->
+    <div class="bg-white rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.35)] overflow-hidden"
+         *ngIf="isFormVisible()">
+
+      <!-- 模态框头部 -->
+      <div class="px-8 py-6 border-b border-slate-200 bg-gradient-to-r from-primary to-primary-dark">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl font-bold text-white">{{ getModalTitle() }}</h2>
+            <p class="text-white/80 text-sm mt-1">{{ getActionDescription() }}</p>
+          </div>
+          <button class="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors text-white"
+                  (click)="onClose()">
+            <span class="text-xl">✕</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 模态框内容 -->
+      <div class="max-h-[calc(90vh-200px)] overflow-y-auto p-8">
+        <!-- 错误提示 -->
+        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg" *ngIf="error">
+          <div class="flex items-start gap-3">
+            <span class="text-red-500 text-lg">⚠️</span>
+            <div>
+              <h4 class="text-sm font-medium text-red-800">操作失败</h4>
+              <p class="text-sm text-red-600 mt-1">{{ error }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 表单组件 -->
+        <app-api-key-form
+          [apiKey]="apiKey"
+          [loading]="loading"
+          (submit)="onFormSubmit($event)"
+          (cancel)="onClose()">
+        </app-api-key-form>
+      </div>
+    </div>
+
+    <!-- 删除/重新生成确认 -->
+    <div class="bg-white rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.35)] overflow-hidden"
+         *ngIf="isConfirmVisible()">
+
+      <!-- 模态框头部 -->
+      <div class="px-8 py-6 border-b border-slate-200"
+           [ngClass]="isDangerousAction() ? 'bg-gradient-to-r from-red-600 to-red-700' : 'bg-gradient-to-r from-primary to-primary-dark'">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+              <span class="text-3xl">{{ isDangerousAction() ? '⚠️' : '🔄' }}</span>
+              {{ getModalTitle() }}
+            </h2>
+            <p class="text-white/80 text-sm mt-1">{{ getActionDescription() }}</p>
+          </div>
+          <button class="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors text-white"
+                  (click)="onClose()">
+            <span class="text-xl">✕</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 模态框内容 -->
+      <div class="p-8">
+        <!-- API Key 信息 -->
+        <div class="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200" *ngIf="apiKey">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-semibold text-slate-800">{{ apiKey.name }}</h3>
+              <p class="text-sm text-slate-600 mt-1">{{ apiKey.description || '无描述' }}</p>
+              <div class="flex items-center gap-4 mt-2">
+                <span class="text-xs px-2 py-1 rounded-full"
+                      [ngClass]="apiKey.type === 'read_only' ? 'bg-blue-100 text-blue-700' : apiKey.type === 'read_write' ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'">
+                  {{ apiKey.type === 'read_only' ? '只读' : apiKey.type === 'read_write' ? '读写' : '管理员' }}
+                </span>
+                <span class="text-xs px-2 py-1 rounded-full"
+                      [ngClass]="apiKey.status === 'active' ? 'bg-green-100 text-green-700' : apiKey.status === 'inactive' ? 'bg-yellow-100 text-yellow-700' : apiKey.status === 'expired' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'">
+                  {{ apiKey.status === 'active' ? '活跃' : apiKey.status === 'inactive' ? '未激活' : apiKey.status === 'expired' ? '已过期' : '已撤销' }}
+                </span>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-slate-500">使用次数</p>
+              <p class="text-lg font-semibold text-slate-800">{{ apiKey.usageCount.toLocaleString() }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 确认信息 -->
+        <div class="mb-6">
+          <div class="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div class="flex items-start gap-3">
+              <span class="text-amber-500 text-lg">⚠️</span>
+              <div>
+                <h4 class="text-sm font-medium text-amber-800">重要提醒</h4>
+                <p class="text-sm text-amber-700 mt-1">{{ getConfirmMessage() }}</p>
+                <p class="text-sm text-amber-600 mt-2 font-medium">{{ getWarningMessage() }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 错误提示 -->
+        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg" *ngIf="error">
+          <div class="flex items-start gap-3">
+            <span class="text-red-500 text-lg">⚠️</span>
+            <div>
+              <h4 class="text-sm font-medium text-red-800">操作失败</h4>
+              <p class="text-sm text-red-600 mt-1">{{ error }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex justify-end gap-4">
+          <button class="px-6 py-2.5 text-sm font-medium text-slate-600 bg-white border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-all duration-200"
+                  (click)="onClose()"
+                  [disabled]="loading">
+            取消
+          </button>
+          <button class="px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,0,0,0.25)] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+                  [ngClass]="getActionButtonClass()"
+                  (click)="mode === 'delete' ? onDelete() : onRegenerate()"
+                  [disabled]="loading">
+            <span class="flex items-center gap-2">
+              <span *ngIf="!loading">{{ getActionButtonText() }}</span>
+              <span *ngIf="loading" class="flex items-center gap-2">
+                <span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                处理中...
+              </span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新 API Key 显示 -->
+    <div class="bg-white rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.35)] overflow-hidden"
+         *ngIf="isNewKeyVisible()">
+
+      <!-- 模态框头部 -->
+      <div class="px-8 py-6 border-b border-slate-200 bg-gradient-to-r from-green-600 to-green-700">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+              <span class="text-3xl">✅</span>
+              {{ mode === 'create' ? 'API Key 创建成功' : 'API Key 重新生成成功' }}
+            </h2>
+            <p class="text-white/80 text-sm mt-1">
+              {{ mode === 'create' ? '您的新 API Key 已生成，请妥善保管。' : '您的 API Key 已重新生成，请及时更新相关应用程序。' }}
+            </p>
+          </div>
+          <button class="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors text-white"
+                  (click)="onClose()">
+            <span class="text-xl">✕</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 模态框内容 -->
+      <div class="p-8">
+        <!-- 安全提醒 -->
+        <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div class="flex items-start gap-3">
+            <span class="text-blue-500 text-lg">🔒</span>
+            <div>
+              <h4 class="text-sm font-medium text-blue-800">安全提醒</h4>
+              <ul class="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
+                <li>请立即复制并保存此 API Key，关闭此窗口后将无法再次查看完整密钥</li>
+                <li>请勿将 API Key 暴露在客户端代码或公共仓库中</li>
+                <li>建议定期更换 API Key 以确保安全性</li>
+                <li>如果 API Key 意外泄露，请立即重新生成</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Key 显示 -->
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-slate-700 mb-2">您的 API Key</label>
+          <div class="flex items-center gap-2">
+            <div class="flex-1 p-4 bg-slate-100 border-2 border-slate-300 rounded-lg font-mono text-sm">
+              <span class="text-slate-800">{{ getDisplayedApiKey() }}</span>
+            </div>
+            <button class="px-4 py-2 text-sm text-slate-600 bg-slate-200 border border-slate-300 rounded-lg hover:bg-slate-300 transition-colors"
+                    (click)="toggleFullApiKey()"
+                    title="显示/隐藏完整密钥">
+              {{ showFullApiKey ? '隐藏' : '显示' }}
+            </button>
+            <button class="px-4 py-2 text-sm text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors"
+                    (click)="copyNewApiKey()"
+                    title="复制密钥">
+              📋 复制
+            </button>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex justify-end gap-4">
+          <button class="px-6 py-2.5 text-sm font-medium text-white bg-green-600 border-none rounded-lg transition-all duration-300 shadow-[0_4px_12px_rgba(34,197,94,0.4)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(34,197,94,0.6)]"
+                    (click)="completeNewApiKey()">
+            我已保存，完成
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 动画样式 -->
+<style>
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+</style>

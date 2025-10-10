@@ -1,0 +1,13 @@
+.stats-card { @apply cursor-pointer transition-transform hover:-translate-y-1; }
+.progress-bar { @apply transition-all duration-700; }
+.distribution-bar { @apply transition-all duration-500; }
+
+.trend-up { color: rgb(22 163 74); }
+.trend-down { color: rgb(239 68 68); }
+
+.refresh-button { @apply transition-transform hover:rotate-180; }
+.refresh-button.spinning { @apply animate-spin; }
+
+@media (max-width: 768px) {
+  .stats-card:hover { @apply -translate-y-0; }
+}

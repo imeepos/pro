@@ -1,0 +1,148 @@
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+  <!-- 统计卡片 -->
+  <ng-container *ngIf="getStatsData() | async as statsData">
+
+    <!-- 总数卡片 -->
+    <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-6 border border-white/20 hover:shadow-[0_25px_70px_rgba(0,0,0,0.35)] transition-all duration-300 cursor-pointer"
+         (click)="selectStat('total')">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center">
+          <span class="text-white text-xl">🔑</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="text-slate-400 hover:text-slate-600 transition-colors"
+                  (click)="refreshStats(); $event.stopPropagation()"
+                  title="刷新统计">
+            <span class="text-sm">🔄</span>
+          </button>
+        </div>
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-2xl font-bold text-slate-800">{{ statsData.total }}</h3>
+        <p class="text-sm text-slate-500">API Keys 总数</p>
+        <div class="w-full bg-slate-200 rounded-full h-2">
+          <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full transition-all duration-500"
+               [style.width.%]="getUsageRate(statsData)"></div>
+        </div>
+        <p class="text-xs text-slate-400">{{ getUsageRate(statsData) }}% 活跃</p>
+      </div>
+    </div>
+
+    <!-- 活跃状态卡片 -->
+    <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-6 border border-white/20 hover:shadow-[0_25px_70px_rgba(0,0,0,0.35)] transition-all duration-300 cursor-pointer"
+         (click)="selectStat('status')">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center">
+          <span class="text-white text-xl">✅</span>
+        </div>
+      </div>
+      <div class="space-y-3">
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-600">活跃</span>
+          <span class="text-lg font-semibold text-green-600">{{ statsData.active }}</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-600">未激活</span>
+          <span class="text-lg font-semibold text-yellow-600">{{ statsData.inactive }}</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-600">问题</span>
+          <span class="text-lg font-semibold text-red-600">{{ statsData.expired + statsData.revoked }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 健康度卡片 -->
+    <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-6 border border-white/20 hover:shadow-[0_25px_70px_rgba(0,0,0,0.35)] transition-all duration-300 cursor-pointer"
+         (click)="selectStat('health')">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center">
+          <span class="text-white text-xl">💚</span>
+        </div>
+      </div>
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-slate-600">健康度</span>
+          <span class="text-2xl font-bold" [ngClass]="getHealthScore(statsData) >= 60 ? 'text-green-600' : 'text-red-600'">
+            {{ getHealthScore(statsData) }}
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm">{{ getHealthGrade(getHealthScore(statsData)).icon }}</span>
+          <span class="text-sm font-medium" [ngClass]="getHealthGrade(getHealthScore(statsData)).color">
+            {{ getHealthGrade(getHealthScore(statsData)).grade }}
+          </span>
+        </div>
+        <div class="space-y-1">
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-500">即将过期</span>
+            <span class="font-medium text-orange-600">{{ statsData.expiringSoon }}</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-500">从未使用</span>
+            <span class="font-medium text-blue-600">{{ statsData.neverUsed }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 类型分布卡片 -->
+    <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-6 border border-white/20 hover:shadow-[0_25px_70px_rgba(0,0,0,0.35)] transition-all duration-300 cursor-pointer"
+         (click)="selectStat('types')">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-xl flex items-center justify-center">
+          <span class="text-white text-xl">📊</span>
+        </div>
+      </div>
+      <div class="space-y-3">
+        <h4 class="text-sm font-medium text-slate-700">类型分布</h4>
+        <div class="space-y-2">
+          <ng-container *ngFor="let type of getTypeDistribution(statsData)">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full" [ngClass]="type.color"></div>
+                <span class="text-sm text-slate-600">{{ type.type }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-slate-800">{{ type.count }}</span>
+                <span class="text-xs text-slate-500">({{ type.percentage }}%)</span>
+              </div>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-1.5">
+              <div class="h-1.5 rounded-full transition-all duration-500"
+                   [ngClass]="type.color"
+                   [style.width.%]="type.percentage"></div>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- 简化的详细面板 -->
+<div class="mt-8 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-6 border border-white/20"
+     *ngIf="selectedStat">
+
+  <!-- 面板头部 -->
+  <div class="flex items-center justify-between mb-6">
+    <h3 class="text-xl font-semibold text-slate-800">
+      <ng-container [ngSwitch]="selectedStat">
+        <span *ngSwitchCase="'total'">📈 API Keys 详细统计</span>
+        <span *ngSwitchCase="'status'">📊 状态分布详情</span>
+        <span *ngSwitchCase="'health'">💚 健康度分析</span>
+        <span *ngSwitchCase="'types'">🔐 权限类型分析</span>
+      </ng-container>
+    </h3>
+    <button class="text-slate-400 hover:text-slate-600 transition-colors"
+            (click)="selectStat(null)">
+      <span class="text-xl">✕</span>
+    </button>
+  </div>
+
+  <!-- 简化的内容提示 -->
+  <div class="text-center py-8">
+    <p class="text-slate-600">详细统计功能开发中...</p>
+    <p class="text-sm text-slate-500 mt-2">点击卡片外区域关闭此面板</p>
+  </div>
+</div>

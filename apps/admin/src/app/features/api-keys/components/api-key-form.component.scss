@@ -1,0 +1,68 @@
+.form-container { max-width: 600px; margin: 0 auto; }
+.form-title { @apply text-center mb-6; }
+.form-title h2 { @apply text-2xl font-bold text-slate-800 mb-2; }
+.form-title p { @apply text-slate-600; }
+
+.form-section { @apply space-y-4 mb-6; }
+.section-title { @apply text-lg font-semibold text-slate-700 pb-2 border-b border-slate-200; }
+
+.form-group { @apply space-y-2; }
+.form-label { @apply block text-sm font-medium text-slate-700; }
+.form-label.required::after { content: ' *'; @apply text-red-500; }
+
+.form-input, .form-textarea, .form-select {
+  @apply w-full px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white text-slate-800 placeholder:text-slate-400 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)];
+}
+.form-input.error, .form-textarea.error, .form-select.error { @apply border-red-500; }
+.form-textarea { @apply resize-none; }
+
+.error-message { @apply text-xs text-red-500 min-h-[16px]; }
+.help-text { @apply text-xs text-slate-500; }
+.char-count { @apply text-xs text-slate-500 text-right; }
+
+.radio-group { @apply grid grid-cols-1 gap-3; }
+.radio-card { @apply relative flex items-center p-4 border-2 rounded-lg cursor-pointer; }
+.radio-card.selected { @apply border-primary bg-primary/50; }
+.radio-card:not(.selected) { @apply border-slate-200 bg-white; }
+.radio-input { @apply sr-only; }
+.radio-indicator { @apply w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center; }
+.radio-indicator.selected { @apply border-primary bg-primary; }
+.radio-indicator:not(.selected) { @apply border-slate-300; }
+.radio-dot { @apply w-2 h-2 rounded-full bg-white; }
+.radio-content { @apply flex-1; }
+.radio-label { @apply font-medium text-slate-800; }
+.radio-description { @apply text-sm text-slate-500; }
+
+.checkbox-container { @apply bg-slate-50 rounded-lg p-4; }
+.checkbox-header { @apply flex items-center justify-between mb-4; }
+.checkbox-group { @apply grid grid-cols-1 md:grid-cols-2 gap-4; }
+.checkbox-section { @apply space-y-2; }
+.checkbox-section-title { @apply text-sm font-medium text-slate-600 mb-2; }
+.checkbox-item { @apply flex items-center space-x-3 text-sm cursor-pointer hover:bg-white p-2 rounded; }
+.checkbox-input { @apply w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary focus:ring-2; }
+.checkbox-input:disabled { @apply opacity-50 cursor-not-allowed; }
+.checkbox-label { @apply text-slate-700 font-medium; }
+
+.info-box { @apply mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200; }
+.info-content { @apply text-xs text-blue-700; }
+.info-title { @apply font-medium mb-1; }
+.info-list { @apply space-y-1 list-disc list-inside; }
+
+.datetime-group { @apply flex gap-2; }
+.datetime-input { @apply flex-1; }
+.datetime-button { @apply px-4 py-2.5 text-sm text-slate-600 bg-slate-100 border border-slate-300 rounded-lg hover:bg-slate-200; }
+
+.button-group { @apply flex justify-end gap-4 pt-6 border-t border-slate-200; }
+.btn { @apply px-6 py-2.5 text-sm font-medium rounded-lg; }
+.btn-secondary { @apply text-slate-600 bg-white border-2 border-slate-300 hover:bg-slate-50; }
+.btn-primary { @apply text-white bg-primary border-none hover:bg-primary-dark; }
+.btn-primary:disabled { @apply opacity-60 cursor-not-allowed; }
+
+.loading-spinner { @apply inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin; }
+
+@media (max-width: 768px) {
+  .checkbox-group { @apply grid-cols-1; }
+  .datetime-group { @apply flex-col gap-2; }
+  .button-group { @apply flex-col gap-2; }
+  .btn { @apply w-full; }
+}

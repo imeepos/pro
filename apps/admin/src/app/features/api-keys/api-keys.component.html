@@ -1,192 +1,180 @@
-<div class="api-keys-container">
-  <!-- 页面标题和操作按钮 -->
-  <div class="page-header">
-    <div class="header-content">
-      <h1 class="page-title">API Key 管理</h1>
-      <p class="page-subtitle">管理您的API访问密钥，控制应用权限</p>
-    </div>
-    <button class="btn-primary" (click)="openCreateModal()">
-      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-      </svg>
-      创建新密钥
-    </button>
+<div class="relative w-full min-h-screen overflow-hidden bg-gradient-to-br from-primary to-primary-dark">
+  <!-- 背景动画效果 -->
+  <div class="absolute inset-0 overflow-hidden">
+    <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[length:50px_50px] animate-[gridMove_20s_linear_infinite]"></div>
+    <div class="absolute w-[400px] h-[400px] bg-primary/60 rounded-full blur-[80px] opacity-60 -top-[100px] -right-[100px] animate-[float_8s_ease-in-out_infinite]"></div>
+    <div class="absolute w-[350px] h-[350px] bg-primary-dark/60 rounded-full blur-[80px] opacity-60 -bottom-[100px] -left-[100px] animate-[float_8s_ease-in-out_infinite]"></div>
   </div>
 
-  <!-- API密钥列表 -->
-  <div class="api-keys-list">
-    @for (key of apiKeys; track key.id) {
-      <div class="api-key-card" [class.inactive]="!key.isActive">
-        <div class="key-header">
-          <div class="key-info">
-            <h3 class="key-name">{{ key.name }}</h3>
-            <div class="key-meta">
-              <span class="created-date">创建于 {{ formatDate(key.createdAt) }}</span>
-              @if (key.lastUsed) {
-                <span class="last-used">最后使用：{{ formatDateTime(key.lastUsed) }}</span>
-              }
-            </div>
-          </div>
-          <div class="key-status">
-            @if (isKeyExpired(key)) {
-              <span class="status-badge expired">已过期</span>
-            } @else if (isKeyExpiringSoon(key)) {
-              <span class="status-badge expiring-soon">即将过期</span>
-            } @else if (key.isActive) {
-              <span class="status-badge active">活跃</span>
-            } @else {
-              <span class="status-badge inactive">已禁用</span>
-            }
-          </div>
-        </div>
-
-        <div class="key-content">
-          <div class="key-display">
-            <code class="key-value">{{ key.key }}</code>
-            <button class="btn-copy" (click)="copyToClipboard(key.key)" title="复制到剪贴板">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-              </svg>
-            </button>
-          </div>
-
-          <div class="key-permissions">
-            <h4 class="permissions-title">权限：</h4>
-            <div class="permissions-list">
-              @for (permission of key.permissions; track permission) {
-                <span class="permission-badge" [ngClass]="getPermissionBadgeClass(permission)">
-                  {{ getPermissionLabel(permission) }}
-                </span>
-              }
-            </div>
-          </div>
-
-          @if (key.expiresAt) {
-            <div class="key-expiry">
-              <span class="expiry-label">过期时间：</span>
-              <span class="expiry-date" [class.soon]="isKeyExpiringSoon(key)" [class.expired]="isKeyExpired(key)">
-                {{ formatDate(key.expiresAt) }}
-              </span>
-            </div>
-          }
-        </div>
-
-        <div class="key-actions">
-          <button class="btn-secondary" (click)="toggleKeyStatus(key)">
-            {{ key.isActive ? '禁用' : '启用' }}
-          </button>
-          <button class="btn-danger" (click)="openDeleteModal(key)">
-            删除
-          </button>
-        </div>
+  <!-- 主要内容 -->
+  <div class="relative z-10 w-full h-full p-6">
+    <!-- 页面标题 -->
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-4xl font-bold text-white m-0 drop-shadow-[0_2px_10px_rgba(0,0,0,0.2)]">API Key 管理</h1>
+        <p class="text-white/80 mt-2">管理您的 API 访问密钥，控制访问权限和使用统计</p>
       </div>
-    } @empty {
-      <div class="empty-state">
-        <div class="empty-icon">
-          <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-          </svg>
-        </div>
-        <h3 class="empty-title">还没有 API 密钥</h3>
-        <p class="empty-description">创建您的第一个API密钥来开始使用我们的服务</p>
-        <button class="btn-primary" (click)="openCreateModal()">创建第一个密钥</button>
-      </div>
-    }
-  </div>
-</div>
-
-<!-- 创建API密钥模态框 -->
-@if (showCreateForm) {
-  <div class="modal-overlay" (click)="closeCreateModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2 class="modal-title">创建新的 API 密钥</h2>
-        <button class="modal-close" (click)="closeCreateModal()">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
+      <div class="flex gap-4">
+        <button class="px-6 py-3 text-sm font-semibold text-white bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg cursor-pointer transition-all duration-300 hover:bg-white/30 hover:-translate-y-0.5"
+                (click)="onRefresh()">
+          <span class="flex items-center gap-2">
+            🔄 刷新
+          </span>
+        </button>
+        <button class="px-6 py-3 text-sm font-semibold text-primary bg-white border-none rounded-lg cursor-pointer transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,0,0,0.25)]"
+                (click)="onCreateApiKey()">
+          <span class="flex items-center gap-2">
+            ➕ 创建 API Key
+          </span>
         </button>
       </div>
+    </div>
 
-      <form class="modal-body" (ngSubmit)="createApiKey()">
-        <div class="form-group">
-          <label class="form-label">密钥名称</label>
-          <input
-            type="text"
-            class="form-input"
-            [(ngModel)]="newKey.name"
-            name="name"
-            placeholder="例如：生产环境密钥"
-            required>
+    <!-- 统计信息卡片 -->
+    <div class="mb-8">
+      <app-api-key-stats></app-api-key-stats>
+    </div>
+
+    <!-- 搜索和过滤区域 -->
+    <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-6 mb-6">
+      <form [formGroup]="searchForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- 搜索 -->
+        <div class="flex flex-col">
+          <label class="text-sm font-semibold text-slate-700 mb-2">搜索</label>
+          <input type="text"
+                 formControlName="search"
+                 placeholder="名称或描述"
+                 class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 placeholder:text-slate-400 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">权限设置</label>
-          <div class="permissions-grid">
-            @for (permission of availablePermissions; track permission.id) {
-              <label class="permission-checkbox">
-                <input
-                  type="checkbox"
-                  [(ngModel)]="newKey.permissions"
-                  [value]="permission.id"
-                  name="permissions">
-                <div class="checkbox-content">
-                  <span class="checkbox-label">{{ permission.label }}</span>
-                  <span class="checkbox-description">{{ permission.description }}</span>
-                </div>
-              </label>
-            }
-          </div>
+        <!-- 状态过滤 -->
+        <div class="flex flex-col">
+          <label class="text-sm font-semibold text-slate-700 mb-2">状态</label>
+          <select formControlName="status"
+                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+            <option value="">全部状态</option>
+            <option value="active">活跃</option>
+            <option value="inactive">未激活</option>
+            <option value="expired">已过期</option>
+            <option value="revoked">已撤销</option>
+          </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">过期时间（可选）</label>
-          <input
-            type="date"
-            class="form-input"
-            [(ngModel)]="newKey.expiresAt"
-            name="expiresAt"
-            [min]="today">
+        <!-- 类型过滤 -->
+        <div class="flex flex-col">
+          <label class="text-sm font-semibold text-slate-700 mb-2">类型</label>
+          <select formControlName="type"
+                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+            <option value="">全部类型</option>
+            <option value="read_only">只读</option>
+            <option value="read_write">读写</option>
+            <option value="admin">管理员</option>
+          </select>
+        </div>
+
+        <!-- 排序 -->
+        <div class="flex flex-col">
+          <label class="text-sm font-semibold text-slate-700 mb-2">排序</label>
+          <select formControlName="sortBy"
+                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+            <option value="createdAt">创建时间</option>
+            <option value="updatedAt">更新时间</option>
+            <option value="lastUsedAt">最后使用</option>
+            <option value="usageCount">使用次数</option>
+            <option value="name">名称</option>
+          </select>
+        </div>
+
+        <!-- 排序方向 -->
+        <div class="flex flex-col">
+          <label class="text-sm font-semibold text-slate-700 mb-2">排序方向</label>
+          <select formControlName="sortOrder"
+                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+            <option value="desc">降序</option>
+            <option value="asc">升序</option>
+          </select>
         </div>
       </form>
+    </div>
 
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" (click)="closeCreateModal()">取消</button>
-        <button type="submit" class="btn-primary" (click)="createApiKey()"
-                [disabled]="!newKey.name || newKey.permissions.length === 0">
-          创建密钥
-        </button>
+    <!-- 错误提示 -->
+    <div class="bg-red-500/10 px-4 py-3 rounded-lg border-l-4 border-red-500 mb-6" *ngIf="error">
+      <div class="flex items-center">
+        <span class="text-red-500 mr-2">⚠️</span>
+        <span class="text-red-700">{{ error }}</span>
       </div>
     </div>
-  </div>
-}
 
-<!-- 删除确认模态框 -->
-@if (isDeleteModalOpen && selectedKey) {
-  <div class="modal-overlay" (click)="closeDeleteModal()">
-    <div class="modal-content modal-sm" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2 class="modal-title">确认删除</h2>
-        <button class="modal-close" (click)="closeDeleteModal()">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
+    <!-- API Key 列表 -->
+    <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+      <!-- 加载状态 -->
+      <div class="flex items-center justify-center py-20" *ngIf="loading">
+        <div class="flex flex-col items-center gap-4">
+          <div class="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          <p class="text-slate-500">加载中...</p>
+        </div>
       </div>
 
-      <div class="modal-body">
-        <p class="confirm-message">
-          您确定要删除API密钥 <strong>{{ selectedKey.name }}</strong> 吗？
-        </p>
-        <p class="warning-message">
-          删除后无法恢复，所有使用此密钥的应用将无法访问API。
-        </p>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn-secondary" (click)="closeDeleteModal()">取消</button>
-        <button class="btn-danger" (click)="deleteApiKey()">确认删除</button>
-      </div>
+      <!-- 表格组件 -->
+      <app-api-key-table
+        *ngIf="!loading"
+        [apiKeys]="apiKeys"
+        [selectedApiKey]="selectedApiKey"
+        [loading]="loading"
+        [currentPage]="currentPage"
+        [pageSize]="pageSize"
+        [totalItems]="totalItems"
+        (apiKeySelected)="onApiKeySelected($event)"
+        (editApiKey)="onEditApiKey($event)"
+        (deleteApiKey)="onDeleteApiKey($event)"
+        (toggleStatus)="onToggleApiKeyStatus($event)"
+        (regenerateApiKey)="onRegenerateApiKey($event)"
+        (copyApiKey)="onCopyApiKey($event)"
+        (viewStats)="onViewStats($event)"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)">
+      </app-api-key-table>
     </div>
   </div>
-}
+
+  <!-- 创建模态框 -->
+  <app-api-key-modal
+    *ngIf="showCreateModal"
+    [title]="'创建新的 API Key'"
+    [visible]="showCreateModal"
+    (close)="onModalClose()"
+    (created)="onApiKeyCreated($event)">
+  </app-api-key-modal>
+
+  <!-- 编辑模态框 -->
+  <app-api-key-modal
+    *ngIf="showEditModal"
+    [title]="'编辑 API Key'"
+    [visible]="showEditModal"
+    [apiKey]="selectedApiKey"
+    (close)="onModalClose()"
+    (updated)="onApiKeyUpdated($event)">
+  </app-api-key-modal>
+
+  <!-- 删除确认模态框 -->
+  <app-api-key-modal
+    *ngIf="showDeleteModal"
+    [title]="'删除 API Key'"
+    [visible]="showDeleteModal"
+    [mode]="'delete'"
+    [apiKey]="selectedApiKey"
+    (close)="onModalClose()"
+    (deleted)="onApiKeyDeleted()">
+  </app-api-key-modal>
+
+  <!-- 重新生成模态框 -->
+  <app-api-key-modal
+    *ngIf="showRegenerateModal"
+    [title]="'重新生成 API Key'"
+    [visible]="showRegenerateModal"
+    [mode]="'regenerate'"
+    [apiKey]="selectedApiKey"
+    (close)="onModalClose()"
+    (regenerated)="onApiKeyRegenerated()">
+  </app-api-key-modal>
+</div>

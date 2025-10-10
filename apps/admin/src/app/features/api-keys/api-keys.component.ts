@@ -1,194 +1,291 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Subject, combineLatest, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntil, startWith, map } from 'rxjs/operators';
 
-export interface ApiKey {
-  id: string;
-  name: string;
-  key: string;
-  permissions: string[];
-  createdAt: Date;
-  lastUsed?: Date;
-  isActive: boolean;
-  expiresAt?: Date;
-}
+import { SkerSDK, ApiKey, ApiKeyFilters, ApiKeyStats, ApiKeyStatus, ApiKeyType } from '@pro/sdk';
+import { ApiKeyTableComponent } from './components/api-key-table.component';
+import { ApiKeyModalComponent } from './components/api-key-modal.component';
+import { ApiKeyStatsComponent } from './components/api-key-stats.component';
+import { ApiKeyService } from './services/api-key.service';
 
 @Component({
   selector: 'app-api-keys',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    ApiKeyTableComponent,
+    ApiKeyModalComponent,
+    ApiKeyStatsComponent
+  ],
   templateUrl: './api-keys.component.html',
   styleUrls: ['./api-keys.component.scss']
 })
-export class ApiKeysComponent implements OnInit {
+export class ApiKeysComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
+  // 数据状态
   apiKeys: ApiKey[] = [];
-  isCreateModalOpen = false;
-  isDeleteModalOpen = false;
-  selectedKey: ApiKey | null = null;
-  showCreateForm = false;
-  today: string = '';
+  selectedApiKey: ApiKey | null = null;
+  stats: ApiKeyStats | null = null;
+  loading: boolean = false;
+  error: string | null = null;
 
-  // 新建API密钥表单
-  newKey = {
-    name: '',
-    permissions: [] as string[],
-    expiresAt: ''
-  };
+  // UI 状态
+  showCreateModal = false;
+  showEditModal = false;
+  showDeleteModal = false;
+  showRegenerateModal = false;
 
-  availablePermissions = [
-    { id: 'read', label: '读取权限', description: '查看数据' },
-    { id: 'write', label: '写入权限', description: '创建和修改数据' },
-    { id: 'delete', label: '删除权限', description: '删除数据' },
-    { id: 'admin', label: '管理权限', description: '完全控制' }
-  ];
+  // 搜索和过滤表单
+  searchForm: FormGroup;
 
-  constructor() {}
+  // 分页
+  currentPage = 1;
+  pageSize = 10;
+  totalItems = 0;
 
-  ngOnInit(): void {
-    this.loadApiKeys();
-    // 设置今天的日期作为日期输入的最小值
-    this.today = new Date().toISOString().split('T')[0];
-  }
-
-  private loadApiKeys(): void {
-    // 模拟数据，实际应该从API获取
-    this.apiKeys = [
-      {
-        id: '1',
-        name: '生产环境密钥',
-        key: 'sk_prod_1234567890abcdef',
-        permissions: ['read', 'write'],
-        createdAt: new Date('2024-01-15'),
-        lastUsed: new Date('2024-03-10'),
-        isActive: true,
-        expiresAt: new Date('2025-01-15')
-      },
-      {
-        id: '2',
-        name: '测试环境密钥',
-        key: 'sk_test_abcdef1234567890',
-        permissions: ['read'],
-        createdAt: new Date('2024-02-20'),
-        lastUsed: new Date('2024-03-12'),
-        isActive: true
-      },
-      {
-        id: '3',
-        name: '临时访问密钥',
-        key: 'sk_temp_9876543210fedcba',
-        permissions: ['read'],
-        createdAt: new Date('2024-03-01'),
-        isActive: false,
-        expiresAt: new Date('2024-03-15')
-      }
-    ];
-  }
-
-  openCreateModal(): void {
-    this.showCreateForm = true;
-    this.newKey = {
-      name: '',
-      permissions: [],
-      expiresAt: ''
-    };
-  }
-
-  closeCreateModal(): void {
-    this.showCreateForm = false;
-    this.newKey = {
-      name: '',
-      permissions: [],
-      expiresAt: ''
-    };
-  }
-
-  createApiKey(): void {
-    if (!this.newKey.name || this.newKey.permissions.length === 0) {
-      return;
-    }
-
-    const newApiKey: ApiKey = {
-      id: Date.now().toString(),
-      name: this.newKey.name,
-      key: `sk_${this.generateRandomKey()}`,
-      permissions: this.newKey.permissions,
-      createdAt: new Date(),
-      isActive: true,
-      expiresAt: this.newKey.expiresAt ? new Date(this.newKey.expiresAt) : undefined
-    };
-
-    this.apiKeys.unshift(newApiKey);
-    this.closeCreateModal();
-  }
-
-  private generateRandomKey(): string {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < 24; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  }
-
-  toggleKeyStatus(key: ApiKey): void {
-    key.isActive = !key.isActive;
-  }
-
-  copyToClipboard(key: string): void {
-    navigator.clipboard.writeText(key).then(() => {
-      // TODO: 显示成功提示
-      console.log('API Key 已复制到剪贴板');
+  constructor(
+    private fb: FormBuilder,
+    private apiKeyService: ApiKeyService,
+    private sdk: SkerSDK
+  ) {
+    this.searchForm = this.fb.group({
+      search: [''],
+      status: [''],
+      type: [''],
+      isActive: [true],
+      sortBy: ['createdAt'],
+      sortOrder: ['desc']
     });
   }
 
-  openDeleteModal(key: ApiKey): void {
-    this.selectedKey = key;
-    this.isDeleteModalOpen = true;
+  ngOnInit(): void {
+    this.loadInitialData();
+    this.setupSearchFormListener();
   }
 
-  closeDeleteModal(): void {
-    this.isDeleteModalOpen = false;
-    this.selectedKey = null;
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-  deleteApiKey(): void {
-    if (this.selectedKey) {
-      this.apiKeys = this.apiKeys.filter(key => key.id !== this.selectedKey!.id);
-      this.closeDeleteModal();
+  private loadInitialData(): void {
+    this.apiKeyService.loadApiKeys();
+    this.apiKeyService.loadStats();
+
+    // 订阅服务状态
+    this.apiKeyService.apiKeys$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(apiKeys => {
+        this.apiKeys = apiKeys || [];
+      });
+
+    this.apiKeyService.selectedApiKey$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(apiKey => {
+        this.selectedApiKey = apiKey;
+      });
+
+    this.apiKeyService.stats$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(stats => {
+        this.stats = stats;
+      });
+
+    this.apiKeyService.loading$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(loading => {
+        this.loading = loading || false;
+      });
+
+    this.apiKeyService.error$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(error => {
+        this.error = error;
+      });
+  }
+
+  private setupSearchFormListener(): void {
+    this.searchForm.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.applyFilters();
+      });
+  }
+
+  applyFilters(): void {
+    const formValue = this.searchForm.value;
+    const filters: ApiKeyFilters = {
+      ...formValue,
+      page: this.currentPage,
+      limit: this.pageSize
+    };
+
+    this.apiKeyService.loadApiKeys(filters);
+  }
+
+  onApiKeySelected(apiKey: ApiKey): void {
+    this.apiKeyService.selectApiKey(apiKey);
+  }
+
+  onCreateApiKey(): void {
+    this.showCreateModal = true;
+  }
+
+  onEditApiKey(apiKey: ApiKey): void {
+    this.apiKeyService.selectApiKey(apiKey);
+    this.showEditModal = true;
+  }
+
+  onDeleteApiKey(apiKey: ApiKey): void {
+    this.apiKeyService.selectApiKey(apiKey);
+    this.showDeleteModal = true;
+  }
+
+  onToggleApiKeyStatus(apiKey: ApiKey): void {
+    const action = apiKey.isActive ? '停用' : '启用';
+    if (confirm(`确定要${action}这个 API Key 吗？`)) {
+      if (apiKey.isActive) {
+        this.apiKeyService.deactivateApiKey(apiKey.id);
+      } else {
+        this.apiKeyService.activateApiKey(apiKey.id);
+      }
     }
   }
 
-  formatDate(date: Date): string {
-    return date.toLocaleDateString('zh-CN');
+  onRegenerateApiKey(apiKey: ApiKey): void {
+    this.apiKeyService.selectApiKey(apiKey);
+    this.showRegenerateModal = true;
   }
 
-  formatDateTime(date: Date): string {
-    return date.toLocaleString('zh-CN');
+  onCopyApiKey(apiKey: ApiKey): void {
+    this.copyToClipboard(apiKey.key);
   }
 
-  getPermissionBadgeClass(permission: string): string {
-    switch (permission) {
-      case 'admin': return 'bg-red-100 text-red-800';
-      case 'write': return 'bg-blue-100 text-blue-800';
-      case 'delete': return 'bg-orange-100 text-orange-800';
-      case 'read': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+  onViewStats(apiKey: ApiKey): void {
+    this.apiKeyService.selectApiKey(apiKey);
+    this.apiKeyService.loadUsageStats(apiKey.id);
+  }
+
+  onRefresh(): void {
+    this.loadInitialData();
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    this.applyFilters();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.currentPage = 1;
+    this.applyFilters();
+  }
+
+  onModalClose(): void {
+    this.showCreateModal = false;
+    this.showEditModal = false;
+    this.showDeleteModal = false;
+    this.showRegenerateModal = false;
+    this.apiKeyService.clearSelectedApiKey();
+  }
+
+  onApiKeyCreated(apiKey: ApiKey): void {
+    this.onModalClose();
+    this.loadInitialData();
+  }
+
+  onApiKeyUpdated(apiKey: ApiKey): void {
+    this.onModalClose();
+    this.loadInitialData();
+  }
+
+  onApiKeyDeleted(): void {
+    this.onModalClose();
+    this.loadInitialData();
+  }
+
+  onApiKeyRegenerated(): void {
+    this.onModalClose();
+    this.loadInitialData();
+  }
+
+  private copyToClipboard(text: string): void {
+    navigator.clipboard.writeText(text).then(() => {
+      // 这里可以添加一个提示消息
+      console.log('API Key 已复制到剪贴板');
+    }).catch(err => {
+      console.error('复制失败:', err);
+    });
+  }
+
+  // 获取状态徽章样式
+  getStatusBadgeClass(status: ApiKeyStatus): string {
+    switch (status) {
+      case ApiKeyStatus.ACTIVE:
+        return 'bg-green-100 text-green-800 border-green-200';
+      case ApiKeyStatus.INACTIVE:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case ApiKeyStatus.EXPIRED:
+        return 'bg-red-100 text-red-800 border-red-200';
+      case ApiKeyStatus.REVOKED:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   }
 
-  getPermissionLabel(permission: string): string {
-    const perm = this.availablePermissions.find(p => p.id === permission);
-    return perm ? perm.label : permission;
+  // 获取类型徽章样式
+  getTypeBadgeClass(type: ApiKeyType): string {
+    switch (type) {
+      case ApiKeyType.READ_ONLY:
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case ApiKeyType.READ_WRITE:
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case ApiKeyType.ADMIN:
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
   }
 
-  isKeyExpired(key: ApiKey): boolean {
-    return key.expiresAt ? key.expiresAt < new Date() : false;
+  // 格式化显示的 API Key
+  formatApiKey(key: string): string {
+    if (!key) return '';
+    return `${key.substring(0, 8)}...${key.substring(key.length - 8)}`;
   }
 
-  isKeyExpiringSoon(key: ApiKey): boolean {
-    if (!key.expiresAt) return false;
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-    return key.expiresAt <= sevenDaysFromNow && key.expiresAt > new Date();
+  // 检查是否即将过期
+  isExpiringSoon(expiresAt: Date | undefined): boolean {
+    if (!expiresAt) return false;
+    const now = new Date();
+    const expiryDate = new Date(expiresAt);
+    const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
+  }
+
+  // 格式化日期
+  formatDate(date: Date | string | undefined): string {
+    if (!date) return '-';
+    const d = new Date(date);
+    return d.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  // TrackBy 方法
+  trackByApiKeyId(index: number, apiKey: ApiKey): number {
+    return apiKey.id;
   }
 }
