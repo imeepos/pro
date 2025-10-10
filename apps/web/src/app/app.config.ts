@@ -4,8 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { ComponentRegistryService } from './core/services/component-registry.service';
-import { WeiboLoggedInUsersCardComponent } from './features/screen/components/weibo-logged-in-users-card.component';
+import { ComponentRegistryService, WeiboLoggedInUsersCardComponent } from '@pro/components';
 import { SkerSDK } from '@pro/sdk';
 import { environment } from '../environments/environment';
 

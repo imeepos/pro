@@ -4,9 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ScreenPage, Component as ScreenComponent, SkerSDK } from '@pro/sdk';
-import { WebSocketService } from '../../core/services/websocket.service';
-import { ComponentRegistryService } from '../../core/services/component-registry.service';
-import { IScreenComponent } from '../../shared/interfaces/screen-component.interface';
+import { WebSocketService, ComponentRegistryService, IScreenComponent } from '@pro/components';
 
 @Component({
   selector: 'app-screen-display',

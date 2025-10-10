@@ -5,10 +5,8 @@ import { Subject, combineLatest, debounceTime, distinctUntilChanged } from 'rxjs
 import { takeUntil, startWith, map } from 'rxjs/operators';
 
 import { SkerSDK, ApiKey, ApiKeyFilters, ApiKeyStats, ApiKeyStatus, ApiKeyType } from '@pro/sdk';
-import { ApiKeyTableComponent } from './components/api-key-table.component';
-import { ApiKeyModalComponent } from './components/api-key-modal.component';
-import { ApiKeyStatsComponent } from './components/api-key-stats.component';
-import { ApiKeyService } from './services/api-key.service';
+import { ApiKeyTableComponent, ApiKeyModalComponent, ApiKeyStatsComponent } from './components';
+import { ApiKeyService } from './services';
 
 @Component({
   selector: 'app-api-keys',
