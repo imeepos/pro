@@ -10,7 +10,7 @@ import { EventAttachmentEntity, FileType } from '../entities/event-attachment.en
 import { MinIOClient } from '@pro/minio';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
 import { UpdateAttachmentSortDto } from './dto/attachment.dto';
 
 @Injectable()
@@ -44,6 +44,10 @@ export class AttachmentService {
     } catch (error) {
       this.logger.error('初始化 MinIO 存储桶失败', error);
     }
+  }
+
+  private calculateMD5(buffer: Buffer): string {
+    return crypto.createHash('md5').update(buffer).digest('hex');
   }
 
   private getFileType(mimeType: string): FileType {
@@ -129,8 +133,47 @@ export class AttachmentService {
   ): Promise<EventAttachmentEntity> {
     this.validateFile(file);
 
+    const fileMd5 = this.calculateMD5(file.buffer);
     const ext = path.extname(file.originalname);
-    const objectName = `${eventId}/${uuidv4()}${ext}`;
+
+    const existingFile = await this.attachmentRepository.findOne({
+      where: { fileMd5 },
+    });
+
+    const maxSortOrder = await this.attachmentRepository
+      .createQueryBuilder('attachment')
+      .where('attachment.eventId = :eventId', { eventId })
+      .select('MAX(attachment.sortOrder)', 'maxSort')
+      .getRawOne();
+
+    if (existingFile) {
+      this.logger.log(
+        `检测到重复文件 - MD5: ${fileMd5}, 复用已有文件: ${existingFile.objectName}`,
+      );
+
+      const newAttachment = this.attachmentRepository.create({
+        eventId,
+        fileName: file.originalname,
+        fileUrl: existingFile.fileUrl,
+        bucketName: existingFile.bucketName,
+        objectName: existingFile.objectName,
+        fileType: this.getFileType(file.mimetype),
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        fileMd5,
+        sortOrder: (maxSortOrder?.maxSort || 0) + 1,
+      });
+
+      const savedAttachment = await this.attachmentRepository.save(newAttachment);
+
+      this.logger.log(
+        `文件去重成功 - eventId: ${eventId}, 文件名: ${file.originalname}, MD5: ${fileMd5}`,
+      );
+
+      return savedAttachment;
+    }
+
+    const objectName = `shared/${fileMd5.substring(0, 2)}/${fileMd5}${ext}`;
 
     try {
       await this.minioClient.uploadBuffer(
@@ -144,12 +187,6 @@ export class AttachmentService {
         objectName,
       );
 
-      const maxSortOrder = await this.attachmentRepository
-        .createQueryBuilder('attachment')
-        .where('attachment.eventId = :eventId', { eventId })
-        .select('MAX(attachment.sortOrder)', 'maxSort')
-        .getRawOne();
-
       const attachment = this.attachmentRepository.create({
         eventId,
         fileName: file.originalname,
@@ -159,13 +196,14 @@ export class AttachmentService {
         fileType: this.getFileType(file.mimetype),
         fileSize: file.size,
         mimeType: file.mimetype,
+        fileMd5,
         sortOrder: (maxSortOrder?.maxSort || 0) + 1,
       });
 
       const savedAttachment = await this.attachmentRepository.save(attachment);
 
       this.logger.log(
-        `文件上传成功 - eventId: ${eventId}, 文件名: ${file.originalname}, 大小: ${file.size} bytes, 类型: ${file.mimetype}`,
+        `文件上传成功 - eventId: ${eventId}, 文件名: ${file.originalname}, 大小: ${file.size} bytes, MD5: ${fileMd5}`,
       );
 
       return savedAttachment;
@@ -195,22 +233,31 @@ export class AttachmentService {
       throw new NotFoundException('附件不存在');
     }
 
-    try {
-      await this.minioClient.deleteObject(
-        attachment.bucketName,
-        attachment.objectName,
-      );
-      await this.attachmentRepository.remove(attachment);
+    await this.attachmentRepository.remove(attachment);
 
+    const referenceCount = await this.attachmentRepository.count({
+      where: { objectName: attachment.objectName },
+    });
+
+    if (referenceCount === 0) {
+      try {
+        await this.minioClient.deleteObject(
+          attachment.bucketName,
+          attachment.objectName,
+        );
+        this.logger.log(
+          `附件删除成功，已删除 MinIO 文件 - eventId: ${eventId}, attachmentId: ${attachmentId}, objectName: ${attachment.objectName}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `删除 MinIO 文件失败 - objectName: ${attachment.objectName}`,
+          error instanceof Error ? error.stack : error,
+        );
+      }
+    } else {
       this.logger.log(
-        `附件删除成功 - eventId: ${eventId}, attachmentId: ${attachmentId}, 文件名: ${attachment.fileName}`,
+        `附件删除成功，文件仍有 ${referenceCount} 个引用，保留 MinIO 文件 - eventId: ${eventId}, attachmentId: ${attachmentId}, objectName: ${attachment.objectName}`,
       );
-    } catch (error) {
-      this.logger.error(
-        `删除附件失败 - eventId: ${eventId}, attachmentId: ${attachmentId}`,
-        error instanceof Error ? error.stack : error,
-      );
-      throw new BadRequestException('附件删除失败');
     }
   }
 
