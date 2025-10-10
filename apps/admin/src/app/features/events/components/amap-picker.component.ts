@@ -5,9 +5,9 @@ import AMapLoader from '@amap/amap-jsapi-loader';
 import { ConfigService } from '../../../core/services/config.service';
 
 export interface LocationData {
-  longitude: number;
-  latitude: number;
-  address?: string;
+  longitude?: number | null;
+  latitude?: number | null;
+  address?: string | null;
 }
 
 @Component({
