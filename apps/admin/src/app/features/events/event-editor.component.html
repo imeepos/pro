@@ -168,10 +168,75 @@
       <!-- 附件上传 -->
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">附件上传</h2>
-        <app-attachment-uploader
-          [attachments]="attachments"
-          (attachmentsChange)="onAttachmentsChange($event)"
-        ></app-attachment-uploader>
+
+        <div class="space-y-6">
+          <!-- 图片上传 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+              事件图片
+              <span class="text-gray-500 text-xs ml-2">(最多9张，单张不超过10MB)</span>
+            </label>
+            <app-image-upload
+              *ngIf="eventId"
+              [eventId]="eventId"
+              [multiple]="true"
+              [maxCount]="9"
+              [maxSize]="10 * 1024 * 1024"
+              [existingImages]="existingImages"
+              [disabled]="loading"
+              (uploadSuccess)="onImageUploadSuccess($event)"
+              (uploadError)="onImageUploadError($event)"
+              (deleteSuccess)="onImageDeleteSuccess($event)"
+            />
+            <div *ngIf="!eventId" class="text-sm text-gray-500 dark:text-gray-400 py-4 px-6 bg-gray-50 dark:bg-gray-700 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+              请先保存事件草稿后再上传图片
+            </div>
+          </div>
+
+          <!-- 文档上传 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+              相关文档
+              <span class="text-gray-500 text-xs ml-2">(最多10个，单个不超过50MB)</span>
+            </label>
+            <app-file-upload
+              *ngIf="eventId"
+              [eventId]="eventId"
+              [multiple]="true"
+              [maxCount]="10"
+              [maxSize]="50 * 1024 * 1024"
+              [disabled]="loading"
+              (uploadSuccess)="onFileUploadSuccess($event)"
+              (uploadError)="onFileUploadError($event)"
+              (deleteSuccess)="onFileDeleteSuccess($event)"
+            />
+            <div *ngIf="!eventId" class="text-sm text-gray-500 dark:text-gray-400 py-4 px-6 bg-gray-50 dark:bg-gray-700 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+              请先保存事件草稿后再上传文档
+            </div>
+          </div>
+
+          <!-- 视频上传 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+              事件视频
+              <span class="text-gray-500 text-xs ml-2">(最多3个，单个不超过500MB)</span>
+            </label>
+            <pro-video-upload
+              *ngIf="eventId"
+              [eventId]="eventId"
+              [multiple]="true"
+              [maxCount]="3"
+              [maxSize]="500 * 1024 * 1024"
+              [disabled]="loading"
+              (uploadSuccess)="onVideoUploadSuccess($event)"
+              (uploadError)="onVideoUploadError($event)"
+              (deleteSuccess)="onVideoDeleteSuccess($event)"
+            />
+            <div *ngIf="!eventId" class="text-sm text-gray-500 dark:text-gray-400 py-4 px-6 bg-gray-50 dark:bg-gray-700 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+              请先保存事件草稿后再上传视频
+            </div>
+          </div>
+        </div>
       </div>
     </form>
   </div>

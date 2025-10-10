@@ -16,11 +16,14 @@ import type { SelectOption } from '../../shared/components/select';
 import {
   AddressCascaderComponent,
   AmapPickerComponent,
-  TagSelectorComponent,
-  AttachmentUploaderComponent
+  TagSelectorComponent
 } from './components';
 import type { LocationData } from './components/amap-picker.component';
 import { DateTimePickerComponent } from '../../shared/components/date-time-picker';
+import { ImageUploadComponent } from '../../shared/components/image-upload/image-upload.component';
+import { FileUploadComponent } from '../../shared/components/file-upload/file-upload.component';
+import { VideoUploadComponent } from '../../shared/components/video-upload/video-upload.component';
+import { Attachment } from '@pro/sdk';
 
 @Component({
   selector: 'app-event-editor',
@@ -32,8 +35,10 @@ import { DateTimePickerComponent } from '../../shared/components/date-time-picke
     AddressCascaderComponent,
     AmapPickerComponent,
     TagSelectorComponent,
-    AttachmentUploaderComponent,
-    DateTimePickerComponent
+    DateTimePickerComponent,
+    ImageUploadComponent,
+    FileUploadComponent,
+    VideoUploadComponent
   ],
   templateUrl: './event-editor.component.html',
   host: { class: 'block h-full' }
@@ -44,7 +49,10 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   eventId: string | null = null;
   loading = false;
   selectedTagIds: string[] = [];
-  attachments: any[] = [];
+
+  existingImages: Attachment[] = [];
+  existingDocuments: Attachment[] = [];
+  existingVideos: Attachment[] = [];
 
   industryTypeOptions: SelectOption[] = [];
   eventTypeOptions: SelectOption[] = [];
@@ -156,7 +164,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
         }
 
         if (event.attachments) {
-          this.attachments = event.attachments as any[];
+          this.categorizeAttachments(event.attachments);
         }
 
         this.loading = false;
@@ -194,8 +202,52 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     this.selectedTagIds = tagIds;
   }
 
-  onAttachmentsChange(attachments: any[]): void {
-    this.attachments = attachments;
+  categorizeAttachments(attachments: Attachment[]): void {
+    this.existingImages = attachments.filter(att => att.fileType === 'image');
+    this.existingDocuments = attachments.filter(att => att.fileType === 'document');
+    this.existingVideos = attachments.filter(att => att.fileType === 'video');
+  }
+
+  onImageUploadSuccess(attachment: Attachment): void {
+    this.existingImages = [...this.existingImages, attachment];
+    this.toastService.success('图片上传成功');
+  }
+
+  onImageUploadError(error: Error): void {
+    this.toastService.error(`图片上传失败: ${error.message}`);
+  }
+
+  onImageDeleteSuccess(attachmentId: string): void {
+    this.existingImages = this.existingImages.filter(img => img.id !== attachmentId);
+    this.toastService.success('图片删除成功');
+  }
+
+  onFileUploadSuccess(attachment: Attachment): void {
+    this.existingDocuments = [...this.existingDocuments, attachment];
+    this.toastService.success('文件上传成功');
+  }
+
+  onFileUploadError(error: Error): void {
+    this.toastService.error(`文件上传失败: ${error.message}`);
+  }
+
+  onFileDeleteSuccess(attachmentId: string): void {
+    this.existingDocuments = this.existingDocuments.filter(doc => doc.id !== attachmentId);
+    this.toastService.success('文件删除成功');
+  }
+
+  onVideoUploadSuccess(attachment: Attachment): void {
+    this.existingVideos = [...this.existingVideos, attachment];
+    this.toastService.success('视频上传成功');
+  }
+
+  onVideoUploadError(error: Error): void {
+    this.toastService.error(`视频上传失败: ${error.message}`);
+  }
+
+  onVideoDeleteSuccess(attachmentId: string): void {
+    this.existingVideos = this.existingVideos.filter(vid => vid.id !== attachmentId);
+    this.toastService.success('视频删除成功');
   }
 
   saveDraft(): void {
