@@ -23,6 +23,7 @@ import {
   QueryTaskDto,
   PauseTaskDto,
   ResumeTaskDto,
+  RunNowTaskDto,
 } from './dto/weibo-search-task.dto';
 import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '../entities/weibo-search-task.entity';
 
@@ -145,6 +146,24 @@ export class WeiboSearchTaskController {
       success: true,
       data: task,
       message: '任务恢复成功',
+    };
+  }
+
+  /**
+   * 立即执行微博搜索任务
+   */
+  @Post(':id/run-now')
+  async runNow(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto?: RunNowTaskDto
+  ) {
+    const userId = req.user.userId;
+    const task = await this.taskService.runNow(userId, id, dto);
+    return {
+      success: true,
+      data: task,
+      message: '任务已触发立即执行',
     };
   }
 

@@ -18,6 +18,7 @@ import {
   QueryTaskDto,
   PauseTaskDto,
   ResumeTaskDto,
+  RunNowTaskDto,
 } from './dto/weibo-search-task.dto';
 
 /**
@@ -124,10 +125,15 @@ export class WeiboSearchTaskService {
       'updatedAt': 'updated_at',
       'startDate': 'start_date',
       'nextRunAt': 'next_run_at',
-      'progress': 'progress'
+      'progress': 'progress',
+      'longitude': 'longitude',
+      'latitude': 'latitude',
+      'locationAddress': 'location_address',
+      'locationName': 'location_name'
     };
 
-    const dbFieldName = sortFieldMap[sortBy || 'createdAt'] || 'created_at';
+    // 默认使用created_at排序，如果字段未定义则直接使用字段名
+    const dbFieldName = sortFieldMap[sortBy || 'createdAt'] || sortBy || 'created_at';
     queryBuilder.orderBy(`task.${dbFieldName}`, order);
 
     // 分页
@@ -269,6 +275,31 @@ export class WeiboSearchTaskService {
     });
 
     this.logger.log(`任务恢复: ID=${id}, 原因: ${dto?.reason || '手动恢复'}`);
+
+    return this.findOne(userId, id);
+  }
+
+  /**
+   * 立即执行微博搜索任务
+   */
+  async runNow(userId: string, id: number, dto?: RunNowTaskDto): Promise<WeiboSearchTaskEntity> {
+    const task = await this.findOne(userId, id);
+
+    // 如果任务被暂停，自动启用
+    const updates: Partial<WeiboSearchTaskEntity> = {
+      nextRunAt: new Date(), // 设置为当前时间，立即执行
+      status: WeiboSearchTaskStatus.PENDING, // 重置为待执行状态
+      errorMessage: null, // 清除错误信息
+    };
+
+    if (!task.enabled) {
+      updates.enabled = true;
+      updates.noDataCount = 0; // 重置无数据计数
+    }
+
+    await this.taskRepo.update(id, updates);
+
+    this.logger.log(`任务立即执行: ID=${id}, 原因: ${dto?.reason || '手动触发'}`);
 
     return this.findOne(userId, id);
   }

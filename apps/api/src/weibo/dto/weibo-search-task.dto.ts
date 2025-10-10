@@ -187,6 +187,16 @@ export class ResumeTaskDto {
 }
 
 /**
+ * 立即执行任务DTO
+ */
+export class RunNowTaskDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: '执行原因长度不能超过500个字符' })
+  reason?: string;
+}
+
+/**
  * 任务查询参数DTO
  */
 export class QueryTaskDto {

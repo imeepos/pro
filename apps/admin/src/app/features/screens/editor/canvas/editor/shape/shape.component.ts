@@ -21,7 +21,7 @@ import { ContextMenuComponent, MenuItem } from '../context-menu/context-menu.com
   styleUrls: ['./shape.component.scss']
 })
 export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild(ComponentHostDirective, { static: true }) componentHost!: ComponentHostDirective;
+  @ViewChild(ComponentHostDirective, { static: false }) componentHost!: ComponentHostDirective;
   @Input() component!: ComponentItem;
   @Input() editor?: any;
 
@@ -196,20 +196,42 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // 确保 componentHost 已正确初始化
-    if (!this.componentHost) {
-      console.warn('[ShapeComponent] componentHost 未在 ngAfterViewInit 中初始化，延迟创建组件');
-      // 使用 setTimeout 延迟执行，给 Angular 更多的时间完成初始化
-      setTimeout(() => {
-        if (!this.hasRenderError && this.componentHost) {
-          this.createComponent();
-        } else if (!this.componentHost) {
-          this.setRenderError('组件容器初始化失败', 'render');
-        }
-      }, 0);
+    // 使用更稳健的重试机制创建组件
+    this.retryCreateComponent(0);
+  }
+
+  /**
+   * 带重试机制的组件创建
+   */
+  private retryCreateComponent(attemptCount: number): void {
+    // 最多重试5次
+    if (attemptCount >= 5) {
+      console.error('[ShapeComponent] 组件容器初始化超时，已重试5次', {
+        componentId: this.component.id,
+        componentType: this.component.type
+      });
+      this.setRenderError('组件容器初始化超时，请刷新页面重试', 'render');
       return;
     }
 
+    // 检查 componentHost 是否已初始化
+    if (!this.componentHost) {
+      console.warn(`[ShapeComponent] componentHost 未初始化，第 ${attemptCount + 1} 次重试`, {
+        componentId: this.component.id,
+        componentType: this.component.type
+      });
+
+      // 递增延迟重试：50ms * (attemptCount + 1)
+      const delay = 50 * (attemptCount + 1);
+      setTimeout(() => {
+        if (!this.hasRenderError) {
+          this.retryCreateComponent(attemptCount + 1);
+        }
+      }, delay);
+      return;
+    }
+
+    // componentHost 已就绪，创建组件
     this.createComponent();
   }
 

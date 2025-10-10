@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-headerapikey';
+import Strategy from 'passport-headerapikey';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiKeyEntity } from '../../entities/api-key.entity';
@@ -19,18 +19,22 @@ export class ApiKeyStrategy extends PassportStrategy(Strategy, 'api-key') {
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
   ) {
-    super({
-      header: 'X-API-Key',
-      prefix: '',
-    });
+    super(
+      { header: 'X-API-Key', prefix: '' },
+      false
+    );
   }
 
-  async validate(apiKey: string, req: any): Promise<JwtPayload> {
-    // 如果请求头中没有，尝试从查询参数获取
-    if (!apiKey) {
-      apiKey = req.query?.apiKey || req.query?.api_key;
+  async validate(apiKey: string, done: Function): Promise<void> {
+    try {
+      const result = await this.validateMethod(apiKey);
+      done(null, result);
+    } catch (err) {
+      done(err, false);
     }
+  }
 
+  async validateMethod(apiKey: string): Promise<JwtPayload> {
     if (!apiKey) {
       throw new UnauthorizedException('API Key 未提供');
     }

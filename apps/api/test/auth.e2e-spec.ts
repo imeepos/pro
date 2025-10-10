@@ -42,8 +42,8 @@ describe('Auth (e2e)', () => {
         .expect(201)
         .expect((res) => {
           expect(res.body.success).toBe(true);
-          expect(res.body.data).toHaveProperty('accessToken');
-          expect(res.body.data).toHaveProperty('refreshToken');
+          expect(res.body.data.accessToken).toBeDefined();
+          expect(res.body.data.refreshToken).toBeDefined();
           expect(res.body.data.user.username).toBe('testuser');
           accessToken = res.body.data.accessToken;
           refreshToken = res.body.data.refreshToken;
@@ -84,8 +84,8 @@ describe('Auth (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(res.body.success).toBe(true);
-          expect(res.body.data).toHaveProperty('accessToken');
-          expect(res.body.data).toHaveProperty('refreshToken');
+          expect(res.body.data.accessToken).toBeDefined();
+          expect(res.body.data.refreshToken).toBeDefined();
         });
     });
 
@@ -125,8 +125,8 @@ describe('Auth (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(res.body.success).toBe(true);
-          expect(res.body.data).toHaveProperty('accessToken');
-          expect(res.body.data).toHaveProperty('refreshToken');
+          expect(res.body.data.accessToken).toBeDefined();
+          expect(res.body.data.refreshToken).toBeDefined();
         });
     });
   });

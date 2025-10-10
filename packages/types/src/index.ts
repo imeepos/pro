@@ -33,6 +33,21 @@ export interface LoginDto {
   password: string;
 }
 
+export interface ApiKey {
+  id: number;
+  key: string;
+  name: string;
+  isActive: boolean;
+  lastUsedAt?: Date;
+  usageCount: number;
+  expiresAt?: Date;
+  createdIp?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  isExpired: boolean;
+  isValid: boolean;
+}
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;

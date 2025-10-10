@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, Like, SelectQueryBuilder } from 'typeorm';
 import { ApiKeyEntity } from '../entities/api-key.entity';
 import { UserEntity } from '../entities/user.entity';
+import { UserStatus } from '@pro/types';
 import {
   CreateApiKeyDto,
   UpdateApiKeyDto,
@@ -31,7 +32,7 @@ export class ApiKeyService {
    */
   async createApiKey(userId: string, createDto: CreateApiKeyDto, createdIp?: string): Promise<ApiKeyEntity> {
     // 验证用户存在
-    const user = await this.userRepo.findOne({ where: { id: userId, status: 'active' } });
+    const user = await this.userRepo.findOne({ where: { id: userId, status: UserStatus.ACTIVE } });
     if (!user) {
       throw new NotFoundException('用户不存在或已被禁用');
     }
@@ -56,7 +57,7 @@ export class ApiKeyService {
     const savedApiKey = await this.apiKeyRepo.save(apiKey);
 
     // 不返回完整的key，只返回前缀和后几位
-    savedApiKey.key = `${savedApiKey.key.substring(0, 7)}...${savedApiKey.key.substring(-4)}`;
+    savedApiKey.key = `${savedApiKey.key.substring(0, 7)}...${savedApiKey.key.substring(savedApiKey.key.length - 4)}`;
 
     return savedApiKey;
   }
@@ -104,10 +105,13 @@ export class ApiKeyService {
     });
 
     // 隐藏完整的key
-    return apiKeys.map(key => ({
-      ...key,
-      key: `${key.key.substring(0, 7)}...${key.key.substring(-4)}`,
-    }));
+    return apiKeys.map(key => {
+      const hiddenKey = {
+        ...key,
+        key: `${key.key.substring(0, 7)}...${key.key.substring(key.key.length - 4)}`,
+      };
+      return hiddenKey as ApiKeyEntity;
+    });
   }
 
   /**
@@ -140,7 +144,7 @@ export class ApiKeyService {
     await this.apiKeyRepo.update(keyId, updateDto);
 
     const updatedApiKey = await this.apiKeyRepo.findOne({ where: { id: keyId } });
-    updatedApiKey.key = `${updatedApiKey.key.substring(0, 7)}...${updatedApiKey.key.substring(-4)}`;
+    updatedApiKey.key = `${updatedApiKey.key.substring(0, 7)}...${updatedApiKey.key.substring(updatedApiKey.key.length - 4)}`;
 
     return updatedApiKey;
   }
@@ -446,7 +450,7 @@ export class ApiKeyService {
         username: 'test-user',
         email: 'test@example.com',
         password: 'test-password-hash', // 实际应该加密
-        status: 'active',
+        status: UserStatus.ACTIVE,
       });
       testUser = await this.userRepo.save(testUser);
     }

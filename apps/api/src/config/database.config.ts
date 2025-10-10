@@ -1,5 +1,6 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { UserEntity } from '../entities/user.entity';
+import { ApiKeyEntity } from '../entities/api-key.entity';
 import { WeiboAccountEntity } from '../entities/weibo-account.entity';
 import { WeiboSearchTaskEntity } from '../entities/weibo-search-task.entity';
 import { JdAccountEntity } from '../entities/jd-account.entity';
@@ -15,6 +16,7 @@ import { MediaTypeEntity } from '../entities/media-type.entity';
 export const getDatabaseConfig = (): TypeOrmModuleOptions => {
   const entities = [
     UserEntity,
+    ApiKeyEntity,
     WeiboAccountEntity,
     WeiboSearchTaskEntity,
     JdAccountEntity,
@@ -33,7 +35,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
       type: 'postgres',
       url: process.env.DATABASE_URL,
       entities,
-      synchronize: false,
+      synchronize: true,
       logging: process.env.NODE_ENV === 'development',
     };
   }
@@ -46,7 +48,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
     password: process.env.DATABASE_PASSWORD || 'postgres123',
     database: process.env.DATABASE_NAME || 'pro',
     entities,
-    synchronize: false,
+    synchronize: true,
     logging: process.env.NODE_ENV === 'development',
   };
 };

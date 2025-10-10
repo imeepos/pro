@@ -19,18 +19,21 @@
     "claude": "claude --dangerously-skip-permissions"
   },
   "devDependencies": {
-    "turbo": "^2.3.3",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
     "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
     "typescript": "~5.8.0"
   },
   "pnpm": {
     "overrides": {
       "undici": "^5.28.0"
     }
+  },
+  "dependencies": {
+    "passport-headerapikey": "^1.2.2"
   }
 }

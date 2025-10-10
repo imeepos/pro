@@ -13,7 +13,9 @@
       "Bash(pnpm list:*)",
       "WebFetch(domain:flowbite.com)",
       "Bash(docker exec:*)",
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(docker logs:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
