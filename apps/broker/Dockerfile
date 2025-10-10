@@ -1,31 +1,58 @@
 # ========================================
-# 开发阶段
+# 基础准备阶段：共享的依赖安装层
+# 目的：为 development 和 builder 阶段提供统一的依赖基础
+# 缓存策略：优先使用已有镜像作为基础，大幅加速构建
 # ========================================
-FROM node:18-alpine AS development
+ARG BUILD_FROM_BASE=node:20-alpine
+FROM $BUILD_FROM_BASE AS base
 
-# 安装 pnpm
+# 安装 pnpm（全局，可被后续阶段复用）
 RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
 
 # 设置工作目录
 WORKDIR /app
 
+# ========================================
+# 依赖声明层：复制所有 package.json 文件
+# 目的：将依赖声明与源代码分离，最大化缓存利用
+# 变化频率：低（仅在依赖变更时重建）
+# ========================================
 # 复制 workspace 配置文件
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 
-# 复制所有 packages 的 package.json
+# 复制所有 packages 的 package.json（按依赖关系排序）
 COPY packages/types/package.json ./packages/types/
 COPY packages/config/package.json ./packages/config/
 COPY packages/utils/package.json ./packages/utils/
-COPY packages/redis/package.json ./packages/redis/
 COPY packages/mongodb/package.json ./packages/mongodb/
+COPY packages/redis/package.json ./packages/redis/
 COPY packages/rabbitmq/package.json ./packages/rabbitmq/
 
 # 复制 broker 应用的 package.json
 COPY apps/broker/package.json ./apps/broker/
 
-# 安装依赖
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+# ========================================
+# 依赖安装层：实际安装依赖
+# 目的：利用 BuildKit cache mount 加速依赖下载
+# 缓存策略：使用持久化缓存，避免重复下载
+# 增量构建：当使用缓存镜像时，跳过依赖安装
+# ========================================
+ARG BUILD_FROM_BASE=node:20-alpine
+RUN if [ "$BUILD_FROM_BASE" = "node:20-alpine" ]; then \
+        echo "🔧 安装依赖..."; \
+        pnpm install --frozen-lockfile; \
+    else \
+        echo "✅ 使用缓存镜像，跳过依赖安装"; \
+    fi
+
+# ========================================
+# 开发阶段：基于依赖层，添加源代码热重载
+# ========================================
+FROM base AS development
+
+# 复制源代码（开发时需要完整源码用于热重载）
+COPY packages/ ./packages/
+COPY apps/ ./apps/
 
 # 暴露端口
 EXPOSE 3003
@@ -34,96 +61,69 @@ EXPOSE 3003
 CMD ["pnpm", "--filter", "@pro/broker", "start:dev"]
 
 # ============================================
-# 构建阶段：安装依赖并构建 NestJS 应用
+# 构建阶段：基于依赖层，按依赖关系逐层构建
+# 目的：最大化利用缓存，只重建变化的部分
+# 缓存策略：按依赖关系分层，源码变化只影响相关层
 # ============================================
-FROM node:18-alpine AS builder
+FROM base AS builder
 
-# 安装 pnpm
-RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
-
-# 设置工作目录
-WORKDIR /app
-
-# ============================================
-# 第一层：复制 package.json 文件（依赖声明）
-# 目的：只有依赖变化时才重新安装，源代码变化不影响此层
-# ============================================
-
-# 复制 workspace 配置文件
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-
-# 复制所有 packages 的 package.json
-COPY packages/types/package.json ./packages/types/
-COPY packages/config/package.json ./packages/config/
-COPY packages/utils/package.json ./packages/utils/
-COPY packages/redis/package.json ./packages/redis/
-COPY packages/mongodb/package.json ./packages/mongodb/
-COPY packages/rabbitmq/package.json ./packages/rabbitmq/
-
-# 复制 broker 应用的 package.json
-COPY apps/broker/package.json ./apps/broker/
+# 当使用缓存镜像时，确保依赖可用
+ARG BUILD_FROM_BASE=node:20-alpine
+RUN if [ "$BUILD_FROM_BASE" != "node:20-alpine" ]; then \
+        echo "✅ 确保缓存镜像中的依赖可用"; \
+        pnpm install --frozen-lockfile --prefer-frozen-lockfile; \
+    fi
 
 # ============================================
-# 第二层：安装依赖
-# 使用 BuildKit cache mount 加速依赖下载
-# 只有 package.json 或 lockfile 变化时才会重新执行
-# ============================================
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
-
-# ============================================
-# 第三层：复制基础 TypeScript 配置
+# 基础配置层：TypeScript 配置（变化频率极低）
+# 目的：将构建配置与源代码分离
 # ============================================
 COPY tsconfig.base.json* ./
 
 # ============================================
-# 第四层：构建 @pro/types
-# 目的：独立层，types 源码变化只影响此层及依赖它的后续层
+# 核心依赖构建层：按依赖关系逐构建 packages
+# 目的：利用 Docker 层级缓存，只重建变化的 package
+# 构建顺序：按依赖关系从底层到上层
 # ============================================
+
+# 第一层：@pro/types（基础类型定义，无依赖）
+# 目的：最底层包，types 变化只影响此层及所有后续层
 COPY packages/types/tsconfig.json ./packages/types/
 COPY packages/types/src ./packages/types/src
 RUN pnpm --filter @pro/types build
 
-# ============================================
-# 第五层：构建 @pro/config
-# 目的：独立层，config 源码变化只影响此层及依赖它的后续层
-# 依赖：@pro/types
-# ============================================
+# 第二层：@pro/config（配置管理，依赖 types）
+# 目的：config 变化只影响此层及依赖它的后续层
 COPY packages/config/tsconfig.json ./packages/config/
 COPY packages/config/src ./packages/config/src
 RUN pnpm --filter @pro/config build
 
-# ============================================
-# 第六层：构建 @pro/utils
-# 目的：独立层，utils 源码变化只影响此层及依赖它的后续层
-# ============================================
+# 第三层：@pro/mongodb（MongoDB 封装，独立依赖）
+# 目的：mongodb 变化只影响此层及依赖它的后续层
+COPY packages/mongodb/tsconfig.json ./packages/mongodb/
+COPY packages/mongodb/src ./packages/mongodb/src
+RUN pnpm --filter @pro/mongodb build
+
+# 第四层：@pro/utils（工具函数，独立依赖）
+# 目的：utils 变化只影响此层及依赖它的后续层
 COPY packages/utils/tsconfig.json ./packages/utils/
 COPY packages/utils/src ./packages/utils/src
 RUN pnpm --filter @pro/utils build
 
-# ============================================
-# 第七层：构建 @pro/redis
-# 目的：独立层，redis 源码变化只影响此层及依赖它的后续层
-# 依赖：@pro/config
-# ============================================
+# 第五层：@pro/redis（Redis 封装，依赖 config）
+# 目的：redis 变化只影响此层及依赖它的后续层
 COPY packages/redis/tsconfig.json ./packages/redis/
 COPY packages/redis/src ./packages/redis/src
 RUN pnpm --filter @pro/redis build
 
-# ============================================
-# 第八层：构建 @pro/rabbitmq
-# 目的：独立层，rabbitmq 源码变化只影响此层及依赖它的后续层
-# 依赖：@pro/config
-# ============================================
+# 第六层：@pro/rabbitmq（RabbitMQ 封装，依赖 config）
+# 目的：rabbitmq 变化只影响此层及依赖它的后续层
 COPY packages/rabbitmq/tsconfig.json ./packages/rabbitmq/
 COPY packages/rabbitmq/src ./packages/rabbitmq/src
 RUN pnpm --filter @pro/rabbitmq build
 
-# ============================================
-# 第九层：构建 @pro/broker 应用
-# 目的：独立层，broker 源码变化只影响此层
-# 依赖：所有前置 packages
-# ============================================
+# 第七层：@pro/broker 应用（顶层应用，依赖所有 packages）
+# 目的：broker 变化只影响此层，最大化缓存利用
 COPY apps/broker/tsconfig.json ./apps/broker/
 COPY apps/broker/tsconfig.build.json* ./apps/broker/
 COPY apps/broker/nest-cli.json* ./apps/broker/
@@ -131,62 +131,80 @@ COPY apps/broker/src ./apps/broker/src
 RUN pnpm --filter @pro/broker build
 
 # ========================================
-# 生产阶段
+# 生产阶段：最小化运行时镜像
+# 目的：基于构建产物创建轻量级生产镜像
+# 优化策略：始终使用干净的基础镜像确保生产环境纯净
 # ========================================
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
-# 安装 pnpm 和 dumb-init
+# ========================================
+# 运行时准备层：安装系统依赖和配置用户
+# 目的：配置安全的运行环境，避免使用 root 用户
+# ========================================
+# 安装 pnpm 和 dumb-init（信号处理）
 RUN corepack enable && corepack prepare pnpm@10.18.1 --activate && \
     apk add --no-cache dumb-init
 
-# 创建非 root 用户
+# 创建非 root 用户（安全最佳实践）
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
 # 设置工作目录
 WORKDIR /app
 
-# 复制 workspace 配置文件
+# ========================================
+# 生产依赖层：仅安装生产依赖
+# 目的：基于依赖声明安装最小化的生产依赖
+# 缓存策略：利用 BuildKit cache mount 避免重复下载
+# ========================================
+# 复制依赖声明文件（不复制源代码）
 COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-
-# 复制 packages 的 package.json
 COPY --chown=nestjs:nodejs packages/types/package.json ./packages/types/
 COPY --chown=nestjs:nodejs packages/config/package.json ./packages/config/
 COPY --chown=nestjs:nodejs packages/utils/package.json ./packages/utils/
+COPY --chown=nestjs:nodejs packages/mongodb/package.json ./packages/mongodb/
 COPY --chown=nestjs:nodejs packages/redis/package.json ./packages/redis/
 COPY --chown=nestjs:nodejs packages/rabbitmq/package.json ./packages/rabbitmq/
-
-# 复制 apps/broker 的 package.json
 COPY --chown=nestjs:nodejs apps/broker/package.json ./apps/broker/
 
-# 安装生产依赖（使用 BuildKit cache mount）
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+# 安装生产依赖（使用缓存优化）
+RUN --mount=type=cache,id=pnpm-prod,target=/root/.local/share/pnpm/store \
     pnpm install --prod --frozen-lockfile
 
-# 从构建阶段复制编译后的代码
+# ========================================
+# 构建产物层：复制编译后的代码
+# 目的：从 builder 阶段复制构建产物，不包含源代码
+# 优势：镜像体积小，安全性高，构建速度快
+# ========================================
+# 复制 packages 的构建产物（按依赖关系顺序复制）
 COPY --from=builder --chown=nestjs:nodejs /app/packages/types/dist ./packages/types/dist
 COPY --from=builder --chown=nestjs:nodejs /app/packages/config/dist ./packages/config/dist
 COPY --from=builder --chown=nestjs:nodejs /app/packages/utils/dist ./packages/utils/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/mongodb/dist ./packages/mongodb/dist
 COPY --from=builder --chown=nestjs:nodejs /app/packages/redis/dist ./packages/redis/dist
 COPY --from=builder --chown=nestjs:nodejs /app/packages/rabbitmq/dist ./packages/rabbitmq/dist
 
-# 复制 apps/broker 的构建产物
+# 复制应用的构建产物
 COPY --from=builder --chown=nestjs:nodejs /app/apps/broker/dist ./apps/broker/dist
 
+# ========================================
+# 运行时配置：用户权限、环境变量和健康检查
+# 目的：配置生产环境的运行参数
+# ========================================
 # 切换到非 root 用户
 USER nestjs
 
 # 暴露端口
 EXPOSE 3003
 
-# 设置环境变量
+# 设置生产环境变量
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--experimental-global-webcrypto"
 
-# 健康检查
+# 健康检查（确保服务可用性）
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3003/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# 使用 dumb-init 启动应用
+# 启动应用（使用 dumb-init 处理信号）
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "apps/broker/dist/apps/broker/src/main.js"]

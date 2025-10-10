@@ -45,6 +45,47 @@ get_all_services() {
     echo "api web admin broker crawler cleaner"
 }
 
+# 检查是否存在旧镜像作为缓存源
+check_cache_source() {
+    local service=$1
+    local config=$(get_service_config "$service")
+    local IMAGE_NAME=$(echo "$config" | cut -d'|' -f1)
+    local LATEST_IMAGE_NAME="${IMAGE_NAME%:*}:latest"
+
+    # 去除 docker.io/ 前缀，因为 Docker images 命令默认不显示这个前缀
+    local SHORT_IMAGE_NAME="${IMAGE_NAME#docker.io/}"
+    local SHORT_LATEST_IMAGE_NAME="${LATEST_IMAGE_NAME#docker.io/}"
+
+    echo "🔍 检查缓存镜像..." >&2
+    echo "📋 完整名称: $LATEST_IMAGE_NAME" >&2
+    echo "📋 短名称: $SHORT_LATEST_IMAGE_NAME" >&2
+
+    # 检查是否存在 latest 标签的镜像（先尝试短名称）
+    if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^${SHORT_LATEST_IMAGE_NAME}$"; then
+        echo "🎯 发现缓存镜像: $SHORT_LATEST_IMAGE_NAME" >&2
+        echo "$SHORT_LATEST_IMAGE_NAME"
+        return 0
+    fi
+
+    # 再尝试完整名称
+    if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^${LATEST_IMAGE_NAME}$"; then
+        echo "🎯 发现缓存镜像: $LATEST_IMAGE_NAME" >&2
+        echo "$LATEST_IMAGE_NAME"
+        return 0
+    fi
+
+    # 检查是否存在其他版本的镜像
+    local latest_tag=$(docker images --format "{{.Repository}}:{{.Tag}} {{.CreatedAt}}" | grep "^${SHORT_IMAGE_NAME%:*}:" | sort -k2 -r | head -1 | awk '{print $1}')
+    if [ -n "$latest_tag" ]; then
+        echo "🎯 发现缓存镜像: $latest_tag" >&2
+        echo "$latest_tag"
+        return 0
+    fi
+
+    echo "❌ 未找到缓存镜像" >&2
+    return 1
+}
+
 # 构建单个服务
 build_service() {
     local service=$1
@@ -71,8 +112,31 @@ build_service() {
         return 1
     fi
 
-    # 构建镜像
-    docker buildx build --platform linux/amd64 -f $DOCKERFILE -t $IMAGE_NAME $BUILD_CONTEXT
+    # 设置缓存参数
+    local CACHE_ARGS=""
+    local BUILD_FROM_BASE="node:20-alpine"
+
+    # 检查缓存源
+    local CACHE_SOURCE=$(check_cache_source "$service")
+    local CACHE_CHECK_RESULT=$?
+
+    if [ $CACHE_CHECK_RESULT -eq 0 ] && [ -n "$CACHE_SOURCE" ]; then
+        echo "🚀 使用缓存镜像: $CACHE_SOURCE"
+        CACHE_ARGS="--cache-from $CACHE_SOURCE"
+        BUILD_FROM_BASE="$CACHE_SOURCE"
+    else
+        echo "🔧 使用基础镜像: node:20-alpine"
+    fi
+
+    # 构建镜像，启用 inline cache 和外部缓存源
+    docker buildx build \
+        --platform linux/amd64 \
+        -f $DOCKERFILE \
+        -t $IMAGE_NAME \
+        --build-arg BUILD_FROM_BASE="$BUILD_FROM_BASE" \
+        $CACHE_ARGS \
+        --cache-to type=inline,mode=max \
+        $BUILD_CONTEXT
 
     # 添加 latest 标签
     local LATEST_IMAGE_NAME="${IMAGE_NAME%:*}:latest"

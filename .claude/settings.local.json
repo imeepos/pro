@@ -1,22 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)",
-      "Bash(grep:*)",
-      "WebSearch",
-      "Bash(pnpm run:*)",
-      "Bash(npx ng build:*)",
-      "Bash(docker compose build:*)",
-      "Bash(docker compose:*)",
-      "Bash(curl:*)",
-      "WebFetch(domain:flowbite-angular.com)",
-      "Bash(pnpm list:*)",
-      "WebFetch(domain:flowbite.com)",
-      "Bash(docker exec:*)",
-      "Bash(docker ps:*)",
-      "Bash(docker logs:*)",
-      "Bash(cat:*)",
-      "Bash(docker run:*)"
+      "Bash(LATEST_IMAGE_NAME=\"docker.io/imeepos/broker:latest\")"
     ],
     "deny": [],
     "ask": []
