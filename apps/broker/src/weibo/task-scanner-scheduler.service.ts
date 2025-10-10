@@ -93,8 +93,36 @@ export class TaskScannerScheduler {
     try {
       // 检查任务状态，避免重复调度
       if (task.status === WeiboSearchTaskStatus.RUNNING) {
-        this.logger.debug(`任务 ${task.id} 正在执行中，跳过调度`);
-        return;
+        // 检测是否为僵尸任务（任务标记为RUNNING但实际未在执行）
+        if (this.isTaskStale(task)) {
+          this.logger.warn(
+            `检测到僵尸任务 ${task.id} [${task.keyword}]: ` +
+            `状态为RUNNING但已超过5分钟未更新 (最后更新时间: ${task.updatedAt.toISOString()})`
+          );
+
+          // 重置僵尸任务状态，允许重新调度
+          await this.taskRepository.update(task.id, {
+            status: WeiboSearchTaskStatus.PENDING,
+            errorMessage: null,
+          });
+
+          this.logger.log(
+            `僵尸任务 ${task.id} [${task.keyword}] 已自动恢复为PENDING状态，允许重新调度`
+          );
+
+          // 重新加载任务数据，继续执行调度流程
+          const refreshedTask = await this.taskRepository.findOne({ where: { id: task.id } });
+          if (!refreshedTask) {
+            this.logger.error(`任务 ${task.id} 恢复后重新加载失败`);
+            return;
+          }
+
+          // 使用刷新后的任务继续执行
+          Object.assign(task, refreshedTask);
+        } else {
+          this.logger.debug(`任务 ${task.id} 正在执行中，跳过调度`);
+          return;
+        }
       }
 
       // 更新任务状态为运行中
@@ -181,6 +209,28 @@ export class TaskScannerScheduler {
       weiboAccountId: task.weiboAccountId,
       enableAccountRotation: task.enableAccountRotation,
     };
+  }
+
+  /**
+   * 判断任务是否为僵尸任务
+   * 僵尸任务：状态标记为RUNNING，但已超过健康检查超时时间未更新
+   *
+   * @param task 待检查的任务
+   * @returns true表示任务已失活（僵尸状态），false表示任务正常运行
+   *
+   * 设计说明：
+   * - 使用updatedAt字段判断任务活性，无需额外添加lastHeartbeatAt字段
+   * - 正常运行的任务会定期更新进度，从而自动更新updatedAt
+   * - 僵尸任务因crawler重启等原因，updatedAt将停止更新
+   * - 超时阈值设为5分钟，足够容忍正常的网络延迟和处理时间
+   */
+  private isTaskStale(task: WeiboSearchTaskEntity): boolean {
+    const HEALTH_CHECK_TIMEOUT_MS = 5 * 60 * 1000; // 5分钟
+    const now = Date.now();
+    const lastUpdateTime = new Date(task.updatedAt).getTime();
+    const timeSinceLastUpdate = now - lastUpdateTime;
+
+    return timeSinceLastUpdate > HEALTH_CHECK_TIMEOUT_MS;
   }
 
   /**
