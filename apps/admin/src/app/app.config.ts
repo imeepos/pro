@@ -11,6 +11,8 @@ import { WeiboLoggedInUsersCardComponent } from './features/screens/components/w
 import { TestSimpleComponent } from './features/screens/components/test-simple.component';
 import { EventsStore } from './state/events.store';
 import { TagsStore } from './state/tags.store';
+import { SkerSDK } from '@pro/sdk';
+import { environment } from '../environments/environment';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
   return () => {
@@ -54,6 +56,11 @@ export const appConfig: ApplicationConfig = {
     },
     // Akita stores
     EventsStore,
-    TagsStore
+    TagsStore,
+    // SDK
+    {
+      provide: SkerSDK,
+      useFactory: () => new SkerSDK(environment.apiUrl)
+    }
   ]
 };

@@ -1,0 +1,113 @@
+<div class="file-upload-container">
+  <!-- 上传区域 -->
+  <div
+    class="upload-area"
+    [class.dragging]="isDragging()"
+    [class.disabled]="disabled || !canUploadMore()"
+    (click)="!disabled && canUploadMore() && fileInput.click()"
+    (drop)="onDrop($event)"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+  >
+    <input
+      #fileInput
+      type="file"
+      [accept]="accept"
+      [multiple]="multiple"
+      (change)="onFileSelect($event)"
+      hidden
+    />
+
+    <div class="upload-content">
+      <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+        />
+      </svg>
+
+      <div class="upload-text">
+        <p class="text-primary">点击上传</p>
+        <p class="text-secondary">或拖拽文件到此处</p>
+      </div>
+
+      <p class="upload-hint">
+        支持: {{ accept }} | 最大: {{ formatFileSize(maxSize) }} | 最多: {{ maxCount }} 个文件
+      </p>
+
+      <div class="upload-stats" *ngIf="totalFiles() > 0">
+        <span class="text-blue-600">已上传: {{ successCount() }}/{{ totalFiles() }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文件列表 -->
+  <div class="file-list" *ngIf="uploadingFiles().length > 0">
+    <div
+      *ngFor="let uploadingFile of uploadingFiles()"
+      class="file-item"
+      [class.success]="uploadingFile.status === 'success'"
+      [class.error]="uploadingFile.status === 'error'"
+      [class.uploading]="uploadingFile.status === 'uploading'"
+    >
+      <!-- 文件图标 -->
+      <div class="file-icon-container">
+        <span class="material-icons file-icon" [ngClass]="getStatusColor(uploadingFile.status)">
+          {{ uploadingFile.attachment
+            ? getFileIcon(uploadingFile.attachment.mimeType)
+            : 'insert_drive_file' }}
+        </span>
+      </div>
+
+      <!-- 文件信息 -->
+      <div class="file-info">
+        <p class="file-name" [title]="uploadingFile.file.name">
+          {{ uploadingFile.file.name }}
+        </p>
+        <p class="file-size">{{ formatFileSize(uploadingFile.file.size) }}</p>
+
+        <!-- 进度条 -->
+        <div class="progress-container" *ngIf="uploadingFile.status === 'uploading'">
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              [style.width.%]="uploadingFile.progress"
+            ></div>
+          </div>
+          <span class="progress-text">{{ uploadingFile.progress }}%</span>
+        </div>
+
+        <!-- 错误信息 -->
+        <p class="error-message" *ngIf="uploadingFile.status === 'error'">
+          {{ uploadingFile.error }}
+        </p>
+      </div>
+
+      <!-- 状态图标 -->
+      <div class="status-icon-container">
+        <span class="material-icons status-icon" [ngClass]="getStatusColor(uploadingFile.status)">
+          {{ getStatusIcon(uploadingFile.status) }}
+        </span>
+      </div>
+
+      <!-- 删除按钮 -->
+      <button
+        *ngIf="uploadingFile.status === 'success'"
+        class="delete-button"
+        type="button"
+        (click)="deleteFile(uploadingFile)"
+        title="删除文件"
+      >
+        <span class="material-icons">delete</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 空状态提示 -->
+  <div class="empty-state" *ngIf="uploadingFiles().length === 0">
+    <span class="material-icons empty-icon">cloud_upload</span>
+    <p class="empty-text">暂无文件</p>
+  </div>
+</div>
