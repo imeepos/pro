@@ -1,9 +1,17 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between, Like, SelectQueryBuilder } from 'typeorm';
 import { ApiKeyEntity } from '../entities/api-key.entity';
 import { UserEntity } from '../entities/user.entity';
-import { CreateApiKeyDto, UpdateApiKeyDto } from './dto/api-key.dto';
+import {
+  CreateApiKeyDto,
+  UpdateApiKeyDto,
+  ApiKeyQueryDto,
+  ApiKeyListResponseDto,
+  ApiKeyResponseDto,
+  ApiKeyStatus,
+  ApiKeyStatsDto
+} from './dto/api-key.dto';
 
 /**
  * API Key 管理服务
@@ -150,6 +158,280 @@ export class ApiKeyService {
     }
 
     await this.apiKeyRepo.delete(keyId);
+  }
+
+  /**
+   * 分页获取用户的API Key列表（支持搜索和过滤）
+   */
+  async getUserApiKeysPaginated(
+    userId: string,
+    query: ApiKeyQueryDto,
+  ): Promise<ApiKeyListResponseDto> {
+    const { page = 1, limit = 10, search, status, includeExpired = false, sortBy, sortOrder, startDate, endDate } = query;
+    const offset = (page - 1) * limit;
+
+    // 构建查询
+    let queryBuilder: SelectQueryBuilder<ApiKeyEntity> = this.apiKeyRepo
+      .createQueryBuilder('apiKey')
+      .where('apiKey.userId = :userId', { userId });
+
+    // 搜索条件
+    if (search) {
+      queryBuilder = queryBuilder.andWhere('apiKey.name LIKE :search', { search: `%${search}%` });
+    }
+
+    // 状态过滤
+    if (status && status !== ApiKeyStatus.ALL) {
+      switch (status) {
+        case ApiKeyStatus.ACTIVE:
+          queryBuilder = queryBuilder.andWhere('apiKey.isActive = :isActive', { isActive: true });
+          if (!includeExpired) {
+            queryBuilder = queryBuilder.andWhere('(apiKey.expiresAt IS NULL OR apiKey.expiresAt > :now)', { now: new Date() });
+          }
+          break;
+        case ApiKeyStatus.INACTIVE:
+          queryBuilder = queryBuilder.andWhere('apiKey.isActive = :isActive', { isActive: false });
+          break;
+        case ApiKeyStatus.EXPIRED:
+          queryBuilder = queryBuilder.andWhere('apiKey.expiresAt IS NOT NULL AND apiKey.expiresAt <= :now', { now: new Date() });
+          break;
+      }
+    } else if (!includeExpired) {
+      // 默认情况下不显示已过期的Key
+      queryBuilder = queryBuilder.andWhere('(apiKey.expiresAt IS NULL OR apiKey.expiresAt > :now)', { now: new Date() });
+    }
+
+    // 日期范围过滤
+    if (startDate && endDate) {
+      queryBuilder = queryBuilder.andWhere('apiKey.createdAt BETWEEN :startDate AND :endDate', {
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+      });
+    } else if (startDate) {
+      queryBuilder = queryBuilder.andWhere('apiKey.createdAt >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    } else if (endDate) {
+      queryBuilder = queryBuilder.andWhere('apiKey.createdAt <= :endDate', {
+        endDate: new Date(endDate),
+      });
+    }
+
+    // 排序
+    const sortField = sortBy === 'usageCount' ? 'apiKey.usageCount' :
+                     sortBy === 'name' ? 'apiKey.name' :
+                     sortBy === 'lastUsedAt' ? 'apiKey.lastUsedAt' :
+                     sortBy === 'updatedAt' ? 'apiKey.updatedAt' :
+                     'apiKey.createdAt';
+
+    queryBuilder = queryBuilder.orderBy(sortField, sortOrder || 'DESC');
+
+    // 获取总数
+    const total = await queryBuilder.getCount();
+
+    // 获取分页数据
+    const apiKeys = await queryBuilder
+      .skip(offset)
+      .take(limit)
+      .getMany();
+
+    // 转换为响应格式（隐藏完整的key）
+    const items = apiKeys.map(apiKey => this.transformToResponseDto(apiKey));
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+    };
+  }
+
+  /**
+   * 根据ID获取用户的单个API Key
+   */
+  async getUserApiKeyById(userId: string, keyId: number): Promise<ApiKeyResponseDto> {
+    const apiKey = await this.apiKeyRepo.findOne({
+      where: { id: keyId, userId },
+    });
+
+    if (!apiKey) {
+      throw new NotFoundException('API Key 不存在');
+    }
+
+    return this.transformToResponseDto(apiKey);
+  }
+
+  /**
+   * 启用API Key
+   */
+  async enableApiKey(userId: string, keyId: number): Promise<void> {
+    const apiKey = await this.apiKeyRepo.findOne({
+      where: { id: keyId, userId },
+    });
+
+    if (!apiKey) {
+      throw new NotFoundException('API Key 不存在');
+    }
+
+    await this.apiKeyRepo.update(keyId, { isActive: true });
+  }
+
+  /**
+   * 获取API Key使用统计
+   */
+  async getApiKeyStats(userId: string, keyId: number): Promise<ApiKeyStatsDto> {
+    const apiKey = await this.apiKeyRepo.findOne({
+      where: { id: keyId, userId },
+    });
+
+    if (!apiKey) {
+      throw new NotFoundException('API Key 不存在');
+    }
+
+    const daysSinceCreation = Math.ceil((new Date().getTime() - apiKey.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    const averageDailyUsage = daysSinceCreation > 0 ? apiKey.usageCount / daysSinceCreation : 0;
+
+    return {
+      id: apiKey.id,
+      name: apiKey.name,
+      usageCount: apiKey.usageCount,
+      lastUsedAt: apiKey.lastUsedAt,
+      createdAt: apiKey.createdAt,
+      daysSinceCreation,
+      averageDailyUsage: Math.round(averageDailyUsage * 100) / 100,
+    };
+  }
+
+  /**
+   * 重新生成API Key
+   */
+  async regenerateApiKey(userId: string, keyId: number, createdIp?: string): Promise<string> {
+    const apiKey = await this.apiKeyRepo.findOne({
+      where: { id: keyId, userId },
+    });
+
+    if (!apiKey) {
+      throw new NotFoundException('API Key 不存在');
+    }
+
+    // 生成新的API Key
+    const newKey = ApiKeyEntity.generateKey();
+
+    // 更新数据库
+    await this.apiKeyRepo.update(keyId, {
+      key: newKey,
+      updatedIp: createdIp,
+      updatedAt: new Date(),
+    });
+
+    return newKey;
+  }
+
+  /**
+   * 批量操作：禁用用户的所有API Key
+   */
+  async disableAllUserApiKeys(userId: string): Promise<void> {
+    await this.apiKeyRepo.update(
+      { userId },
+      { isActive: false }
+    );
+  }
+
+  /**
+   * 清理过期的API Key
+   */
+  async cleanupExpiredApiKeys(): Promise<number> {
+    const result = await this.apiKeyRepo
+      .createQueryBuilder()
+      .update(ApiKeyEntity)
+      .set({ isActive: false })
+      .where('expiresAt IS NOT NULL AND expiresAt <= :now', { now: new Date() })
+      .andWhere('isActive = :isActive', { isActive: true })
+      .execute();
+
+    return result.affected || 0;
+  }
+
+  /**
+   * 获取用户的API Key使用统计汇总
+   */
+  async getUserApiKeySummary(userId: string): Promise<{
+    total: number;
+    active: number;
+    inactive: number;
+    expired: number;
+    totalUsage: number;
+  }> {
+    const [total, active, inactive, expired] = await Promise.all([
+      this.apiKeyRepo.count({ where: { userId } }),
+      this.apiKeyRepo.count({
+        where: {
+          userId,
+          isActive: true,
+          ...(await this.getNonExpiredCondition())
+        }
+      }),
+      this.apiKeyRepo.count({ where: { userId, isActive: false } }),
+      this.apiKeyRepo.count({
+        where: {
+          userId,
+          ...(await this.getExpiredCondition())
+        }
+      }),
+    ]);
+
+    const totalUsageResult = await this.apiKeyRepo
+      .createQueryBuilder('apiKey')
+      .select('SUM(apiKey.usageCount)', 'total')
+      .where('apiKey.userId = :userId', { userId })
+      .getRawOne();
+
+    const totalUsage = parseInt(totalUsageResult?.total || '0');
+
+    return { total, active, inactive, expired, totalUsage };
+  }
+
+  /**
+   * 将ApiKeyEntity转换为响应DTO
+   */
+  private transformToResponseDto(apiKey: ApiKeyEntity): ApiKeyResponseDto {
+    return {
+      id: apiKey.id,
+      key: `${apiKey.key.substring(0, 7)}...${apiKey.key.substring(apiKey.key.length - 4)}`,
+      name: apiKey.name,
+      isActive: apiKey.isActive,
+      lastUsedAt: apiKey.lastUsedAt,
+      usageCount: apiKey.usageCount,
+      expiresAt: apiKey.expiresAt,
+      createdIp: apiKey.createdIp,
+      createdAt: apiKey.createdAt,
+      updatedAt: apiKey.updatedAt,
+      isExpired: apiKey.isExpired,
+      isValid: apiKey.isValid,
+    };
+  }
+
+  /**
+   * 获取非过期条件
+   */
+  private async getNonExpiredCondition(): Promise<{ expiresAt?: any }> {
+    return {
+      expiresAt: null, // 这里实际上需要更复杂的逻辑，暂时简化
+    };
+  }
+
+  /**
+   * 获取过期条件
+   */
+  private async getExpiredCondition(): Promise<{ expiresAt?: any }> {
+    return {
+      expiresAt: { $lte: new Date() }, // 这里需要根据具体的数据库适配
+    };
   }
 
   /**

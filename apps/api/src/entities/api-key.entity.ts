@@ -72,6 +72,12 @@ export class ApiKeyEntity {
   @Column({ type: 'varchar', length: 45, nullable: true, name: 'created_ip' })
   createdIp?: string;
 
+  /**
+   * 最后更新IP地址
+   */
+  @Column({ type: 'varchar', length: 45, nullable: true, name: 'updated_ip' })
+  updatedIp?: string;
+
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;
 

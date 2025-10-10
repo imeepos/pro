@@ -11,7 +11,9 @@
       "Bash(curl:*)",
       "WebFetch(domain:flowbite-angular.com)",
       "Bash(pnpm list:*)",
-      "WebFetch(domain:flowbite.com)"
+      "WebFetch(domain:flowbite.com)",
+      "Bash(docker exec:*)",
+      "Bash(docker ps:*)"
     ],
     "deny": [],
     "ask": []
