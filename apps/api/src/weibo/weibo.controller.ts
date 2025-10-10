@@ -108,10 +108,10 @@ export class WeiboController {
 
   /**
    * 内部接口：获取包含cookies的微博账号列表
-   * POST /api/internal/weibo/accounts/with-cookies
+   * POST /api/weibo/internal/accounts/with-cookies
    * 供爬虫服务使用
    */
-  @Post('internal/weibo/accounts/with-cookies')
+  @Post('internal/accounts/with-cookies')
   async getAccountsWithCookies(@Headers() headers) {
     // 验证内部服务调用
     const internalToken = headers['authorization']?.replace('Bearer ', '');
@@ -126,10 +126,10 @@ export class WeiboController {
 
   /**
    * 内部接口：标记账号为banned状态
-   * POST /api/internal/weibo/accounts/:id/mark-banned
+   * POST /api/weibo/internal/accounts/:id/mark-banned
    * 供爬虫服务使用
    */
-  @Post('internal/weibo/accounts/:id/mark-banned')
+  @Post('internal/accounts/:id/mark-banned')
   async markAccountBanned(
     @Param('id', ParseIntPipe) id: number,
     @Headers() headers

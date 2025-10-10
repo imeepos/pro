@@ -47,11 +47,11 @@ export class WeiboAccountService implements OnModuleInit {
     try {
       this.logger.debug(`从 ${this.apiUrl} 获取微博账号列表`);
 
-      // 注意：这里需要一个内部接口来获取包括cookies在内的完整账号信息
-      // 当前API接口不返回敏感信息，所以我们需要扩展API或者使用内部token
+      // 使用内部接口获取包含cookies的完整账号信息
       const response = await firstValueFrom(
-        this.httpService.get<{accounts: ApiWeiboAccount[]}>(
-          `${this.apiUrl}/internal/weibo/accounts/with-cookies`,
+        this.httpService.post<{accounts: ApiWeiboAccount[]}>(
+          `${this.apiUrl}/weibo/internal/accounts/with-cookies`,
+          {},
           {
             timeout: 10000,
             headers: {
@@ -185,7 +185,7 @@ export class WeiboAccountService implements OnModuleInit {
       try {
         await firstValueFrom(
           this.httpService.post(
-            `${this.apiUrl}/internal/weibo/accounts/${accountId}/mark-banned`,
+            `${this.apiUrl}/weibo/internal/accounts/${accountId}/mark-banned`,
             {},
             {
               headers: {

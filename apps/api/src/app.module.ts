@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -11,15 +11,17 @@ import { JdModule } from './jd/jd.module';
 import { ScreensModule } from './screens/screens.module';
 import { EventsModule } from './events/events.module';
 import { MediaTypeModule } from './media-type/media-type.module';
+import { ConfigModule } from './config/config.module';
 import { getDatabaseConfig } from './config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
+    NestConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
     TypeOrmModule.forRoot(getDatabaseConfig()),
+    ConfigModule,
     AuthModule,
     UserModule,
     WeiboModule,

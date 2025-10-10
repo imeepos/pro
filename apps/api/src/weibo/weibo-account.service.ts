@@ -119,4 +119,49 @@ export class WeiboAccountService {
       console.error('推送微博用户统计更新失败:', error);
     }
   }
+
+  /**
+   * 内部接口：获取包含cookies的微博账号列表
+   * 供爬虫服务使用
+   */
+  async getAccountsWithCookies() {
+    const accounts = await this.weiboAccountRepo.find({
+      where: { status: WeiboAccountStatus.ACTIVE },
+      order: { lastCheckAt: 'ASC' }, // 优先使用最近检查过的账号
+    });
+
+    return {
+      accounts: accounts.map((account) => ({
+        id: account.id,
+        weiboUid: account.weiboUid,
+        weiboNickname: account.weiboNickname,
+        status: account.status,
+        cookies: account.cookies, // 包含敏感的cookies信息
+        lastCheckAt: account.lastCheckAt,
+      })),
+    };
+  }
+
+  /**
+   * 内部接口：标记账号为banned状态
+   * 供爬虫服务使用
+   */
+  async markAccountBanned(accountId: number) {
+    const account = await this.weiboAccountRepo.findOne({
+      where: { id: accountId },
+    });
+
+    if (!account) {
+      throw new NotFoundException('账号不存在');
+    }
+
+    // 更新账号状态为banned
+    account.status = WeiboAccountStatus.BANNED;
+    await this.weiboAccountRepo.save(account);
+
+    // 推送统计更新
+    await this.notifyWeiboStatsUpdate();
+
+    return { success: true, message: '账号已标记为banned状态' };
+  }
 }

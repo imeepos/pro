@@ -25,9 +25,10 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
-**/.env
 **/.env.local
 **/.env.*.local
+# 允许爬虫服务的 .env 文件
+!apps/crawler/.env
 
 # 编辑器和 IDE
 .vscode

@@ -148,6 +148,7 @@ COPY apps/crawler/tsconfig.json ./apps/crawler/
 COPY apps/crawler/tsconfig.build.json* ./apps/crawler/
 COPY apps/crawler/nest-cli.json* ./apps/crawler/
 COPY apps/crawler/src ./apps/crawler/src
+COPY apps/crawler/.env ./apps/crawler/.env
 RUN pnpm --filter @pro/crawler build
 
 # ========================================
@@ -178,8 +179,9 @@ COPY --chown=nestjs:nodejs packages/mongodb/package.json ./packages/mongodb/
 COPY --chown=nestjs:nodejs packages/rabbitmq/package.json ./packages/rabbitmq/
 COPY --chown=nestjs:nodejs packages/minio/package.json ./packages/minio/
 
-# 复制 apps/crawler 的 package.json
+# 复制 apps/crawler 的 package.json 和 .env
 COPY --chown=nestjs:nodejs apps/crawler/package.json ./apps/crawler/
+COPY --chown=nestjs:nodejs apps/crawler/.env ./apps/crawler/
 
 # 安装生产依赖（使用 BuildKit cache mount）
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \

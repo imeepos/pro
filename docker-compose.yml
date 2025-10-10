@@ -261,6 +261,7 @@ services:
       MINIO_BUCKET: pro-storage
       CRAWLER_CONCURRENCY: ${CRAWLER_CONCURRENCY:-5}
       CRAWLER_TIMEOUT: ${CRAWLER_TIMEOUT:-30000}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-internal-token}
     depends_on:
       - api
       - rabbitmq
