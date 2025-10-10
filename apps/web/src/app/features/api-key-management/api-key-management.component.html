@@ -1,0 +1,180 @@
+<div class="relative w-full min-h-screen overflow-hidden bg-gradient-to-br from-primary to-primary-dark">
+  <!-- 背景动画效果 -->
+  <div class="absolute inset-0 overflow-hidden">
+    <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[length:50px_50px] animate-[gridMove_20s_linear_infinite]"></div>
+    <div class="absolute w-[400px] h-[400px] bg-primary/60 rounded-full blur-[80px] opacity-60 -top-[100px] -right-[100px] animate-[float_8s_ease-in-out_infinite]"></div>
+    <div class="absolute w-[350px] h-[350px] bg-primary-dark/60 rounded-full blur-[80px] opacity-60 -bottom-[100px] -left-[100px] animate-[float_8s_ease-in-out_infinite]"></div>
+  </div>
+
+  <!-- 主要内容 -->
+  <div class="relative z-10 w-full h-full p-6">
+    <!-- 页面标题 -->
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-4xl font-bold text-white m-0 drop-shadow-[0_2px_10px_rgba(0,0,0,0.2)]">API Key 管理</h1>
+        <p class="text-white/80 mt-2">管理您的 API 访问密钥，控制访问权限和使用统计</p>
+      </div>
+      <div class="flex gap-4">
+        <button class="px-6 py-3 text-sm font-semibold text-white bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg cursor-pointer transition-all duration-300 hover:bg-white/30 hover:-translate-y-0.5"
+                (click)="onRefresh()">
+          <span class="flex items-center gap-2">
+            🔄 刷新
+          </span>
+        </button>
+        <button class="px-6 py-3 text-sm font-semibold text-primary bg-white border-none rounded-lg cursor-pointer transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,0,0,0.25)]"
+                (click)="onCreateApiKey()">
+          <span class="flex items-center gap-2">
+            ➕ 创建 API Key
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 统计信息卡片 -->
+    <div class="mb-8">
+      <app-api-key-stats></app-api-key-stats>
+    </div>
+
+    <!-- 搜索和过滤区域 -->
+    <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-6 mb-6">
+      <form [formGroup]="searchForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- 搜索 -->
+        <div class="flex flex-col">
+          <label class="text-sm font-semibold text-slate-700 mb-2">搜索</label>
+          <input type="text"
+                 formControlName="search"
+                 placeholder="名称或描述"
+                 class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 placeholder:text-slate-400 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+        </div>
+
+        <!-- 状态过滤 -->
+        <div class="flex flex-col">
+          <label class="text-sm font-semibold text-slate-700 mb-2">状态</label>
+          <select formControlName="status"
+                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+            <option value="">全部状态</option>
+            <option value="active">活跃</option>
+            <option value="inactive">未激活</option>
+            <option value="expired">已过期</option>
+            <option value="revoked">已撤销</option>
+          </select>
+        </div>
+
+        <!-- 类型过滤 -->
+        <div class="flex flex-col">
+          <label class="text-sm font-semibold text-slate-700 mb-2">类型</label>
+          <select formControlName="type"
+                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+            <option value="">全部类型</option>
+            <option value="read_only">只读</option>
+            <option value="read_write">读写</option>
+            <option value="admin">管理员</option>
+          </select>
+        </div>
+
+        <!-- 排序 -->
+        <div class="flex flex-col">
+          <label class="text-sm font-semibold text-slate-700 mb-2">排序</label>
+          <select formControlName="sortBy"
+                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+            <option value="createdAt">创建时间</option>
+            <option value="updatedAt">更新时间</option>
+            <option value="lastUsedAt">最后使用</option>
+            <option value="usageCount">使用次数</option>
+            <option value="name">名称</option>
+          </select>
+        </div>
+
+        <!-- 排序方向 -->
+        <div class="flex flex-col">
+          <label class="text-sm font-semibold text-slate-700 mb-2">排序方向</label>
+          <select formControlName="sortOrder"
+                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+            <option value="desc">降序</option>
+            <option value="asc">升序</option>
+          </select>
+        </div>
+      </form>
+    </div>
+
+    <!-- 错误提示 -->
+    <div class="bg-red-500/10 px-4 py-3 rounded-lg border-l-4 border-red-500 mb-6" *ngIf="error">
+      <div class="flex items-center">
+        <span class="text-red-500 mr-2">⚠️</span>
+        <span class="text-red-700">{{ error }}</span>
+      </div>
+    </div>
+
+    <!-- API Key 列表 -->
+    <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+      <!-- 加载状态 -->
+      <div class="flex items-center justify-center py-20" *ngIf="loading">
+        <div class="flex flex-col items-center gap-4">
+          <div class="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          <p class="text-slate-500">加载中...</p>
+        </div>
+      </div>
+
+      <!-- 表格组件 -->
+      <app-api-key-table
+        *ngIf="!loading"
+        [apiKeys]="apiKeys"
+        [selectedApiKey]="selectedApiKey"
+        [loading]="loading"
+        [currentPage]="currentPage"
+        [pageSize]="pageSize"
+        [totalItems]="totalItems"
+        (apiKeySelected)="onApiKeySelected($event)"
+        (editApiKey)="onEditApiKey($event)"
+        (deleteApiKey)="onDeleteApiKey($event)"
+        (toggleStatus)="onToggleApiKeyStatus($event)"
+        (regenerateApiKey)="onRegenerateApiKey($event)"
+        (copyApiKey)="onCopyApiKey($event)"
+        (viewStats)="onViewStats($event)"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)">
+      </app-api-key-table>
+    </div>
+  </div>
+
+  <!-- 创建模态框 -->
+  <app-api-key-modal
+    *ngIf="showCreateModal"
+    [title]="'创建新的 API Key'"
+    [visible]="showCreateModal"
+    (close)="onModalClose()"
+    (created)="onApiKeyCreated($event)">
+  </app-api-key-modal>
+
+  <!-- 编辑模态框 -->
+  <app-api-key-modal
+    *ngIf="showEditModal"
+    [title]="'编辑 API Key'"
+    [visible]="showEditModal"
+    [apiKey]="selectedApiKey"
+    (close)="onModalClose()"
+    (updated)="onApiKeyUpdated($event)">
+  </app-api-key-modal>
+
+  <!-- 删除确认模态框 -->
+  <app-api-key-modal
+    *ngIf="showDeleteModal"
+    [title]="'删除 API Key'"
+    [visible]="showDeleteModal"
+    [mode]="'delete'"
+    [apiKey]="selectedApiKey"
+    (close)="onModalClose()"
+    (deleted)="onApiKeyDeleted()">
+  </app-api-key-modal>
+
+  <!-- 重新生成模态框 -->
+  <app-api-key-modal
+    *ngIf="showRegenerateModal"
+    [title]="'重新生成 API Key'"
+    [visible]="showRegenerateModal"
+    [mode]="'regenerate'"
+    [apiKey]="selectedApiKey"
+    (close)="onModalClose()"
+    (regenerated)="onApiKeyRegenerated()">
+  </app-api-key-modal>
+</div>

@@ -1,0 +1,464 @@
+/* 模态框背景 */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* 模态框容器 */
+.modal-container {
+  position: relative;
+  width: 100%;
+  max-width: 48rem; /* 768px */
+  max-height: 90vh;
+  overflow: hidden;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
+}
+
+/* 模态框头部 */
+.modal-header {
+  padding: 2rem;
+  border-bottom: 1px solid rgb(226 232 240);
+  background: linear-gradient(to right, rgb(102 126 234), rgb(67 56 202));
+  color: white;
+}
+
+.modal-header.danger {
+  background: linear-gradient(to right, rgb(220 38 38), rgb(185 28 28));
+}
+
+.modal-header.success {
+  background: linear-gradient(to right, rgb(34 197 94), rgb(22 163 74));
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-description {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+}
+
+/* 关闭按钮 */
+.close-button {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* 模态框内容 */
+.modal-content {
+  padding: 2rem;
+  max-height: calc(90vh - 8rem);
+  overflow-y: auto;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: rgb(241 245 249);
+  border-radius: 3px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: rgb(148 163 184);
+  border-radius: 3px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgb(100 116 139);
+}
+
+/* API Key 信息卡片 */
+.api-key-info {
+  padding: 1rem;
+  background-color: rgb(248 250 252);
+  border: 1px solid rgb(226 232 240);
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.api-key-name {
+  font-weight: 600;
+  color: rgb(30 41 59);
+}
+
+.api-key-description {
+  color: rgb(71 85 105);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.api-key-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.api-key-stats {
+  text-align: right;
+}
+
+.api-key-usage-count {
+  font-size: 0.875rem;
+  color: rgb(71 85 105);
+}
+
+.api-key-usage-number {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: rgb(30 41 59);
+}
+
+/* 徽章样式 */
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-read-only {
+  background-color: rgb(219 234 254);
+  color: rgb(29 78 216);
+}
+
+.badge-read-write {
+  background-color: rgb(233 213 255);
+  color: rgb(109 40 217);
+}
+
+.badge-admin {
+  background-color: rgb(254 202 202);
+  color: rgb(185 28 28);
+}
+
+.badge-active {
+  background-color: rgb(220 252 231);
+  color: rgb(22 101 52);
+}
+
+.badge-inactive {
+  background-color: rgb(254 240 138);
+  color: rgb(120 113 108);
+}
+
+.badge-expired {
+  background-color: rgb(254 202 202);
+  color: rgb(153 27 27);
+}
+
+.badge-revoked {
+  background-color: rgb(229 231 235);
+  color: rgb(75 85 99);
+}
+
+/* 警告和提示框 */
+.alert {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.alert-warning {
+  background-color: rgb(254 243 199);
+  border: 1px solid rgb(252 211 77);
+  color: rgb(120 113 108);
+}
+
+.alert-danger {
+  background-color: rgb(254 226 226);
+  border: 1px solid rgb(248 180 180);
+  color: rgb(127 29 29);
+}
+
+.alert-info {
+  background-color: rgb(219 234 254);
+  border: 1px solid rgb(147 197 253);
+  color: rgb(30 58 138);
+}
+
+.alert-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.alert-icon {
+  font-size: 1.125rem;
+}
+
+.alert-title {
+  font-weight: 500;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.alert-message {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.alert-list {
+  margin-top: 0.5rem;
+  margin-left: 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.alert-list li {
+  margin-bottom: 0.25rem;
+}
+
+/* API Key 显示区域 */
+.api-key-display {
+  margin-bottom: 1.5rem;
+}
+
+.api-key-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(30 41 59);
+  margin-bottom: 0.5rem;
+}
+
+.api-key-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.api-key-input {
+  flex: 1;
+  padding: 1rem;
+  background-color: rgb(241 245 249);
+  border: 2px solid rgb(203 213 225);
+  border-radius: 0.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: rgb(30 41 59);
+  word-break: break-all;
+}
+
+.api-key-button {
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.api-key-button-secondary {
+  color: rgb(71 85 105);
+  background-color: rgb(226 232 240);
+  border-color: rgb(203 213 225);
+}
+
+.api-key-button-secondary:hover {
+  background-color: rgb(203 213 225);
+}
+
+.api-key-button-primary {
+  color: rgb(67 56 202);
+  background-color: rgb(238 242 255);
+  border-color: rgb(165 180 252);
+}
+
+.api-key-button-primary:hover {
+  background-color: rgb(224 231 255);
+}
+
+/* 按钮组 */
+.button-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.button {
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.button-secondary {
+  color: rgb(71 85 105);
+  background-color: white;
+  border-color: rgb(203 213 225);
+}
+
+.button-secondary:hover:not(:disabled) {
+  background-color: rgb(248 250 252);
+}
+
+.button-danger {
+  color: white;
+  background-color: rgb(220 38 38);
+  border-color: rgb(220 38 38);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.button-danger:hover:not(:disabled) {
+  background-color: rgb(185 28 28);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
+}
+
+.button-warning {
+  color: white;
+  background-color: rgb(217 119 6);
+  border-color: rgb(217 119 6);
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
+}
+
+.button-warning:hover:not(:disabled) {
+  background-color: rgb(180 83 9);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.6);
+}
+
+.button-success {
+  color: white;
+  background-color: rgb(34 197 94);
+  border-color: rgb(34 197 94);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+}
+
+.button-success:hover:not(:disabled) {
+  background-color: rgb(22 163 74);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* 加载状态 */
+.loading-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .modal-container {
+    margin: 0.5rem;
+    max-height: 95vh;
+  }
+
+  .modal-header,
+  .modal-content {
+    padding: 1.5rem;
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+  }
+
+  .api-key-input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .button {
+    width: 100%;
+  }
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* 焦点样式 */
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 4px rgba(67, 56, 202, 0.5);
+  border-radius: 0.5rem;
+}

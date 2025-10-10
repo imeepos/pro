@@ -841,6 +841,9 @@ importers:
       '@angular/core':
         specifier: ^20.0.0
         version: 20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1)
+      '@angular/forms':
+        specifier: ^20.0.0
+        version: 20.3.4(@angular/common@20.3.4(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@20.3.4(@angular/animations@20.3.4(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1)))(@angular/common@20.3.4(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1)))(rxjs@7.8.2)
       ng-packagr:
         specifier: ^20.0.0
         version: 20.3.0(@angular/compiler-cli@20.3.4(@angular/compiler@20.3.4)(typescript@5.8.3))(tailwindcss@4.1.14)(tslib@2.8.1)(typescript@5.8.3)
@@ -17524,15 +17527,6 @@ snapshots:
     optionalDependencies:
       esbuild: 0.25.9
 
-  terser-webpack-plugin@5.3.14(webpack@5.101.2):
-    dependencies:
-      '@jridgewell/trace-mapping': 0.3.31
-      jest-worker: 27.5.1
-      schema-utils: 4.3.3
-      serialize-javascript: 6.0.2
-      terser: 5.44.0
-      webpack: 5.101.2
-
   terser-webpack-plugin@5.3.14(webpack@5.97.1):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
@@ -17705,7 +17699,7 @@ snapshots:
       semver: 7.7.2
       source-map: 0.7.4
       typescript: 5.4.5
-      webpack: 5.101.2
+      webpack: 5.101.2(esbuild@0.25.9)
 
   ts-node@10.9.2(@types/node@20.19.19)(typescript@5.4.5):
     dependencies:
@@ -18085,38 +18079,6 @@ snapshots:
     dependencies:
       typed-assert: 1.0.9
       webpack: 5.101.2(esbuild@0.25.9)
-
-  webpack@5.101.2:
-    dependencies:
-      '@types/eslint-scope': 3.7.7
-      '@types/estree': 1.0.8
-      '@types/json-schema': 7.0.15
-      '@webassemblyjs/ast': 1.14.1
-      '@webassemblyjs/wasm-edit': 1.14.1
-      '@webassemblyjs/wasm-parser': 1.14.1
-      acorn: 8.15.0
-      acorn-import-phases: 1.0.4(acorn@8.15.0)
-      browserslist: 4.26.3
-      chrome-trace-event: 1.0.4
-      enhanced-resolve: 5.18.3
-      es-module-lexer: 1.7.0
-      eslint-scope: 5.1.1
-      events: 3.3.0
-      glob-to-regexp: 0.4.1
-      graceful-fs: 4.2.11
-      json-parse-even-better-errors: 2.3.1
-      loader-runner: 4.3.0
-      mime-types: 2.1.35
-      neo-async: 2.6.2
-      schema-utils: 4.3.3
-      tapable: 2.3.0
-      terser-webpack-plugin: 5.3.14(webpack@5.101.2)
-      watchpack: 2.4.4
-      webpack-sources: 3.3.3
-    transitivePeerDependencies:
-      - '@swc/core'
-      - esbuild
-      - uglify-js
 
   webpack@5.101.2(esbuild@0.25.9):
     dependencies:

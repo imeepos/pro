@@ -1,0 +1,138 @@
+/* 确保动画正确导入 */
+@keyframes gridMove {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  25% { transform: translateY(-20px) translateX(10px); }
+  50% { transform: translateY(10px) translateX(-10px); }
+  75% { transform: translateY(-10px) translateX(20px); }
+}
+
+@keyframes cardEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* 主容器样式 */
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-5 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 表格容器滚动 */
+.overflow-x-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background-color: rgb(203 213 225);
+  border-radius: 3px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(148 163 184);
+}
+
+/* 按钮悬停效果增强 */
+button {
+  will-change: transform;
+}
+
+button:active {
+  transform: translateY(0) !important;
+}
+
+/* 输入框焦点效果优化 */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+/* 卡片内容过渡效果 */
+.bg-white\/95 {
+  transition: all 0.3s ease;
+}
+
+.bg-white\/95:hover {
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
+}
+
+/* 状态徽章动画 */
+.status-badge {
+  transition: all 0.2s ease;
+}
+
+.status-badge:hover {
+  transform: scale(1.05);
+}
+
+/* 加载动画优化 */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 错误状态动画 */
+.error-message {
+  animation: errorShake 0.3s ease;
+}
+
+/* 成功提示动画 */
+.success-message {
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

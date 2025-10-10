@@ -1,0 +1,228 @@
+/* 统计卡片样式 */
+.stats-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.stats-card:hover:before {
+  left: 100%;
+}
+
+.stats-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
+}
+
+/* 图标容器 */
+.icon-container {
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover .icon-container {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* 进度条动画 */
+.progress-bar {
+  transition: width 0.8s ease;
+}
+
+/* 健康度圆环 */
+.health-circle {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.health-ring {
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.health-ring:hover {
+  transform: scale(1.05);
+}
+
+/* 分发条形图 */
+.distribution-bar {
+  transition: width 0.6s ease;
+}
+
+/* 详细面板动画 */
+.detail-panel {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 数值变化动画 */
+.value-change {
+  animation: valueUpdate 0.5s ease;
+}
+
+@keyframes valueUpdate {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* 徽章样式 */
+.grade-badge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* 趋势指示器 */
+.trend-indicator {
+  transition: all 0.2s ease;
+}
+
+.trend-up {
+  color: rgb(22 163 74);
+}
+
+.trend-down {
+  color: rgb(239 68 68);
+}
+
+/* 警告卡片 */
+.warning-card {
+  animation: warningPulse 2s infinite;
+}
+
+@keyframes warningPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
+/* 刷新按钮 */
+.refresh-button {
+  transition: all 0.3s ease;
+}
+
+.refresh-button:hover {
+  transform: rotate(180deg);
+}
+
+.refresh-button.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .stats-card {
+    transform: none;
+  }
+
+  .stats-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .detail-panel {
+    padding: 1rem;
+  }
+
+  .health-circle {
+    transform: scale(0.8);
+  }
+}
+
+/* 悬浮效果 */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* 渐变背景动画 */
+.gradient-shift {
+  background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 卡片内容动画 */
+.card-content {
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover .card-content {
+  transform: translateY(-2px);
+}
+
+/* 数据加载骨架屏 */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* 数值高亮 */
+.highlight-value {
+  position: relative;
+}
+
+.highlight-value::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.stats-card:hover .highlight-value::after {
+  transform: scaleX(1);
+}
