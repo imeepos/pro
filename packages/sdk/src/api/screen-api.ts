@@ -29,7 +29,7 @@ export class ScreenApi {
    */
   async getScreens(page = 1, limit = 20): Promise<ScreenListResponse> {
     const response = await this.httpClient.get<ScreenApiResponse<ScreenListResponse>>(
-      '/screens',
+      '/api/screens',
       { page: page.toString(), limit: limit.toString() }
     );
 
@@ -49,7 +49,7 @@ export class ScreenApi {
    * @returns 屏幕详情
    */
   async getScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.get<ScreenApiResponse<ScreenPage>>(`/screens/${id}`);
+    const response = await this.httpClient.get<ScreenApiResponse<ScreenPage>>(`/api/screens/${id}`);
 
     if (!response.success || !response.data) {
       throw new Error('API返回数据格式错误');
@@ -64,7 +64,7 @@ export class ScreenApi {
    * @returns 创建的屏幕详情
    */
   async createScreen(dto: CreateScreenDto): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>('/screens', dto);
+    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>('/api/screens', dto);
 
     if (!response.success || !response.data) {
       throw new Error('API返回数据格式错误');
@@ -80,7 +80,7 @@ export class ScreenApi {
    * @returns 更新后的屏幕详情
    */
   async updateScreen(id: string, dto: UpdateScreenDto): Promise<ScreenPage> {
-    const response = await this.httpClient.put<ScreenApiResponse<ScreenPage>>(`/screens/${id}`, dto);
+    const response = await this.httpClient.put<ScreenApiResponse<ScreenPage>>(`/api/screens/${id}`, dto);
 
     if (!response.success || !response.data) {
       throw new Error('API返回数据格式错误');
@@ -94,7 +94,7 @@ export class ScreenApi {
    * @param id 屏幕ID
    */
   async deleteScreen(id: string): Promise<void> {
-    await this.httpClient.delete<void>(`/screens/${id}`);
+    await this.httpClient.delete<void>(`/api/screens/${id}`);
   }
 
   /**
@@ -103,7 +103,7 @@ export class ScreenApi {
    * @returns 复制后的屏幕详情
    */
   async copyScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>(`/screens/${id}/copy`, {});
+    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>(`/api/screens/${id}/copy`, {});
 
     if (!response.success || !response.data) {
       throw new Error('API返回数据格式错误');
@@ -118,7 +118,7 @@ export class ScreenApi {
    * @returns 发布后的屏幕详情
    */
   async publishScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>(`/screens/${id}/publish`, {});
+    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>(`/api/screens/${id}/publish`, {});
 
     if (!response.success || !response.data) {
       throw new Error('API返回数据格式错误');
@@ -133,7 +133,7 @@ export class ScreenApi {
    * @returns 草稿状态的屏幕详情
    */
   async draftScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>(`/screens/${id}/draft`, {});
+    const response = await this.httpClient.post<ScreenApiResponse<ScreenPage>>(`/api/screens/${id}/draft`, {});
 
     if (!response.success || !response.data) {
       throw new Error('API返回数据格式错误');
@@ -148,7 +148,7 @@ export class ScreenApi {
    * @returns 设置为默认后的屏幕详情
    */
   async setDefaultScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.put<ScreenApiResponse<ScreenPage>>(`/screens/default/${id}`, {});
+    const response = await this.httpClient.put<ScreenApiResponse<ScreenPage>>(`/api/screens/default/${id}`, {});
 
     if (!response.success || !response.data) {
       throw new Error('API返回数据格式错误');
@@ -162,7 +162,7 @@ export class ScreenApi {
    * @returns 默认屏幕详情
    */
   async getDefaultScreen(): Promise<ScreenPage> {
-    const response = await this.httpClient.get<ScreenApiResponse<ScreenPage>>('/screens/default');
+    const response = await this.httpClient.get<ScreenApiResponse<ScreenPage>>('/api/screens/default');
 
     if (!response.success || !response.data) {
       throw new Error('API返回数据格式错误');

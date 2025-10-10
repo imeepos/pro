@@ -22,7 +22,7 @@ export class WeiboSearchTasksApi {
     // 如果没有提供 baseUrl，使用 getApiUrl() 获取基础 URL
     const baseApiUrl = baseUrl || getApiUrl();
     this.http = new HttpClient(baseApiUrl);
-    this.baseUrl = '/weibo-search-tasks';
+    this.baseUrl = '/api/weibo-search-tasks';
   }
 
   /**

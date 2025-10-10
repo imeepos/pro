@@ -20,7 +20,7 @@ export class WeiboApi {
    */
   getLoggedInUsersStats(): Observable<LoggedInUsersStats> {
     return new Observable<LoggedInUsersStats>((subscriber) => {
-      this.http.get<LoggedInUsersStats>('/weibo/logged-in-users/stats')
+      this.http.get<LoggedInUsersStats>('/api/weibo/logged-in-users/stats')
         .then((data) => {
           subscriber.next(data);
           subscriber.complete();
