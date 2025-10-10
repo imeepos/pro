@@ -152,17 +152,19 @@ export class WeiboSearchCrawlerService {
     return `${this.weiboConfig.searchUrl}?q=${encodedKeyword}&timescope=custom:${startTime}:${endTime}&page=${page}`;
   }
 
-  private formatDateForWeibo(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hour = String(date.getHours()).padStart(2, '0');
+  private formatDateForWeibo(date: Date | string): string {
+    const d = date instanceof Date ? date : new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hour = String(d.getHours()).padStart(2, '0');
 
     return `${year}-${month}-${day}-${hour}`;
   }
 
-  private formatDate(date: Date): string {
-    return date.toISOString().split('T')[0];
+  private formatDate(date: Date | string): string {
+    const d = date instanceof Date ? date : new Date(date);
+    return d.toISOString().split('T')[0];
   }
 
   private async getPageHtml(page: Page, url: string): Promise<string> {
