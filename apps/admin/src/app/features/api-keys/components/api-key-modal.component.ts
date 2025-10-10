@@ -4,7 +4,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { ApiKey, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyRegenerationResponse } from '@pro/sdk';
-import { ApiKeyService } from '../../services/api-key.service';
+import { ApiKeyService } from '../services/api-key.service';
 import { ApiKeyFormComponent } from './api-key-form.component';
 
 export type ModalMode = 'create' | 'edit' | 'delete' | 'regenerate';

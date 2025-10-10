@@ -4,7 +4,7 @@ import { Observable, Subject, of } from 'rxjs';
 import { takeUntil, catchError, map } from 'rxjs/operators';
 
 import { ApiKeyStats, ApiKeyUsageStats, ApiKey } from '@pro/sdk';
-import { ApiKeyService } from '../../services/api-key.service';
+import { ApiKeyService } from '../services/api-key.service';
 
 @Component({
   selector: 'app-api-key-stats',
