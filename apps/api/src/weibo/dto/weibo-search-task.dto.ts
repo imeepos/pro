@@ -191,11 +191,13 @@ export class ResumeTaskDto {
  */
 export class QueryTaskDto {
   @IsOptional()
+  @Type(() => Number)
   @IsInt({ message: '页码必须是整数' })
   @Min(1, { message: '页码必须大于0' })
   page?: number = 1;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt({ message: '每页数量必须是整数' })
   @Min(1, { message: '每页数量必须大于0' })
   @Max(100, { message: '每页数量不能超过100' })
@@ -213,6 +215,7 @@ export class QueryTaskDto {
   status?: WeiboSearchTaskStatus;
 
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean({ message: '启用状态筛选必须是布尔值' })
   enabled?: boolean;
 

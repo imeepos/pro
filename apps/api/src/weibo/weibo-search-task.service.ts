@@ -117,7 +117,18 @@ export class WeiboSearchTaskService {
 
     // 排序（转换为大写）
     const order = (sortOrder?.toUpperCase() || 'DESC') as 'ASC' | 'DESC';
-    queryBuilder.orderBy(`task.${sortBy}`, order);
+
+    // 字段映射：将前端字段名映射到数据库列名
+    const sortFieldMap: Record<string, string> = {
+      'createdAt': 'created_at',
+      'updatedAt': 'updated_at',
+      'startDate': 'start_date',
+      'nextRunAt': 'next_run_at',
+      'progress': 'progress'
+    };
+
+    const dbFieldName = sortFieldMap[sortBy || 'createdAt'] || 'created_at';
+    queryBuilder.orderBy(`task.${dbFieldName}`, order);
 
     // 分页
     const offset = (page - 1) * limit;
