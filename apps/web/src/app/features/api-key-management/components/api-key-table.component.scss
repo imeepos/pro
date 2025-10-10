@@ -4,7 +4,7 @@ tbody tr { @apply transition-colors; }
 
 .status-badge, .type-badge { @apply transition-transform hover:scale-105; }
 .actions-group { @apply flex items-center gap-1; }
-.action-button { @apply transition-all relative overflow-hidden; }
+.action-button { @apply transition-all; }
 
 .api-key-display { @apply font-mono text-xs bg-slate-100 px-2 py-1 rounded transition-colors hover:bg-slate-200; }
 .visibility-button, .copy-button { @apply transition-transform hover:scale-110; }
