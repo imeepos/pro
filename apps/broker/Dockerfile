@@ -7,8 +7,8 @@ ARG BUILD_FROM_BASE=node:20-alpine
 FROM $BUILD_FROM_BASE AS base
 
 # 创建非 root 用户（修复权限问题）
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
+RUN (getent group nodejs >/dev/null 2>&1 || addgroup -g 1001 -S nodejs) && \
+    (id nestjs >/dev/null 2>&1 || adduser -S nestjs -u 1001)
 
 # 安装 pnpm（全局，可被后续阶段复用）
 RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
@@ -145,8 +145,8 @@ RUN corepack enable && corepack prepare pnpm@10.18.1 --activate && \
     apk add --no-cache dumb-init
 
 # 创建非 root 用户（安全最佳实践）
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
+RUN (getent group nodejs >/dev/null 2>&1 || addgroup -g 1001 -S nodejs) && \
+    (id nestjs >/dev/null 2>&1 || adduser -S nestjs -u 1001)
 
 # 设置工作目录
 WORKDIR /app
