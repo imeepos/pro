@@ -146,7 +146,7 @@
             class="form-input"
             [(ngModel)]="newKey.expiresAt"
             name="expiresAt"
-            min="{{ new Date().toISOString().split('T')[0] }}">
+            [min]="today">
         </div>
       </form>
 
