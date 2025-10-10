@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { Observable, BehaviorSubject, from, of, EMPTY } from 'rxjs';
 import { catchError, map, shareReplay, take } from 'rxjs/operators';
 import { SkerSDK } from '@pro/sdk';
-import { getApiUrl } from '@pro/config';
 import { environment } from '../../../environments/environment';
 
 interface CachedConfig {
@@ -23,7 +22,7 @@ export class ConfigService {
   );
 
   constructor() {
-    this.sdk = new SkerSDK(getApiUrl());
+    this.sdk = new SkerSDK(environment.apiUrl);
 
     // 如果环境变量中有有效的API Key，则使用它作为初始值
     const envApiKey = environment.amapApiKey || '';

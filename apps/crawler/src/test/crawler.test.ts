@@ -5,6 +5,7 @@ import { BrowserService } from '../browser/browser.service';
 import { RawDataService } from '../raw-data/raw-data.service';
 import { ConfigService } from '@nestjs/config';
 import { CrawlerConfig, RabbitMQConfig, WeiboConfig } from '../config/crawler.interface';
+import { WeiboAccountStatus } from '../entities/weibo-account.entity';
 
 describe('WeiboSearchCrawlerService', () => {
   let service: WeiboSearchCrawlerService;
@@ -164,7 +165,7 @@ describe('WeiboSearchCrawlerService', () => {
         id: 1,
         nickname: 'test',
         cookies: [],
-        status: 'active',
+        status: WeiboAccountStatus.ACTIVE,
         usageCount: 0
       });
 

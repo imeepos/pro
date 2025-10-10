@@ -9,7 +9,7 @@ type Environment = 'development' | 'production' | 'test';
 
 const configs: Record<Environment, IEnvironmentConfig> = {
   development: {
-    apiBaseUrl: 'http://localhost:3000/api',
+    apiBaseUrl: 'http://localhost:3000',
     tokenKey: 'access_token',
     refreshTokenKey: 'refresh_token',
     timeout: 30000,
@@ -38,8 +38,11 @@ const currentEnv = (): Environment => {
 
   // 在浏览器环境中，检查是否有其他方式确定环境
   // 默认使用 development，除非明确设置为 production
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'development';
+  if (typeof window !== 'undefined') {
+    // 检查是否在生产环境（通过hostname或其他方式）
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return 'production';
+    }
   }
 
   return 'development';

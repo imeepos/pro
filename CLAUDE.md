@@ -2,6 +2,9 @@ use Chinese language!
 use pnpm workspace!
 use code-artisan agent do anything! 
 
+你是一个任务规划专家，擅长将复杂任务拆分成有依赖关系的子任务，规划哪些可以并行执行，需要哪些前置任务，拆分之前，先搜集资料，切勿重复造轮子，使用全文搜索工具，检查有无可用的基础设施，
+在此基础上，尽量复用之前的成果，合理规划，对于简单任务禁止使用sub agent，对于复杂任务必须使用sub agent，如果只有一个任务 那就每笔要 sub agent了。
+
 ## 先完成依赖：
 
 A任务依赖B任务，那么就要先做B任务，B任务完成后才能做A任务

@@ -1,13 +1,14 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
+import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
-import { firstValueFrom } from 'rxjs';
+import { Repository } from 'typeorm';
+import { WeiboAccountEntity, WeiboAccountStatus } from '../entities/weibo-account.entity';
 
 export interface WeiboAccount {
   id: number;
   nickname: string;
   cookies: any[];
-  status: 'active' | 'banned' | 'expired';
+  status: WeiboAccountStatus;
   usageCount: number;
   lastUsedAt?: Date;
 }
@@ -25,73 +26,59 @@ export class WeiboAccountService implements OnModuleInit {
   private readonly logger = new Logger(WeiboAccountService.name);
   private accounts: Map<number, WeiboAccount> = new Map();
   private currentIndex = 0;
-  private apiUrl: string;
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly httpService: HttpService,
-  ) {
-    this.apiUrl = this.configService.get<string>('API_URL', 'http://api:3000');
-  }
+    @InjectRepository(WeiboAccountEntity)
+    private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
+  ) {}
 
   async onModuleInit() {
     this.logger.log('微博账号服务初始化中...');
-    await this.loadAccountsFromApi();
+    await this.loadAccountsFromDatabase();
     this.logger.log(`微博账号服务初始化完成，加载了 ${this.accounts.size} 个账号`);
   }
 
   /**
-   * 从API服务加载微博账号
+   * 从数据库加载微博账号
    */
-  private async loadAccountsFromApi(): Promise<void> {
+  private async loadAccountsFromDatabase(): Promise<void> {
     try {
-      this.logger.debug(`从 ${this.apiUrl} 获取微博账号列表`);
+      this.logger.debug('从数据库获取微博账号列表');
 
-      // 使用内部接口获取包含cookies的完整账号信息
-      const response = await firstValueFrom(
-        this.httpService.post<{accounts: ApiWeiboAccount[]}>(
-          `${this.apiUrl}/weibo/internal/accounts/with-cookies`,
-          {},
-          {
-            timeout: 10000,
-            headers: {
-              'X-Internal-Service': 'crawler',
-              'Authorization': `Bearer ${this.configService.get<string>('INTERNAL_API_TOKEN', 'internal-token')}`
-            }
-          }
-        )
-      );
+      // 查询所有active状态的微博账号
+      const dbAccounts = await this.weiboAccountRepo.find({
+        where: { status: WeiboAccountStatus.ACTIVE },
+        order: { lastCheckAt: 'ASC' }, // 优先使用最近检查过的账号
+      });
 
-      const apiAccounts = response.data.accounts || [];
       this.accounts.clear();
 
-      for (const apiAccount of apiAccounts) {
+      for (const dbAccount of dbAccounts) {
         let cookies = [];
         try {
-          cookies = JSON.parse(apiAccount.cookies);
+          cookies = JSON.parse(dbAccount.cookies);
         } catch (error) {
-          this.logger.warn(`解析账号 ${apiAccount.id} 的cookies失败:`, error.message);
+          this.logger.warn(`解析账号 ${dbAccount.id} 的cookies失败:`, error.message);
           continue;
         }
 
-        // 只加载active状态的账号
-        if (apiAccount.status === 'active') {
-          this.accounts.set(apiAccount.id, {
-            id: apiAccount.id,
-            nickname: apiAccount.weiboNickname || `账号${apiAccount.id}`,
-            cookies,
-            status: apiAccount.status as any,
-            usageCount: 0,
-            lastUsedAt: undefined
-          });
-        }
+        this.accounts.set(dbAccount.id, {
+          id: dbAccount.id,
+          nickname: dbAccount.weiboNickname || `账号${dbAccount.id}`,
+          cookies,
+          status: dbAccount.status,
+          usageCount: 0,
+          lastUsedAt: undefined
+        });
       }
 
-      this.logger.log(`成功加载 ${this.accounts.size} 个active状态的微博账号`);
+      this.logger.log(`成功从数据库加载 ${this.accounts.size} 个active状态的微博账号`);
     } catch (error) {
-      this.logger.error('从API加载微博账号失败:', error.message);
+      this.logger.error('从数据库加载微博账号失败:', error.message);
+      this.logger.error('数据库连接错误:', error.stack);
 
-      // 如果API失败，尝试从环境变量加载（fallback）
+      // 如果数据库连接失败，尝试从环境变量加载（fallback）
       this.loadAccountsFromEnv();
     }
   }
@@ -135,7 +122,7 @@ export class WeiboAccountService implements OnModuleInit {
    */
   async refreshAccounts(): Promise<void> {
     this.logger.log('刷新微博账号列表...');
-    await this.loadAccountsFromApi();
+    await this.loadAccountsFromDatabase();
   }
 
   async getAvailableAccount(accountId?: number): Promise<WeiboAccount | null> {
@@ -178,26 +165,17 @@ export class WeiboAccountService implements OnModuleInit {
   async markAccountBanned(accountId: number): Promise<void> {
     const account = this.accounts.get(accountId);
     if (account) {
-      account.status = 'banned';
+      account.status = WeiboAccountStatus.BANNED;
       this.logger.warn(`标记账号 ${account.nickname} (ID: ${accountId}) 为banned状态`);
 
-      // 通知API服务更新账号状态
+      // 直接更新数据库
       try {
-        await firstValueFrom(
-          this.httpService.post(
-            `${this.apiUrl}/weibo/internal/accounts/${accountId}/mark-banned`,
-            {},
-            {
-              headers: {
-                'X-Internal-Service': 'crawler',
-                'Authorization': `Bearer ${this.configService.get<string>('INTERNAL_API_TOKEN', 'internal-token')}`
-              }
-            }
-          )
-        );
-        this.logger.debug(`已通知API服务标记账号 ${accountId} 为banned状态`);
+        await this.weiboAccountRepo.update(accountId, {
+          status: WeiboAccountStatus.BANNED
+        });
+        this.logger.debug(`已更新数据库中账号 ${accountId} 为banned状态`);
       } catch (error) {
-        this.logger.error(`通知API服务标记账号 ${accountId} 失败:`, error.message);
+        this.logger.error(`更新数据库标记账号 ${accountId} 失败:`, error.message);
       }
     }
   }

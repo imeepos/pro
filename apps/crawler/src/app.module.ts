@@ -4,6 +4,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { WeiboAccountEntity } from './entities/weibo-account.entity';
 import { WeiboAccountService } from './weibo/account.service';
 import { BrowserService } from './browser/browser.service';
 import { WeiboSearchCrawlerService } from './weibo/search-crawler.service';
@@ -18,6 +20,30 @@ import { defaultCrawlerConfig, defaultRabbitMQConfig, defaultMongoDBConfig, defa
       isGlobal: true,
       envFilePath: ['.env', '.env.local']
     }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
+        const host = configService.get<string>('POSTGRES_HOST', 'localhost');
+        const port = configService.get<number>('POSTGRES_PORT', 5432);
+        const username = configService.get<string>('POSTGRES_USER', 'postgres');
+        const password = configService.get<string>('POSTGRES_PASSWORD', 'postgres123');
+        const database = configService.get<string>('POSTGRES_DATABASE', 'pro');
+
+        return {
+          type: 'postgres',
+          host,
+          port,
+          username,
+          password,
+          database,
+          entities: [WeiboAccountEntity],
+          synchronize: false,
+          logging: configService.get<string>('NODE_ENV') === 'development' ? true : false,
+        };
+      }
+    }),
+    TypeOrmModule.forFeature([WeiboAccountEntity]),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
