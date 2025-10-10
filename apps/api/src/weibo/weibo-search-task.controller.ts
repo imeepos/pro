@@ -12,8 +12,10 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  SetMetadata,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiKeyAuthGuard } from '../auth/guards/api-key-auth.guard';
 import { WeiboSearchTaskService } from './weibo-search-task.service';
 import {
   CreateWeiboSearchTaskDto,
@@ -51,6 +53,7 @@ export class WeiboSearchTaskController {
    * 获取微博搜索任务列表
    */
   @Get()
+  @UseGuards(JwtAuthGuard)
   async findAll(@Request() req, @Query() query: QueryTaskDto) {
     const userId = req.user.userId;
     const result = await this.taskService.findAll(userId, query);
@@ -207,6 +210,42 @@ export class WeiboSearchTaskController {
       success: true,
       data: statusOptions,
       message: '获取状态选项成功',
+    };
+  }
+
+  /**
+   * 测试专用：获取微博搜索任务列表（支持API Key认证）
+   */
+  @Get('test/list')
+  @UseGuards(ApiKeyAuthGuard)
+  async testFindAll(@Request() req, @Query() query: QueryTaskDto) {
+    const userId = req.user.userId;
+    const result = await this.taskService.findAll(userId, query);
+
+    // 计算总页数
+    const totalPages = Math.ceil(result.total / result.limit);
+
+    return {
+      data: result.tasks,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages,
+    };
+  }
+
+  /**
+   * 测试专用：获取单个微博搜索任务详情（支持API Key认证）
+   */
+  @Get('test/:id')
+  @UseGuards(ApiKeyAuthGuard)
+  async testFindOne(@Request() req, @Param('id', ParseIntPipe) id: number) {
+    const userId = req.user.userId;
+    const task = await this.taskService.findOne(userId, id);
+    return {
+      success: true,
+      data: task,
+      message: '获取任务详情成功',
     };
   }
 }

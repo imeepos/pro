@@ -11,6 +11,7 @@ import { WeiboHealthCheckScheduler } from './weibo-health-check.scheduler';
 import { WeiboSearchTaskController } from './weibo-search-task.controller';
 import { WeiboSearchTaskService } from './weibo-search-task.service';
 import { ScreensModule } from '../screens/screens.module';
+import { AuthModule } from '../auth/auth.module';
 
 /**
  * 微博模块
@@ -24,6 +25,7 @@ import { ScreensModule } from '../screens/screens.module';
     ]),
     ScheduleModule.forRoot(),
     forwardRef(() => ScreensModule),
+    AuthModule,
   ],
   controllers: [
     WeiboController,
