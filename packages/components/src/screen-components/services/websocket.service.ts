@@ -15,13 +15,9 @@ export class WebSocketService {
   private readonly wsUrl: string;
   private config: WebSocketConfig | null = null;
 
-  constructor(apiUrl?: string) {
-    // 使用传入的API URL或默认值
-    if (apiUrl) {
-      this.wsUrl = apiUrl.replace('/api', '');
-    } else {
-      this.wsUrl = 'http://localhost:3000';
-    }
+  constructor() {
+    // 使用默认URL，项目可以在需要时重写
+    this.wsUrl = 'http://localhost:3000';
   }
 
   connect(token?: string): void {

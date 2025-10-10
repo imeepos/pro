@@ -365,11 +365,11 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     this.sdk.weibo.getLoggedInUsersStats().pipe(
       takeUntil(this.destroy$)
     ).subscribe({
-      next: (stats) => {
+      next: (stats: any) => {
         this.updateStats(stats);
         this.isLoading = false;
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('获取微博用户统计数据失败:', error);
         if (this.config.showErrorHandling) {
           this.errorMessage = '数据加载失败';
