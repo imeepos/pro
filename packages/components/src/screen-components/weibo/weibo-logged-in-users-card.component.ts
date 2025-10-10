@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval, Observable } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
