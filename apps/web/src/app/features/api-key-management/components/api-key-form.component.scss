@@ -4,7 +4,6 @@
   margin: 0 auto;
 }
 
-/* 表单标题 */
 .form-title {
   @apply text-center mb-6;
 }
@@ -43,13 +42,7 @@
 .form-input,
 .form-textarea,
 .form-select {
-  @apply w-full px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 placeholder:text-slate-400 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)];
-}
-
-.form-input:focus,
-.form-textarea:focus,
-.form-select:focus {
-  @apply border-primary shadow-[0_0_0_4px_rgba(102,126,234,0.1)];
+  @apply w-full px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white text-slate-800 placeholder:text-slate-400 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)] transition-all;
 }
 
 .form-input.error,
@@ -62,17 +55,14 @@
   @apply resize-none;
 }
 
-/* 错误信息 */
 .error-message {
   @apply text-xs text-red-500 min-h-[16px];
 }
 
-/* 帮助文本 */
 .help-text {
   @apply text-xs text-slate-500;
 }
 
-/* 字符计数 */
 .char-count {
   @apply text-xs text-slate-500 text-right;
 }
@@ -83,7 +73,7 @@
 }
 
 .radio-card {
-  @apply relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200;
+  @apply relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all;
 }
 
 .radio-card.selected {
@@ -103,7 +93,7 @@
 }
 
 .radio-indicator {
-  @apply w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center transition-all duration-200;
+  @apply w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center transition-all;
 }
 
 .radio-indicator.selected {
@@ -164,11 +154,7 @@
 }
 
 .checkbox-label {
-  @apply text-slate-700;
-}
-
-.checkbox-label-medium {
-  @apply font-medium;
+  @apply text-slate-700 font-medium;
 }
 
 /* 信息提示 */
@@ -207,7 +193,7 @@
 }
 
 .btn {
-  @apply px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-200;
+  @apply px-6 py-2.5 text-sm font-medium rounded-lg transition-all;
 }
 
 .btn-secondary {
@@ -222,83 +208,22 @@
   @apply opacity-60 cursor-not-allowed transform-none;
 }
 
-/* 加载状态 */
 .loading-spinner {
   @apply inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .radio-group {
-    @apply grid-cols-1;
-  }
-
   .checkbox-group {
     @apply grid-cols-1;
   }
-
   .datetime-group {
     @apply flex-col gap-2;
   }
-
   .button-group {
     @apply flex-col gap-2;
   }
-
   .btn {
     @apply w-full;
   }
-}
-
-/* 动画效果 */
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.form-section {
-  animation: slideIn 0.3s ease-out;
-}
-
-/* 焦点效果 */
-.focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
-}
-
-/* 过渡效果 */
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
-}
-
-/* 悬停效果 */
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* 自定义滚动条 */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
 }
