@@ -31,7 +31,7 @@ export class WeiboAccountEntity {
   id: number;
 
   @Index()
-  @Column({ type: 'varchar', name: 'user_id' })
+  @Column({ type: 'varchar', length: 255, name: 'user_id' })
   userId: string;
 
   @Column({ type: 'varchar', length: 50, name: 'weibo_uid' })

@@ -1,7 +1,7 @@
 use Chinese language!
 use pnpm workspace!
 use code-artisan agent do anything! 
-
+use tailwind not css/sass/less!
 
 ## 三思而后行：
 
