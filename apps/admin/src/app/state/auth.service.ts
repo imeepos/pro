@@ -1,27 +1,25 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError, finalize } from 'rxjs';
 import { AuthStore } from './auth.store';
 import { AuthQuery } from './auth.query';
-import { AuthApiService } from '../core/services/auth-api.service';
+import { SkerSDK } from '@pro/sdk';
 import { TokenStorageService } from '../core/services/token-storage.service';
 import { LoginDto, RegisterDto, AuthResponse } from '@pro/types';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  constructor(
-    private store: AuthStore,
-    private query: AuthQuery,
-    private authApi: AuthApiService,
-    private tokenStorage: TokenStorageService,
-    private router: Router
-  ) {}
+  private sdk = inject(SkerSDK);
+  private store = inject(AuthStore);
+  private query = inject(AuthQuery);
+  private tokenStorage = inject(TokenStorageService);
+  private router = inject(Router);
 
   login(dto: LoginDto): Observable<AuthResponse> {
     this.setLoading(true);
     this.setError(null);
 
-    return this.authApi.login(dto).pipe(
+    return this.sdk.auth.login(dto).pipe(
       tap(response => {
         const actualResponse = (response as any).data || response;
         this.handleAuthSuccess(actualResponse);
@@ -38,7 +36,7 @@ export class AuthService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.authApi.register(dto).pipe(
+    return this.sdk.auth.register(dto).pipe(
       tap(response => {
         this.handleAuthSuccess(response);
       }),
@@ -53,7 +51,7 @@ export class AuthService {
   logout(): void {
     this.setLoading(true);
 
-    this.authApi.logout().subscribe({
+    this.sdk.auth.logout().subscribe({
       complete: () => {
         this.handleLogout();
       },
