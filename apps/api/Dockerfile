@@ -162,10 +162,12 @@ COPY --from=packages --chown=nestjs:nodejs /app/bun.lock ./
 COPY --from=packages --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=packages --chown=nestjs:nodejs /app/packages ./packages
 
-# 从 builder 复制 api 应用依赖和构建产物
+# 从 builder 复制 api 应用构建产物
 COPY --from=builder --chown=nestjs:nodejs /app/apps/api/package.json ./apps/api/
-COPY --from=builder --chown=nestjs:nodejs /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./apps/api/dist
+
+# 在生产镜像中重新安装依赖以确保 Node.js 兼容性
+RUN --chown=nestjs:nodejs npm install --prefix ./apps/api
 
 # 安装 Playwright Chromium 浏览器
 RUN npx playwright install chromium
