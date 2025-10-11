@@ -5,7 +5,9 @@ WORKDIR /app
 
 # 安装 bun
 RUN apk add --no-cache curl bash \
-    && curl -fsSL https://bun.sh/install | bash
+    && curl -fsSL https://bun.sh/install | bash \
+    && export BUN_INSTALL="$HOME/.bun" \
+    && export PATH="$BUN_INSTALL/bin:$PATH"
 
 # 复制依赖文件
 COPY package.json bun.lock ./
@@ -14,14 +16,18 @@ COPY packages ./packages
 
 # 安装依赖
 RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
-    bun install
+    export BUN_INSTALL="$HOME/.bun" \
+    && export PATH="$BUN_INSTALL/bin:$PATH" \
+    && bun install
 
 # 复制源码并构建
 COPY apps/admin ./apps/admin
 ARG AMAP_API_KEY
 ENV AMAP_API_KEY=${AMAP_API_KEY:-YOUR_AMAP_KEY}
 RUN echo "AMAP_API_KEY=${AMAP_API_KEY}" >> apps/admin/.env.production
-RUN bun --filter @pro/admin build
+RUN export BUN_INSTALL="$HOME/.bun" \
+    && export PATH="$BUN_INSTALL/bin:$PATH" \
+    && bun --filter @pro/admin build
 
 # 第二阶段：运行
 FROM nginx:alpine
