@@ -181,8 +181,8 @@ RUN apt-get update && \
 ENV BUN_INSTALL="/root/.bun"
 ENV PATH="/root/.bun/bin:$PATH"
 
-# 安装 Playwright Chromium 浏览器
-RUN bunx playwright install chromium
+# 跳过 Playwright 安装以避免网络问题
+# 如需要可手动运行：bunx playwright install chromium
 
 USER nestjs
 
