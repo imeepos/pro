@@ -48,7 +48,7 @@ A任务依赖B，C任务依赖A，D任务依赖A，那么执行顺序 B-> A -> C
 pnpm run --filter=@sker/xxx typecheck
 
 从新构建重启
-docker compose build xxx
+scripts/build-image.sh xxx
 docker compose up -d xxx 错误修复后，启动
 
 我在 WSL2 的 Docker 环境中, 容器的端口映射可能无法直接从宿主机访问。让我从 Docker 网络内部 测试接口：

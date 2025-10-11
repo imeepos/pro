@@ -53,7 +53,7 @@ COPY --chown=nestjs:nodejs apps/broker/package.json ./apps/broker/
 # 安装 broker 应用依赖
 RUN --mount=type=cache,id=bun-broker-dev,target=/root/.bun/install/cache \
     echo "📦 安装 @pro/broker 依赖..." && \
-    bun install --frozen-lockfile
+    bun install
 
 # 暴露端口
 EXPOSE 3003
@@ -94,7 +94,7 @@ COPY --chown=nestjs:nodejs apps/broker/package.json ./apps/broker/
 # 安装 broker 应用依赖
 RUN --mount=type=cache,id=bun-broker-builder,target=/root/.bun/install/cache \
     echo "📦 安装 @pro/broker 依赖..." && \
-    bun install --frozen-lockfile
+    bun install
 
 # 复制 broker 应用源码
 COPY --chown=nestjs:nodejs apps/broker/tsconfig.json ./apps/broker/
