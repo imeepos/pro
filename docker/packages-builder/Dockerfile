@@ -19,7 +19,7 @@ FROM $BUILD_FROM_BASE AS base
 # ========================================
 LABEL maintainer="Pro Team" \
       description="包含所有共享 packages 构建产物的基础镜像" \
-      base.image="$BUILD_FROM_BASE" \
+      base.image="imeepos/base:latest" \
       packages="types,config,utils,mongodb,redis,rabbitmq,minio"
 
 # ========================================
@@ -32,6 +32,10 @@ FROM base AS deps
 
 # 设置工作目录（base 镜像已配置好权限）
 WORKDIR /app
+
+# 配置 Bun 临时目录，解决权限问题
+ENV BUN_TMPDIR=/home/nestjs/tmp \
+    BUN_INSTALL_CACHE_DIR=/home/nestjs/.bun/install/cache
 
 # ========================================
 # 复制 workspace 配置文件
@@ -67,7 +71,7 @@ COPY --chown=nestjs:nodejs packages/minio/package.json ./packages/minio/
 # ========================================
 RUN --mount=type=cache,id=bun-packages,target=/home/nestjs/.bun/install/cache \
     echo "🔧 安装所有 packages 依赖..." && \
-    bun install
+    BUN_TMPDIR=/home/nestjs/tmp bun install
 
 # ========================================
 # 构建阶段 (builder)
@@ -188,7 +192,7 @@ COPY --chown=nestjs:nodejs packages/minio/package.json ./packages/minio/
 # ========================================
 RUN --mount=type=cache,id=bun-packages,target=/home/nestjs/.bun/install/cache \
     echo "📦 安装生产依赖..." && \
-    bun install
+    BUN_TMPDIR=/home/nestjs/tmp bun install
 
 # ========================================
 # 复制构建产物
@@ -209,9 +213,11 @@ COPY --from=builder --chown=nestjs:nodejs /app/packages/minio/dist ./packages/mi
 # 优化：与 base 镜像保持一致的环境变量
 # 使用统一的家目录和路径配置
 # ========================================
-ENV NODE_ENV=production
-ENV BUN_INSTALL=/home/nestjs/.bun
-ENV PATH=${BUN_INSTALL}/bin:${PATH}
+ENV NODE_ENV=production \
+    BUN_INSTALL=/home/nestjs/.bun \
+    BUN_TMPDIR=/home/nestjs/tmp \
+    BUN_INSTALL_CACHE_DIR=/home/nestjs/.bun/install/cache \
+    PATH=${BUN_INSTALL}/bin:${PATH}
 
 # ========================================
 # 用户权限验证
