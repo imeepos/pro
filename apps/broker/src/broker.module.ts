@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
 import { TaskMonitor } from './weibo/task-monitor.service';
 import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
 import { WeiboSearchTaskEntity } from './entities/weibo-search-task.entity';
-import { getDatabaseConfig } from './config/database.config';
+import { createDatabaseConfig } from './config/database.config';
 import { AppController } from './app.controller';
 
 /**
@@ -22,7 +22,10 @@ import { AppController } from './app.controller';
     }),
 
     // 数据库配置
-    TypeOrmModule.forRoot(getDatabaseConfig()),
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
+    }),
 
     // 任务调度模块
     ScheduleModule.forRoot(),

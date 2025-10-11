@@ -1,6 +1,5 @@
 import { HttpClient } from '../client/http-client';
 import { Observable } from 'rxjs';
-import { getApiUrl } from '@pro/config';
 import {
   ScreenPage,
   CreateScreenDto,
@@ -16,8 +15,8 @@ import {
 export class ScreenApi {
   private readonly httpClient: HttpClient;
 
-  constructor() {
-    this.httpClient = new HttpClient(getApiUrl());
+  constructor(baseUrl?: string, tokenKey?: string) {
+    this.httpClient = new HttpClient(baseUrl || 'http://localhost:3000', tokenKey);
   }
 
   /**

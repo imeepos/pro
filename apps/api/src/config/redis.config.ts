@@ -1,17 +1,22 @@
 import { RedisOptions } from 'ioredis';
+import { ConfigService } from '@nestjs/config';
 
-export const getRedisConfig = (): RedisOptions | string => {
-  if (process.env.REDIS_URL) {
-    return process.env.REDIS_URL;
+export const redisConfigFactory = (configService: ConfigService): RedisOptions | string => {
+  const redisUrl = configService.get<string>('REDIS_URL');
+
+  if (redisUrl) {
+    return redisUrl;
   }
 
   return {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
-    password: process.env.REDIS_PASSWORD,
-    retryStrategy: (times: number) => {
-      const delay = Math.min(times * 50, 2000);
-      return delay;
-    },
+    host: configService.get<string>('REDIS_HOST', 'localhost'),
+    port: configService.get<number>('REDIS_PORT', 6379),
+    password: configService.get<string>('REDIS_PASSWORD'),
+    retryStrategy: (times: number) => Math.min(times * 50, 2000),
   };
 };
+
+export const createRedisConfig = () => ({
+  inject: [ConfigService],
+  useFactory: redisConfigFactory,
+});

@@ -1,5 +1,4 @@
 import { HttpClient } from '../client/http-client';
-import { getApiUrl } from '@pro/config';
 import { User } from '@pro/types';
 import { fromPromise } from '../utils/observable-adapter';
 import { Observable } from 'rxjs';
@@ -11,9 +10,9 @@ export class UserApi {
   private http: HttpClient;
   private readonly baseUrl: string;
 
-  constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || getApiUrl();
-    this.http = new HttpClient(this.baseUrl);
+  constructor(baseUrl?: string, tokenKey?: string) {
+    this.baseUrl = baseUrl || 'http://localhost:3000';
+    this.http = new HttpClient(this.baseUrl, tokenKey);
   }
 
   /**

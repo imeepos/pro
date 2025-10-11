@@ -22,7 +22,7 @@ import { EventController } from './event.controller';
 import { TagController } from './tag.controller';
 import { AttachmentController } from './attachment.controller';
 
-import { getJwtConfig } from '../config';
+import { createJwtConfig } from '../config';
 
 @Module({
   imports: [
@@ -35,7 +35,7 @@ import { getJwtConfig } from '../config';
       EventAttachmentEntity,
     ]),
     ConfigModule,
-    JwtModule.register(getJwtConfig()),
+    JwtModule.registerAsync(createJwtConfig()),
   ],
   controllers: [
     IndustryTypeController,

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { getConfig } from '@pro/config';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -9,9 +9,8 @@ export class TokenStorageService {
   private readonly refreshTokenKey: string;
 
   constructor() {
-    const config = getConfig();
-    this.tokenKey = config.tokenKey;
-    this.refreshTokenKey = config.refreshTokenKey;
+    this.tokenKey = environment.tokenKey;
+    this.refreshTokenKey = environment.refreshTokenKey;
   }
 
   getToken(): string | null {

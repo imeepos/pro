@@ -1,7 +1,7 @@
 import { Component, OnDestroy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { createWeiboAuthSDK, WeiboLoginEvent, WeiboAuthSDK } from '@pro/sdk';
-import { getApiUrl } from '@pro/config';
+import { environment } from '../../../environments/environment';
 import { TokenStorageService } from '../../core/services/token-storage.service';
 
 /**
@@ -33,7 +33,7 @@ export class WeiboLoginComponent implements OnDestroy {
     private tokenStorage: TokenStorageService,
     private ngZone: NgZone
   ) {
-    this.weiboSDK = createWeiboAuthSDK(this.getBaseUrl());
+    this.weiboSDK = createWeiboAuthSDK(this.getBaseUrl(), environment.tokenKey);
   }
 
   ngOnDestroy(): void {
@@ -44,7 +44,7 @@ export class WeiboLoginComponent implements OnDestroy {
    * 获取 API 基础地址
    */
   private getBaseUrl(): string {
-    return getApiUrl().replace('/api', '');
+    return environment.apiUrl.replace('/api', '');
   }
 
   /**

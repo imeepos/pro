@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { createWeiboAuthSDK, WeiboAccount, WeiboAuthSDK } from '@pro/sdk';
-import { getApiUrl } from '@pro/config';
+import { environment } from '../../../environments/environment';
 import { TokenStorageService } from '../../core/services/token-storage.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { WeiboLoginComponent } from './weibo-login.component';
@@ -36,7 +36,7 @@ export class WeiboAccountsComponent implements OnInit {
     private router: Router,
     private toastService: ToastService
   ) {
-    this.weiboSDK = createWeiboAuthSDK(this.getBaseUrl());
+    this.weiboSDK = createWeiboAuthSDK(this.getBaseUrl(), environment.tokenKey);
   }
 
   ngOnInit(): void {
@@ -47,7 +47,7 @@ export class WeiboAccountsComponent implements OnInit {
    * 获取 API 基础地址
    */
   private getBaseUrl(): string {
-    return getApiUrl().replace('/api', '');
+    return environment.apiUrl.replace('/api', '');
   }
 
   /**

@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { createJdAuthSDK, JdAccount, JdAuthSDK } from '@pro/sdk';
-import { getApiUrl } from '@pro/config';
+import { environment } from '../../../environments/environment';
 import { TokenStorageService } from '../../core/services/token-storage.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { JdLoginComponent } from './jd-login.component';
@@ -36,7 +36,7 @@ export class JdAccountsComponent implements OnInit {
     private router: Router,
     private toastService: ToastService
   ) {
-    this.jdSDK = createJdAuthSDK(this.getBaseUrl());
+    this.jdSDK = createJdAuthSDK(this.getBaseUrl(), environment.tokenKey);
   }
 
   ngOnInit(): void {
@@ -47,7 +47,7 @@ export class JdAccountsComponent implements OnInit {
    * 获取 API 基础地址
    */
   private getBaseUrl(): string {
-    return getApiUrl().replace('/api', '');
+    return environment.apiUrl.replace('/api', '');
   }
 
   /**

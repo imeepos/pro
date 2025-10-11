@@ -1,4 +1,5 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 
 export interface BrowserConfig {
@@ -13,12 +14,17 @@ export class BrowserService implements OnModuleDestroy {
   private browser: Browser | null = null;
   private contexts: Map<string, BrowserContext> = new Map();
 
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject('CRAWLER_CONFIG') private readonly crawlerConfig: any
+  ) {}
+
   async initialize(config?: Partial<BrowserConfig>): Promise<void> {
     const defaultConfig: BrowserConfig = {
-      headless: process.env.NODE_ENV === 'production',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      viewport: { width: 1920, height: 1080 },
-      timeout: 30000
+      headless: this.configService.get<string>('NODE_ENV') === 'production',
+      userAgent: this.crawlerConfig.userAgent,
+      viewport: this.crawlerConfig.viewport,
+      timeout: this.crawlerConfig.timeout
     };
 
     const browserConfig = { ...defaultConfig, ...config };
@@ -59,8 +65,8 @@ export class BrowserService implements OnModuleDestroy {
     }
 
     const context = await this.browser!.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      viewport: { width: 1920, height: 1080 },
+      userAgent: this.crawlerConfig.userAgent,
+      viewport: this.crawlerConfig.viewport,
       ignoreHTTPSErrors: true,
       acceptDownloads: false
     });
@@ -102,8 +108,8 @@ export class BrowserService implements OnModuleDestroy {
     const context = await this.createContext(accountId, cookies);
     const page = await context.newPage();
 
-    await page.setDefaultTimeout(30000);
-    await page.setDefaultNavigationTimeout(30000);
+    await page.setDefaultTimeout(this.crawlerConfig.timeout);
+    await page.setDefaultNavigationTimeout(this.crawlerConfig.pageTimeout);
 
     page.on('dialog', async (dialog) => {
       await dialog.dismiss();

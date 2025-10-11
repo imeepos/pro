@@ -30,42 +30,66 @@ import { EventAttachmentEntity } from './event-attachment.entity';
 import { MediaTypeEntity } from './media-type.entity';
 
 
-export const getDatabaseConfig = (): DataSourceOptions => {
-  const entities = [
-    UserEntity,
-    ApiKeyEntity,
-    WeiboAccountEntity,
-    WeiboSearchTaskEntity,
-    JdAccountEntity,
-    ScreenPageEntity,
-    IndustryTypeEntity,
-    EventTypeEntity,
-    EventEntity,
-    TagEntity,
-    EventTagEntity,
-    EventAttachmentEntity,
-    MediaTypeEntity,
-  ];
+interface ConfigService {
+  get<T = any>(key: string, defaultValue?: T): T;
+}
 
-  if (process.env.DATABASE_URL) {
+const entities = [
+  UserEntity,
+  ApiKeyEntity,
+  WeiboAccountEntity,
+  WeiboSearchTaskEntity,
+  JdAccountEntity,
+  ScreenPageEntity,
+  IndustryTypeEntity,
+  EventTypeEntity,
+  EventEntity,
+  TagEntity,
+  EventTagEntity,
+  EventAttachmentEntity,
+  MediaTypeEntity,
+];
+
+export const createDatabaseConfig = (configService: ConfigService): DataSourceOptions => {
+  const databaseUrl = configService.get<string>('DATABASE_URL');
+  const nodeEnv = configService.get<string>('NODE_ENV');
+
+  if (databaseUrl) {
     return {
       type: 'postgres',
-      url: process.env.DATABASE_URL,
+      url: databaseUrl,
       entities,
       synchronize: true,
-      logging: process.env.NODE_ENV === 'development',
+      logging: nodeEnv === 'development',
     };
   }
 
   return {
     type: 'postgres',
-    host: process.env.DATABASE_HOST || 'localhost',
-    port: parseInt(process.env.DATABASE_PORT || '5432', 10),
-    username: process.env.DATABASE_USER || 'postgres',
-    password: process.env.DATABASE_PASSWORD || 'postgres123',
-    database: process.env.DATABASE_NAME || 'pro',
+    host: configService.get<string>('DATABASE_HOST', 'localhost'),
+    port: configService.get<number>('DATABASE_PORT', 5432),
+    username: configService.get<string>('DATABASE_USER', 'postgres'),
+    password: configService.get<string>('DATABASE_PASSWORD', 'postgres123'),
+    database: configService.get<string>('DATABASE_NAME', 'pro'),
     entities,
     synchronize: true,
-    logging: process.env.NODE_ENV === 'development',
+    logging: nodeEnv === 'development',
   };
+};
+
+export const getDatabaseConfig = (): DataSourceOptions => {
+  const legacyConfigService = {
+    get: <T = any>(key: string, defaultValue?: T): T => {
+      const value = process.env[key];
+      if (value === undefined) return defaultValue as T;
+
+      if (typeof defaultValue === 'number') {
+        return parseInt(value, 10) as T;
+      }
+
+      return value as T;
+    }
+  };
+
+  return createDatabaseConfig(legacyConfigService);
 };

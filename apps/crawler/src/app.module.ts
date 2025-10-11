@@ -11,7 +11,7 @@ import { BrowserService } from './browser/browser.service';
 import { WeiboSearchCrawlerService } from './weibo/search-crawler.service';
 import { RawDataService } from './raw-data/raw-data.service';
 import { CrawlQueueConsumer } from './crawl-queue.consumer';
-import { defaultCrawlerConfig, defaultRabbitMQConfig, defaultMongoDBConfig, defaultWeiboConfig } from './config/crawler.config';
+import { createCrawlerConfig, createRabbitMQConfig, createMongoDBConfig, createWeiboConfig } from './config/crawler.config';
 
 @Module({
   imports: [
@@ -100,19 +100,23 @@ import { defaultCrawlerConfig, defaultRabbitMQConfig, defaultMongoDBConfig, defa
     CrawlQueueConsumer,
     {
       provide: 'CRAWLER_CONFIG',
-      useValue: defaultCrawlerConfig
+      inject: [ConfigService],
+      useFactory: createCrawlerConfig
     },
     {
       provide: 'RABBITMQ_CONFIG',
-      useValue: defaultRabbitMQConfig
+      inject: [ConfigService],
+      useFactory: createRabbitMQConfig
     },
     {
       provide: 'MONGODB_CONFIG',
-      useValue: defaultMongoDBConfig
+      inject: [ConfigService],
+      useFactory: createMongoDBConfig
     },
     {
       provide: 'WEIBO_CONFIG',
-      useValue: defaultWeiboConfig
+      inject: [ConfigService],
+      useFactory: createWeiboConfig
     }
   ],
 })

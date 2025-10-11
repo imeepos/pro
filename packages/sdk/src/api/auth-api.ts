@@ -2,7 +2,6 @@ import { Observable, from } from 'rxjs';
 import { HttpClient } from '../client/http-client';
 import { IAuthService } from '../auth.interface';
 import { LoginDto, RegisterDto, AuthResponse, UserProfile } from '@pro/types';
-import { getApiUrl } from '@pro/config';
 
 /**
  * 认证 API 接口封装
@@ -11,9 +10,9 @@ import { getApiUrl } from '@pro/config';
 export class AuthApi implements IAuthService {
   private http: HttpClient;
 
-  constructor(baseUrl?: string) {
-    const apiBaseUrl = baseUrl || getApiUrl();
-    this.http = new HttpClient(apiBaseUrl);
+  constructor(baseUrl?: string, tokenKey?: string) {
+    const apiBaseUrl = baseUrl || 'http://localhost:3000';
+    this.http = new HttpClient(apiBaseUrl, tokenKey);
   }
 
   /**

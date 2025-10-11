@@ -1,6 +1,5 @@
 import { Observable } from 'rxjs';
 import { HttpClient } from '../client/http-client';
-import { getApiUrl } from '@pro/config';
 import {
   WeiboSearchTask,
   WeiboSearchTaskListResponse,
@@ -18,10 +17,10 @@ export class WeiboSearchTasksApi {
   private readonly http: HttpClient;
   private readonly baseUrl: string;
 
-  constructor(baseUrl?: string) {
-    // 如果没有提供 baseUrl，使用 getApiUrl() 获取基础 URL
-    const baseApiUrl = baseUrl || getApiUrl();
-    this.http = new HttpClient(baseApiUrl);
+  constructor(baseUrl?: string, tokenKey?: string) {
+    // 如果没有提供 baseUrl，使用默认值
+    const baseApiUrl = baseUrl || 'http://localhost:3000';
+    this.http = new HttpClient(baseApiUrl, tokenKey);
     this.baseUrl = '/api/weibo-search-tasks';
   }
 

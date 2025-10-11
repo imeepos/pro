@@ -1,6 +1,5 @@
 import { Observable } from 'rxjs';
 import { HttpClient } from '../client/http-client';
-import { getApiUrl } from '@pro/config';
 import { LoggedInUsersStats } from '../types/weibo.types';
 
 /**
@@ -10,9 +9,9 @@ export class WeiboApi {
   private http: HttpClient;
   private readonly baseUrl: string;
 
-  constructor() {
-    this.baseUrl = getApiUrl();
-    this.http = new HttpClient(this.baseUrl);
+  constructor(baseUrl?: string, tokenKey?: string) {
+    this.baseUrl = baseUrl || 'http://localhost:3000';
+    this.http = new HttpClient(this.baseUrl, tokenKey);
   }
 
   /**

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import { TokenStorageService } from './token-storage.service';
-import { getApiUrl } from '@pro/config';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +12,7 @@ export class WebSocketService {
   private readonly wsUrl: string;
 
   constructor(private tokenStorage: TokenStorageService) {
-    this.wsUrl = getApiUrl().replace('/api', '');
+    this.wsUrl = environment.apiUrl.replace('/api', '');
   }
 
   connect(): void {

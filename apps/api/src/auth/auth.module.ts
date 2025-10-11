@@ -10,13 +10,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { ApiKeyOwnerGuard } from './guards/api-key-owner.guard';
 import { UserEntity, ApiKeyEntity } from '@pro/entities';
-import { getJwtConfig } from '../config';
+import { createJwtConfig } from '../config';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserEntity, ApiKeyEntity]),
     PassportModule,
-    JwtModule.register(getJwtConfig()),
+    JwtModule.registerAsync(createJwtConfig()),
   ],
   controllers: [AuthController, ApiKeyController],
   providers: [

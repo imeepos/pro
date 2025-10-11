@@ -1,7 +1,7 @@
 import { Component, OnDestroy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { createJdAuthSDK, JdLoginEvent, JdAuthSDK } from '@pro/sdk';
-import { getApiUrl } from '@pro/config';
+import { environment } from '../../../environments/environment';
 import { TokenStorageService } from '../../core/services/token-storage.service';
 
 /**
@@ -34,7 +34,7 @@ export class JdLoginComponent implements OnDestroy {
     private tokenStorage: TokenStorageService,
     private ngZone: NgZone
   ) {
-    this.jdSDK = createJdAuthSDK(this.getBaseUrl());
+    this.jdSDK = createJdAuthSDK(this.getBaseUrl(), environment.tokenKey);
   }
 
   ngOnDestroy(): void {
@@ -45,7 +45,7 @@ export class JdLoginComponent implements OnDestroy {
    * 获取 API 基础地址
    */
   private getBaseUrl(): string {
-    return getApiUrl().replace('/api', '');
+    return environment.apiUrl.replace('/api', '');
   }
 
   /**

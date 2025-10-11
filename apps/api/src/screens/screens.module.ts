@@ -7,12 +7,12 @@ import { ScreensGateway } from './screens.gateway';
 import { ScreensStatsScheduler } from './screens-stats.scheduler';
 import { ScreenPageEntity } from '@pro/entities';
 import { WeiboModule } from '../weibo/weibo.module';
-import { getJwtConfig } from '../config';
+import { createJwtConfig } from '../config';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([ScreenPageEntity]),
-    JwtModule.register(getJwtConfig()),
+    JwtModule.registerAsync(createJwtConfig()),
     forwardRef(() => WeiboModule),
   ],
   controllers: [ScreensController],

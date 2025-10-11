@@ -1,30 +1,31 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { WeiboSearchTaskEntity } from '../entities/weibo-search-task.entity';
 
-export const getDatabaseConfig = (): TypeOrmModuleOptions => {
-  const entities = [
-    WeiboSearchTaskEntity,
-  ];
+export const createDatabaseConfig = (configService: ConfigService): TypeOrmModuleOptions => {
+  const entities = [WeiboSearchTaskEntity];
+  const databaseUrl = configService.get<string>('DATABASE_URL');
+  const isDevelopment = configService.get<string>('NODE_ENV') === 'development';
 
-  if (process.env.DATABASE_URL) {
+  if (databaseUrl) {
     return {
       type: 'postgres',
-      url: process.env.DATABASE_URL,
+      url: databaseUrl,
       entities,
       synchronize: false,
-      logging: process.env.NODE_ENV === 'development',
+      logging: isDevelopment,
     };
   }
 
   return {
     type: 'postgres',
-    host: process.env.DATABASE_HOST || 'localhost',
-    port: parseInt(process.env.DATABASE_PORT || '5432', 10),
-    username: process.env.DATABASE_USER || 'postgres',
-    password: process.env.DATABASE_PASSWORD || 'postgres123',
-    database: process.env.DATABASE_NAME || 'pro',
+    host: configService.get<string>('DATABASE_HOST', 'localhost'),
+    port: configService.get<number>('DATABASE_PORT', 5432),
+    username: configService.get<string>('DATABASE_USER', 'postgres'),
+    password: configService.get<string>('DATABASE_PASSWORD', 'postgres123'),
+    database: configService.get<string>('DATABASE_NAME', 'pro'),
     entities,
     synchronize: false,
-    logging: process.env.NODE_ENV === 'development',
+    logging: isDevelopment,
   };
 };

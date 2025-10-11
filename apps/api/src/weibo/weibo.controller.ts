@@ -11,6 +11,7 @@ import {
   Headers,
   ForbiddenException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Observable } from 'rxjs';
 import { WeiboAccountService } from './weibo-account.service';
 import { WeiboAuthService, WeiboLoginEvent } from './weibo-auth.service';
@@ -27,7 +28,17 @@ export class WeiboController {
     private readonly weiboAccountService: WeiboAccountService,
     private readonly weiboAuthService: WeiboAuthService,
     private readonly healthCheckService: WeiboHealthCheckService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private validateInternalToken(headers: any): void {
+    const token = headers['authorization']?.replace('Bearer ', '');
+    const expectedToken = this.configService.get<string>('INTERNAL_API_TOKEN', 'internal-token');
+
+    if (token !== expectedToken) {
+      throw new ForbiddenException('无权访问此接口');
+    }
+  }
 
   /**
    * 启动微博扫码登录
@@ -113,14 +124,7 @@ export class WeiboController {
    */
   @Post('internal/accounts/with-cookies')
   async getAccountsWithCookies(@Headers() headers) {
-    // 验证内部服务调用
-    const internalToken = headers['authorization']?.replace('Bearer ', '');
-    const expectedToken = process.env.INTERNAL_API_TOKEN || 'internal-token';
-
-    if (internalToken !== expectedToken) {
-      throw new ForbiddenException('无权访问此接口');
-    }
-
+    this.validateInternalToken(headers);
     return this.weiboAccountService.getAccountsWithCookies();
   }
 
@@ -134,14 +138,7 @@ export class WeiboController {
     @Param('id', ParseIntPipe) id: number,
     @Headers() headers
   ) {
-    // 验证内部服务调用
-    const internalToken = headers['authorization']?.replace('Bearer ', '');
-    const expectedToken = process.env.INTERNAL_API_TOKEN || 'internal-token';
-
-    if (internalToken !== expectedToken) {
-      throw new ForbiddenException('无权访问此接口');
-    }
-
+    this.validateInternalToken(headers);
     return this.weiboAccountService.markAccountBanned(id);
   }
 }

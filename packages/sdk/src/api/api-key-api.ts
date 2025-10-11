@@ -1,5 +1,4 @@
 import { Observable } from 'rxjs';
-import { getApiUrl } from '@pro/config';
 import {
   ApiKey,
   ApiKeyActivityFilters,
@@ -59,9 +58,9 @@ export class ApiKeyApi {
   private readonly http: HttpClient;
   private readonly baseUrl = '/api/api-keys';
 
-  constructor(baseUrl?: string) {
-    const resolvedBaseUrl = baseUrl || getApiUrl();
-    this.http = new HttpClient(resolvedBaseUrl);
+  constructor(baseUrl?: string, tokenKey?: string) {
+    const resolvedBaseUrl = baseUrl || 'http://localhost:3000';
+    this.http = new HttpClient(resolvedBaseUrl, tokenKey);
   }
 
   findAll(filters?: ApiKeyFilters): Observable<ApiKeyListResponse> {

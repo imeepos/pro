@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from '@pro/types';
 import { RedisClient } from '@pro/redis';
-import { getRedisConfig } from '../../config';
+import { redisConfigFactory } from '../../config';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -22,7 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: config.get('JWT_SECRET', 'ymm-123456'),
       passReqToCallback: true,
     });
-    this.redisClient = new RedisClient(getRedisConfig());
+    this.redisClient = new RedisClient(redisConfigFactory(config));
   }
 
   async validate(req: any, payload: JwtPayload): Promise<JwtPayload> {

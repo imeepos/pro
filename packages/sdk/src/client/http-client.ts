@@ -1,14 +1,11 @@
-import { getConfig } from '@pro/config';
-
 /**
  * HTTP 客户端封装
  */
 export class HttpClient {
   private readonly tokenKey: string;
 
-  constructor(private baseUrl: string) {
-    const config = getConfig();
-    this.tokenKey = config.tokenKey;
+  constructor(private baseUrl: string, tokenKey: string = 'access_token') {
+    this.tokenKey = tokenKey;
   }
 
   private async request<T>(

@@ -12,7 +12,8 @@ import { UserEntity } from '@pro/entities';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
 import { AuthResponse, JwtPayload, User, UserStatus } from '@pro/types';
 import { RedisClient } from '@pro/redis';
-import { getRedisConfig, getRefreshTokenExpiresIn } from '../config';
+import { redisConfigFactory, getRefreshTokenExpiresIn } from '../config';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -24,8 +25,9 @@ export class AuthService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {
-    this.redisClient = new RedisClient(getRedisConfig());
+    this.redisClient = new RedisClient(redisConfigFactory(configService));
   }
 
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
@@ -160,10 +162,10 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
 
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: getRefreshTokenExpiresIn(),
+      expiresIn: getRefreshTokenExpiresIn(this.configService),
     } as any);
 
-    const refreshTokenTTL = this.parseExpiration(getRefreshTokenExpiresIn());
+    const refreshTokenTTL = this.parseExpiration(getRefreshTokenExpiresIn(this.configService));
     await this.redisClient.set(
       `${this.REFRESH_TOKEN_PREFIX}${user.id}`,
       refreshToken,
