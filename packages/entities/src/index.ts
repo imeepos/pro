@@ -66,11 +66,11 @@ export const createDatabaseConfig = (configService: ConfigService): DataSourceOp
 
   return {
     type: 'postgres',
-    host: configService.get<string>('DATABASE_HOST', 'localhost'),
-    port: configService.get<number>('DATABASE_PORT', 5432),
-    username: configService.get<string>('DATABASE_USER', 'postgres'),
-    password: configService.get<string>('DATABASE_PASSWORD', 'postgres123'),
-    database: configService.get<string>('DATABASE_NAME', 'pro'),
+    host: configService.get<string>('POSTGRES_HOST', 'localhost'),
+    port: configService.get<number>('POSTGRES_PORT', 5432),
+    username: configService.get<string>('POSTGRES_USER', 'postgres'),
+    password: configService.get<string>('POSTGRES_PASSWORD', 'postgres123'),
+    database: configService.get<string>('POSTGRES_DB', 'pro'),
     entities,
     synchronize: true,
     logging: nodeEnv === 'development',

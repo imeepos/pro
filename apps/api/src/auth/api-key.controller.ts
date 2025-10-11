@@ -22,7 +22,8 @@ import {
   ApiKeyResponseDto,
   ApiKeyListResponseDto,
   RegenerateApiKeyDto,
-  ApiKeyStatsDto
+  ApiKeyStatsDto,
+  ApiKeySummaryStatsDto
 } from './dto/api-key.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiKeyOwnerGuard } from './guards/api-key-owner.guard';
@@ -122,6 +123,14 @@ export class ApiKeyController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
     await this.apiKeyService.deleteApiKey(req.user.userId, id);
+  }
+
+  /**
+   * 获取用户API Key汇总统计
+   */
+  @Get('summary/stats')
+  async getSummaryStats(@Request() req): Promise<ApiKeySummaryStatsDto> {
+    return this.apiKeyService.getUserApiKeysSummaryStats(req.user.userId);
   }
 
   /**

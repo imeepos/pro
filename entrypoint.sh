@@ -41,7 +41,7 @@ detect_service_type() {
 start_nestjs_service() {
     local service="${SERVICE_NAME}"
     local app_path="/app/apps/${service}"
-    local dist_path="/app/dist/apps/${service}"
+    local dist_path="/app/apps/${service}/dist"
 
     log_info "启动 NestJS 服务: $service"
 
@@ -53,7 +53,7 @@ start_nestjs_service() {
     if [[ ! -f "${dist_path}/main.js" ]]; then
         log_error "构建产物不存在: ${dist_path}/main.js"
         log_info "可用构建产物:"
-        find /app/dist -name "main.js" -type f 2>/dev/null || log_info "未找到任何 main.js 文件"
+        find /app/apps -name "main.js" -type f 2>/dev/null || log_info "未找到任何 main.js 文件"
         exit 1
     fi
 
@@ -69,14 +69,14 @@ start_nestjs_service() {
 
 start_angular_service() {
     local service="${SERVICE_NAME}"
-    local dist_path="/app/dist/apps/${service}"
+    local dist_path="/app/apps/${service}/dist/${service}/browser"
 
     log_info "启动 Angular 服务: $service"
 
     if [[ ! -d "$dist_path" ]]; then
         log_error "构建产物不存在: $dist_path"
         log_info "可用构建产物:"
-        find /app/dist -type d -name "$service" 2>/dev/null || log_info "未找到服务构建目录"
+        find /app/apps -type d -name "dist" 2>/dev/null || log_info "未找到服务构建目录"
         exit 1
     fi
 

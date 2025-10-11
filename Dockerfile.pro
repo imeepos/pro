@@ -1,7 +1,7 @@
-FROM ubuntu-ai-tools:22.04 AS runtime
+FROM imeepos/pro:latest AS runtime
 
 # 安装 nginx 用于 Angular 应用
-RUN apt-get update && apt-get install -y nginx && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && apt-get install -y nginx && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

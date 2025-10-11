@@ -11,7 +11,8 @@ import {
   ApiKeyListResponseDto,
   ApiKeyResponseDto,
   ApiKeyStatus,
-  ApiKeyStatsDto
+  ApiKeyStatsDto,
+  ApiKeySummaryStatsDto
 } from './dto/api-key.dto';
 
 /**
@@ -435,6 +436,69 @@ export class ApiKeyService {
   private async getExpiredCondition(): Promise<{ expiresAt?: any }> {
     return {
       expiresAt: { $lte: new Date() }, // 这里需要根据具体的数据库适配
+    };
+  }
+
+  /**
+   * 获取用户的API Key汇总统计
+   */
+  async getUserApiKeysSummaryStats(userId: string): Promise<ApiKeySummaryStatsDto> {
+    const now = new Date();
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // 使用单个查询获取所有统计数据，符合性能优化原则
+    const queryBuilder = this.apiKeyRepo
+      .createQueryBuilder('apiKey')
+      .select([
+        'COUNT(*) as total',
+        'SUM(CASE WHEN apiKey.isActive = true AND (apiKey.expiresAt IS NULL OR apiKey.expiresAt > :now) THEN 1 ELSE 0 END) as active',
+        'SUM(CASE WHEN apiKey.isActive = false THEN 1 ELSE 0 END) as inactive',
+        'SUM(CASE WHEN apiKey.expiresAt IS NOT NULL AND apiKey.expiresAt <= :now THEN 1 ELSE 0 END) as expired',
+        'SUM(CASE WHEN apiKey.usageCount = 0 THEN 1 ELSE 0 END) as neverUsed',
+        'SUM(CASE WHEN apiKey.expiresAt IS NOT NULL AND apiKey.expiresAt > :now AND apiKey.expiresAt <= :sevenDaysLater THEN 1 ELSE 0 END) as expiringSoon',
+        'SUM(apiKey.usageCount) as totalUsage'
+      ])
+      .where('apiKey.userId = :userId', { userId })
+      .setParameters({ now, sevenDaysLater });
+
+    const stats = await queryBuilder.getRawOne();
+
+    // 单独计算平均每日使用次数，避免数据库特定函数
+    const allKeys = await this.apiKeyRepo.find({
+      where: { userId },
+      select: ['usageCount', 'createdAt']
+    });
+
+    const averageDailyUsage = allKeys.length > 0
+      ? allKeys.reduce((sum, key) => {
+          const daysSinceCreation = Math.max(1, Math.ceil((now.getTime() - key.createdAt.getTime()) / (24 * 60 * 60 * 1000)));
+          return sum + (key.usageCount / daysSinceCreation);
+        }, 0) / allKeys.length
+      : 0;
+
+    // 获取使用次数最多的API Key
+    const mostUsedApiKey = await this.apiKeyRepo.findOne({
+      where: { userId },
+      order: { usageCount: 'DESC' },
+    });
+
+    // 获取最近使用的API Key
+    const recentlyUsedApiKey = await this.apiKeyRepo.findOne({
+      where: { userId },
+      order: { lastUsedAt: 'DESC' },
+    });
+
+    return {
+      total: parseInt(stats.total || '0') || 0,
+      active: parseInt(stats.active || '0') || 0,
+      inactive: parseInt(stats.inactive || '0') || 0,
+      expired: parseInt(stats.expired || '0') || 0,
+      neverUsed: parseInt(stats.neverUsed || '0') || 0,
+      expiringSoon: parseInt(stats.expiringSoon || '0') || 0,
+      totalUsage: parseInt(stats.totalUsage || '0') || 0,
+      averageDailyUsage: isNaN(averageDailyUsage) ? 0 : Math.round(averageDailyUsage * 100) / 100,
+      mostUsed: mostUsedApiKey ? await this.getApiKeyStats(userId, mostUsedApiKey.id) : undefined,
+      recentlyUsed: recentlyUsedApiKey ? await this.getApiKeyStats(userId, recentlyUsedApiKey.id) : undefined,
     };
   }
 

@@ -295,6 +295,47 @@ export class ApiKeyStatsDto {
 }
 
 /**
+ * API Key汇总统计DTO
+ */
+export class ApiKeySummaryStatsDto {
+  @ApiProperty({ description: '总数量', example: 25 })
+  total: number;
+
+  @ApiProperty({ description: '活跃数量', example: 18 })
+  active: number;
+
+  @ApiProperty({ description: '非活跃数量', example: 5 })
+  inactive: number;
+
+  @ApiProperty({ description: '已过期数量', example: 2 })
+  expired: number;
+
+  @ApiProperty({ description: '从未使用数量', example: 3 })
+  neverUsed: number;
+
+  @ApiProperty({ description: '即将过期数量（7天内）', example: 1 })
+  expiringSoon: number;
+
+  @ApiProperty({ description: '总使用次数', example: 12456 })
+  totalUsage: number;
+
+  @ApiProperty({ description: '平均每日使用次数', example: 85.67 })
+  averageDailyUsage: number;
+
+  @ApiPropertyOptional({
+    description: '使用次数最多的API Key',
+    type: () => ApiKeyStatsDto
+  })
+  mostUsed?: ApiKeyStatsDto;
+
+  @ApiPropertyOptional({
+    description: '最近使用的API Key',
+    type: () => ApiKeyStatsDto
+  })
+  recentlyUsed?: ApiKeyStatsDto;
+}
+
+/**
  * 重新生成API Key响应DTO
  */
 export class RegenerateApiKeyDto {

@@ -54,6 +54,19 @@ interface ApiKeyStatsPayload {
   daysSinceCreation: number;
 }
 
+interface ApiKeySummaryStatsPayload {
+  total: number;
+  active: number;
+  inactive: number;
+  expired: number;
+  neverUsed: number;
+  expiringSoon: number;
+  totalUsage: number;
+  averageDailyUsage: number;
+  mostUsed?: ApiKeyStatsPayload;
+  recentlyUsed?: ApiKeyStatsPayload;
+}
+
 export class ApiKeyApi {
   private readonly http: HttpClient;
   private readonly baseUrl = '/api/api-keys';
@@ -191,9 +204,7 @@ export class ApiKeyApi {
   }
 
   getStats(): Observable<ApiKeyStats> {
-    return fromPromise(
-      this.fetchList({ limit: 1000 }).then((list) => calculateStats(list.data))
-    );
+    return fromPromise(this.fetchSummaryStats());
   }
 
   extendExpiry(id: number, expiresAt: string): Observable<ApiKey> {
@@ -217,6 +228,11 @@ export class ApiKeyApi {
   private async fetchOne(id: number): Promise<ApiKey> {
     const record = await this.http.get<ApiKeyRecord>(`${this.baseUrl}/${id}`);
     return adaptApiKey(record);
+  }
+
+  private async fetchSummaryStats(): Promise<ApiKeyStats> {
+    const payload = await this.http.get<ApiKeySummaryStatsPayload>(`${this.baseUrl}/summary/stats`);
+    return adaptSummaryStats(payload);
   }
 
   private buildQueryParams(filters?: ApiKeyFilters): Record<string, unknown> {
@@ -306,92 +322,43 @@ function createPlaceholderKey(): ApiKey {
   };
 }
 
-function calculateStats(keys: ApiKey[]): ApiKeyStats {
-  if (!keys.length) {
-    const placeholder = createPlaceholderKey();
+function adaptApiKeyStats(stats: ApiKeyStatsPayload): ApiKey {
+  return {
+    id: stats.id,
+    key: 'N/A',
+    name: stats.name,
+    description: undefined,
+    type: ApiKeyType.READ_ONLY,
+    status: ApiKeyStatus.ACTIVE,
+    isActive: true,
+    lastUsedAt: normalizeDate(stats.lastUsedAt),
+    usageCount: stats.usageCount,
+    expiresAt: undefined,
+    createdIp: undefined,
+    createdAt: normalizeDate(stats.createdAt) ?? new Date(),
+    updatedAt: normalizeDate(stats.createdAt) ?? new Date(),
+    isExpired: false,
+    isValid: true,
+    userId: 0,
+    permissions: [],
+  };
+}
 
-    return {
-      total: 0,
-      active: 0,
-      inactive: 0,
-      expired: 0,
-      revoked: 0,
-      readOnly: 0,
-      readWrite: 0,
-      admin: 0,
-      expiringSoon: 0,
-      neverUsed: 0,
-      mostUsed: placeholder,
-      recentlyUsed: placeholder,
-    };
-  }
-
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-  const now = Date.now();
-
-  let mostUsed: ApiKey | null = null;
-  let recentlyUsed: ApiKey | null = null;
-
-  const summary = keys.reduce(
-    (acc, key) => {
-      acc.total += 1;
-
-      if (key.status === ApiKeyStatus.ACTIVE) acc.active += 1;
-      if (key.status === ApiKeyStatus.INACTIVE) acc.inactive += 1;
-      if (key.status === ApiKeyStatus.EXPIRED) acc.expired += 1;
-      if (key.status === ApiKeyStatus.REVOKED) acc.revoked += 1;
-
-      if (key.type === ApiKeyType.READ_ONLY) acc.readOnly += 1;
-      if (key.type === ApiKeyType.READ_WRITE) acc.readWrite += 1;
-      if (key.type === ApiKeyType.ADMIN) acc.admin += 1;
-
-      const expiresAt = key.expiresAt?.getTime?.() ?? new Date(key.expiresAt ?? '').getTime();
-      if (!Number.isNaN(expiresAt) && expiresAt > now && expiresAt - now <= sevenDaysMs) {
-        acc.expiringSoon += 1;
-      }
-
-      if (!key.usageCount) {
-        acc.neverUsed += 1;
-      }
-
-      if (!mostUsed || key.usageCount > mostUsed.usageCount) {
-        mostUsed = key;
-      }
-
-      const lastUsedAt = key.lastUsedAt?.getTime?.() ?? 0;
-      const recentLastUsed = recentlyUsed?.lastUsedAt?.getTime?.() ?? 0;
-      if (lastUsedAt >= recentLastUsed) {
-        recentlyUsed = key;
-      }
-
-      return acc;
-    },
-    {
-      total: 0,
-      active: 0,
-      inactive: 0,
-      expired: 0,
-      revoked: 0,
-      readOnly: 0,
-      readWrite: 0,
-      admin: 0,
-      expiringSoon: 0,
-      neverUsed: 0,
-    }
-  );
+function adaptSummaryStats(payload: ApiKeySummaryStatsPayload): ApiKeyStats {
+  const placeholder = createPlaceholderKey();
 
   return {
-    total: summary.total,
-    active: summary.active,
-    inactive: summary.inactive,
-    expired: summary.expired,
-    revoked: summary.revoked,
-    readOnly: summary.readOnly,
-    readWrite: summary.readWrite,
-    admin: summary.admin,
-    expiringSoon: summary.expiringSoon,
-    neverUsed: summary.neverUsed,
-    mostUsed: mostUsed ?? createPlaceholderKey(),
-    recentlyUsed: recentlyUsed ?? createPlaceholderKey(),
+    total: payload.total,
+    active: payload.active,
+    inactive: payload.inactive,
+    expired: payload.expired,
+    revoked: 0, // 后端暂未提供此数据
+    readOnly: payload.total, // 默认所有key都是只读类型
+    readWrite: 0,
+    admin: 0,
+    expiringSoon: payload.expiringSoon,
+    neverUsed: payload.neverUsed,
+    mostUsed: payload.mostUsed ? adaptApiKeyStats(payload.mostUsed) : placeholder,
+    recentlyUsed: payload.recentlyUsed ? adaptApiKeyStats(payload.recentlyUsed) : placeholder,
   };
 }

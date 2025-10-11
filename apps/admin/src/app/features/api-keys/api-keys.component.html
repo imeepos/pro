@@ -1,57 +1,61 @@
-<div class="relative w-full min-h-screen overflow-hidden bg-gradient-to-br from-primary to-primary-dark">
-  <!-- 背景动画效果 -->
-  <div class="absolute inset-0 overflow-hidden">
-    <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[length:50px_50px] animate-[gridMove_20s_linear_infinite]"></div>
-    <div class="absolute w-[400px] h-[400px] bg-primary/60 rounded-full blur-[80px] opacity-60 -top-[100px] -right-[100px] animate-[float_8s_ease-in-out_infinite]"></div>
-    <div class="absolute w-[350px] h-[350px] bg-primary-dark/60 rounded-full blur-[80px] opacity-60 -bottom-[100px] -left-[100px] animate-[float_8s_ease-in-out_infinite]"></div>
-  </div>
-
-  <!-- 主要内容 -->
-  <div class="relative z-10 w-full h-full p-6">
-    <!-- 页面标题 -->
-    <div class="flex justify-between items-center mb-8">
-      <div>
-        <h1 class="text-4xl font-bold text-white m-0 drop-shadow-[0_2px_10px_rgba(0,0,0,0.2)]">API Key 管理</h1>
-        <p class="text-white/80 mt-2">管理您的 API 访问密钥，控制访问权限和使用统计</p>
-      </div>
-      <div class="flex gap-4">
-        <button class="px-6 py-3 text-sm font-semibold text-white bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg cursor-pointer transition-all duration-300 hover:bg-white/30 hover:-translate-y-0.5"
-                (click)="onRefresh()">
-          <span class="flex items-center gap-2">
-            🔄 刷新
-          </span>
-        </button>
-        <button class="px-6 py-3 text-sm font-semibold text-primary bg-white border-none rounded-lg cursor-pointer transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,0,0,0.25)]"
-                (click)="onCreateApiKey()">
-          <span class="flex items-center gap-2">
-            ➕ 创建 API Key
-          </span>
-        </button>
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <div class="h-full flex flex-col">
+    <!-- 页面标题区域 -->
+    <div class="bg-white border-b px-6 py-4 -mx-6 -mt-6 mb-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">API Key 管理</h1>
+          <p class="text-sm text-gray-600 mt-1">管理您的 API 访问密钥，控制访问权限和使用统计</p>
+        </div>
+        <div class="flex gap-3">
+          <button
+            (click)="onRefresh()"
+            class="inline-flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            刷新
+          </button>
+          <button
+            (click)="onCreateApiKey()"
+            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            创建 API Key
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- 统计信息卡片 -->
-    <div class="mb-8">
+    <div class="mb-6">
       <app-api-key-stats></app-api-key-stats>
     </div>
 
     <!-- 搜索和过滤区域 -->
-    <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-6 mb-6">
+    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
       <form [formGroup]="searchForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- 搜索 -->
         <div class="flex flex-col">
-          <label class="text-sm font-semibold text-slate-700 mb-2">搜索</label>
-          <input type="text"
-                 formControlName="search"
-                 placeholder="名称或描述"
-                 class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 placeholder:text-slate-400 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+          <label class="text-sm font-semibold text-gray-700 mb-2">搜索</label>
+          <input
+            type="text"
+            formControlName="search"
+            placeholder="名称或描述"
+            class="px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white transition-all duration-300 outline-none text-gray-800 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
+          >
         </div>
 
         <!-- 状态过滤 -->
         <div class="flex flex-col">
-          <label class="text-sm font-semibold text-slate-700 mb-2">状态</label>
-          <select formControlName="status"
-                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+          <label class="text-sm font-semibold text-gray-700 mb-2">状态</label>
+          <select
+            formControlName="status"
+            class="px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white transition-all duration-300 outline-none text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
+          >
             <option value="">全部状态</option>
             <option value="active">活跃</option>
             <option value="inactive">未激活</option>
@@ -62,9 +66,11 @@
 
         <!-- 类型过滤 -->
         <div class="flex flex-col">
-          <label class="text-sm font-semibold text-slate-700 mb-2">类型</label>
-          <select formControlName="type"
-                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+          <label class="text-sm font-semibold text-gray-700 mb-2">类型</label>
+          <select
+            formControlName="type"
+            class="px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white transition-all duration-300 outline-none text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
+          >
             <option value="">全部类型</option>
             <option value="read_only">只读</option>
             <option value="read_write">读写</option>
@@ -74,9 +80,11 @@
 
         <!-- 排序 -->
         <div class="flex flex-col">
-          <label class="text-sm font-semibold text-slate-700 mb-2">排序</label>
-          <select formControlName="sortBy"
-                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+          <label class="text-sm font-semibold text-gray-700 mb-2">排序</label>
+          <select
+            formControlName="sortBy"
+            class="px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white transition-all duration-300 outline-none text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
+          >
             <option value="createdAt">创建时间</option>
             <option value="updatedAt">更新时间</option>
             <option value="lastUsedAt">最后使用</option>
@@ -87,9 +95,11 @@
 
         <!-- 排序方向 -->
         <div class="flex flex-col">
-          <label class="text-sm font-semibold text-slate-700 mb-2">排序方向</label>
-          <select formControlName="sortOrder"
-                  class="px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]">
+          <label class="text-sm font-semibold text-gray-700 mb-2">排序方向</label>
+          <select
+            formControlName="sortOrder"
+            class="px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white transition-all duration-300 outline-none text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
+          >
             <option value="desc">降序</option>
             <option value="asc">升序</option>
           </select>
@@ -98,20 +108,22 @@
     </div>
 
     <!-- 错误提示 -->
-    <div class="bg-red-500/10 px-4 py-3 rounded-lg border-l-4 border-red-500 mb-6" *ngIf="error">
+    <div class="bg-red-50 border border-red-200 px-4 py-3 rounded-lg border-l-4 border-l-red-500 mb-6" *ngIf="error">
       <div class="flex items-center">
-        <span class="text-red-500 mr-2">⚠️</span>
+        <svg class="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.866-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+        </svg>
         <span class="text-red-700">{{ error }}</span>
       </div>
     </div>
 
     <!-- API Key 列表 -->
-    <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+    <div class="bg-white border border-gray-200 rounded-lg">
       <!-- 加载状态 -->
       <div class="flex items-center justify-center py-20" *ngIf="loading">
         <div class="flex flex-col items-center gap-4">
-          <div class="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-          <p class="text-slate-500">加载中...</p>
+          <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+          <p class="text-gray-500">加载中...</p>
         </div>
       </div>
 
@@ -136,45 +148,45 @@
       </app-api-key-table>
     </div>
   </div>
-
-  <!-- 创建模态框 -->
-  <app-api-key-modal
-    *ngIf="showCreateModal"
-    [title]="'创建新的 API Key'"
-    [visible]="showCreateModal"
-    (close)="onModalClose()"
-    (created)="onApiKeyCreated($event)">
-  </app-api-key-modal>
-
-  <!-- 编辑模态框 -->
-  <app-api-key-modal
-    *ngIf="showEditModal"
-    [title]="'编辑 API Key'"
-    [visible]="showEditModal"
-    [apiKey]="selectedApiKey"
-    (close)="onModalClose()"
-    (updated)="onApiKeyUpdated($event)">
-  </app-api-key-modal>
-
-  <!-- 删除确认模态框 -->
-  <app-api-key-modal
-    *ngIf="showDeleteModal"
-    [title]="'删除 API Key'"
-    [visible]="showDeleteModal"
-    [mode]="'delete'"
-    [apiKey]="selectedApiKey"
-    (close)="onModalClose()"
-    (deleted)="onApiKeyDeleted()">
-  </app-api-key-modal>
-
-  <!-- 重新生成模态框 -->
-  <app-api-key-modal
-    *ngIf="showRegenerateModal"
-    [title]="'重新生成 API Key'"
-    [visible]="showRegenerateModal"
-    [mode]="'regenerate'"
-    [apiKey]="selectedApiKey"
-    (close)="onModalClose()"
-    (regenerated)="onApiKeyRegenerated()">
-  </app-api-key-modal>
 </div>
+
+<!-- 创建模态框 -->
+<app-api-key-modal
+  *ngIf="showCreateModal"
+  [title]="'创建新的 API Key'"
+  [visible]="showCreateModal"
+  (close)="onModalClose()"
+  (created)="onApiKeyCreated($event)">
+</app-api-key-modal>
+
+<!-- 编辑模态框 -->
+<app-api-key-modal
+  *ngIf="showEditModal"
+  [title]="'编辑 API Key'"
+  [visible]="showEditModal"
+  [apiKey]="selectedApiKey"
+  (close)="onModalClose()"
+  (updated)="onApiKeyUpdated($event)">
+</app-api-key-modal>
+
+<!-- 删除确认模态框 -->
+<app-api-key-modal
+  *ngIf="showDeleteModal"
+  [title]="'删除 API Key'"
+  [visible]="showDeleteModal"
+  [mode]="'delete'"
+  [apiKey]="selectedApiKey"
+  (close)="onModalClose()"
+  (deleted)="onApiKeyDeleted()">
+</app-api-key-modal>
+
+<!-- 重新生成模态框 -->
+<app-api-key-modal
+  *ngIf="showRegenerateModal"
+  [title]="'重新生成 API Key'"
+  [visible]="showRegenerateModal"
+  [mode]="'regenerate'"
+  [apiKey]="selectedApiKey"
+  (close)="onModalClose()"
+  (regenerated)="onApiKeyRegenerated()">
+</app-api-key-modal>

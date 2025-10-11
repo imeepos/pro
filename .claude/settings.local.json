@@ -31,7 +31,8 @@
       "Bash(git restore:*)",
       "Bash(find:*)",
       "Bash(docker run:*)",
-      "WebFetch(domain:blog.csdn.net)"
+      "WebFetch(domain:blog.csdn.net)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

@@ -1,134 +1,180 @@
-<div class="dashboard-container">
-  <!-- 欢迎区域 -->
-  <div class="welcome-section">
-    <div class="welcome-content">
-      <h1 class="welcome-title">欢迎回来</h1>
-      <p class="welcome-subtitle" *ngIf="currentUser$ | async as user">
-        {{ user?.username }}，今天是个管理数据的好日子！
-      </p>
-    </div>
-    <div class="welcome-actions">
-      <button class="action-button primary" (click)="navigateToSection('screens')">
-        创建大屏
-      </button>
-      <button class="action-button secondary" (click)="navigateToSection('events')">
-        添加事件
-      </button>
-    </div>
-  </div>
-
-  <!-- 统计卡片区域 -->
-  <div class="stats-grid">
-    <div class="stat-card" (click)="navigateToSection('screens')">
-      <div class="stat-icon screens">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-        </svg>
-      </div>
-      <div class="stat-content">
-        <h3 class="stat-number">{{ stats.totalScreens }}</h3>
-        <p class="stat-label">大屏总数</p>
-      </div>
-    </div>
-
-    <div class="stat-card" (click)="navigateToSection('events')">
-      <div class="stat-icon events">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-        </svg>
-      </div>
-      <div class="stat-content">
-        <h3 class="stat-number">{{ stats.totalEvents }}</h3>
-        <p class="stat-label">事件总数</p>
-      </div>
-    </div>
-
-    <div class="stat-card" (click)="navigateToSection('weibo/accounts')">
-      <div class="stat-icon weibo">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-        </svg>
-      </div>
-      <div class="stat-content">
-        <h3 class="stat-number">{{ stats.totalWeiboAccounts }}</h3>
-        <p class="stat-label">微博账号</p>
-      </div>
-    </div>
-
-    <div class="stat-card" (click)="navigateToSection('weibo-search-tasks')">
-      <div class="stat-icon search">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-        </svg>
-      </div>
-      <div class="stat-content">
-        <h3 class="stat-number">{{ stats.totalSearchTasks }}</h3>
-        <p class="stat-label">搜索任务</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- 最近活动区域 -->
-  <div class="recent-activity">
-    <h2 class="section-title">最近活动</h2>
-    <div class="activity-list">
-      @for (activity of recentActivities; track $index) {
-        <div class="activity-item">
-          <div class="activity-icon" [ngClass]="getActivityColor(activity.type)">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <!-- 根据类型显示不同图标 -->
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+  <div class="h-full flex flex-col">
+    <!-- 页面标题区域 -->
+    <div class="bg-white border-b px-6 py-4 -mx-6 -mt-6 mb-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">工作台</h1>
+          <p class="text-sm text-gray-600 mt-1" *ngIf="currentUser$ | async as user">
+            欢迎回来，{{ user?.username }}！今天是个管理数据的好日子！
+          </p>
+        </div>
+        <div class="flex gap-3">
+          <button
+            (click)="navigateToSection('screens')"
+            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
             </svg>
-          </div>
-          <div class="activity-content">
-            <p class="activity-message">{{ activity.message }}</p>
-            <span class="activity-time">{{ activity.time }}</span>
-          </div>
+            创建大屏
+          </button>
+          <button
+            (click)="navigateToSection('events')"
+            class="inline-flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            添加事件
+          </button>
         </div>
-      }
+      </div>
     </div>
-  </div>
 
-  <!-- 快速操作区域 -->
-  <div class="quick-actions">
-    <h2 class="section-title">快速操作</h2>
-    <div class="actions-grid">
-      <button class="quick-action-card" (click)="navigateToSection('screens')">
-        <div class="action-icon">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
+    <!-- 统计卡片区域 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition-shadow" (click)="navigateToSection('screens')">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-2xl font-bold text-gray-900">{{ stats.totalScreens }}</p>
+            <p class="text-sm text-gray-600">大屏总数</p>
+          </div>
         </div>
-        <span>新建大屏</span>
-      </button>
+      </div>
 
-      <button class="quick-action-card" (click)="navigateToSection('events')">
-        <div class="action-icon">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
+      <div class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition-shadow" (click)="navigateToSection('events')">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-2xl font-bold text-gray-900">{{ stats.totalEvents }}</p>
+            <p class="text-sm text-gray-600">事件总数</p>
+          </div>
         </div>
-        <span>添加事件</span>
-      </button>
+      </div>
 
-      <button class="quick-action-card" (click)="navigateToSection('weibo/accounts')">
-        <div class="action-icon">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
+      <div class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition-shadow" (click)="navigateToSection('weibo/accounts')">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-2xl font-bold text-gray-900">{{ stats.totalWeiboAccounts }}</p>
+            <p class="text-sm text-gray-600">微博账号</p>
+          </div>
         </div>
-        <span>添加账号</span>
-      </button>
+      </div>
 
-      <button class="quick-action-card" (click)="navigateToSection('weibo-search-tasks')">
-        <div class="action-icon">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
+      <div class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition-shadow" (click)="navigateToSection('weibo-search-tasks')">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-2xl font-bold text-gray-900">{{ stats.totalSearchTasks }}</p>
+            <p class="text-sm text-gray-600">搜索任务</p>
+          </div>
         </div>
-        <span>创建任务</span>
-      </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- 最近活动区域 -->
+      <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">最近活动</h2>
+        <div class="space-y-4">
+          @for (activity of recentActivities; track $index) {
+            <div class="flex items-start space-x-3">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center" [ngClass]="getActivityColor(activity.type)">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm text-gray-900">{{ activity.message }}</p>
+                <p class="text-sm text-gray-500">{{ activity.time }}</p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- 快速操作区域 -->
+      <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">快速操作</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <button
+            class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+            (click)="navigateToSection('screens')"
+          >
+            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-700">新建大屏</span>
+          </button>
+
+          <button
+            class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors"
+            (click)="navigateToSection('events')"
+          >
+            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-2">
+              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-700">添加事件</span>
+          </button>
+
+          <button
+            class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors"
+            (click)="navigateToSection('weibo/accounts')"
+          >
+            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-2">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-700">添加账号</span>
+          </button>
+
+          <button
+            class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors"
+            (click)="navigateToSection('weibo-search-tasks')"
+          >
+            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mb-2">
+              <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-700">创建任务</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

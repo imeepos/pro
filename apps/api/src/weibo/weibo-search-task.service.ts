@@ -119,22 +119,14 @@ export class WeiboSearchTaskService {
     // 排序（转换为大写）
     const order = (sortOrder?.toUpperCase() || 'DESC') as 'ASC' | 'DESC';
 
-    // 字段映射：将前端字段名映射到数据库列名
-    const sortFieldMap: Record<string, string> = {
-      'createdAt': 'created_at',
-      'updatedAt': 'updated_at',
-      'startDate': 'start_date',
-      'nextRunAt': 'next_run_at',
-      'progress': 'progress',
-      'longitude': 'longitude',
-      'latitude': 'latitude',
-      'locationAddress': 'location_address',
-      'locationName': 'location_name'
-    };
+    // 处理排序字段
+    const allowedSortFields = [
+      'createdAt', 'updatedAt', 'startDate', 'nextRunAt',
+      'progress', 'longitude', 'latitude', 'locationAddress', 'locationName'
+    ];
 
-    // 默认使用created_at排序，如果字段未定义则直接使用字段名
-    const dbFieldName = sortFieldMap[sortBy || 'createdAt'] || sortBy || 'created_at';
-    queryBuilder.orderBy(`task.${dbFieldName}`, order);
+    const safeSortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    queryBuilder.orderBy(`task.${safeSortField}`, order);
 
     // 分页
     const offset = (page - 1) * limit;
