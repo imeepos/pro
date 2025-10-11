@@ -23,7 +23,7 @@
 ```typescript
 import { Component } from '@angular/core';
 import { ImageUploadComponent } from '../../shared/components/image-upload/image-upload.component';
-import { Attachment } from '@pro/sdk/dist/types/attachment.types';
+import { Attachment } from '@pro/sdk';
 
 @Component({
   selector: 'app-your-component',

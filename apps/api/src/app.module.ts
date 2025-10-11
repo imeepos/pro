@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService, ConfigModule as NestConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './health.controller';
@@ -22,7 +22,7 @@ import { createDatabaseConfig } from './config';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
+      useFactory: (configService: ConfigService) => createDatabaseConfig(configService) as TypeOrmModuleOptions,
     }),
     ConfigModule,
     AuthModule,

@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SkerSDK } from '@pro/sdk';
-import { Attachment } from '@pro/sdk/dist/types/attachment.types';
+import { Attachment } from '@pro/sdk';
 import { environment } from '../../../../environments/environment';
 
 interface UploadingImage {

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
 import { TaskMonitor } from './weibo/task-monitor.service';
@@ -24,7 +24,7 @@ import { AppController } from './app.controller';
     // 数据库配置
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
+      useFactory: (configService: ConfigService) => createDatabaseConfig(configService) as TypeOrmModuleOptions,
     }),
 
     // 任务调度模块
