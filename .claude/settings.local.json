@@ -26,7 +26,8 @@
       "Bash(docker exec:*)",
       "Bash(docker buildx du:*)",
       "Bash(docker system df:*)",
-      "Bash(docker image inspect:*)"
+      "Bash(docker image inspect:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
