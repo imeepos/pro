@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { EventEntity } from './event.entity';
+import { EventEntity } from './event.entity.js';
 
 export enum FileType {
   IMAGE = 'image',

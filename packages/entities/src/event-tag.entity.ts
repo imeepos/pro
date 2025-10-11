@@ -7,8 +7,8 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { EventEntity } from './event.entity';
-import { TagEntity } from './tag.entity';
+import { EventEntity } from './event.entity.js';
+import { TagEntity } from './tag.entity.js';
 
 @Entity('event_tag')
 @Index(['eventId', 'tagId'], { unique: true })

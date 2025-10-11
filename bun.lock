@@ -342,6 +342,7 @@
       "name": "@pro/entities",
       "version": "1.0.0",
       "dependencies": {
+        "@pro/types": "workspace:*",
         "reflect-metadata": "^0.2.0",
         "typeorm": "^0.3.27",
       },

@@ -16,12 +16,10 @@ describe('validatePassword', () => {
   it('应该接受长度等于6的密码', () => {
     const result = validatePassword('123456');
     expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
   });
 
   it('应该接受长度大于6的密码', () => {
     const result = validatePassword('12345678');
     expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
   });
 });

@@ -8,8 +8,8 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { UserEntity } from './user.entity';
-import { WeiboAccountEntity } from './weibo-account.entity';
+import { UserEntity } from './user.entity.js';
+import { WeiboAccountEntity } from './weibo-account.entity.js';
 
 /**
  * 微博搜索任务状态枚举

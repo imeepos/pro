@@ -7,7 +7,7 @@ import {
   Index,
   OneToMany,
 } from 'typeorm';
-import { EventEntity } from './event.entity';
+import { EventEntity } from './event.entity.js';
 
 @Entity('industry_type')
 export class IndustryTypeEntity {

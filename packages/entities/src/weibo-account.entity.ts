@@ -8,7 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { UserEntity } from './user.entity';
+import { UserEntity } from './user.entity.js';
 
 /**
  * 微博账号状态枚举

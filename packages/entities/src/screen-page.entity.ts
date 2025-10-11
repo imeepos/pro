@@ -8,7 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { UserEntity } from './user.entity';
+import { UserEntity } from './user.entity.js';
 
 export type ScreenStatus = 'draft' | 'published';
 

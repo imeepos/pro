@@ -8,7 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { UserEntity } from './user.entity';
+import { UserEntity } from './user.entity.js';
 
 /**
  * 京东账号状态枚举

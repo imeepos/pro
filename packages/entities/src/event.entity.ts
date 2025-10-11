@@ -9,10 +9,10 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { EventTypeEntity } from './event-type.entity';
-import { IndustryTypeEntity } from './industry-type.entity';
-import { EventAttachmentEntity } from './event-attachment.entity';
-import { EventTagEntity } from './event-tag.entity';
+import { EventTypeEntity } from './event-type.entity.js';
+import { IndustryTypeEntity } from './industry-type.entity.js';
+import { EventAttachmentEntity } from './event-attachment.entity.js';
+import { EventTagEntity } from './event-tag.entity.js';
 
 export enum EventStatus {
   DRAFT = 0,

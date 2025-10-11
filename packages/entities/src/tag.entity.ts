@@ -7,7 +7,7 @@ import {
   Index,
   OneToMany,
 } from 'typeorm';
-import { EventTagEntity } from './event-tag.entity';
+import { EventTagEntity } from './event-tag.entity.js';
 
 @Entity('tag')
 export class TagEntity {

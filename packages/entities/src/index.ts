@@ -1,33 +1,33 @@
 import "reflect-metadata"
 
-export * from './user.entity';
-export * from './weibo-account.entity';
-export * from './jd-account.entity';
-export * from './screen-page.entity';
-export * from './industry-type.entity';
-export * from './event-type.entity';
-export * from './event.entity';
-export * from './event-attachment.entity';
-export * from './tag.entity';
-export * from './event-tag.entity';
-export * from './weibo-search-task.entity';
-export * from './media-type.entity';
-export * from './api-key.entity';
+export * from './user.entity.js';
+export * from './weibo-account.entity.js';
+export * from './jd-account.entity.js';
+export * from './screen-page.entity.js';
+export * from './industry-type.entity.js';
+export * from './event-type.entity.js';
+export * from './event.entity.js';
+export * from './event-attachment.entity.js';
+export * from './tag.entity.js';
+export * from './event-tag.entity.js';
+export * from './weibo-search-task.entity.js';
+export * from './media-type.entity.js';
+export * from './api-key.entity.js';
 
 import { DataSourceOptions } from 'typeorm';
-import { UserEntity } from './user.entity';
-import { ApiKeyEntity } from './api-key.entity';
-import { WeiboAccountEntity } from './weibo-account.entity';
-import { WeiboSearchTaskEntity } from './weibo-search-task.entity';
-import { JdAccountEntity } from './jd-account.entity';
-import { ScreenPageEntity } from './screen-page.entity';
-import { IndustryTypeEntity } from './industry-type.entity';
-import { EventTypeEntity } from './event-type.entity';
-import { EventEntity } from './event.entity';
-import { TagEntity } from './tag.entity';
-import { EventTagEntity } from './event-tag.entity';
-import { EventAttachmentEntity } from './event-attachment.entity';
-import { MediaTypeEntity } from './media-type.entity';
+import { UserEntity } from './user.entity.js';
+import { ApiKeyEntity } from './api-key.entity.js';
+import { WeiboAccountEntity } from './weibo-account.entity.js';
+import { WeiboSearchTaskEntity } from './weibo-search-task.entity.js';
+import { JdAccountEntity } from './jd-account.entity.js';
+import { ScreenPageEntity } from './screen-page.entity.js';
+import { IndustryTypeEntity } from './industry-type.entity.js';
+import { EventTypeEntity } from './event-type.entity.js';
+import { EventEntity } from './event.entity.js';
+import { TagEntity } from './tag.entity.js';
+import { EventTagEntity } from './event-tag.entity.js';
+import { EventAttachmentEntity } from './event-attachment.entity.js';
+import { MediaTypeEntity } from './media-type.entity.js';
 
 
 interface ConfigService {

@@ -1,27 +1,37 @@
 {
   "name": "@pro/entities",
   "version": "1.0.0",
-  "description": "Shared configuration",
+  "description": "Shared entities and data models",
+  "type": "module",
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "tsup && tsc --project tsconfig.types.json",
+    "build:js": "tsup",
+    "build:types": "tsc --project tsconfig.types.json",
+    "dev": "tsup --watch",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\""
   },
-  "keywords": [
-    "config",
-    "configuration"
-  ],
+  "keywords": ["entities", "data", "models"],
   "license": "UNLICENSED",
-  "devDependencies": {
-    "@types/node": "^20.10.0",
-    "typescript": "~5.3.3"
-  },
   "dependencies": {
     "reflect-metadata": "^0.2.0",
-    "typeorm": "^0.3.27"
+    "typeorm": "^0.3.27",
+    "@pro/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.5.0",
+    "typescript": "~5.3.3"
   }
 }
