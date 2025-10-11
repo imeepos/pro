@@ -4,7 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, And } from 'typeorm';
 import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
 import { RabbitMQConfigService } from '../rabbitmq/rabbitmq-config.service';
-
 /**
  * 任务超时时间配置（毫秒）
  */
