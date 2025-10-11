@@ -2,9 +2,7 @@ name: ${COMPOSE_PROJECT_NAME}
 
 services:
   postgres:
-    build:
-      context: .
-      dockerfile: docker/postgres/Dockerfile
+    image: imeepos/postgres:latest
     container_name: ${COMPOSE_PROJECT_NAME}_postgres
     restart: unless-stopped
     environment:
@@ -237,9 +235,7 @@ services:
       start_period: 40s
 
   crawler:
-    build:
-      context: .
-      dockerfile: apps/crawler/Dockerfile
+    image: imeepos/crawler:latest
     container_name: pro-crawler
     ports:
       - "${CRAWLER_PORT:-3001}:3001"
@@ -275,9 +271,7 @@ services:
       start_period: 40s
 
   cleaner:
-    build:
-      context: .
-      dockerfile: apps/cleaner/Dockerfile
+    image: imeepos/cleaner:latest
     container_name: pro-cleaner
     ports:
       - "${CLEANER_PORT:-3002}:3002"
@@ -306,9 +300,7 @@ services:
       start_period: 40s
 
   broker:
-    build:
-      context: .
-      dockerfile: apps/broker/Dockerfile
+    image: imeepos/broker:latest
     container_name: pro-broker
     ports:
       - "${BROKER_PORT:-3003}:3003"
@@ -331,9 +323,7 @@ services:
       start_period: 40s
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+    image: imeepos/web:latest
     container_name: pro-web
     ports:
       - "${WEB_PORT:-8080}:80"
@@ -350,11 +340,7 @@ services:
       retries: 3
 
   admin:
-    build:
-      context: .
-      dockerfile: apps/admin/Dockerfile
-      args:
-        AMAP_API_KEY: ${AMAP_API_KEY:-YOUR_AMAP_KEY}
+    image: imeepos/admin:latest
     container_name: pro-admin
     ports:
       - "${ADMIN_PORT:-8081}:80"
