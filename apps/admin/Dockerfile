@@ -4,7 +4,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # 安装 bun
-RUN curl -fsSL https://bun.sh/install | bash
+RUN apk add --no-cache curl bash \
+    && curl -fsSL https://bun.sh/install | bash
 
 # 复制依赖文件
 COPY package.json bun.lock ./
