@@ -76,20 +76,3 @@ export const createDatabaseConfig = (configService: ConfigService): DataSourceOp
     logging: nodeEnv === 'development',
   };
 };
-
-export const getDatabaseConfig = (): DataSourceOptions => {
-  const legacyConfigService = {
-    get: <T = any>(key: string, defaultValue?: T): T => {
-      const value = process.env[key];
-      if (value === undefined) return defaultValue as T;
-
-      if (typeof defaultValue === 'number') {
-        return parseInt(value, 10) as T;
-      }
-
-      return value as T;
-    }
-  };
-
-  return createDatabaseConfig(legacyConfigService);
-};

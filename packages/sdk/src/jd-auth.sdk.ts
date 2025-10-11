@@ -4,7 +4,7 @@ import { JdAuthSDK, JdLoginEventHandler, JdAccount, JdAccountCheckResult } from 
  * 京东认证 SDK 实现
  */
 export class JdAuthSDKImpl implements JdAuthSDK {
-  constructor(private baseUrl: string, private tokenKey?: string) {}
+  constructor(private baseUrl: string) {}
 
   /**
    * 启动京东登录（SSE）
@@ -101,6 +101,6 @@ export class JdAuthSDKImpl implements JdAuthSDK {
 /**
  * 创建京东认证 SDK 实例
  */
-export function createJdAuthSDK(baseUrl: string, tokenKey?: string): JdAuthSDK {
-  return new JdAuthSDKImpl(baseUrl, tokenKey);
+export function createJdAuthSDK(baseUrl: string, _tokenKey?: string): JdAuthSDK {
+  return new JdAuthSDKImpl(baseUrl);
 }

@@ -5,7 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
 import { TaskMonitor } from './weibo/task-monitor.service';
 import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
-import { WeiboSearchTaskEntity } from './entities/weibo-search-task.entity';
+import { WeiboSearchTaskEntity } from '@pro/entities';
 import { createDatabaseConfig } from './config/database.config';
 import { AppController } from './app.controller';
 

@@ -430,21 +430,6 @@ your-registry.com/pro/api:v1        # 主版本 (可选)
 # 4. 记录回滚时间和问题
 ```
 
-### 7. 监控和告警
-
-集成版本监控到监控系统:
-
-```javascript
-// 在应用中暴露版本信息端点
-app.get('/version', (req, res) => {
-  res.json({
-    version: process.env.BUILD_VERSION || 'unknown',
-    gitCommit: process.env.GIT_COMMIT,
-    buildTime: process.env.BUILD_TIME,
-    service: 'api'
-  });
-});
-```
 
 ---
 

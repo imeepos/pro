@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, And } from 'typeorm';
-import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '../entities/weibo-search-task.entity';
+import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
 import { RabbitMQConfigService } from '../rabbitmq/rabbitmq-config.service';
 
 /**

@@ -1,1 +1,1 @@
-export { getDatabaseConfig } from '@pro/entities';
+export { createDatabaseConfig } from '@pro/entities';
