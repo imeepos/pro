@@ -58,7 +58,12 @@ Docker 镜像构建脚本
     $(basename "$0") [SERVICE] [OPTIONS]
 
 参数:
-    SERVICE             服务名称 (api, web, admin, broker, crawler, cleaner, all)
+    SERVICE             服务名称，支持以下选项:
+                        - base: 基础镜像层
+                        - packages-builder: Packages 构建层
+                        - api, web, admin: 应用服务
+                        - broker, crawler, cleaner: 后台服务
+                        - all: 构建所有服务 (按依赖顺序)
 
 选项:
     --service=SERVICE   指定服务名称
@@ -68,11 +73,18 @@ Docker 镜像构建脚本
     --platform=PLATFORM 目标平台 (默认: linux/amd64)
     -h, --help         显示帮助信息
 
+构建依赖关系:
+    base → packages-builder → 应用/后台服务
+
+    脚本会自动检查并构建缺失的依赖镜像
+
 示例:
-    $(basename "$0") api
-    $(basename "$0") --service=api --tag=v1.0.0
-    $(basename "$0") all --push
-    $(basename "$0") api --no-cache --platform=linux/arm64
+    $(basename "$0") api                           # 构建 api 服务 (自动检查依赖)
+    $(basename "$0") base                          # 构建基础镜像
+    $(basename "$0") packages-builder              # 构建 packages 构建层
+    $(basename "$0") --service=api --tag=v1.0.0   # 指定标签构建
+    $(basename "$0") all --push                    # 构建并推送所有服务
+    $(basename "$0") api --no-cache --platform=linux/arm64  # 无缓存多平台构建
 
 EOF
     exit 0
@@ -123,9 +135,19 @@ parse_args() {
 }
 
 # 服务配置函数
+# 格式: 镜像名称|Dockerfile路径|构建上下文
 get_service_config() {
     local service=$1
     case $service in
+        # 基础镜像层
+        base)
+            echo "${REGISTRY}/base|docker/base/Dockerfile|docker/base"
+            ;;
+        # Packages 构建层
+        packages-builder)
+            echo "${REGISTRY}/packages-builder|docker/packages-builder/Dockerfile|."
+            ;;
+        # 应用服务层
         api)
             echo "${REGISTRY}/api|apps/api/Dockerfile|."
             ;;
@@ -151,8 +173,9 @@ get_service_config() {
 }
 
 # 获取所有服务列表
+# 按依赖顺序排列: base -> packages-builder -> 应用服务
 get_all_services() {
-    echo "api web admin broker crawler cleaner"
+    echo "base packages-builder api web admin broker crawler cleaner"
 }
 
 # 验证服务名称
@@ -233,6 +256,77 @@ get_image_layers() {
     docker image inspect "$image" --format='{{len .RootFS.Layers}}' 2>/dev/null || echo "unknown"
 }
 
+# 获取服务依赖
+# 返回服务的直接依赖列表
+get_service_dependencies() {
+    local service=$1
+    case $service in
+        base)
+            # base 无依赖
+            echo ""
+            ;;
+        packages-builder)
+            # packages-builder 依赖 base
+            echo "base"
+            ;;
+        api|web|admin|broker|crawler|cleaner)
+            # 应用服务依赖 packages-builder
+            echo "packages-builder"
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
+
+# 检查镜像是否存在
+check_image_exists() {
+    local image=$1
+    if docker image inspect "$image" &>/dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# 检查并构建依赖镜像
+# 如果依赖镜像不存在，自动触发构建
+check_and_build_dependencies() {
+    local service=$1
+    local dependencies
+    local dep_image
+    local need_build=false
+
+    dependencies=$(get_service_dependencies "$service")
+
+    # 如果没有依赖，直接返回
+    if [[ -z "$dependencies" ]]; then
+        return 0
+    fi
+
+    # 检查每个依赖
+    for dep in $dependencies; do
+        dep_image="${REGISTRY}/${dep}:latest"
+
+        if ! check_image_exists "$dep_image"; then
+            log_warning "📦 依赖镜像不存在: $dep_image"
+            log_info "🔨 自动构建依赖: $dep"
+
+            # 递归构建依赖
+            if ! build_service "$dep"; then
+                log_error "❌ 依赖构建失败: $dep"
+                return 1
+            fi
+
+            log_success "✅ 依赖构建完成: $dep"
+        else
+            log_info "✅ 依赖镜像已存在: $dep_image"
+        fi
+    done
+
+    return 0
+}
+
 # 构建单个服务
 build_service() {
     local service=$1
@@ -254,12 +348,19 @@ build_service() {
     image_name="${image_base}:${TAG}"
 
     print_separator
-    log_info "构建服务: $service"
-    log_info "镜像名称: $image_name"
-    log_info "Dockerfile: $dockerfile"
-    log_info "构建上下文: $build_context"
-    log_info "目标平台: $PLATFORM"
+    log_info "📦 构建服务: $service"
+    log_info "🏷️  镜像名称: $image_name"
+    log_info "📄 Dockerfile: $dockerfile"
+    log_info "📂 构建上下文: $build_context"
+    log_info "🎯 目标平台: $PLATFORM"
     print_separator
+
+    # 检查并构建依赖
+    log_info "🔍 检查依赖镜像..."
+    if ! check_and_build_dependencies "$service"; then
+        log_error "❌ 依赖检查失败: $service"
+        return 1
+    fi
 
     # 检查 Dockerfile 是否存在
     if [[ ! -f "${PROJECT_ROOT}/${dockerfile}" ]]; then
@@ -298,7 +399,7 @@ build_service() {
 
     # 执行构建
     build_start=$(date +%s)
-    log_info "开始构建..."
+    log_info "🔨 开始构建..."
 
     if docker buildx build "${build_args[@]}" "${PROJECT_ROOT}/${build_context}"; then
         build_end=$(date +%s)
@@ -311,11 +412,11 @@ build_service() {
         image_layers=$(get_image_layers "$image_name")
 
         print_separator
-        log_success "构建成功: $service"
-        log_info "镜像标签: ${image_name}, ${image_base}:latest"
-        log_info "镜像大小: ${image_size}"
-        log_info "镜像层数: ${image_layers}"
-        log_info "构建耗时: ${build_duration}s"
+        log_success "✅ 构建成功: $service"
+        log_info "🏷️  镜像标签: ${image_name}, ${image_base}:latest"
+        log_info "📦 镜像大小: ${image_size}"
+        log_info "📚 镜像层数: ${image_layers}"
+        log_info "⏱️  构建耗时: ${build_duration}s"
         print_separator
 
         # 推送镜像
@@ -325,7 +426,7 @@ build_service() {
 
         return 0
     else
-        log_error "构建失败: $service"
+        log_error "❌ 构建失败: $service"
         return 1
     fi
 }
