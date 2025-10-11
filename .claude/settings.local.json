@@ -20,7 +20,8 @@
       "Bash(bash:*)",
       "Bash(/home/ubuntu/worktrees/pro/scripts/build-image.sh:*)",
       "Bash(docker rmi:*)",
-      "Bash(./scripts/build-image.sh:*)"
+      "Bash(./scripts/build-image.sh:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
