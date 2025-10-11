@@ -138,7 +138,7 @@ WORKDIR /app
 
 # 从 packages 镜像复制 packages 依赖和构建产物
 COPY --from=packages --chown=nestjs:nodejs /app/package.json ./
-COPY --from=packages --chown=nestjs:nodejs /app/bun.lockb ./
+COPY --from=packages --chown=nestjs:nodejs /app/bun.lock ./
 COPY --from=packages --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=packages --chown=nestjs:nodejs /app/packages ./packages
 

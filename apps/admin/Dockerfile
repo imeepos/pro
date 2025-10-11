@@ -7,7 +7,7 @@ WORKDIR /app
 RUN curl -fsSL https://bun.sh/install | bash
 
 # 复制依赖文件
-COPY package.json pnpm-workspace.yaml bun.lockb ./
+COPY package.json bun.lock ./
 COPY apps/admin/package.json ./apps/admin/
 COPY packages ./packages
 

@@ -12,7 +12,15 @@
       "Bash(git commit:*)",
       "Bash(git log:*)",
       "Bash(git check-ignore:*)",
-      "Bash(docker build:*)"
+      "Bash(docker build:*)",
+      "Bash(git push:*)",
+      "Bash(docker inspect:*)",
+      "Bash(docker history:*)",
+      "Bash(awk:*)",
+      "Bash(bash:*)",
+      "Bash(/home/ubuntu/worktrees/pro/scripts/build-image.sh:*)",
+      "Bash(docker rmi:*)",
+      "Bash(./scripts/build-image.sh:*)"
     ],
     "deny": [],
     "ask": []

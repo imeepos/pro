@@ -6,6 +6,8 @@ use tailwind not css/sass/less!
 - @pro/admin 后台管理项目 (修改后不用启动/重启，已启动开发监控)
 - @pro/web 自定义大屏页面的展示项目 (修改后不用启动/重启，已启动开发监控)
 
+**务必遵守**当不需要并行任务执行时，不需要使用sub agent，不需要 sub agent时，需要加载使用.claude/agents/code-artisan.md提示词工作
+
 ## 三思而后行：
 
 ### 三思：
@@ -47,10 +49,10 @@ A任务依赖B，C任务依赖A，D任务依赖A，那么执行顺序 B-> A -> C
 从全局视角 不要修一个问题 出先另一个问题 骨头不顾尾
 pnpm run --filter=@sker/xxx typecheck
 
-从新构建重启
-scripts/build-image.sh xxx
-docker compose up -d xxx 错误修复后，启动
+使用：scripts/build-image.sh构建镜像
+使用：docker compose up -d xxx 错误修复后，启动
 
+## 所处环境
 我在 WSL2 的 Docker 环境中, 容器的端口映射可能无法直接从宿主机访问。让我从 Docker 网络内部 测试接口：
 如果时接口，你自己验证，如果时界面，等用户验证反馈
 curl gateway xxx 检查有无修复

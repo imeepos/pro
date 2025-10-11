@@ -164,7 +164,7 @@ get_service_config() {
             echo "${REGISTRY}/crawler|apps/crawler/Dockerfile|."
             ;;
         cleaner)
-            echo "${REGISTRY}/cleaner|apps/cleaner/."
+            echo "${REGISTRY}/cleaner|apps/cleaner/Dockerfile|."
             ;;
         *)
             echo ""
@@ -219,7 +219,6 @@ check_cache_source() {
 
     # 检查本地是否存在 latest 标签
     if docker image inspect "${image_base}:latest" &>/dev/null; then
-        log_info "发现缓存镜像: ${image_base}:latest"
         echo "${image_base}:latest"
         return 0
     fi
@@ -229,12 +228,10 @@ check_cache_source() {
     latest_image=$(docker images --format "{{.Repository}}:{{.Tag}}" "${image_base}" | head -1)
 
     if [[ -n "$latest_image" ]]; then
-        log_info "发现缓存镜像: ${latest_image}"
         echo "$latest_image"
         return 0
     fi
 
-    log_warning "未找到缓存镜像，将进行完整构建"
     return 1
 }
 
@@ -383,7 +380,10 @@ build_service() {
     if [[ "$NO_CACHE" == "false" ]]; then
         local cache_source
         if cache_source=$(check_cache_source "$service"); then
+            log_info "发现缓存镜像: ${cache_source}"
             build_args+=("--cache-from=${cache_source}")
+        else
+            log_warning "未找到缓存镜像，将进行完整构建"
         fi
 
         if [[ "$BUILDKIT_INLINE_CACHE" == "true" ]]; then
