@@ -184,8 +184,6 @@ ENV PATH="/root/.bun/bin:$PATH"
 # 跳过 Playwright 安装以避免网络问题
 # 如需要可手动运行：bunx playwright install chromium
 
-USER nestjs
-
 # 创建版本信息文件
 RUN echo "{ \
       \"version\": \"${BUILD_VERSION}\", \
