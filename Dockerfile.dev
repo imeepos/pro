@@ -42,20 +42,11 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/usr/lib/chromium
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# 复制 workspace 配置
-COPY package.json bun.lock* ./
-COPY turbo.json ./
-COPY tsconfig.base.json ./
-
-# 复制所有 packages 和 apps 的 package.json
-COPY packages/*/package.json ./packages/
-COPY apps/*/package.json ./apps/
+# 复制完整源代码
+COPY . .
 
 # 安装依赖（开发模式，包含 devDependencies）
 RUN bun install
-
-# 复制源代码
-COPY . .
 
 # 暴露所有服务端口
 # API 服务
