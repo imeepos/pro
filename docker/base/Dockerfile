@@ -42,7 +42,7 @@ RUN if ! getent group nodejs > /dev/null 2>&1; then \
 # 确保目录所有权在用户操作前已正确设置
 # ========================================
 WORKDIR /app
-RUN chown -R nestjs:nodejs /app
+RUN chown nestjs:nodejs /app
 
 # ========================================
 # 创建并配置 Bun 相关目录
@@ -50,25 +50,18 @@ RUN chown -R nestjs:nodejs /app
 # 创建 /home/nestjs/tmp 作为 Bun 临时目录
 # ========================================
 RUN mkdir -p /home/nestjs/.bun /home/nestjs/tmp && \
-    chown -R nestjs:nodejs /home/nestjs/.bun /home/nestjs/tmp
+    chown nestjs:nodejs /home/nestjs/.bun /home/nestjs/tmp
 
 # ========================================
 # 安装 Bun 并配置权限和环境变量
 # 临时切换到 root 安装 Bun，然后配置权限给 nestjs 用户
 # 配置 BUN_TMPDIR 指向用户可写的临时目录
 # ========================================
-USER root
 ENV BUN_INSTALL=/home/nestjs/.bun \
     BUN_TMPDIR=/home/nestjs/tmp
-RUN curl -fsSL https://bun.sh/install | bash && \
-    chown -R nestjs:nodejs ${BUN_INSTALL}
+USER nestjs
+RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH=${BUN_INSTALL}/bin:${PATH}
-
-# ========================================
-# 确保用户主目录权限正确
-# 为后续构建提供稳定的权限基础
-# ========================================
-RUN chown -R nestjs:nodejs /home/nestjs
 
 # ========================================
 # 默认使用非 root 用户

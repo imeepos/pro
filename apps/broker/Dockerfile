@@ -1,146 +1,95 @@
-# ========================================
-# Broker 应用镜像
-# ========================================
-# 架构：基于 packages-builder 提供的预构建 packages
-# 优化：无需 Playwright，直接继承 packages 层
-# 策略：packages → development/builder/production
-# ========================================
+# syntax=docker/dockerfile:1
 
-# ========================================
-# 构建参数
-# ========================================
-ARG PACKAGES_IMAGE=imeepos/packages-builder:latest
-ARG BUILD_VERSION=1.0.0
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE=full
+FROM oven/bun:1.3.0-alpine AS base
 
-# ========================================
-# Packages 阶段
-# 目的：引入预构建的共享 packages
-# ========================================
-FROM ${PACKAGES_IMAGE} AS packages
+ENV BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 \
+    BUN_INSTALL_BIN=/usr/local/bin
 
-# ========================================
-# 开发阶段
-# 目的：本地开发环境，支持热重载
-# 基础：直接继承 packages（无需 Playwright）
-# ========================================
-FROM packages AS development
-
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
-
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="development"
-
-USER nestjs
 WORKDIR /app
 
-# 复制 broker 应用配置
-COPY --chown=nestjs:nodejs apps/broker/package.json ./apps/broker/
+FROM base AS deps
 
-# 安装 broker 应用依赖（利用 cache mount 加速）
-RUN --mount=type=cache,id=bun-broker-dev,target=/home/nestjs/.bun/install/cache \
-    echo "📦 安装 @pro/broker 依赖..." && \
-    bun install
+WORKDIR /app
+
+COPY bun.lock package.json turbo.json tsconfig.base.json ./
+
+RUN --mount=type=bind,source=apps,target=/tmp/apps,ro \
+    --mount=type=bind,source=packages,target=/tmp/packages,ro \
+    set -e; \
+    mkdir -p apps packages; \
+    for manifest in /tmp/apps/*/package.json; do \
+      [ -f "$manifest" ] || continue; \
+      app="$(basename "$(dirname "$manifest")")"; \
+      mkdir -p "apps/$app"; \
+      cp "$manifest" "apps/$app/package.json"; \
+    done; \
+    for manifest in /tmp/packages/*/package.json; do \
+      [ -f "$manifest" ] || continue; \
+      pkg="$(basename "$(dirname "$manifest")")"; \
+      mkdir -p "packages/$pkg"; \
+      cp "$manifest" "packages/$pkg/package.json"; \
+    done
+
+RUN --mount=type=cache,id=bun-broker-deps,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
+
+FROM base AS builder
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/bun.lock ./bun.lock
+COPY --from=deps /app/package.json ./package.json
+COPY --from=deps /app/apps/broker/package.json ./apps/broker/package.json
+COPY --from=deps /app/apps/broker/node_modules ./apps/broker/node_modules
+COPY --from=deps /app/packages ./packages
+
+COPY . .
+
+RUN --mount=type=cache,id=bun-broker-deps,target=/root/.bun/install/cache \
+    bunx --bun turbo run build --filter=@pro/broker...
+
+RUN --mount=type=cache,id=bun-broker-prod,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile --production
+
+RUN set -eux; \
+    mkdir -p /app/.release/apps/broker; \
+    cp bun.lock package.json /app/.release/; \
+    cp -r node_modules /app/.release/node_modules; \
+    cp apps/broker/package.json /app/.release/apps/broker/; \
+    if [ -d apps/broker/node_modules ]; then \
+      cp -r apps/broker/node_modules /app/.release/apps/broker/node_modules; \
+    fi; \
+    cp -r apps/broker/dist /app/.release/apps/broker/dist; \
+    for pkg in packages/*; do \
+      if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then \
+        mkdir -p "/app/.release/$pkg"; \
+        cp "$pkg/package.json" "/app/.release/$pkg/"; \
+        if [ -d "$pkg/dist" ]; then \
+          cp -r "$pkg/dist" "/app/.release/$pkg/dist"; \
+        fi; \
+      fi; \
+    done
+
+FROM oven/bun:1.3.0-alpine AS runner
+
+ENV NODE_ENV=production \
+    PORT=3003 \
+    BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 \
+    BUN_INSTALL_BIN=/usr/local/bin
+
+RUN addgroup -g 1001 bunapp && \
+    adduser -u 1001 -G bunapp -h /home/bunapp -s /bin/sh -D bunapp
+
+WORKDIR /app
+
+COPY --from=builder --chown=bunapp:bunapp /app/.release/ /app/
+
+USER bunapp
 
 EXPOSE 3003
 
-CMD ["bun", "--filter", "@pro/broker", "start:dev"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- "http://127.0.0.1:${PORT:-3003}/health" >/dev/null || exit 1
 
-# ========================================
-# 构建阶段
-# 目的：构建 @pro/broker 应用
-# 基础：直接继承 packages
-# ========================================
-FROM packages AS builder
-
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
-
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="builder"
-
-USER nestjs
-WORKDIR /app
-
-# 复制 broker 应用配置
-COPY --chown=nestjs:nodejs apps/broker/package.json ./apps/broker/
-
-# 安装依赖
-RUN --mount=type=cache,id=bun-broker-builder,target=/home/nestjs/.bun/install/cache \
-    echo "📦 安装 @pro/broker 依赖..." && \
-    bun install
-
-# 复制源码
-COPY --chown=nestjs:nodejs apps/broker/tsconfig.json ./apps/broker/
-COPY --chown=nestjs:nodejs apps/broker/tsconfig.build.json* ./apps/broker/
-COPY --chown=nestjs:nodejs apps/broker/nest-cli.json* ./apps/broker/
-COPY --chown=nestjs:nodejs apps/broker/src ./apps/broker/src
-
-# 构建应用
-RUN echo "🏗️  构建 @pro/broker..." && \
-    bun --filter @pro/broker build
-
-# ========================================
-# 生产阶段
-# 目的：最小化生产镜像
-# 基础：直接继承 packages
-# ========================================
-FROM packages AS production
-
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
-
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="production"
-
-USER nestjs
-WORKDIR /app
-
-# 从 builder 复制构建产物
-COPY --from=builder --chown=nestjs:nodejs /app/apps/broker/package.json ./apps/broker/
-COPY --from=builder --chown=nestjs:nodejs /app/apps/broker/dist ./apps/broker/dist
-COPY --from=builder --chown=nestjs:nodejs /app/bun.lock ./
-
-# 仅安装生产依赖
-RUN --mount=type=cache,id=bun-broker-prod,target=/home/nestjs/.bun/install/cache \
-    echo "📦 安装 @pro/broker 生产依赖..." && \
-    bun install --cwd ./apps/broker --production
-
-# 创建版本信息
-RUN echo "{ \
-      \"version\": \"${BUILD_VERSION}\", \
-      \"buildTime\": \"${BUILD_TIME}\", \
-      \"gitCommit\": \"${GIT_COMMIT}\", \
-      \"buildType\": \"${BUILD_TYPE}\", \
-      \"stage\": \"production\", \
-      \"nodeVersion\": \"$(node --version)\", \
-      \"platform\": \"$(uname -a)\" \
-    }" > /app/build-info.json
-
-EXPOSE 3003
-
-ENV NODE_ENV=production
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3003/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["bun", "apps/broker/dist/main.js"]
+CMD ["bun", "run", "--cwd", "apps/broker", "start:prod"]

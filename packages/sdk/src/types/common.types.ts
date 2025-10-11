@@ -14,6 +14,9 @@ export interface PageResponse<T> {
   total: number;
   page: number;
   pageSize: number;
+  totalPages?: number;
+  hasNext?: boolean;
+  hasPrev?: boolean;
 }
 
 /**

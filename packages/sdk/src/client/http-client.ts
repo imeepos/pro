@@ -56,8 +56,21 @@ export class HttpClient {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const result = await response.json();
-    return result.data !== undefined ? result.data : result;
+    if (response.status === 204 || response.status === 205) {
+      return undefined as T;
+    }
+
+    const raw = await response.text();
+    if (!raw) {
+      return undefined as T;
+    }
+
+    try {
+      const result = JSON.parse(raw);
+      return result?.data !== undefined ? result.data : result;
+    } catch (error) {
+      throw new Error('解析响应失败');
+    }
   }
 
   async get<T>(url: string, params?: Record<string, unknown>): Promise<T> {

@@ -2,6 +2,14 @@ import { HttpClient } from '../client/http-client';
 import { Tag, CreateTagDto, UpdateTagDto } from '../types/tag.types';
 import { PageResponse } from '../types/common.types';
 
+interface TagListPayload {
+  items: Tag[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages?: number;
+}
+
 /**
  * 标签 API 接口封装
  */
@@ -20,7 +28,15 @@ export class TagApi {
     pageSize?: number;
     keyword?: string;
   }): Promise<PageResponse<Tag>> {
-    return this.http.get<PageResponse<Tag>>('/api/tags', params);
+    const response = await this.http.get<TagListPayload>('/api/tags', params);
+
+    return {
+      data: response.items,
+      total: response.total,
+      page: response.page,
+      pageSize: response.pageSize,
+      totalPages: response.totalPages,
+    };
   }
 
   /**

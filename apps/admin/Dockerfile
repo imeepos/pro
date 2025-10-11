@@ -1,98 +1,78 @@
-# ========================================
-# Admin 应用镜像（前端 Angular 项目）
-# ========================================
-# 架构：基于 Playwright 基础镜像（已包含系统依赖和 Chromium）
-# 优化：利用预构建的 Playwright 环境，统一权限和缓存配置
-# 策略：playwright-base → builder → production (nginx)
-# ========================================
+# syntax=docker/dockerfile:1
 
-# ========================================
-# 构建参数
-# ========================================
+#
+# Multi-stage build for the @pro/admin Angular dashboard.
+# Builder uses Bun workspaces; runtime is a hardened nginx image.
+#
+
+FROM oven/bun:1.3.0-alpine AS base
+
+ENV BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 \
+    BUN_INSTALL_BIN=/usr/local/bin
+
+WORKDIR /app
+
+# -----------------------------------------------------------------------------
+# deps: install monorepo dependencies once
+# -----------------------------------------------------------------------------
+FROM base AS deps
+
+WORKDIR /app
+
+COPY bun.lock package.json turbo.json tsconfig.base.json ./
+COPY apps/admin/package.json apps/admin/
+COPY packages/*/package.json packages/*/
+
+RUN --mount=type=cache,id=bun-admin-deps,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
+
+# -----------------------------------------------------------------------------
+# builder: compile the Angular dashboard
+# -----------------------------------------------------------------------------
+FROM base AS builder
+
+ARG AMAP_API_KEY
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/bun.lock ./bun.lock
+COPY --from=deps /app/package.json ./package.json
+COPY --from=deps /app/apps/admin/package.json ./apps/admin/package.json
+COPY --from=deps /app/apps/admin/node_modules ./apps/admin/node_modules
+COPY --from=deps /app/packages ./packages
+
+COPY . .
+
+# Provide map key to the build if supplied.
+RUN if [ -n "${AMAP_API_KEY}" ]; then \
+      printf 'AMAP_API_KEY=%s\n' "${AMAP_API_KEY}" > apps/admin/.env.production; \
+    fi
+
+RUN --mount=type=cache,id=bun-admin-deps,target=/root/.bun/install/cache \
+    bunx --bun turbo run build --filter=@pro/admin...
+
+RUN set -eux; \
+    mkdir -p /app/.release/dist; \
+    cp -r apps/admin/dist/admin /app/.release/dist/admin
+
+# -----------------------------------------------------------------------------
+# runner: nginx serving the compiled dashboard
+# -----------------------------------------------------------------------------
+FROM nginx:1.27-alpine AS runner
+
 ARG BUILD_VERSION=1.0.0
 ARG BUILD_TIME
 ARG GIT_COMMIT
 ARG BUILD_TYPE=full
-ARG AMAP_API_KEY
 
-# ========================================
-# Playwright 基础阶段
-# 目的：使用预配置的 Playwright 基础镜像
-# 优势：已包含 Chromium、系统依赖、Bun 运行时，无需重复安装
-# ========================================
-FROM imeepos/playwright:latest AS base
-
-# ========================================
-# 构建阶段
-# 目的：构建 @pro/admin Angular 应用
-# 基础：playwright-base（已包含所有系统依赖）
-# ========================================
-FROM base AS builder
-
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
-ARG AMAP_API_KEY
-
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="builder"
-
-USER nestjs
-WORKDIR /app
-
-# 复制 admin 应用配置
-COPY apps/admin/package.json ./apps/admin/
-
-# 安装依赖（使用统一的缓存目录）
-RUN --mount=type=cache,id=bun-admin-builder,target=/home/nestjs/.bun/install/cache \
-    echo "📦 安装 @pro/admin 依赖..." && \
-    bun install
-
-# 复制源码并构建
-COPY apps/admin ./apps/admin
-
-# 配置环境变量并构建
-ENV AMAP_API_KEY=${AMAP_API_KEY:-YOUR_AMAP_KEY}
-RUN echo "AMAP_API_KEY=${AMAP_API_KEY}" >> apps/admin/.env.production && \
-    echo "🏗️  构建 @pro/admin..." && \
-    bun --filter @pro/admin build
-
-# ========================================
-# 生产阶段
-# 目的：最小化生产镜像（nginx + 静态文件）
-# 基础：nginx:alpine
-# ========================================
-FROM nginx:alpine AS production
-
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
-
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="production"
-
-# 从 builder 复制构建产物
-COPY --from=builder /app/apps/admin/dist/admin/browser /usr/share/nginx/html
-
-# 复制 nginx 配置
+COPY --from=builder /app/.release/dist/admin/browser /usr/share/nginx/html
 COPY apps/admin/nginx.conf /etc/nginx/conf.d/default.conf
 
-# 创建版本信息文件
-RUN echo "{ \
-      \"version\": \"${BUILD_VERSION}\", \
-      \"buildTime\": \"${BUILD_TIME}\", \
-      \"gitCommit\": \"${GIT_COMMIT}\", \
-      \"buildType\": \"${BUILD_TYPE}\", \
-      \"stage\": \"production\" \
-    }" > /usr/share/nginx/html/build-info.json
+RUN set -eux; \
+    printf '{\n  "version": "%s",\n  "buildTime": "%s",\n  "gitCommit": "%s",\n  "buildType": "%s",\n  "stage": "production"\n}\n' \
+      "${BUILD_VERSION}" "${BUILD_TIME}" "${GIT_COMMIT}" "${BUILD_TYPE}" \
+      > /usr/share/nginx/html/build-info.json
 
 EXPOSE 80
 

@@ -159,9 +159,28 @@ export class WeiboSearchTasksApi {
    */
   getStats(): Observable<TaskStats> {
     return new Observable<TaskStats>((subscriber) => {
-      this.http.get<TaskStats>(`${this.baseUrl}/stats`)
+      this.http.get<{
+        total: number;
+        enabled: number;
+        running: number;
+        paused: number;
+        failed: number;
+        completed: number;
+      }>(`${this.baseUrl}/stats/overview`)
         .then((response) => {
-          subscriber.next(response);
+          const pending = Math.max(
+            response.total - response.running - response.paused - response.failed - response.completed,
+            0
+          );
+
+          subscriber.next({
+            total: response.total,
+            enabled: response.enabled,
+            running: response.running,
+            pending,
+            failed: response.failed,
+            paused: response.paused,
+          });
           subscriber.complete();
         })
         .catch((error) => {

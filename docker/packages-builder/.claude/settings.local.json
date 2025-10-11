@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/ubuntu/worktrees/pro/**)",
+      "Bash(grep:*)",
+      "Bash(docker build:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

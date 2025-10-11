@@ -8,6 +8,14 @@ import {
 } from '../types/event.types';
 import { PageResponse } from '../types/common.types';
 
+interface EventListPayload {
+  items: Event[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages?: number;
+}
+
 /**
  * 事件 API 接口封装
  */
@@ -22,7 +30,18 @@ export class EventApi {
    * 查询事件列表
    */
   async getEvents(params: EventQueryParams): Promise<PageResponse<Event>> {
-    return this.http.get<PageResponse<Event>>('/api/events', params as unknown as Record<string, unknown>);
+    const response = await this.http.get<EventListPayload>(
+      '/api/events',
+      params as unknown as Record<string, unknown>
+    );
+
+    return {
+      data: response.items,
+      total: response.total,
+      page: response.page,
+      pageSize: response.pageSize,
+      totalPages: response.totalPages,
+    };
   }
 
   /**

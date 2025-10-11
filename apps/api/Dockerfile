@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7-labs
+# syntax=docker/dockerfile:1
 
 #
 # Production-ready multi-stage image for the @pro/api service.
@@ -25,8 +25,25 @@ WORKDIR /app
 
 # Copy only manifests so dependency layer is re-used when source changes.
 COPY bun.lock package.json turbo.json tsconfig.base.json ./
-COPY apps/api/package.json apps/api/
-COPY packages/*/package.json packages/*/
+
+# Populate workspace manifests for apps and packages without dragging
+# their source trees into the dependency layer.
+RUN --mount=type=bind,source=apps,target=/tmp/apps,ro \
+    --mount=type=bind,source=packages,target=/tmp/packages,ro \
+    set -e; \
+    mkdir -p apps packages; \
+    for manifest in /tmp/apps/*/package.json; do \
+      [ -f "$manifest" ] || continue; \
+      app="$(basename "$(dirname "$manifest")")"; \
+      mkdir -p "apps/$app"; \
+      cp "$manifest" "apps/$app/package.json"; \
+    done; \
+    for manifest in /tmp/packages/*/package.json; do \
+      [ -f "$manifest" ] || continue; \
+      pkg="$(basename "$(dirname "$manifest")")"; \
+      mkdir -p "packages/$pkg"; \
+      cp "$manifest" "packages/$pkg/package.json"; \
+    done
 
 RUN --mount=type=cache,id=bun-deps,target=/root/.bun/install/cache \
     bun install --frozen-lockfile
@@ -43,6 +60,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/bun.lock ./bun.lock
 COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/apps/api/package.json ./apps/api/package.json
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /app/packages ./packages
 
 # Copy the rest of the workspace (source code, configs, etc.).
@@ -55,6 +73,20 @@ RUN --mount=type=cache,id=bun-deps,target=/root/.bun/install/cache \
 # Produce a production-only node_modules tree.
 RUN --mount=type=cache,id=bun-deps,target=/root/.bun/install/cache \
     bun install --frozen-lockfile --production
+
+# Install production dependencies for each package that has dependencies
+RUN --mount=type=cache,id=bun-deps,target=/root/.bun/install/cache \
+    set -e; \
+    for pkg in packages/*; do \
+      if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then \
+        pkg_name=$(basename "$pkg"); \
+        echo "Checking dependencies for package: $pkg_name"; \
+        if bun pm ls "$pkg_name" --production-only 2>/dev/null | grep -q "ioredis\|@redis\|redis"; then \
+          echo "Installing production dependencies for $pkg_name"; \
+          (cd "$pkg" && bun install --frozen-lockfile --production); \
+        fi; \
+      fi; \
+    done
 
 # Assemble a minimal runtime filesystem under /.release
 RUN set -eux; \
@@ -72,6 +104,9 @@ RUN set -eux; \
         cp "$pkg/package.json" "/app/.release/$pkg/"; \
         if [ -d "$pkg/dist" ]; then \
           cp -r "$pkg/dist" "/app/.release/$pkg/dist"; \
+        fi; \
+        if [ -d "$pkg/node_modules" ]; then \
+          cp -r "$pkg/node_modules" "/app/.release/$pkg/node_modules"; \
         fi; \
       fi; \
     done
@@ -92,11 +127,8 @@ ENV NODE_ENV=production \
 RUN addgroup -g 1001 bunapp && \
     adduser -u 1001 -G bunapp -h /home/bunapp -s /bin/sh -D bunapp
 
-# Copy the prepared runtime payload.
-COPY --from=builder /app/.release/ /app/
-
-# Ensure correct ownership for mounted files/directories.
-RUN chown -R bunapp:bunapp /app
+# Copy the prepared runtime payload with correct ownership.
+COPY --from=builder --chown=bunapp:bunapp /app/.release/ /app/
 
 USER bunapp
 

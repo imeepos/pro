@@ -69,6 +69,8 @@ export interface ApiKeyListResponse {
   page: number;
   limit: number;
   totalPages: number;
+  hasNext?: boolean;
+  hasPrev?: boolean;
 }
 
 export interface ApiKeyUsageStats {

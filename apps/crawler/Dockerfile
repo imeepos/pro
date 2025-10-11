@@ -1,149 +1,115 @@
-# ========================================
-# Crawler 应用镜像
-# ========================================
-# 架构：基于 imeepos/playwright 基础镜像
-# 优化：统一权限处理，简化构建流程
-# 策略：base → development/builder → production
-# ========================================
+# syntax=docker/dockerfile:1
 
-# ========================================
-# 构建参数
-# ========================================
-ARG BUILD_VERSION=1.0.0
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE=full
+#
+# Production multi-stage image for the @pro/crawler service.
+# Includes Playwright browser binaries while keeping the runtime lean.
+#
 
-# ========================================
-# Base 阶段
-# 目的：基于 imeepos/playwright 基础镜像
-# 包含：预装的 Playwright 依赖和统一的权限配置
-# ========================================
-FROM imeepos/playwright:latest AS base
+FROM oven/bun:1.3.0 AS base
 
-# ========================================
-# 开发阶段
-# 目的：本地开发环境，支持热重载
-# 基础：base (已包含 Playwright 依赖和 packages)
-# ========================================
-FROM base AS development
+ENV BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 \
+    BUN_INSTALL_BIN=/usr/local/bin \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
-
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="development"
-
-USER nestjs
 WORKDIR /app
 
-# 复制 crawler 应用配置
-COPY apps/crawler/package.json ./apps/crawler/
+# -----------------------------------------------------------------------------
+# deps: install workspace dependencies with caching
+# -----------------------------------------------------------------------------
+FROM base AS deps
 
-# 安装 crawler 应用依赖（利用统一缓存目录）
-RUN --mount=type=cache,id=bun-crawler-dev,target=/home/nestjs/.bun/install/cache \
-    echo "📦 安装 @pro/crawler 依赖..." && \
-    bun install
+WORKDIR /app
 
-EXPOSE 3001
+COPY bun.lock package.json turbo.json tsconfig.base.json ./
+COPY apps/crawler/package.json apps/crawler/
+COPY packages/*/package.json packages/*/
 
-CMD ["bun", "--filter", "@pro/crawler", "start:dev"]
+RUN --mount=type=cache,id=bun-crawler-deps,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
-# ========================================
-# 构建阶段
-# 目的：构建 @pro/crawler 应用
-# 基础：base
-# ========================================
+# -----------------------------------------------------------------------------
+# builder: compile service, download browsers, prepare payload
+# -----------------------------------------------------------------------------
 FROM base AS builder
 
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
-
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="builder"
-
-USER nestjs
 WORKDIR /app
 
-# 复制 crawler 应用配置
-COPY apps/crawler/package.json ./apps/crawler/
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/bun.lock ./bun.lock
+COPY --from=deps /app/package.json ./package.json
+COPY --from=deps /app/apps/crawler/package.json ./apps/crawler/package.json
+COPY --from=deps /app/apps/crawler/node_modules ./apps/crawler/node_modules
+COPY --from=deps /app/packages ./packages
 
-# 安装依赖（利用统一缓存目录）
-RUN --mount=type=cache,id=bun-crawler-builder,target=/home/nestjs/.bun/install/cache \
-    echo "📦 安装 @pro/crawler 依赖..." && \
-    bun install
+COPY . .
 
-# 复制源码
-COPY apps/crawler/tsconfig.json ./apps/crawler/
-COPY apps/crawler/tsconfig.build.json* ./apps/crawler/
-COPY apps/crawler/nest-cli.json* ./apps/crawler/
-COPY apps/crawler/src ./apps/crawler/
-COPY apps/crawler/.env* ./apps/crawler/
+RUN --mount=type=cache,id=bun-crawler-deps,target=/root/.bun/install/cache \
+    bunx --bun turbo run build --filter=@pro/crawler...
 
-# 构建应用
-RUN echo "🏗️  构建 @pro/crawler..." && \
-    bun --filter @pro/crawler build
+RUN --mount=type=cache,id=bun-crawler-deps,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile --production
 
-# ========================================
-# 生产阶段
-# 目的：最小化生产镜像
-# 基础：base (复用 Playwright 依赖)
-# ========================================
-FROM base AS production
+# Download Chromium so it can be copied into the runtime image.
+RUN --mount=type=cache,id=playwright-browsers,target=/root/.cache/ms-playwright \
+    bunx --bun playwright install chromium
 
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
+RUN set -eux; \
+    mkdir -p /app/.release/apps/crawler; \
+    cp bun.lock package.json /app/.release/; \
+    cp -r node_modules /app/.release/node_modules; \
+    cp apps/crawler/package.json /app/.release/apps/crawler/; \
+    if [ -d apps/crawler/node_modules ]; then \
+      cp -r apps/crawler/node_modules /app/.release/apps/crawler/node_modules; \
+    fi; \
+    cp -r apps/crawler/dist /app/.release/apps/crawler/dist; \
+    for env_file in apps/crawler/.env*; do \
+      [ -e "$env_file" ] && cp "$env_file" /app/.release/apps/crawler/; \
+    done; \
+    if [ -d packages ]; then \
+      for pkg in packages/*; do \
+        if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then \
+          mkdir -p "/app/.release/$pkg"; \
+          cp "$pkg/package.json" "/app/.release/$pkg/"; \
+          if [ -d "$pkg/dist" ]; then \
+            cp -r "$pkg/dist" "/app/.release/$pkg/dist"; \
+          fi; \
+        fi; \
+      done; \
+    fi; \
+    if [ -d /ms-playwright ]; then \
+      cp -r /ms-playwright /app/.release/ms-playwright; \
+    fi
 
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="production"
+# -----------------------------------------------------------------------------
+# runner: Bun runtime with Playwright deps installed
+# -----------------------------------------------------------------------------
+FROM base AS runner
 
-USER nestjs
+ENV NODE_ENV=production \
+    PORT=3001 \
+    NODE_OPTIONS="--experimental-global-webcrypto" \
+    BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 \
+    BUN_INSTALL_BIN=/usr/local/bin \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
 WORKDIR /app
 
-# 从 builder 复制构建产物
-COPY --from=builder /app/apps/crawler/package.json ./apps/crawler/
-COPY --from=builder /app/apps/crawler/dist ./apps/crawler/dist
-COPY --from=builder /app/apps/crawler/.env* ./apps/crawler/
-COPY --from=builder /app/bun.lock ./
+RUN addgroup --system bunapp && \
+    adduser --system --ingroup bunapp --home /home/bunapp --shell /bin/bash bunapp
 
-# 仅安装生产依赖（利用统一缓存目录）
-RUN --mount=type=cache,id=bun-crawler-prod,target=/home/nestjs/.bun/install/cache \
-    echo "📦 安装 @pro/crawler 生产依赖..." && \
-    bun install --cwd ./apps/crawler --production
+COPY --from=builder --chown=bunapp:bunapp /app/.release/ /app/
 
-# 创建版本信息
-RUN echo "{ \
-      \"version\": \"${BUILD_VERSION}\", \
-      \"buildTime\": \"${BUILD_TIME}\", \
-      \"gitCommit\": \"${GIT_COMMIT}\", \
-      \"buildType\": \"${BUILD_TYPE}\", \
-      \"stage\": \"production\", \
-      \"nodeVersion\": \"$(node --version)\", \
-      \"platform\": \"$(uname -a)\" \
-    }" > /app/build-info.json
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends curl; \
+    node_modules/.bin/playwright install-deps chromium; \
+    rm -rf /var/lib/apt/lists/*
+
+USER bunapp
 
 EXPOSE 3001
 
-ENV NODE_ENV=production \
-    NODE_OPTIONS="--experimental-global-webcrypto"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -fsS "http://127.0.0.1:${PORT:-3001}/health" >/dev/null || exit 1
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["bun", "apps/crawler/dist/main.js"]
+CMD ["bun", "run", "--cwd", "apps/crawler", "start:prod"]
