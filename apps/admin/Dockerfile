@@ -8,8 +8,8 @@ RUN apk add --no-cache curl bash \
     && curl -fsSL https://bun.sh/install | bash
 
 # 设置 bun 环境
-ENV BUN_INSTALL="$HOME/.bun"
-ENV PATH="$BUN_INSTALL/bin:$PATH"
+ENV BUN_INSTALL="/root/.bun"
+ENV PATH="/root/.bun/bin:$PATH"
 
 # 复制依赖文件
 COPY package.json bun.lock ./
