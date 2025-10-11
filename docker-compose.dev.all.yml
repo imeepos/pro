@@ -194,14 +194,12 @@ services:
       - "${CLEANER_PORT:-3002}:3002"  # Cleaner
       - "${BROKER_PORT:-3003}:3003"   # Broker
       # 前端服务
-      - "4200:4200"                    # Web
-      - "4201:4201"                    # Admin
+      - "5200:4200"                    # Web
+      - "5201:4201"                    # Admin
     volumes:
       # 源代码映射 - 实现热重载
       - ./apps:/app/apps
       - ./packages:/app/packages
-      - ./tsconfig.base.json:/app/tsconfig.base.json
-      - ./turbo.json:/app/turbo.json
       # 排除 node_modules 和构建产物
       - /app/node_modules
       - /app/apps/*/node_modules

@@ -19,7 +19,8 @@ WORKDIR /app
 # - curl: 健康检查和调试
 # - dumb-init: 优雅的进程管理
 # - chromium 相关: Playwright 爬虫依赖
-RUN apk add --no-cache \
+RUN apk update && apk add --no-cache \
+    ca-certificates \
     git \
     curl \
     dumb-init \
@@ -28,11 +29,12 @@ RUN apk add --no-cache \
     nss \
     freetype \
     harfbuzz \
-    ca-certificates \
     ttf-freefont
 
 # 安装 bun
-RUN curl -fsSL https://bun.sh/install | bash
+RUN apk add --no-cache bash unzip && \
+    curl -fsSL https://bun.sh/install | bash && \
+    apk del bash unzip
 ENV PATH="/root/.bun/bin:${PATH}"
 
 # 设置 Playwright 环境变量
@@ -50,7 +52,7 @@ COPY packages/*/package.json ./packages/
 COPY apps/*/package.json ./apps/
 
 # 安装依赖（开发模式，包含 devDependencies）
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # 复制源代码
 COPY . .
