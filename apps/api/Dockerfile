@@ -53,7 +53,7 @@ COPY --chown=nestjs:nodejs apps/api/package.json ./apps/api/
 # 安装 api 应用依赖
 RUN --mount=type=cache,id=bun-api-dev,target=/root/.bun/install/cache \
     echo "📦 安装 @pro/api 依赖..." && \
-    bun install --frozen-lockfile
+    bun install
 
 # 暴露端口
 EXPOSE 3000
@@ -94,7 +94,7 @@ COPY --chown=nestjs:nodejs apps/api/package.json ./apps/api/
 # 安装 api 应用依赖
 RUN --mount=type=cache,id=bun-api-builder,target=/root/.bun/install/cache \
     echo "📦 安装 @pro/api 依赖..." && \
-    bun install --frozen-lockfile
+    bun install
 
 # 复制 api 应用源码
 COPY --chown=nestjs:nodejs apps/api/tsconfig.json ./apps/api/

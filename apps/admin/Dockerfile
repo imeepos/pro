@@ -13,7 +13,7 @@ COPY packages ./packages
 
 # 安装依赖
 RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile
+    bun install
 
 # 复制源码并构建
 COPY apps/admin ./apps/admin
