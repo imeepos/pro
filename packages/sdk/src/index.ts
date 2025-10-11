@@ -1,57 +1,57 @@
-export * from './http-client.interface';
-export * from './auth.interface';
-export * from './user.interface';
-export * from './config.interface';
-export * from './weibo.interface';
-export * from './weibo-auth.sdk';
-export * from './jd.interface';
-export * from './jd-auth.sdk';
-export * from './media-type.interface';
-export * from './media-type.sdk';
+export * from './http-client.interface.js';
+export * from './auth.interface.js';
+export * from './user.interface.js';
+export * from './config.interface.js';
+export * from './weibo.interface.js';
+export * from './weibo-auth.sdk.js';
+export * from './jd.interface.js';
+export * from './jd-auth.sdk.js';
+export * from './media-type.interface.js';
+export * from './media-type.sdk.js';
 
 export * from '@pro/types';
 
 // 事件管理系统类型导出
-export * from './types/common.types';
-export * from './types/event.types';
-export * from './types/tag.types';
-export * from './types/attachment.types';
-export * from './types/industry-type.types';
-export * from './types/event-type.types';
-export * from './types/config.types';
-export * from './types/screen.types';
-export * from './types/weibo-search-tasks.types';
-export * from './types/weibo.types';
+export * from './types/common.types.js';
+export * from './types/event.types.js';
+export * from './types/tag.types.js';
+export * from './types/attachment.types.js';
+export * from './types/industry-type.types.js';
+export * from './types/event-type.types.js';
+export * from './types/config.types.js';
+export * from './types/screen.types.js';
+export * from './types/weibo-search-tasks.types.js';
+export * from './types/weibo.types.js';
 
 // HTTP 客户端导出
-export { HttpClient } from './client/http-client';
+export { HttpClient } from './client/http-client.js';
 
 // 事件管理系统 API 导出
-import { EventApi } from './api/event-api';
-import { TagApi } from './api/tag-api';
-import { AttachmentApi } from './api/attachment-api';
-import { IndustryTypeApi } from './api/industry-type-api';
-import { EventTypeApi } from './api/event-type-api';
-import { ConfigApi } from './api/config-api';
-import { AuthApi } from './api/auth-api';
-import { UserApi } from './api/user-api';
-import { WeiboSearchTasksApi } from './api/weibo-search-tasks-api';
-import { ScreenApi } from './api/screen-api';
-import { WeiboApi } from './api/weibo-api';
-import { ApiKeyApi } from './api/api-key-api';
+import { EventApi } from './api/event-api.js';
+import { TagApi } from './api/tag-api.js';
+import { AttachmentApi } from './api/attachment-api.js';
+import { IndustryTypeApi } from './api/industry-type-api.js';
+import { EventTypeApi } from './api/event-type-api.js';
+import { ConfigApi } from './api/config-api.js';
+import { AuthApi } from './api/auth-api.js';
+import { UserApi } from './api/user-api.js';
+import { WeiboSearchTasksApi } from './api/weibo-search-tasks-api.js';
+import { ScreenApi } from './api/screen-api.js';
+import { WeiboApi } from './api/weibo-api.js';
+import { ApiKeyApi } from './api/api-key-api.js';
 
-export { EventApi } from './api/event-api';
-export { TagApi } from './api/tag-api';
-export { AttachmentApi } from './api/attachment-api';
-export { IndustryTypeApi } from './api/industry-type-api';
-export { EventTypeApi } from './api/event-type-api';
-export { ConfigApi } from './api/config-api';
-export { AuthApi } from './api/auth-api';
-export { UserApi } from './api/user-api';
-export { WeiboSearchTasksApi } from './api/weibo-search-tasks-api';
-export { ScreenApi } from './api/screen-api';
-export { WeiboApi } from './api/weibo-api';
-export { ApiKeyApi } from './api/api-key-api';
+export { EventApi } from './api/event-api.js';
+export { TagApi } from './api/tag-api.js';
+export { AttachmentApi } from './api/attachment-api.js';
+export { IndustryTypeApi } from './api/industry-type-api.js';
+export { EventTypeApi } from './api/event-type-api.js';
+export { ConfigApi } from './api/config-api.js';
+export { AuthApi } from './api/auth-api.js';
+export { UserApi } from './api/user-api.js';
+export { WeiboSearchTasksApi } from './api/weibo-search-tasks-api.js';
+export { ScreenApi } from './api/screen-api.js';
+export { WeiboApi } from './api/weibo-api.js';
+export { ApiKeyApi } from './api/api-key-api.js';
 
 /**
  * SDK 主类

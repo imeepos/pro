@@ -1,9 +1,9 @@
-import { HttpClient } from '../client/http-client';
+import { HttpClient } from '../client/http-client.js';
 import {
   IndustryType,
   CreateIndustryTypeDto,
   UpdateIndustryTypeDto,
-} from '../types/industry-type.types';
+} from '../types/industry-type.types.js';
 
 /**
  * 行业类型 API 接口封装

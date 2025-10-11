@@ -1,4 +1,4 @@
-import { validatePassword } from './password';
+import { validatePassword } from './password.js';
 
 describe('validatePassword', () => {
   it('应该拒绝空密码', () => {

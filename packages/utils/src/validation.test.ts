@@ -1,4 +1,4 @@
-import { validateEmail, validateUsername } from './validation';
+import { validateEmail, validateUsername } from './validation.js';
 
 describe('Validation Utils', () => {
   describe('validateEmail', () => {

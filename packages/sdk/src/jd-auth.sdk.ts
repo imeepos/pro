@@ -1,4 +1,4 @@
-import { JdAuthSDK, JdLoginEventHandler, JdAccount, JdAccountCheckResult } from './jd.interface';
+import { JdAuthSDK, JdLoginEventHandler, JdAccount, JdAccountCheckResult } from './jd.interface.js';
 
 /**
  * 京东认证 SDK 实现

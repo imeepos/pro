@@ -1,12 +1,12 @@
-import { HttpClient } from '../client/http-client';
+import { HttpClient } from '../client/http-client.js';
 import {
   Event,
   EventDetail,
   CreateEventDto,
   UpdateEventDto,
   EventQueryParams,
-} from '../types/event.types';
-import { PageResponse } from '../types/common.types';
+} from '../types/event.types.js';
+import { PageResponse } from '../types/common.types.js';
 
 interface EventListPayload {
   items: Event[];

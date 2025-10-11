@@ -1,8 +1,8 @@
-import { PageRequest } from './common.types';
-import { EventType } from './event-type.types';
-import { IndustryType } from './industry-type.types';
-import { Tag } from './tag.types';
-import { Attachment } from './attachment.types';
+import { PageRequest } from './common.types.js';
+import { EventType } from './event-type.types.js';
+import { IndustryType } from './industry-type.types.js';
+import { Tag } from './tag.types.js';
+import { Attachment } from './attachment.types.js';
 
 /**
  * 事件状态枚举

@@ -1,5 +1,5 @@
-import { HttpClient } from '../client/http-client';
-import { Attachment, FileType, UploadOptions, SortData } from '../types/attachment.types';
+import { HttpClient } from '../client/http-client.js';
+import { Attachment, FileType, UploadOptions, SortData } from '../types/attachment.types.js';
 
 /**
  * 附件 API 接口封装

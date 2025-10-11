@@ -1,6 +1,6 @@
-import { HttpClient } from '../client/http-client';
+import { HttpClient } from '../client/http-client.js';
 import { User } from '@pro/types';
-import { fromPromise } from '../utils/observable-adapter';
+import { fromPromise } from '../utils/observable-adapter.js';
 import { Observable } from 'rxjs';
 
 /**

@@ -66,5 +66,5 @@ export interface ValidationResult {
   errors: string[];
 }
 
-export * from './weibo-search-task';
-export * from './api-key';
+export * from './weibo-search-task.js';
+export * from './api-key.js';

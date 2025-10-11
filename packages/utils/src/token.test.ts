@@ -1,4 +1,4 @@
-import { decodeToken, isTokenExpired, getTokenExpiry } from './token';
+import { decodeToken, isTokenExpired, getTokenExpiry } from './token.js';
 
 describe('Token Utils', () => {
   describe('decodeToken', () => {

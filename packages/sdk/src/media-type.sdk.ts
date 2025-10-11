@@ -1,10 +1,10 @@
-import { HttpClient } from './client/http-client';
+import { HttpClient } from './client/http-client.js';
 import {
   MediaType,
   CreateMediaTypeDto,
   UpdateMediaTypeDto,
   QueryMediaTypeDto,
-} from './media-type.interface';
+} from './media-type.interface.js';
 
 /**
  * 媒体类型 SDK 接口

@@ -1,6 +1,6 @@
 import { Observable, from } from 'rxjs';
-import { HttpClient } from '../client/http-client';
-import { IAuthService } from '../auth.interface';
+import { HttpClient } from '../client/http-client.js';
+import { IAuthService } from '../auth.interface.js';
 import { LoginDto, RegisterDto, AuthResponse, UserProfile } from '@pro/types';
 
 /**

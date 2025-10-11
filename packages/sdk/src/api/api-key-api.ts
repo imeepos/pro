@@ -16,8 +16,8 @@ import {
   CreateApiKeyDto,
   UpdateApiKeyDto,
 } from '@pro/types';
-import { HttpClient } from '../client/http-client';
-import { fromPromise } from '../utils/observable-adapter';
+import { HttpClient } from '../client/http-client.js';
+import { fromPromise } from '../utils/observable-adapter.js';
 
 interface ApiKeyRecord {
   id: number;

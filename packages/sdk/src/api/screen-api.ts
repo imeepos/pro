@@ -1,4 +1,4 @@
-import { HttpClient } from '../client/http-client';
+import { HttpClient } from '../client/http-client.js';
 import { Observable } from 'rxjs';
 import {
   ScreenPage,
@@ -6,7 +6,7 @@ import {
   UpdateScreenDto,
   ScreenListResponse,
   normalizeScreenPageData
-} from '../types/screen.types';
+} from '../types/screen.types.js';
 
 /**
  * 屏幕管理 API 类

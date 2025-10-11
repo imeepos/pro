@@ -1,4 +1,4 @@
-import { formatDate, debounce, sleep } from './common';
+import { formatDate, debounce, sleep } from './common.js';
 
 describe('Common Utils', () => {
   describe('formatDate', () => {

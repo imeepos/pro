@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
-import { HttpClient } from '../client/http-client';
-import { LoggedInUsersStats } from '../types/weibo.types';
+import { HttpClient } from '../client/http-client.js';
+import { LoggedInUsersStats } from '../types/weibo.types.js';
 
 /**
  * 微博 API 接口封装

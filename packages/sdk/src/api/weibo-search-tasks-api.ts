@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { HttpClient } from '../client/http-client';
+import { HttpClient } from '../client/http-client.js';
 import {
   WeiboSearchTask,
   WeiboSearchTaskListResponse,
@@ -7,7 +7,7 @@ import {
   UpdateWeiboSearchTaskDto,
   WeiboSearchTaskFilters
 } from '@pro/types';
-import { TaskStats } from '../types/weibo-search-tasks.types';
+import { TaskStats } from '../types/weibo-search-tasks.types.js';
 
 /**
  * 微博搜索任务 API 接口封装

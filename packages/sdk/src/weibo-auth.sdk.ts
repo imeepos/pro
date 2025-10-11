@@ -1,4 +1,4 @@
-import { WeiboAuthSDK, WeiboLoginEventHandler, WeiboAccount, WeiboAccountCheckResult } from './weibo.interface';
+import { WeiboAuthSDK, WeiboLoginEventHandler, WeiboAccount, WeiboAccountCheckResult } from './weibo.interface.js';
 
 /**
  * 微博认证 SDK 实现

@@ -1,6 +1,6 @@
-import { HttpClient } from '../client/http-client';
-import { Tag, CreateTagDto, UpdateTagDto } from '../types/tag.types';
-import { PageResponse } from '../types/common.types';
+import { HttpClient } from '../client/http-client.js';
+import { Tag, CreateTagDto, UpdateTagDto } from '../types/tag.types.js';
+import { PageResponse } from '../types/common.types.js';
 
 interface TagListPayload {
   items: Tag[];

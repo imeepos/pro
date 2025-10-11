@@ -1,9 +1,9 @@
-import { HttpClient } from '../client/http-client';
+import { HttpClient } from '../client/http-client.js';
 import {
   EventType,
   CreateEventTypeDto,
   UpdateEventTypeDto,
-} from '../types/event-type.types';
+} from '../types/event-type.types.js';
 
 /**
  * 事件类型 API 接口封装

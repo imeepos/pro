@@ -1,10 +1,10 @@
-import { HttpClient } from '../client/http-client';
+import { HttpClient } from '../client/http-client.js';
 import {
   ConfigType,
   GetConfigParams,
   ConfigResponse,
   CacheStats,
-} from '../types/config.types';
+} from '../types/config.types.js';
 
 /**
  * 配置 API 接口封装
