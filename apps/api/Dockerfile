@@ -166,13 +166,25 @@ COPY --from=packages --chown=nestjs:nodejs /app/packages ./packages
 COPY --from=builder --chown=nestjs:nodejs /app/apps/api/package.json ./apps/api/
 COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./apps/api/dist
 
-# 在生产镜像中重新安装依赖以确保 Node.js 兼容性
+# 安装 bun 在生产镜像中
 USER root
-RUN npm install --prefix ./apps/api --legacy-peer-deps && chown -R nestjs:nodejs apps/api/node_modules
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl bash && \
+    curl -fsSL https://bun.sh/install | bash && \
+    export BUN_INSTALL="/root/.bun" && \
+    export PATH="$BUN_INSTALL/bin:$PATH" && \
+    bun install --cwd ./apps/api && \
+    chown -R nestjs:nodejs apps/api/node_modules && \
+    rm -rf /var/lib/apt/lists/*
+
 USER nestjs
 
+# 设置 bun 环境
+ENV BUN_INSTALL="/root/.bun"
+ENV PATH="/root/.bun/bin:$PATH"
+
 # 安装 Playwright Chromium 浏览器
-RUN npx playwright install chromium
+RUN bunx playwright install chromium
 
 # 创建版本信息文件
 RUN echo "{ \
@@ -200,4 +212,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 
 # 使用 dumb-init 启动应用
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "apps/api/dist/main.js"]
+CMD ["bun", "apps/api/dist/main.js"]
