@@ -218,7 +218,6 @@ node -e "console.log('Font test passed')"
 node -e "
 console.log('Node.js:', process.version);
 console.log('Playwright:', require('playwright').version);
-console.log('Environment:', process.env.PLAYWRIGHT_BROWSERS_PATH);
 "
 
 # 测试浏览器启动
