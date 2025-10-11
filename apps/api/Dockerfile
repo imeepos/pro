@@ -169,7 +169,7 @@ COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./apps/api/dist
 # 安装 bun 在生产镜像中
 USER root
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl bash && \
+    apt-get install -y --no-install-recommends curl bash ca-certificates && \
     curl -fsSL https://bun.sh/install | bash && \
     export BUN_INSTALL="/root/.bun" && \
     export PATH="$BUN_INSTALL/bin:$PATH" && \
