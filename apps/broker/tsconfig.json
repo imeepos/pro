@@ -16,14 +16,6 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false,
-    "paths": {
-      "@pro/config": ["../../packages/config/src"],
-      "@pro/mongodb": ["../../packages/mongodb/src"],
-      "@pro/rabbitmq": ["../../packages/rabbitmq/src"],
-      "@pro/redis": ["../../packages/redis/src"],
-      "@pro/types": ["../../packages/types/src"],
-      "@pro/utils": ["../../packages/utils/src"]
-    }
+    "noFallthroughCasesInSwitch": false
   }
 }
