@@ -39,16 +39,20 @@ LABEL version="${BUILD_VERSION}" \
       build-type="${BUILD_TYPE}" \
       stage="builder"
 
-USER root
+# 使用 nestjs 用户作为主要用户，减少权限切换
+USER nestjs
 WORKDIR /app
+
+# 确保统一缓存目录权限
+RUN mkdir -p /home/nestjs/.bun/install/cache
 
 # 复制 web 应用配置和依赖的 packages
 COPY --chown=nestjs:nodejs apps/web/package.json ./apps/web/
 COPY --chown=nestjs:nodejs packages/components ./packages/components
 COPY --chown=nestjs:nodejs packages/sdk ./packages/sdk
 
-# 安装依赖
-RUN --mount=type=cache,id=bun-web-builder,target=/root/.bun/install/cache \
+# 安装依赖 - 使用统一的缓存目录
+RUN --mount=type=cache,id=bun-web-builder,target=/home/nestjs/.bun/install/cache \
     echo "📦 安装 @pro/web 依赖..." && \
     bun install
 

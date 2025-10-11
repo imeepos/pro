@@ -1,15 +1,14 @@
 # ========================================
 # Admin 应用镜像（前端 Angular 项目）
 # ========================================
-# 架构：基于 packages-builder 提供的预构建 packages
-# 优化：将 Playwright 依赖独立为缓存层（用于 E2E 测试）
-# 策略：packages → runtime-deps (Playwright) → builder → production (nginx)
+# 架构：基于 Playwright 基础镜像（已包含系统依赖和 Chromium）
+# 优化：利用预构建的 Playwright 环境，统一权限和缓存配置
+# 策略：playwright-base → builder → production (nginx)
 # ========================================
 
 # ========================================
 # 构建参数
 # ========================================
-ARG PACKAGES_IMAGE=imeepos/packages-builder:latest
 ARG BUILD_VERSION=1.0.0
 ARG BUILD_TIME
 ARG GIT_COMMIT
@@ -17,43 +16,18 @@ ARG BUILD_TYPE=full
 ARG AMAP_API_KEY
 
 # ========================================
-# Packages 阶段
-# 目的：引入预构建的共享 packages
+# Playwright 基础阶段
+# 目的：使用预配置的 Playwright 基础镜像
+# 优势：已包含 Chromium、系统依赖、Bun 运行时，无需重复安装
 # ========================================
-FROM ${PACKAGES_IMAGE} AS packages
-
-# ========================================
-# Runtime 依赖阶段（关键优化点）
-# 目的：预装 Playwright 系统依赖，此层独立缓存
-# 优势：源码变化不影响此层，仅构建一次即可复用
-# ========================================
-FROM packages AS runtime-deps
-
-USER root
-
-# 安装 Playwright 所需的 Alpine 系统包
-# 精简版本，只安装必需依赖
-RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    && rm -rf /var/cache/apk/*
-
-# 配置 Chromium 环境变量
-ENV CHROME_BIN=/usr/bin/chromium-browser \
-    CHROME_PATH=/usr/lib/chromium/
-
-USER nestjs
+FROM imeepos/playwright:latest AS base
 
 # ========================================
 # 构建阶段
 # 目的：构建 @pro/admin Angular 应用
-# 基础：runtime-deps
+# 基础：playwright-base（已包含所有系统依赖）
 # ========================================
-FROM runtime-deps AS builder
+FROM base AS builder
 
 ARG BUILD_VERSION
 ARG BUILD_TIME
@@ -67,19 +41,19 @@ LABEL version="${BUILD_VERSION}" \
       build-type="${BUILD_TYPE}" \
       stage="builder"
 
-USER root
+USER nestjs
 WORKDIR /app
 
 # 复制 admin 应用配置
-COPY --chown=nestjs:nodejs apps/admin/package.json ./apps/admin/
+COPY apps/admin/package.json ./apps/admin/
 
-# 安装依赖
-RUN --mount=type=cache,id=bun-admin-builder,target=/root/.bun/install/cache \
+# 安装依赖（使用统一的缓存目录）
+RUN --mount=type=cache,id=bun-admin-builder,target=/home/nestjs/.bun/install/cache \
     echo "📦 安装 @pro/admin 依赖..." && \
     bun install
 
 # 复制源码并构建
-COPY --chown=nestjs:nodejs apps/admin ./apps/admin
+COPY apps/admin ./apps/admin
 
 # 配置环境变量并构建
 ENV AMAP_API_KEY=${AMAP_API_KEY:-YOUR_AMAP_KEY}

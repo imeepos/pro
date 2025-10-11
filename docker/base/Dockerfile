@@ -45,18 +45,21 @@ WORKDIR /app
 RUN chown -R nestjs:nodejs /app
 
 # ========================================
-# 创建并配置 Bun 缓存目录
+# 创建并配置 Bun 相关目录
 # 统一使用 /home/nestjs/.bun 避免权限冲突
+# 创建 /home/nestjs/tmp 作为 Bun 临时目录
 # ========================================
-RUN mkdir -p /home/nestjs/.bun && \
-    chown -R nestjs:nodejs /home/nestjs/.bun
+RUN mkdir -p /home/nestjs/.bun /home/nestjs/tmp && \
+    chown -R nestjs:nodejs /home/nestjs/.bun /home/nestjs/tmp
 
 # ========================================
-# 安装 Bun 并配置权限
+# 安装 Bun 并配置权限和环境变量
 # 临时切换到 root 安装 Bun，然后配置权限给 nestjs 用户
+# 配置 BUN_TMPDIR 指向用户可写的临时目录
 # ========================================
 USER root
-ENV BUN_INSTALL=/home/nestjs/.bun
+ENV BUN_INSTALL=/home/nestjs/.bun \
+    BUN_TMPDIR=/home/nestjs/tmp
 RUN curl -fsSL https://bun.sh/install | bash && \
     chown -R nestjs:nodejs ${BUN_INSTALL}
 ENV PATH=${BUN_INSTALL}/bin:${PATH}

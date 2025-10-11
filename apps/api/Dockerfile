@@ -1,152 +1,108 @@
-# ========================================
-# API 应用镜像
-# ========================================
-# 架构：基于 Playwright 基础镜像，预装所有必要依赖
-# 优化：统一权限配置，避免重复安装 Playwright 依赖
-# 策略：playwright-base → development/production
-# ========================================
+# syntax=docker/dockerfile:1.7-labs
 
-# ========================================
-# 构建参数
-# ========================================
-ARG BUILD_VERSION=1.0.0
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE=full
+#
+# Production-ready multi-stage image for the @pro/api service.
+# Key goals:
+#   - deterministic installs via bun.lock
+#   - cached dependency layer to speed up rebuilds
+#   - multi-stage build producing a trimmed runtime payload
+#   - non-root execution with health monitoring
+#
 
-# ========================================
-# Playwright 基础阶段
-# 目的：利用预装 Playwright 依赖的基础镜像
-# 优势：包含 Chromium、系统依赖、Bun 运行时
-# ========================================
-FROM imeepos/playwright:latest AS base
+FROM oven/bun:1.3.0-alpine AS base
 
-# ========================================
-# 开发阶段
-# 目的：本地开发环境，支持热重载
-# 基础：playwright-base (已包含所有系统依赖)
-# ========================================
-FROM base AS development
+ENV BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 \
+    BUN_INSTALL_BIN=/usr/local/bin
 
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
-
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="development"
-
-USER nestjs
 WORKDIR /app
 
-# 复制 API 应用配置
-COPY apps/api/package.json ./apps/api/
+# -----------------------------------------------------------------------------
+# deps: install workspace dependencies with maximal layer reuse
+# -----------------------------------------------------------------------------
+FROM base AS deps
 
-# 安装 API 应用依赖（使用统一的缓存目录）
-RUN --mount=type=cache,id=bun-api-dev,target=/home/nestjs/.bun/install/cache \
-    echo "📦 安装 @pro/api 依赖..." && \
-    bun install
+WORKDIR /app
 
-EXPOSE 3000
+# Copy only manifests so dependency layer is re-used when source changes.
+COPY bun.lock package.json turbo.json tsconfig.base.json ./
+COPY apps/api/package.json apps/api/
+COPY packages/*/package.json packages/*/
 
-CMD ["bun", "--filter", "@pro/api", "start:dev"]
+RUN --mount=type=cache,id=bun-deps,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
-# ========================================
-# 构建阶段
-# 目的：构建 @pro/api 应用
-# 基础：playwright-base
-# ========================================
+# -----------------------------------------------------------------------------
+# builder: compile API + dependant workspaces, prepare runtime payload
+# -----------------------------------------------------------------------------
 FROM base AS builder
 
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
-
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="builder"
-
-USER nestjs
 WORKDIR /app
 
-# 复制 API 应用配置
-COPY apps/api/package.json ./apps/api/
+# Re-use dependency graph from the deps stage.
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/bun.lock ./bun.lock
+COPY --from=deps /app/package.json ./package.json
+COPY --from=deps /app/apps/api/package.json ./apps/api/package.json
+COPY --from=deps /app/packages ./packages
 
-# 安装依赖（使用统一的缓存目录）
-RUN --mount=type=cache,id=bun-api-builder,target=/home/nestjs/.bun/install/cache \
-    echo "📦 安装 @pro/api 依赖..." && \
-    bun install
+# Copy the rest of the workspace (source code, configs, etc.).
+COPY . .
 
-# 复制源码
-COPY apps/api/tsconfig.json ./apps/api/
-COPY apps/api/tsconfig.build.json* ./apps/api/
-COPY apps/api/nest-cli.json* ./apps/api/
-COPY apps/api/src ./apps/api/src
+# Build API and its transitive workspace dependencies.
+RUN --mount=type=cache,id=bun-deps,target=/root/.bun/install/cache \
+    bunx --bun turbo run build --filter=@pro/api...
 
-# 构建应用
-RUN echo "🏗️  构建 @pro/api..." && \
-    bun --filter @pro/api build
+# Produce a production-only node_modules tree.
+RUN --mount=type=cache,id=bun-deps,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile --production
 
-# ========================================
-# 生产阶段
-# 目的：最小化生产镜像
-# 基础：playwright-base (复用所有预装依赖)
-# ========================================
-FROM base AS production
+# Assemble a minimal runtime filesystem under /.release
+RUN set -eux; \
+    mkdir -p /app/.release/apps/api; \
+    cp bun.lock package.json /app/.release/; \
+    cp -r node_modules /app/.release/node_modules; \
+    cp apps/api/package.json /app/.release/apps/api/; \
+    if [ -d apps/api/node_modules ]; then \
+      cp -r apps/api/node_modules /app/.release/apps/api/node_modules; \
+    fi; \
+    cp -r apps/api/dist /app/.release/apps/api/dist; \
+    for pkg in packages/*; do \
+      if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then \
+        mkdir -p "/app/.release/$pkg"; \
+        cp "$pkg/package.json" "/app/.release/$pkg/"; \
+        if [ -d "$pkg/dist" ]; then \
+          cp -r "$pkg/dist" "/app/.release/$pkg/dist"; \
+        fi; \
+      fi; \
+    done
 
-ARG BUILD_VERSION
-ARG BUILD_TIME
-ARG GIT_COMMIT
-ARG BUILD_TYPE
+# -----------------------------------------------------------------------------
+# runner: minimal production image
+# -----------------------------------------------------------------------------
+FROM base AS runner
 
-LABEL version="${BUILD_VERSION}" \
-      build-time="${BUILD_TIME}" \
-      git-commit="${GIT_COMMIT}" \
-      build-type="${BUILD_TYPE}" \
-      stage="production"
-
-USER nestjs
 WORKDIR /app
 
-# 从 builder 复制构建产物
-COPY --from=builder /app/apps/api/package.json ./apps/api/
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/bun.lock ./
+ENV NODE_ENV=production \
+    PORT=3000 \
+    BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 \
+    BUN_INSTALL_BIN=/usr/local/bin
 
-# 安装生产依赖（使用统一的缓存目录）
-RUN --mount=type=cache,id=bun-api-prod,target=/home/nestjs/.bun/install/cache \
-    echo "📦 安装 @pro/api 生产依赖..." && \
-    bun install --cwd ./apps/api --production
+# Create an unprivileged user for the runtime container.
+RUN addgroup -g 1001 bunapp && \
+    adduser -u 1001 -G bunapp -h /home/bunapp -s /bin/sh -D bunapp
 
-# 创建版本信息
-RUN echo "{ \
-      \"version\": \"${BUILD_VERSION}\", \
-      \"buildTime\": \"${BUILD_TIME}\", \
-      \"gitCommit\": \"${GIT_COMMIT}\", \
-      \"buildType\": \"${BUILD_TYPE}\", \
-      \"stage\": \"production\", \
-      \"nodeVersion\": \"$(node --version)\", \
-      \"platform\": \"$(uname -a)\" \
-    }" > /app/build-info.json
+# Copy the prepared runtime payload.
+COPY --from=builder /app/.release/ /app/
+
+# Ensure correct ownership for mounted files/directories.
+RUN chown -R bunapp:bunapp /app
+
+USER bunapp
 
 EXPOSE 3000
 
-ENV NODE_ENV=production
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/health" >/dev/null || exit 1
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# 切换到 root 用户安装 dumb-init（基础镜像中可能未包含）
-USER root
-RUN apk add --no-cache dumb-init
-
-# 切换回 nestjs 用户运行应用
-USER nestjs
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["bun", "apps/api/dist/main.js"]
+CMD ["bun", "run", "--cwd", "apps/api", "start:prod"]

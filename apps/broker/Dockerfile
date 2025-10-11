@@ -39,20 +39,18 @@ LABEL version="${BUILD_VERSION}" \
       build-type="${BUILD_TYPE}" \
       stage="development"
 
-USER root
+USER nestjs
 WORKDIR /app
 
 # 复制 broker 应用配置
 COPY --chown=nestjs:nodejs apps/broker/package.json ./apps/broker/
 
 # 安装 broker 应用依赖（利用 cache mount 加速）
-RUN --mount=type=cache,id=bun-broker-dev,target=/root/.bun/install/cache \
+RUN --mount=type=cache,id=bun-broker-dev,target=/home/nestjs/.bun/install/cache \
     echo "📦 安装 @pro/broker 依赖..." && \
     bun install
 
 EXPOSE 3003
-
-USER nestjs
 
 CMD ["bun", "--filter", "@pro/broker", "start:dev"]
 
@@ -74,14 +72,14 @@ LABEL version="${BUILD_VERSION}" \
       build-type="${BUILD_TYPE}" \
       stage="builder"
 
-USER root
+USER nestjs
 WORKDIR /app
 
 # 复制 broker 应用配置
 COPY --chown=nestjs:nodejs apps/broker/package.json ./apps/broker/
 
 # 安装依赖
-RUN --mount=type=cache,id=bun-broker-builder,target=/root/.bun/install/cache \
+RUN --mount=type=cache,id=bun-broker-builder,target=/home/nestjs/.bun/install/cache \
     echo "📦 安装 @pro/broker 依赖..." && \
     bun install
 
@@ -113,7 +111,7 @@ LABEL version="${BUILD_VERSION}" \
       build-type="${BUILD_TYPE}" \
       stage="production"
 
-USER root
+USER nestjs
 WORKDIR /app
 
 # 从 builder 复制构建产物
@@ -122,10 +120,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/apps/broker/dist ./apps/broker/di
 COPY --from=builder --chown=nestjs:nodejs /app/bun.lock ./
 
 # 仅安装生产依赖
-RUN --mount=type=cache,id=bun-broker-prod,target=/root/.bun/install/cache \
+RUN --mount=type=cache,id=bun-broker-prod,target=/home/nestjs/.bun/install/cache \
     echo "📦 安装 @pro/broker 生产依赖..." && \
-    bun install --cwd ./apps/broker --production && \
-    chown -R nestjs:nodejs apps/broker/node_modules
+    bun install --cwd ./apps/broker --production
 
 # 创建版本信息
 RUN echo "{ \
@@ -136,10 +133,7 @@ RUN echo "{ \
       \"stage\": \"production\", \
       \"nodeVersion\": \"$(node --version)\", \
       \"platform\": \"$(uname -a)\" \
-    }" > /app/build-info.json && \
-    chown nestjs:nodejs /app/build-info.json
-
-USER nestjs
+    }" > /app/build-info.json
 
 EXPOSE 3003
 

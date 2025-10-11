@@ -68,9 +68,12 @@ COPY --chown=nestjs:nodejs packages/minio/package.json ./packages/minio/
 # 1. 利用 base 镜像已安装的 bun
 # 2. 使用统一的缓存 ID 和目录
 # 3. 减少权限切换操作
+# 4. 确保临时目录存在并有正确权限
 # ========================================
-RUN --mount=type=cache,id=bun-packages,target=/home/nestjs/.bun/install/cache \
+RUN --mount=type=cache,id=bun-packages,target=/home/nestjs/.bun/install/cache,uid=1001,gid=1001 \
     echo "🔧 安装所有 packages 依赖..." && \
+    mkdir -p /home/nestjs/tmp && \
+    chmod 755 /home/nestjs/tmp && \
     BUN_TMPDIR=/home/nestjs/tmp bun install
 
 # ========================================
@@ -189,9 +192,12 @@ COPY --chown=nestjs:nodejs packages/minio/package.json ./packages/minio/
 # 1. 使用统一的缓存 ID，最大化缓存复用
 # 2. 利用 base 镜像已配置的 bun 和权限
 # 3. 避免重复安装 base 镜像已有的依赖
+# 4. 确保临时目录存在并有正确权限
 # ========================================
-RUN --mount=type=cache,id=bun-packages,target=/home/nestjs/.bun/install/cache \
+RUN --mount=type=cache,id=bun-packages,target=/home/nestjs/.bun/install/cache,uid=1001,gid=1001 \
     echo "📦 安装生产依赖..." && \
+    mkdir -p /home/nestjs/tmp && \
+    chmod 755 /home/nestjs/tmp && \
     BUN_TMPDIR=/home/nestjs/tmp bun install
 
 # ========================================

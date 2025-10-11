@@ -29,7 +29,9 @@
       "Bash(docker image inspect:*)",
       "Bash(git pull:*)",
       "Bash(git restore:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(docker run:*)",
+      "WebFetch(domain:blog.csdn.net)"
     ],
     "deny": [],
     "ask": []
