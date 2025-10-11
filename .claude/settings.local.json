@@ -23,7 +23,10 @@
       "Bash(./scripts/build-image.sh:*)",
       "Bash(chmod:*)",
       "Bash(docker logs:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(docker buildx du:*)",
+      "Bash(docker system df:*)",
+      "Bash(docker image inspect:*)"
     ],
     "deny": [],
     "ask": []
