@@ -44,9 +44,9 @@ EXPOSE 3000
 CMD ["pnpm", "--filter", "@pro/api", "start:dev"]
 
 # ========================================
-# 依赖安装阶段
+# 生产依赖安装阶段
 # ========================================
-FROM base AS deps
+FROM base AS prod-deps
 
 WORKDIR /app
 
@@ -66,12 +66,42 @@ COPY packages/sdk/package.json ./packages/sdk/
 # 复制 api 应用的 package.json
 COPY apps/api/package.json ./apps/api/
 
-# 安装生产依赖
+# 只安装生产依赖
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --prod --no-frozen-lockfile
+    pnpm install --prod --frozen-lockfile
 
 # ========================================
-# 生产阶段：只复制产物
+# 构建阶段
+# ========================================
+FROM base AS builder
+
+WORKDIR /app
+
+# 复制 workspace 配置和 package.json
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
+COPY packages/types/package.json ./packages/types/
+COPY packages/config/package.json ./packages/config/
+COPY packages/utils/package.json ./packages/utils/
+COPY packages/redis/package.json ./packages/redis/
+COPY packages/mongodb/package.json ./packages/mongodb/
+COPY packages/rabbitmq/package.json ./packages/rabbitmq/
+COPY packages/minio/package.json ./packages/minio/
+COPY packages/sdk/package.json ./packages/sdk/
+COPY apps/api/package.json ./apps/api/
+
+# 安装依赖（让 pnpm 创建正确的符号链接）
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# 复制所有源代码
+COPY packages/ ./packages/
+COPY apps/api/ ./apps/api/
+
+# 构建所有依赖包和 API（使用依赖顺序自动构建）
+RUN pnpm --filter @pro/api... build
+
+# ========================================
+# 生产阶段
 # ========================================
 FROM base AS production
 
@@ -86,8 +116,8 @@ RUN groupadd -g 1001 nodejs && \
 
 WORKDIR /app
 
-# 从 deps 阶段复制 node_modules（pnpm workspace 只有根 node_modules）
-COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules
+# 从 builder 阶段复制 node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 
 # 复制 package.json（用于 node 查找模块）
 COPY --chown=nestjs:nodejs pnpm-workspace.yaml package.json ./
@@ -101,16 +131,16 @@ COPY --chown=nestjs:nodejs packages/minio/package.json ./packages/minio/
 COPY --chown=nestjs:nodejs packages/sdk/package.json ./packages/sdk/
 COPY --chown=nestjs:nodejs apps/api/package.json ./apps/api/
 
-# 复制构建好的代码（从宿主机的相对路径，因为 context 是项目根目录）
-COPY --chown=nestjs:nodejs ./packages/types/dist ./packages/types/dist
-COPY --chown=nestjs:nodejs ./packages/config/dist ./packages/config/dist
-COPY --chown=nestjs:nodejs ./packages/utils/dist ./packages/utils/dist
-COPY --chown=nestjs:nodejs ./packages/redis/dist ./packages/redis/dist
-COPY --chown=nestjs:nodejs ./packages/mongodb/dist ./packages/mongodb/dist
-COPY --chown=nestjs:nodejs ./packages/rabbitmq/dist ./packages/rabbitmq/dist
-COPY --chown=nestjs:nodejs ./packages/minio/dist ./packages/minio/dist
-COPY --chown=nestjs:nodejs ./packages/sdk/dist ./packages/sdk/dist
-COPY --chown=nestjs:nodejs ./apps/api/dist ./apps/api/dist
+# 从 builder 阶段复制构建产物
+COPY --from=builder --chown=nestjs:nodejs /app/packages/types/dist ./packages/types/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/config/dist ./packages/config/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/utils/dist ./packages/utils/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/redis/dist ./packages/redis/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/mongodb/dist ./packages/mongodb/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/rabbitmq/dist ./packages/rabbitmq/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/minio/dist ./packages/minio/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/sdk/dist ./packages/sdk/dist
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./apps/api/dist
 
 # 切换到非 root 用户
 USER nestjs

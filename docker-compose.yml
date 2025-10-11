@@ -201,10 +201,7 @@ services:
       retries: ${NGINX_HEALTHCHECK_RETRIES}
 
   api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile.playwright
-      target: production
+    image: imeepos/api:latest
     container_name: pro-api
     ports:
       - "${API_PORT:-3000}:3000"

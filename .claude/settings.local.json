@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(LATEST_IMAGE_NAME=\"docker.io/imeepos/broker:latest\")"
+      "Bash(LATEST_IMAGE_NAME=\"docker.io/imeepos/broker:latest\")",
+      "Bash(bun:*)",
+      "Bash(docker compose:*)"
     ],
     "deny": [],
     "ask": []
