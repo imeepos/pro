@@ -61,6 +61,7 @@ Docker 镜像构建脚本
     SERVICE             服务名称，支持以下选项:
                         - base: 基础镜像层
                         - packages-builder: Packages 构建层
+                        - playwright: Playwright 基础层
                         - api, web, admin: 应用服务
                         - broker, crawler, cleaner: 后台服务
                         - all: 构建所有服务 (按依赖顺序)
@@ -74,7 +75,7 @@ Docker 镜像构建脚本
     -h, --help         显示帮助信息
 
 构建依赖关系:
-    base → packages-builder → 应用/后台服务
+    base → packages-builder → playwright → 应用/后台服务
 
     脚本会自动检查并构建缺失的依赖镜像
 
@@ -82,6 +83,7 @@ Docker 镜像构建脚本
     $(basename "$0") api                           # 构建 api 服务 (自动检查依赖)
     $(basename "$0") base                          # 构建基础镜像
     $(basename "$0") packages-builder              # 构建 packages 构建层
+    $(basename "$0") playwright                    # 构建 playwright 基础层
     $(basename "$0") --service=api --tag=v1.0.0   # 指定标签构建
     $(basename "$0") all --push                    # 构建并推送所有服务
     $(basename "$0") api --no-cache --platform=linux/arm64  # 无缓存多平台构建
@@ -147,6 +149,10 @@ get_service_config() {
         packages-builder)
             echo "${REGISTRY}/packages-builder|docker/packages-builder/Dockerfile|."
             ;;
+        # Playwright 基础层
+        playwright)
+            echo "${REGISTRY}/playwright|docker/playwright/Dockerfile|."
+            ;;
         # 应用服务层
         api)
             echo "${REGISTRY}/api|apps/api/Dockerfile|."
@@ -173,9 +179,9 @@ get_service_config() {
 }
 
 # 获取所有服务列表
-# 按依赖顺序排列: base -> packages-builder -> 应用服务
+# 按依赖顺序排列: base -> packages-builder -> playwright -> 应用服务
 get_all_services() {
-    echo "base packages-builder api web admin broker crawler cleaner"
+    echo "base packages-builder playwright api web admin broker crawler cleaner"
 }
 
 # 验证服务名称
@@ -266,8 +272,16 @@ get_service_dependencies() {
             # packages-builder 依赖 base
             echo "base"
             ;;
-        api|web|admin|broker|crawler|cleaner)
-            # 应用服务依赖 packages-builder
+        playwright)
+            # playwright 依赖 packages-builder
+            echo "packages-builder"
+            ;;
+        api|crawler|admin)
+            # 需要 Playwright 的服务（API 微博授权，crawler 爬虫，admin E2E 测试）
+            echo "packages-builder"
+            ;;
+        web|broker|cleaner)
+            # 不需要 Playwright 的服务
             echo "packages-builder"
             ;;
         *)

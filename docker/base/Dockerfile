@@ -27,16 +27,8 @@ RUN apk add --no-cache \
     git
 
 # ========================================
-# 安装 Bun
-# 配置环境变量使 bun 命令全局可用
-# ========================================
-ENV BUN_INSTALL=/root/.bun
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH=${BUN_INSTALL}/bin:${PATH}
-
-# ========================================
 # 创建非 root 用户和组
-# 检查并创建以支持基于此镜像的二次构建
+# 早期创建用户，确保后续所有操作都使用正确的用户权限
 # ========================================
 RUN if ! getent group nodejs > /dev/null 2>&1; then \
       addgroup -g 1001 nodejs; \
@@ -47,9 +39,33 @@ RUN if ! getent group nodejs > /dev/null 2>&1; then \
 
 # ========================================
 # 设置工作目录并配置权限
+# 确保目录所有权在用户操作前已正确设置
 # ========================================
 WORKDIR /app
 RUN chown -R nestjs:nodejs /app
+
+# ========================================
+# 创建并配置 Bun 缓存目录
+# 统一使用 /home/nestjs/.bun 避免权限冲突
+# ========================================
+RUN mkdir -p /home/nestjs/.bun && \
+    chown -R nestjs:nodejs /home/nestjs/.bun
+
+# ========================================
+# 安装 Bun 并配置权限
+# 临时切换到 root 安装 Bun，然后配置权限给 nestjs 用户
+# ========================================
+USER root
+ENV BUN_INSTALL=/home/nestjs/.bun
+RUN curl -fsSL https://bun.sh/install | bash && \
+    chown -R nestjs:nodejs ${BUN_INSTALL}
+ENV PATH=${BUN_INSTALL}/bin:${PATH}
+
+# ========================================
+# 确保用户主目录权限正确
+# 为后续构建提供稳定的权限基础
+# ========================================
+RUN chown -R nestjs:nodejs /home/nestjs
 
 # ========================================
 # 默认使用非 root 用户
