@@ -1,38 +1,148 @@
 #!/bin/bash
 
-# 简化的Docker构建脚本
-# 使用方法: ./scripts/build-image.sh [service]
-# 如果不指定服务，则构建所有服务
+# ========================================
+# Docker 镜像构建脚本 - 代码艺术家出品
+# ========================================
+# 使用方法:
+#   ./scripts/build-image.sh [service] [options]
+#
+# 示例:
+#   ./scripts/build-image.sh api
+#   ./scripts/build-image.sh --service=api --tag=v1.0.0
+#   ./scripts/build-image.sh all --push
+# ========================================
 
-set -e
+set -euo pipefail
 
-# 获取git commit hash
-GIT_COMMIT=$(git rev-parse --short HEAD)
+# ========================================
+# 全局配置
+# ========================================
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+readonly REGISTRY="docker.io/imeepos"
 
-# 获取服务参数，如果未指定则构建所有服务
-SERVICE=${1:-"all"}
+# 构建信息
+BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+
+# 默认参数
+SERVICE=""
+TAG="${GIT_COMMIT}"
+PUSH=false
+NO_CACHE=false
+BUILDKIT_INLINE_CACHE=true
+PLATFORM="linux/amd64"
+
+# ========================================
+# 工具函数
+# ========================================
+
+# 打印信息
+log_info() { echo -e "\033[0;36m[INFO]\033[0m $*"; }
+log_success() { echo -e "\033[0;32m[SUCCESS]\033[0m $*"; }
+log_warning() { echo -e "\033[0;33m[WARNING]\033[0m $*"; }
+log_error() { echo -e "\033[0;31m[ERROR]\033[0m $*"; }
+
+# 打印分隔线
+print_separator() {
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+}
+
+# 显示帮助信息
+show_help() {
+    cat << EOF
+Docker 镜像构建脚本
+
+用法:
+    $(basename "$0") [SERVICE] [OPTIONS]
+
+参数:
+    SERVICE             服务名称 (api, web, admin, broker, crawler, cleaner, all)
+
+选项:
+    --service=SERVICE   指定服务名称
+    --tag=TAG          镜像标签 (默认: git commit hash)
+    --push             构建后推送到远程仓库
+    --no-cache         不使用缓存构建
+    --platform=PLATFORM 目标平台 (默认: linux/amd64)
+    -h, --help         显示帮助信息
+
+示例:
+    $(basename "$0") api
+    $(basename "$0") --service=api --tag=v1.0.0
+    $(basename "$0") all --push
+    $(basename "$0") api --no-cache --platform=linux/arm64
+
+EOF
+    exit 0
+}
+
+# 解析命令行参数
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                show_help
+                ;;
+            --service=*)
+                SERVICE="${1#*=}"
+                shift
+                ;;
+            --tag=*)
+                TAG="${1#*=}"
+                shift
+                ;;
+            --push)
+                PUSH=true
+                shift
+                ;;
+            --no-cache)
+                NO_CACHE=true
+                shift
+                ;;
+            --platform=*)
+                PLATFORM="${1#*=}"
+                shift
+                ;;
+            -*)
+                log_error "未知选项: $1"
+                show_help
+                ;;
+            *)
+                if [[ -z "$SERVICE" ]]; then
+                    SERVICE="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    # 如果未指定服务，默认构建所有
+    SERVICE="${SERVICE:-all}"
+}
 
 # 服务配置函数
 get_service_config() {
     local service=$1
     case $service in
-        "api")
-            echo "docker.io/imeepos/api:$GIT_COMMIT|apps/api/Dockerfile.playwright|."
+        api)
+            echo "${REGISTRY}/api|apps/api/Dockerfile|."
             ;;
-        "web")
-            echo "docker.io/imeepos/web:$GIT_COMMIT|apps/web/Dockerfile|."
+        web)
+            echo "${REGISTRY}/web|apps/web/Dockerfile|."
             ;;
-        "admin")
-            echo "docker.io/imeepos/admin:$GIT_COMMIT|apps/admin/Dockerfile|."
+        admin)
+            echo "${REGISTRY}/admin|apps/admin/Dockerfile|."
             ;;
-        "broker")
-            echo "docker.io/imeepos/broker:$GIT_COMMIT|apps/broker/Dockerfile|."
+        broker)
+            echo "${REGISTRY}/broker|apps/broker/Dockerfile|."
             ;;
-        "crawler")
-            echo "docker.io/imeepos/crawler:$GIT_COMMIT|apps/crawler/Dockerfile|."
+        crawler)
+            echo "${REGISTRY}/crawler|apps/crawler/Dockerfile|."
             ;;
-        "cleaner")
-            echo "docker.io/imeepos/cleaner:$GIT_COMMIT|apps/cleaner/Dockerfile|."
+        cleaner)
+            echo "${REGISTRY}/cleaner|apps/cleaner/."
             ;;
         *)
             echo ""
@@ -45,153 +155,277 @@ get_all_services() {
     echo "api web admin broker crawler cleaner"
 }
 
-# 检查是否存在旧镜像作为缓存源
+# 验证服务名称
+validate_service() {
+    local service=$1
+    local config
+
+    if [[ "$service" == "all" ]]; then
+        return 0
+    fi
+
+    config=$(get_service_config "$service")
+    if [[ -z "$config" ]]; then
+        log_error "不支持的服务: $service"
+        log_info "支持的服务: $(get_all_services), all"
+        exit 1
+    fi
+}
+
+# 检查 Docker 环境
+check_docker() {
+    if ! command -v docker &> /dev/null; then
+        log_error "未找到 Docker，请先安装 Docker"
+        exit 1
+    fi
+
+    if ! docker info &> /dev/null; then
+        log_error "Docker 守护进程未运行"
+        exit 1
+    fi
+
+    # 启用 BuildKit
+    export DOCKER_BUILDKIT=1
+    log_info "Docker BuildKit 已启用"
+}
+
+# 检查缓存镜像
 check_cache_source() {
     local service=$1
-    local config=$(get_service_config "$service")
-    local IMAGE_NAME=$(echo "$config" | cut -d'|' -f1)
-    local LATEST_IMAGE_NAME="${IMAGE_NAME%:*}:latest"
+    local image_base="${REGISTRY}/${service}"
 
-    # 去除 docker.io/ 前缀，因为 Docker images 命令默认不显示这个前缀
-    local SHORT_IMAGE_NAME="${IMAGE_NAME#docker.io/}"
-    local SHORT_LATEST_IMAGE_NAME="${LATEST_IMAGE_NAME#docker.io/}"
-
-    echo "🔍 检查缓存镜像..." >&2
-    echo "📋 完整名称: $LATEST_IMAGE_NAME" >&2
-    echo "📋 短名称: $SHORT_LATEST_IMAGE_NAME" >&2
-
-    # 检查是否存在 latest 标签的镜像（先尝试短名称）
-    if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^${SHORT_LATEST_IMAGE_NAME}$"; then
-        echo "🎯 发现缓存镜像: $SHORT_LATEST_IMAGE_NAME" >&2
-        echo "$SHORT_LATEST_IMAGE_NAME"
+    # 检查本地是否存在 latest 标签
+    if docker image inspect "${image_base}:latest" &>/dev/null; then
+        log_info "发现缓存镜像: ${image_base}:latest"
+        echo "${image_base}:latest"
         return 0
     fi
 
-    # 再尝试完整名称
-    if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^${LATEST_IMAGE_NAME}$"; then
-        echo "🎯 发现缓存镜像: $LATEST_IMAGE_NAME" >&2
-        echo "$LATEST_IMAGE_NAME"
+    # 查找最新的镜像
+    local latest_image
+    latest_image=$(docker images --format "{{.Repository}}:{{.Tag}}" "${image_base}" | head -1)
+
+    if [[ -n "$latest_image" ]]; then
+        log_info "发现缓存镜像: ${latest_image}"
+        echo "$latest_image"
         return 0
     fi
 
-    # 检查是否存在其他版本的镜像
-    local latest_tag=$(docker images --format "{{.Repository}}:{{.Tag}} {{.CreatedAt}}" | grep "^${SHORT_IMAGE_NAME%:*}:" | sort -k2 -r | head -1 | awk '{print $1}')
-    if [ -n "$latest_tag" ]; then
-        echo "🎯 发现缓存镜像: $latest_tag" >&2
-        echo "$latest_tag"
-        return 0
-    fi
-
-    echo "❌ 未找到缓存镜像" >&2
+    log_warning "未找到缓存镜像，将进行完整构建"
     return 1
+}
+
+# 获取镜像大小
+get_image_size() {
+    local image=$1
+    docker image inspect "$image" --format='{{.Size}}' 2>/dev/null | awk '{
+        size=$1;
+        if (size >= 1073741824) printf "%.2f GB", size/1073741824;
+        else if (size >= 1048576) printf "%.2f MB", size/1048576;
+        else if (size >= 1024) printf "%.2f KB", size/1024;
+        else printf "%d B", size;
+    }'
+}
+
+# 获取镜像层数
+get_image_layers() {
+    local image=$1
+    docker image inspect "$image" --format='{{len .RootFS.Layers}}' 2>/dev/null || echo "unknown"
 }
 
 # 构建单个服务
 build_service() {
     local service=$1
-    local config=$(get_service_config "$service")
+    local config
+    local image_name
+    local dockerfile
+    local build_context
+    local build_start
+    local build_end
+    local build_duration
 
-    if [ -z "$config" ]; then
-        echo "❌ 错误: 不支持的服务 '$service'"
-        echo "支持的服务: api, web, admin, broker, crawler, cleaner, all"
-        exit 1
-    fi
-
-    IMAGE_NAME=$(echo "$config" | cut -d'|' -f1)
-    DOCKERFILE=$(echo "$config" | cut -d'|' -f2)
-    BUILD_CONTEXT=$(echo "$config" | cut -d'|' -f3)
-
-    echo "🚀 开始构建 $service 服务..."
-    echo "📦 镜像名称: $IMAGE_NAME"
-    echo "📄 Dockerfile: $DOCKERFILE"
-    echo "📁 构建上下文: $BUILD_CONTEXT"
-
-    # 检查Dockerfile是否存在
-    if [ ! -f "$DOCKERFILE" ]; then
-        echo "❌ 错误: Dockerfile不存在: $DOCKERFILE"
+    config=$(get_service_config "$service")
+    if [[ -z "$config" ]]; then
+        log_error "服务配置未找到: $service"
         return 1
     fi
 
-    # 设置缓存参数
-    local CACHE_ARGS=""
-    local BUILD_FROM_BASE="node:20-alpine"
+    IFS='|' read -r image_base dockerfile build_context <<< "$config"
+    image_name="${image_base}:${TAG}"
 
-    # 检查缓存源
-    local CACHE_SOURCE=$(check_cache_source "$service")
-    local CACHE_CHECK_RESULT=$?
+    print_separator
+    log_info "构建服务: $service"
+    log_info "镜像名称: $image_name"
+    log_info "Dockerfile: $dockerfile"
+    log_info "构建上下文: $build_context"
+    log_info "目标平台: $PLATFORM"
+    print_separator
 
-    if [ $CACHE_CHECK_RESULT -eq 0 ] && [ -n "$CACHE_SOURCE" ]; then
-        echo "🚀 使用缓存镜像: $CACHE_SOURCE"
-        CACHE_ARGS="--cache-from $CACHE_SOURCE"
-        BUILD_FROM_BASE="$CACHE_SOURCE"
-    else
-        echo "🔧 使用基础镜像: node:20-alpine"
+    # 检查 Dockerfile 是否存在
+    if [[ ! -f "${PROJECT_ROOT}/${dockerfile}" ]]; then
+        log_error "Dockerfile 不存在: ${dockerfile}"
+        return 1
     fi
 
-    # 构建镜像，启用 inline cache
-    # 如果使用缓存镜像，避免从远程仓库导入缓存以解决权限问题
-    docker buildx build \
-        --platform linux/amd64 \
-        -f $DOCKERFILE \
-        -t $IMAGE_NAME \
-        --build-arg BUILD_FROM_BASE="$BUILD_FROM_BASE" \
-        --cache-to type=inline,mode=max \
-        $BUILD_CONTEXT
+    # 构建参数
+    local build_args=(
+        "--platform=${PLATFORM}"
+        "--file=${PROJECT_ROOT}/${dockerfile}"
+        "--tag=${image_name}"
+        "--build-arg=BUILD_VERSION=${TAG}"
+        "--build-arg=BUILD_TIME=${BUILD_TIME}"
+        "--build-arg=GIT_COMMIT=${GIT_COMMIT}"
+        "--build-arg=GIT_BRANCH=${GIT_BRANCH}"
+    )
+
+    # 缓存策略
+    if [[ "$NO_CACHE" == "false" ]]; then
+        local cache_source
+        if cache_source=$(check_cache_source "$service"); then
+            build_args+=("--cache-from=${cache_source}")
+        fi
+
+        if [[ "$BUILDKIT_INLINE_CACHE" == "true" ]]; then
+            build_args+=("--build-arg=BUILDKIT_INLINE_CACHE=1")
+        fi
+    else
+        build_args+=("--no-cache")
+        log_warning "禁用缓存构建"
+    fi
 
     # 添加 latest 标签
-    local LATEST_IMAGE_NAME="${IMAGE_NAME%:*}:latest"
-    docker tag $IMAGE_NAME $LATEST_IMAGE_NAME
+    build_args+=("--tag=${image_base}:latest")
 
-    echo "✅ $service 服务构建完成！"
-    echo "📦 标签: $IMAGE_NAME, $LATEST_IMAGE_NAME"
-    echo ""
+    # 执行构建
+    build_start=$(date +%s)
+    log_info "开始构建..."
+
+    if docker buildx build "${build_args[@]}" "${PROJECT_ROOT}/${build_context}"; then
+        build_end=$(date +%s)
+        build_duration=$((build_end - build_start))
+
+        # 获取镜像信息
+        local image_size
+        local image_layers
+        image_size=$(get_image_size "$image_name")
+        image_layers=$(get_image_layers "$image_name")
+
+        print_separator
+        log_success "构建成功: $service"
+        log_info "镜像标签: ${image_name}, ${image_base}:latest"
+        log_info "镜像大小: ${image_size}"
+        log_info "镜像层数: ${image_layers}"
+        log_info "构建耗时: ${build_duration}s"
+        print_separator
+
+        # 推送镜像
+        if [[ "$PUSH" == "true" ]]; then
+            push_image "$image_name" "$image_base"
+        fi
+
+        return 0
+    else
+        log_error "构建失败: $service"
+        return 1
+    fi
 }
 
-# 主逻辑
-if [ "$SERVICE" = "all" ]; then
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "🚀 开始构建所有服务 Docker 镜像"
-    echo "🔖 Git Commit: $GIT_COMMIT"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
+# 推送镜像
+push_image() {
+    local image_name=$1
+    local image_base=$2
 
-    # 构建所有服务
-    for service in $(get_all_services); do
-        build_service "$service"
-    done
+    log_info "推送镜像: ${image_name}"
+    if docker push "$image_name"; then
+        log_success "推送成功: ${image_name}"
+    else
+        log_error "推送失败: ${image_name}"
+        return 1
+    fi
 
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "🎉 所有服务构建完成！"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "📋 可用镜像:"
-    for service in $(get_all_services); do
-        local config=$(get_service_config "$service")
-        IMAGE_NAME=$(echo "$config" | cut -d'|' -f1)
-        local LATEST_IMAGE_NAME="${IMAGE_NAME%:*}:latest"
-        echo "   - $IMAGE_NAME"
-        echo "   - $LATEST_IMAGE_NAME"
-    done
-    echo ""
-else
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "🚀 开始构建 Docker 镜像"
-    echo "🔖 Git Commit: $GIT_COMMIT"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
+    log_info "推送镜像: ${image_base}:latest"
+    if docker push "${image_base}:latest"; then
+        log_success "推送成功: ${image_base}:latest"
+    else
+        log_error "推送失败: ${image_base}:latest"
+        return 1
+    fi
+}
 
-    # 构建指定服务
-    build_service "$SERVICE"
+# ========================================
+# 主函数
+# ========================================
+main() {
+    local total_start
+    local total_end
+    local total_duration
+    local failed_services=()
+    local success_services=()
 
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "🎉 构建完成！"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "📋 可用镜像:"
-    echo "   - $IMAGE_NAME"
-    LATEST_IMAGE_NAME="${IMAGE_NAME%:*}:latest"
-    echo "   - $LATEST_IMAGE_NAME"
-    echo ""
-fi
+    # 解析参数
+    parse_args "$@"
 
-echo "🏃 运行示例:"
-echo "   使用 commit hash: docker run -p 3000:3000 $IMAGE_NAME"
-echo "   使用 latest 标签: docker run -p 3000:3000 $LATEST_IMAGE_NAME"
+    # 验证环境
+    check_docker
+
+    # 验证服务
+    validate_service "$SERVICE"
+
+    # 显示构建信息
+    print_separator
+    log_info "Docker 镜像构建"
+    log_info "Git Commit: ${GIT_COMMIT}"
+    log_info "Git Branch: ${GIT_BRANCH}"
+    log_info "Build Time: ${BUILD_TIME}"
+    log_info "镜像标签: ${TAG}"
+    log_info "目标平台: ${PLATFORM}"
+    [[ "$PUSH" == "true" ]] && log_info "推送镜像: 启用"
+    [[ "$NO_CACHE" == "true" ]] && log_warning "缓存: 禁用"
+    print_separator
+
+    total_start=$(date +%s)
+
+    # 构建服务
+    if [[ "$SERVICE" == "all" ]]; then
+        log_info "构建所有服务"
+        for service in $(get_all_services); do
+            if build_service "$service"; then
+                success_services+=("$service")
+            else
+                failed_services+=("$service")
+            fi
+        done
+    else
+        if build_service "$SERVICE"; then
+            success_services+=("$SERVICE")
+        else
+            failed_services+=("$SERVICE")
+        fi
+    fi
+
+    total_end=$(date +%s)
+    total_duration=$((total_end - total_start))
+
+    # 显示构建结果
+    print_separator
+    log_info "构建总结"
+    print_separator
+    log_info "总耗时: ${total_duration}s"
+
+    if [[ ${#success_services[@]} -gt 0 ]]; then
+        log_success "成功构建 (${#success_services[@]}): ${success_services[*]}"
+    fi
+
+    if [[ ${#failed_services[@]} -gt 0 ]]; then
+        log_error "构建失败 (${#failed_services[@]}): ${failed_services[*]}"
+        print_separator
+        exit 1
+    fi
+
+    print_separator
+    log_success "所有构建任务完成"
+    print_separator
+}
+
+# 执行主函数
+main "$@"

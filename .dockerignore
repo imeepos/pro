@@ -1,77 +1,225 @@
+# ========================================
 # 依赖目录
+# ========================================
 node_modules
 **/node_modules
+.pnpm-store
+**/.pnpm-store
 
-# 构建产物
-# dist  # 注释掉，因为 Playwright Dockerfile 需要复制 dist
-# **/dist
+# ========================================
+# 构建产物和缓存
+# ========================================
 .turbo
 **/.turbo
 build
 **/build
+.next
+**/.next
+out
+**/out
 
 # TypeScript 构建信息
 *.tsbuildinfo
 **/*.tsbuildinfo
 
+# ========================================
 # 日志文件
+# ========================================
 *.log
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+bun-debug.log*
 
-# 环境变量文件
+# ========================================
+# 环境变量和敏感信息
+# ========================================
 .env
 .env.local
 .env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
 **/.env.local
 **/.env.*.local
-# 允许爬虫服务的 .env 文件
-!apps/crawler/.env
 
+# 密钥和证书
+*.key
+*.pem
+*.crt
+*.cer
+*.pfx
+*.p12
+**/*.key
+**/*.pem
+
+# 密码和凭证文件
+*password*
+*secret*
+*credentials*
+!**/src/**/*password*
+!**/src/**/*secret*
+
+# ========================================
 # 编辑器和 IDE
+# ========================================
 .vscode
+**/.vscode
 .idea
+**/.idea
 *.swp
 *.swo
+*.swn
 *~
 .DS_Store
+**/.DS_Store
+*.sublime-*
+.project
+.classpath
+.settings
+.history
 
-# 测试覆盖率
+# ========================================
+# 测试相关
+# ========================================
 coverage
 **/coverage
 .nyc_output
+**/.nyc_output
+test-results
+**/test-results
+playwright-report
+**/playwright-report
+.cache/ms-playwright
 
-# Git
+# ========================================
+# 版本控制
+# ========================================
 .git
 .gitignore
 .gitattributes
+.gitmodules
+.hg
+.svn
 
-# 文档和说明
+# ========================================
+# 文档和说明（保留必要的）
+# ========================================
 *.md
 !README.md
+!CHANGELOG.md
+!LICENSE.md
 docs
+**/docs
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
 
-# CI/CD
+# ========================================
+# CI/CD 配置
+# ========================================
 .github
+**/.github
 .gitlab-ci.yml
 .travis.yml
+.circleci
+azure-pipelines.yml
+.jenkins
+Jenkinsfile
 
-# 临时文件
+# ========================================
+# 临时文件和缓存
+# ========================================
 tmp
 temp
 *.tmp
-
-# 缓存
+**/tmp
+**/temp
 .cache
+**/.cache
 .eslintcache
 .stylelintcache
+.parcel-cache
+.sass-cache
 
-# Angular 特定
+# ========================================
+# 框架特定
+# ========================================
+# Angular
 **/.angular
 .angular
 
-# 其他
+# React/Next.js
+.next
+**/.next
+
+# Nuxt.js
+.nuxt
+**/.nuxt
+
+# Vite
+.vite
+**/.vite
+
+# ========================================
+# 开发工具配置
+# ========================================
+.prettierignore
+.eslintignore
+.editorconfig
+.nvmrc
+.npmrc
+.yarnrc
+.pnpmrc
+
+# ========================================
+# Docker 相关（避免嵌套）
+# ========================================
+Dockerfile*
+.dockerignore
+**/.dockerignore
+docker-compose*.yml
+
+# ========================================
+# 其他构建工具
+# ========================================
+.webpack
+**/.webpack
+.rollup.cache
+**/.rollup.cache
+
+# ========================================
+# 备份和临时
+# ========================================
 *.orig
 *.bak
+*.backup
+*~
+
+# ========================================
+# 操作系统
+# ========================================
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ========================================
+# 大文件和媒体（通常不需要在构建中）
+# ========================================
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+*.iso
+*.dmg
+
+# ========================================
+# 性能分析和诊断
+# ========================================
+*.cpuprofile
+*.heapsnapshot
+*.heapprofile
+.clinic

@@ -21,6 +21,7 @@ LABEL maintainer="Pro Team" \
 # 按变化频率排序：系统包变化频率最低，放在最前面
 # ========================================
 RUN apk add --no-cache \
+    bash \
     curl \
     dumb-init \
     git

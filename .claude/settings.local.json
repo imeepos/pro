@@ -3,7 +3,16 @@
     "allow": [
       "Bash(LATEST_IMAGE_NAME=\"docker.io/imeepos/broker:latest\")",
       "Bash(bun:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(cat:*)",
+      "Bash(tree:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: 为 @pro/types 创建极简优化的 Dockerfile\n\n优化策略：\n- 五层缓存设计：workspace 配置 → 依赖声明 → 依赖安装 → TS 配置 → 源码构建\n- BuildKit cache mount 加速依赖安装\n- 多阶段构建：builder（构建） + production（产物）\n- 生产镜像仅包含 package.json 和 dist/\n\n性能收益：\n- 源码修改仅影响最后一层，前四层可完全复用缓存\n- 依赖安装使用持久化缓存，显著提升构建速度\n- 作为项目最底层包，为其他包的构建提供坚实基础\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: 创建统一的 Docker 基础镜像\n\n提取所有服务的公共依赖到 docker/base/Dockerfile：\n- 基于 node:20-alpine\n- 包含 bun、curl、dumb-init、git\n- 创建标准用户 nestjs:nodejs (1001:1001)\n- 配置 /app 工作目录和权限\n- 优化层缓存策略\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(git log:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(docker build:*)"
     ],
     "deny": [],
     "ask": []
