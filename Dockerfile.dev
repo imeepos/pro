@@ -1,0 +1,79 @@
+# ============================================
+# 开发环境 Dockerfile - 所有服务一体化开发容器
+# ============================================
+# 特性：
+# - 基于 node:20-alpine 轻量级镜像
+# - 使用 bun 作为包管理器和运行时
+# - 利用 turbo dev 自动启动所有服务
+# - 支持热重载，文件变化自动重启
+# - 包含所有依赖的工具（git, curl, chromium 等）
+# ============================================
+
+FROM node:20-alpine AS development
+
+# 设置工作目录
+WORKDIR /app
+
+# 安装系统依赖
+# - git: 版本控制
+# - curl: 健康检查和调试
+# - dumb-init: 优雅的进程管理
+# - chromium 相关: Playwright 爬虫依赖
+RUN apk add --no-cache \
+    git \
+    curl \
+    dumb-init \
+    chromium \
+    chromium-chromedriver \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# 安装 bun
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
+
+# 设置 Playwright 环境变量
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/lib/chromium
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# 复制 workspace 配置
+COPY package.json bun.lock* ./
+COPY turbo.json ./
+COPY tsconfig.base.json ./
+
+# 复制所有 packages 和 apps 的 package.json
+COPY packages/*/package.json ./packages/
+COPY apps/*/package.json ./apps/
+
+# 安装依赖（开发模式，包含 devDependencies）
+RUN bun install --frozen-lockfile
+
+# 复制源代码
+COPY . .
+
+# 暴露所有服务端口
+# API 服务
+EXPOSE 3000
+# Crawler 服务
+EXPOSE 3001
+# Cleaner 服务
+EXPOSE 3002
+# Broker 服务
+EXPOSE 3003
+# Admin 前端
+EXPOSE 4201
+# Web 前端
+EXPOSE 4200
+
+# 健康检查（检查 API 服务）
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# 使用 dumb-init 作为 PID 1，启动 turbo dev
+# turbo dev 会并行启动所有配置了 dev 脚本的服务，并自动监控文件变化
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["bun", "run", "dev"]
