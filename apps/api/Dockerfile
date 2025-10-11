@@ -177,14 +177,14 @@ RUN apt-get update && \
     chown -R nestjs:nodejs apps/api/node_modules && \
     rm -rf /var/lib/apt/lists/*
 
-USER nestjs
-
 # 设置 bun 环境
 ENV BUN_INSTALL="/root/.bun"
 ENV PATH="/root/.bun/bin:$PATH"
 
 # 安装 Playwright Chromium 浏览器
 RUN bunx playwright install chromium
+
+USER nestjs
 
 # 创建版本信息文件
 RUN echo "{ \
