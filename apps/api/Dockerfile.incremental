@@ -51,13 +51,6 @@ RUN if [ -d "packages/types/src" ]; then \
       bun --filter @pro/types build; \
     fi
 
-# 更新 config 包
-COPY --chown=nestjs:nodejs packages/config/src ./packages/config/src
-RUN if [ -d "packages/config/src" ]; then \
-      echo "构建 config 包..." && \
-      bun --filter @pro/config build; \
-    fi
-
 # 更新 utils 包
 COPY --chown=nestjs:nodejs packages/utils/src ./packages/utils/src
 RUN if [ -d "packages/utils/src" ]; then \

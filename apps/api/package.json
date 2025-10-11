@@ -35,7 +35,6 @@
     "@nestjs/swagger": "^8.1.1",
     "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^11.1.6",
-    "@pro/config": "workspace:*",
     "@pro/minio": "workspace:*",
     "@pro/mongodb": "workspace:*",
     "@pro/entities": "workspace:*",

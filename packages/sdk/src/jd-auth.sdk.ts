@@ -101,6 +101,6 @@ export class JdAuthSDKImpl implements JdAuthSDK {
 /**
  * 创建京东认证 SDK 实例
  */
-export function createJdAuthSDK(baseUrl: string): JdAuthSDK {
-  return new JdAuthSDKImpl(baseUrl);
+export function createJdAuthSDK(baseUrl: string, tokenKey?: string): JdAuthSDK {
+  return new JdAuthSDKImpl(baseUrl, tokenKey);
 }

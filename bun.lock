@@ -33,7 +33,6 @@
         "@angular/router": "^20.0.0",
         "@datorama/akita": "^7.1.1",
         "@pro/components": "workspace:*",
-        "@pro/config": "workspace:*",
         "@pro/sdk": "workspace:*",
         "@pro/types": "workspace:*",
         "@pro/utils": "workspace:*",
@@ -83,7 +82,6 @@
         "@nestjs/swagger": "^8.1.1",
         "@nestjs/typeorm": "^11.0.0",
         "@nestjs/websockets": "^11.1.6",
-        "@pro/config": "workspace:*",
         "@pro/entities": "workspace:*",
         "@pro/minio": "workspace:*",
         "@pro/mongodb": "workspace:*",
@@ -147,7 +145,6 @@
         "@nestjs/schedule": "^6.0.1",
         "@nestjs/swagger": "^8.0.7",
         "@nestjs/typeorm": "^11.0.0",
-        "@pro/config": "workspace:*",
         "@pro/mongodb": "workspace:*",
         "@pro/rabbitmq": "workspace:*",
         "@pro/redis": "workspace:*",
@@ -190,9 +187,9 @@
       "version": "1.0.0",
       "dependencies": {
         "@nestjs/common": "^10.0.0",
+        "@nestjs/config": "^3.0.0",
         "@nestjs/core": "^10.0.0",
         "@nestjs/platform-express": "^10.0.0",
-        "@pro/config": "workspace:*",
         "@pro/minio": "workspace:*",
         "@pro/mongodb": "workspace:*",
         "@pro/rabbitmq": "workspace:*",
@@ -238,7 +235,6 @@
         "@nestjs/mongoose": "^10.0.0",
         "@nestjs/platform-express": "^10.0.0",
         "@nestjs/typeorm": "^10.0.0",
-        "@pro/config": "workspace:*",
         "@pro/minio": "workspace:*",
         "@pro/mongodb": "workspace:*",
         "@pro/rabbitmq": "workspace:*",
@@ -339,16 +335,7 @@
         "@angular/common": "^20.0.0",
         "@angular/core": "^20.0.0",
         "@angular/forms": "^20.0.0",
-        "@pro/config": "workspace:*",
         "rxjs": "~7.8.0",
-      },
-    },
-    "packages/config": {
-      "name": "@pro/config",
-      "version": "1.0.0",
-      "devDependencies": {
-        "@types/node": "^20.10.0",
-        "typescript": "~5.3.3",
       },
     },
     "packages/entities": {
@@ -431,7 +418,6 @@
       "name": "@pro/sdk",
       "version": "1.0.0",
       "dependencies": {
-        "@pro/config": "workspace:*",
         "@pro/types": "workspace:*",
         "rxjs": "^7.8.1",
       },
@@ -1153,8 +1139,6 @@
     "@pro/cleaner": ["@pro/cleaner@workspace:apps/cleaner"],
 
     "@pro/components": ["@pro/components@workspace:packages/components"],
-
-    "@pro/config": ["@pro/config@workspace:packages/config"],
 
     "@pro/crawler": ["@pro/crawler@workspace:apps/crawler"],
 
@@ -3456,13 +3440,11 @@
 
     "@pro/broker/eslint": ["eslint@8.57.1", "https://registry.npmmirror.com/eslint/-/eslint-8.57.1.tgz", { "dependencies": { "@eslint-community/eslint-utils": "^4.2.0", "@eslint-community/regexpp": "^4.6.1", "@eslint/eslintrc": "^2.1.4", "@eslint/js": "8.57.1", "@humanwhocodes/config-array": "^0.13.0", "@humanwhocodes/module-importer": "^1.0.1", "@nodelib/fs.walk": "^1.2.8", "@ungap/structured-clone": "^1.2.0", "ajv": "^6.12.4", "chalk": "^4.0.0", "cross-spawn": "^7.0.2", "debug": "^4.3.2", "doctrine": "^3.0.0", "escape-string-regexp": "^4.0.0", "eslint-scope": "^7.2.2", "eslint-visitor-keys": "^3.4.3", "espree": "^9.6.1", "esquery": "^1.4.2", "esutils": "^2.0.2", "fast-deep-equal": "^3.1.3", "file-entry-cache": "^6.0.1", "find-up": "^5.0.0", "glob-parent": "^6.0.2", "globals": "^13.19.0", "graphemer": "^1.4.0", "ignore": "^5.2.0", "imurmurhash": "^0.1.4", "is-glob": "^4.0.0", "is-path-inside": "^3.0.3", "js-yaml": "^4.1.0", "json-stable-stringify-without-jsonify": "^1.0.1", "levn": "^0.4.1", "lodash.merge": "^4.6.2", "minimatch": "^3.1.2", "natural-compare": "^1.4.0", "optionator": "^0.9.3", "strip-ansi": "^6.0.1", "text-table": "^0.2.0" }, "bin": { "eslint": "bin/eslint.js" } }, "sha512-ypowyDxpVSYpkXr9WPv2PAZCtNip1Mv5KTW0SCurXv/9iOpcrH9PaqUElksqEB6pChqHGDRCFTyrZlGhnLNGiA=="],
 
+    "@pro/cleaner/@nestjs/config": ["@nestjs/config@3.3.0", "https://registry.npmmirror.com/@nestjs/config/-/config-3.3.0.tgz", { "dependencies": { "dotenv": "16.4.5", "dotenv-expand": "10.0.0", "lodash": "4.17.21" }, "peerDependencies": { "@nestjs/common": "^8.0.0 || ^9.0.0 || ^10.0.0", "rxjs": "^7.1.0" } }, "sha512-pdGTp8m9d0ZCrjTpjkUbZx6gyf2IKf+7zlkrPNMsJzYZ4bFRRTpXrnj+556/5uiI6AfL5mMrJc2u7dB6bvM+VA=="],
+
     "@pro/cleaner/@types/node": ["@types/node@20.19.20", "https://registry.npmmirror.com/@types/node/-/node-20.19.20.tgz", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-2Q7WS25j4pS1cS8yw3d6buNCVJukOTeQ39bAnwR6sOJbaxvyCGebzTMypDFN82CxBLnl+lSWVdCCWbRY6y9yZQ=="],
 
     "@pro/cleaner/eslint": ["eslint@8.57.1", "https://registry.npmmirror.com/eslint/-/eslint-8.57.1.tgz", { "dependencies": { "@eslint-community/eslint-utils": "^4.2.0", "@eslint-community/regexpp": "^4.6.1", "@eslint/eslintrc": "^2.1.4", "@eslint/js": "8.57.1", "@humanwhocodes/config-array": "^0.13.0", "@humanwhocodes/module-importer": "^1.0.1", "@nodelib/fs.walk": "^1.2.8", "@ungap/structured-clone": "^1.2.0", "ajv": "^6.12.4", "chalk": "^4.0.0", "cross-spawn": "^7.0.2", "debug": "^4.3.2", "doctrine": "^3.0.0", "escape-string-regexp": "^4.0.0", "eslint-scope": "^7.2.2", "eslint-visitor-keys": "^3.4.3", "espree": "^9.6.1", "esquery": "^1.4.2", "esutils": "^2.0.2", "fast-deep-equal": "^3.1.3", "file-entry-cache": "^6.0.1", "find-up": "^5.0.0", "glob-parent": "^6.0.2", "globals": "^13.19.0", "graphemer": "^1.4.0", "ignore": "^5.2.0", "imurmurhash": "^0.1.4", "is-glob": "^4.0.0", "is-path-inside": "^3.0.3", "js-yaml": "^4.1.0", "json-stable-stringify-without-jsonify": "^1.0.1", "levn": "^0.4.1", "lodash.merge": "^4.6.2", "minimatch": "^3.1.2", "natural-compare": "^1.4.0", "optionator": "^0.9.3", "strip-ansi": "^6.0.1", "text-table": "^0.2.0" }, "bin": { "eslint": "bin/eslint.js" } }, "sha512-ypowyDxpVSYpkXr9WPv2PAZCtNip1Mv5KTW0SCurXv/9iOpcrH9PaqUElksqEB6pChqHGDRCFTyrZlGhnLNGiA=="],
-
-    "@pro/config/@types/node": ["@types/node@20.19.20", "https://registry.npmmirror.com/@types/node/-/node-20.19.20.tgz", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-2Q7WS25j4pS1cS8yw3d6buNCVJukOTeQ39bAnwR6sOJbaxvyCGebzTMypDFN82CxBLnl+lSWVdCCWbRY6y9yZQ=="],
-
-    "@pro/config/typescript": ["typescript@5.3.3", "https://registry.npmmirror.com/typescript/-/typescript-5.3.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw=="],
 
     "@pro/crawler/@nestjs/axios": ["@nestjs/axios@3.1.3", "https://registry.npmmirror.com/@nestjs/axios/-/axios-3.1.3.tgz", { "peerDependencies": { "@nestjs/common": "^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0", "axios": "^1.3.1", "rxjs": "^6.0.0 || ^7.0.0" } }, "sha512-RZ/63c1tMxGLqyG3iOCVt7A72oy4x1eM6QEhd4KzCYpaVWW0igq0WSREeRoEZhIxRcZfDfIIkvsOMiM7yfVGZQ=="],
 
@@ -4150,6 +4132,10 @@
 
     "@pro/broker/eslint/ignore": ["ignore@5.3.2", "https://registry.npmmirror.com/ignore/-/ignore-5.3.2.tgz", {}, "sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g=="],
 
+    "@pro/cleaner/@nestjs/config/dotenv": ["dotenv@16.4.5", "https://registry.npmmirror.com/dotenv/-/dotenv-16.4.5.tgz", {}, "sha512-ZmdL2rui+eB2YwhsWzjInR8LldtZHGDoQ1ugH85ppHKwpUHL7j7rN0Ti9NCnGiQbhaZ11FpR+7ao1dNsmduNUg=="],
+
+    "@pro/cleaner/@nestjs/config/dotenv-expand": ["dotenv-expand@10.0.0", "https://registry.npmmirror.com/dotenv-expand/-/dotenv-expand-10.0.0.tgz", {}, "sha512-GopVGCpVS1UKH75VKHGuQFqS1Gusej0z4FyQkPdwjil2gNIv+LNsqBlboOzpJFZKVT95GkCyWJbBSdFEFUWI2A=="],
+
     "@pro/cleaner/@types/node/undici-types": ["undici-types@6.21.0", "https://registry.npmmirror.com/undici-types/-/undici-types-6.21.0.tgz", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
     "@pro/cleaner/eslint/@eslint/eslintrc": ["@eslint/eslintrc@2.1.4", "https://registry.npmmirror.com/@eslint/eslintrc/-/eslintrc-2.1.4.tgz", { "dependencies": { "ajv": "^6.12.4", "debug": "^4.3.2", "espree": "^9.6.0", "globals": "^13.19.0", "ignore": "^5.2.0", "import-fresh": "^3.2.1", "js-yaml": "^4.1.0", "minimatch": "^3.1.2", "strip-json-comments": "^3.1.1" } }, "sha512-269Z39MS6wVJtsoUl10L60WdkhJVdPG24Q4eZTH3nnF6lpvSShEK3wQjDX9JRWAUPvPh7COouPpU9IrqaZFvtQ=="],
@@ -4165,8 +4151,6 @@
     "@pro/cleaner/eslint/file-entry-cache": ["file-entry-cache@6.0.1", "https://registry.npmmirror.com/file-entry-cache/-/file-entry-cache-6.0.1.tgz", { "dependencies": { "flat-cache": "^3.0.4" } }, "sha512-7Gps/XWymbLk2QLYK4NzpMOrYjMhdIxXuIvy2QBsLE6ljuodKvdkWs/cpyJJ3CVIVpH0Oi1Hvg1ovbMzLdFBBg=="],
 
     "@pro/cleaner/eslint/ignore": ["ignore@5.3.2", "https://registry.npmmirror.com/ignore/-/ignore-5.3.2.tgz", {}, "sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g=="],
-
-    "@pro/config/@types/node/undici-types": ["undici-types@6.21.0", "https://registry.npmmirror.com/undici-types/-/undici-types-6.21.0.tgz", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
     "@pro/crawler/@nestjs/config/dotenv": ["dotenv@16.4.5", "https://registry.npmmirror.com/dotenv/-/dotenv-16.4.5.tgz", {}, "sha512-ZmdL2rui+eB2YwhsWzjInR8LldtZHGDoQ1ugH85ppHKwpUHL7j7rN0Ti9NCnGiQbhaZ11FpR+7ao1dNsmduNUg=="],
 

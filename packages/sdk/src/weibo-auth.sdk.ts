@@ -4,7 +4,7 @@ import { WeiboAuthSDK, WeiboLoginEventHandler, WeiboAccount, WeiboAccountCheckRe
  * 微博认证 SDK 实现
  */
 export class WeiboAuthSDKImpl implements WeiboAuthSDK {
-  constructor(private baseUrl: string) {}
+  constructor(private baseUrl: string, private tokenKey?: string) {}
 
   /**
    * 启动微博登录（SSE）
@@ -101,6 +101,6 @@ export class WeiboAuthSDKImpl implements WeiboAuthSDK {
 /**
  * 创建微博认证 SDK 实例
  */
-export function createWeiboAuthSDK(baseUrl: string): WeiboAuthSDK {
-  return new WeiboAuthSDKImpl(baseUrl);
+export function createWeiboAuthSDK(baseUrl: string, tokenKey?: string): WeiboAuthSDK {
+  return new WeiboAuthSDKImpl(baseUrl, tokenKey);
 }

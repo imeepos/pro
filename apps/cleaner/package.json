@@ -28,7 +28,6 @@
     "@nestjs/platform-express": "^10.0.0",
     "@pro/types": "workspace:*",
     "@pro/utils": "workspace:*",
-    "@pro/config": "workspace:*",
     "@pro/rabbitmq": "workspace:*",
     "@pro/redis": "workspace:*",
     "@pro/mongodb": "workspace:*",

@@ -104,17 +104,6 @@ RUN echo "🏗️  构建 @pro/types..." && \
     bun --filter @pro/types build
 
 # ========================================
-# 第二层：@pro/config
-# 配置管理，无强依赖，独立构建
-# 影响范围：config 变化影响依赖配置的 packages
-# 优化：复用依赖阶段的安装结果和缓存
-# ========================================
-COPY --chown=nestjs:nodejs packages/config/tsconfig.json ./packages/config/
-COPY --chown=nestjs:nodejs packages/config/src ./packages/config/src
-RUN echo "🏗️  构建 @pro/config..." && \
-    bun --filter @pro/config build
-
-# ========================================
 # 第三层：@pro/utils
 # 工具函数库，依赖 types
 # 影响范围：utils 变化影响使用工具函数的 packages
