@@ -1,58 +1,32 @@
 # ========================================
 # Crawler 应用镜像
 # ========================================
-# 架构：基于 packages-builder 提供的预构建 packages
-# 优化：将 Playwright 依赖独立为缓存层，避免重复下载
-# 策略：packages → runtime-deps (Playwright) → development/production
+# 架构：基于 imeepos/playwright 基础镜像
+# 优化：统一权限处理，简化构建流程
+# 策略：base → development/builder → production
 # ========================================
 
 # ========================================
 # 构建参数
 # ========================================
-ARG PACKAGES_IMAGE=imeepos/packages-builder:latest
 ARG BUILD_VERSION=1.0.0
 ARG BUILD_TIME
 ARG GIT_COMMIT
 ARG BUILD_TYPE=full
 
 # ========================================
-# Packages 阶段
-# 目的：引入预构建的共享 packages
+# Base 阶段
+# 目的：基于 imeepos/playwright 基础镜像
+# 包含：预装的 Playwright 依赖和统一的权限配置
 # ========================================
-FROM ${PACKAGES_IMAGE} AS packages
-
-# ========================================
-# Runtime 依赖阶段（关键优化点）
-# 目的：预装 Playwright 系统依赖，此层独立缓存
-# 优势：源码变化不影响此层，仅构建一次即可复用
-# ========================================
-FROM packages AS runtime-deps
-
-USER root
-
-# 安装 Playwright 所需的 Alpine 系统包
-# 精简版本，只安装必需依赖
-RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    && rm -rf /var/cache/apk/*
-
-# 配置 Chromium 环境变量
-ENV CHROME_BIN=/usr/bin/chromium-browser \
-    CHROME_PATH=/usr/lib/chromium/
-
-USER nestjs
+FROM imeepos/playwright:latest AS base
 
 # ========================================
 # 开发阶段
 # 目的：本地开发环境，支持热重载
-# 基础：runtime-deps (已包含 packages + Playwright)
+# 基础：base (已包含 Playwright 依赖和 packages)
 # ========================================
-FROM runtime-deps AS development
+FROM base AS development
 
 ARG BUILD_VERSION
 ARG BUILD_TIME
@@ -65,29 +39,27 @@ LABEL version="${BUILD_VERSION}" \
       build-type="${BUILD_TYPE}" \
       stage="development"
 
-USER root
+USER nestjs
 WORKDIR /app
 
 # 复制 crawler 应用配置
-COPY --chown=nestjs:nodejs apps/crawler/package.json ./apps/crawler/
+COPY apps/crawler/package.json ./apps/crawler/
 
-# 安装 crawler 应用依赖（利用 cache mount 加速）
-RUN --mount=type=cache,id=bun-crawler-dev,target=/root/.bun/install/cache \
+# 安装 crawler 应用依赖（利用统一缓存目录）
+RUN --mount=type=cache,id=bun-crawler-dev,target=/home/nestjs/.bun/install/cache \
     echo "📦 安装 @pro/crawler 依赖..." && \
     bun install
 
 EXPOSE 3001
-
-USER nestjs
 
 CMD ["bun", "--filter", "@pro/crawler", "start:dev"]
 
 # ========================================
 # 构建阶段
 # 目的：构建 @pro/crawler 应用
-# 基础：runtime-deps
+# 基础：base
 # ========================================
-FROM runtime-deps AS builder
+FROM base AS builder
 
 ARG BUILD_VERSION
 ARG BUILD_TIME
@@ -100,23 +72,23 @@ LABEL version="${BUILD_VERSION}" \
       build-type="${BUILD_TYPE}" \
       stage="builder"
 
-USER root
+USER nestjs
 WORKDIR /app
 
 # 复制 crawler 应用配置
-COPY --chown=nestjs:nodejs apps/crawler/package.json ./apps/crawler/
+COPY apps/crawler/package.json ./apps/crawler/
 
-# 安装依赖
-RUN --mount=type=cache,id=bun-crawler-builder,target=/root/.bun/install/cache \
+# 安装依赖（利用统一缓存目录）
+RUN --mount=type=cache,id=bun-crawler-builder,target=/home/nestjs/.bun/install/cache \
     echo "📦 安装 @pro/crawler 依赖..." && \
     bun install
 
 # 复制源码
-COPY --chown=nestjs:nodejs apps/crawler/tsconfig.json ./apps/crawler/
-COPY --chown=nestjs:nodejs apps/crawler/tsconfig.build.json* ./apps/crawler/
-COPY --chown=nestjs:nodejs apps/crawler/nest-cli.json* ./apps/crawler/
-COPY --chown=nestjs:nodejs apps/crawler/src ./apps/crawler/
-COPY --chown=nestjs:nodejs apps/crawler/.env* ./apps/crawler/
+COPY apps/crawler/tsconfig.json ./apps/crawler/
+COPY apps/crawler/tsconfig.build.json* ./apps/crawler/
+COPY apps/crawler/nest-cli.json* ./apps/crawler/
+COPY apps/crawler/src ./apps/crawler/
+COPY apps/crawler/.env* ./apps/crawler/
 
 # 构建应用
 RUN echo "🏗️  构建 @pro/crawler..." && \
@@ -125,9 +97,9 @@ RUN echo "🏗️  构建 @pro/crawler..." && \
 # ========================================
 # 生产阶段
 # 目的：最小化生产镜像
-# 基础：runtime-deps (复用 Playwright 依赖)
+# 基础：base (复用 Playwright 依赖)
 # ========================================
-FROM runtime-deps AS production
+FROM base AS production
 
 ARG BUILD_VERSION
 ARG BUILD_TIME
@@ -140,20 +112,19 @@ LABEL version="${BUILD_VERSION}" \
       build-type="${BUILD_TYPE}" \
       stage="production"
 
-USER root
+USER nestjs
 WORKDIR /app
 
 # 从 builder 复制构建产物
-COPY --from=builder --chown=nestjs:nodejs /app/apps/crawler/package.json ./apps/crawler/
-COPY --from=builder --chown=nestjs:nodejs /app/apps/crawler/dist ./apps/crawler/dist
-COPY --from=builder --chown=nestjs:nodejs /app/apps/crawler/.env* ./apps/crawler/
-COPY --from=builder --chown=nestjs:nodejs /app/bun.lock ./
+COPY --from=builder /app/apps/crawler/package.json ./apps/crawler/
+COPY --from=builder /app/apps/crawler/dist ./apps/crawler/dist
+COPY --from=builder /app/apps/crawler/.env* ./apps/crawler/
+COPY --from=builder /app/bun.lock ./
 
-# 仅安装生产依赖
-RUN --mount=type=cache,id=bun-crawler-prod,target=/root/.bun/install/cache \
+# 仅安装生产依赖（利用统一缓存目录）
+RUN --mount=type=cache,id=bun-crawler-prod,target=/home/nestjs/.bun/install/cache \
     echo "📦 安装 @pro/crawler 生产依赖..." && \
-    bun install --cwd ./apps/crawler --production && \
-    chown -R nestjs:nodejs apps/crawler/node_modules
+    bun install --cwd ./apps/crawler --production
 
 # 创建版本信息
 RUN echo "{ \
@@ -164,10 +135,7 @@ RUN echo "{ \
       \"stage\": \"production\", \
       \"nodeVersion\": \"$(node --version)\", \
       \"platform\": \"$(uname -a)\" \
-    }" > /app/build-info.json && \
-    chown nestjs:nodejs /app/build-info.json
-
-USER nestjs
+    }" > /app/build-info.json
 
 EXPOSE 3001
 
