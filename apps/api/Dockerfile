@@ -167,7 +167,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/apps/api/package.json ./apps/api/
 COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./apps/api/dist
 
 # 在生产镜像中重新安装依赖以确保 Node.js 兼容性
-RUN --chown=nestjs:nodejs npm install --prefix ./apps/api
+USER root
+RUN npm install --prefix ./apps/api && chown -R nestjs:nodejs apps/api/node_modules
+USER nestjs
 
 # 安装 Playwright Chromium 浏览器
 RUN npx playwright install chromium
