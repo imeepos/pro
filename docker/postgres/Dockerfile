@@ -8,6 +8,6 @@ RUN set -eux; \
         postgresql-16-pgvector; \
     rm -rf /var/lib/apt/lists/*
 
-COPY config/postgres/init/*.sh /docker-entrypoint-initdb.d/
+COPY init/*.sh /docker-entrypoint-initdb.d/
 RUN chmod +x /docker-entrypoint-initdb.d/*.sh
 
