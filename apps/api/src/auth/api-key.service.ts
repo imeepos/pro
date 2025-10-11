@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, Like, SelectQueryBuilder } from 'typeorm';
-import { ApiKeyEntity } from '../entities/api-key.entity';
-import { UserEntity } from '../entities/user.entity';
+import { ApiKeyEntity } from '@pro/entities';
+import { UserEntity } from '@pro/entities';
 import { UserStatus } from '@pro/types';
 import {
   CreateApiKeyDto,

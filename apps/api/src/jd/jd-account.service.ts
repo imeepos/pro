@@ -8,7 +8,7 @@ import { Repository, MoreThanOrEqual } from 'typeorm';
 import {
   JdAccountEntity,
   JdAccountStatus,
-} from '../entities/jd-account.entity';
+} from '@pro/entities';
 
 /**
  * 京东账号管理服务

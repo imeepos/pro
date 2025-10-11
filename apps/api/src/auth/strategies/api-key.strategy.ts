@@ -3,8 +3,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import Strategy from 'passport-headerapikey';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ApiKeyEntity } from '../../entities/api-key.entity';
-import { UserEntity } from '../../entities/user.entity';
+import { ApiKeyEntity } from '@pro/entities';
+import { UserEntity } from '@pro/entities';
 import { JwtPayload } from '@pro/types';
 
 /**

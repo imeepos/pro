@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigType, ConfigResponseDto, GetConfigDto } from './dto/config.dto';
-
+import { ConfigService as NestConfigService} from '@nestjs/config'
 @Injectable()
 export class ConfigService {
   private readonly cache = new Map<string, { value: string; expiresAt: number }>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
+
+  constructor(@Inject() private readonly config: NestConfigService){}
 
   async getConfig(getConfigDto: GetConfigDto): Promise<ConfigResponseDto> {
     const { type } = getConfigDto;
@@ -23,7 +25,7 @@ export class ConfigService {
     let value: string;
     switch (type) {
       case ConfigType.AMAP_API_KEY:
-        value = process.env.AMAP_API_KEY;
+        value = this.config.get(`AMAP_API_KEY`);
         break;
       default:
         throw new NotFoundException(`不支持的配置类型: ${type}`);

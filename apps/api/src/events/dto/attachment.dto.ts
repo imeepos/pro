@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsInt, IsIn, Min } from 'class-validator';
-import { FileType } from '../../entities/event-attachment.entity';
+import { FileType } from '@pro/entities';
 
 export class UploadAttachmentDto {
   @IsString()

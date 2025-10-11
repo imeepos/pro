@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
 import { Subject, Observable } from 'rxjs';
-import { JdAccountEntity } from '../entities/jd-account.entity';
+import { JdAccountEntity } from '@pro/entities';
 import { JdAccountService } from './jd-account.service';
 
 /**

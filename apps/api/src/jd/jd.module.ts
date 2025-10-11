@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
-import { JdAccountEntity } from '../entities/jd-account.entity';
+import { JdAccountEntity } from '@pro/entities';
 import { JdAccountService } from './jd-account.service';
 import { JdAuthService } from './jd-auth.service';
 import { JdHealthCheckService } from './jd-health-check.service';

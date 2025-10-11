@@ -38,6 +38,7 @@
     "@pro/config": "workspace:*",
     "@pro/minio": "workspace:*",
     "@pro/mongodb": "workspace:*",
+    "@pro/entities": "workspace:*",
     "@pro/rabbitmq": "workspace:*",
     "@pro/redis": "workspace:*",
     "@pro/types": "workspace:*",

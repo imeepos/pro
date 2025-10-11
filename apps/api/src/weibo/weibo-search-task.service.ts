@@ -10,8 +10,8 @@ import { Repository, DataSource, LessThanOrEqual, MoreThanOrEqual, Between } fro
 import {
   WeiboSearchTaskEntity,
   WeiboSearchTaskStatus,
-} from '../entities/weibo-search-task.entity';
-import { WeiboAccountEntity, WeiboAccountStatus } from '../entities/weibo-account.entity';
+} from '@pro/entities';
+import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
 import {
   CreateWeiboSearchTaskDto,
   UpdateWeiboSearchTaskDto,

@@ -1,7 +1,7 @@
 import {
   LayoutConfig,
   ScreenComponent,
-} from '../../entities/screen-page.entity';
+} from '@pro/entities';
 import {
   LayoutConfigDto,
   ScreenComponentDto,

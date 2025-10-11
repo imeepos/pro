@@ -5,7 +5,7 @@ import { ScreensController } from './screens.controller';
 import { ScreensService } from './screens.service';
 import { ScreensGateway } from './screens.gateway';
 import { ScreensStatsScheduler } from './screens-stats.scheduler';
-import { ScreenPageEntity } from '../entities/screen-page.entity';
+import { ScreenPageEntity } from '@pro/entities';
 import { WeiboModule } from '../weibo/weibo.module';
 import { getJwtConfig } from '../config';
 

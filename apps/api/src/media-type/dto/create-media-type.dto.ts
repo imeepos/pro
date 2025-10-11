@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsInt, IsEnum, MaxLength } from 'class-validator';
-import { MediaTypeStatus } from '../../entities/media-type.entity';
+import { MediaTypeStatus } from '@pro/entities';
 
 export class CreateMediaTypeDto {
   @IsString()

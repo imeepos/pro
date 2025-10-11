@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "commonjs",
+    "module": "Node16",
     "lib": ["ES2022"],
     "declaration": true,
     "declarationMap": true,
@@ -21,31 +21,11 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "paths": {
-      "@pro/types": ["./packages/types/src"],
-      "@pro/types/*": ["./packages/types/src/*"],
-      "@pro/sdk": ["./packages/sdk/src"],
-      "@pro/sdk/*": ["./packages/sdk/src/*"],
-      "@pro/utils": ["./packages/utils/src"],
-      "@pro/utils/*": ["./packages/utils/src/*"],
-      "@pro/config": ["./packages/config/src"],
-      "@pro/config/*": ["./packages/config/src/*"],
-      "@pro/components": ["./packages/components/src"],
-      "@pro/components/*": ["./packages/components/src/*"],
-      "@pro/rabbitmq": ["./packages/rabbitmq/src"],
-      "@pro/rabbitmq/*": ["./packages/rabbitmq/src/*"],
-      "@pro/redis": ["./packages/redis/src"],
-      "@pro/redis/*": ["./packages/redis/src/*"],
-      "@pro/mongodb": ["./packages/mongodb/src"],
-      "@pro/mongodb/*": ["./packages/mongodb/src/*"],
-      "@pro/minio": ["./packages/minio/src"],
-      "@pro/minio/*": ["./packages/minio/src/*"]
-    }
+    "experimentalDecorators": true
   },
   "exclude": [
     "node_modules",

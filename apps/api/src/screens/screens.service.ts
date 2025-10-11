@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ScreenPageEntity } from '../entities/screen-page.entity';
+import { ScreenPageEntity } from '@pro/entities';
 import { CreateScreenDto, UpdateScreenDto } from './dto';
 import { ScreenDataTransformer } from './utils/screen-data-transformer';
 

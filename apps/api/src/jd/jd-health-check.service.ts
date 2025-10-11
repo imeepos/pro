@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
-import { JdAccountEntity, JdAccountStatus } from '../entities/jd-account.entity';
+import { JdAccountEntity, JdAccountStatus } from '@pro/entities';
 import { JdAccountService } from './jd-account.service';
 
 /**

@@ -5,9 +5,9 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { EventEntity, EventStatus } from '../entities/event.entity';
-import { EventTagEntity } from '../entities/event-tag.entity';
-import { TagEntity } from '../entities/tag.entity';
+import { EventEntity, EventStatus } from '@pro/entities';
+import { EventTagEntity } from '@pro/entities';
+import { TagEntity } from '@pro/entities';
 import { CreateEventDto, UpdateEventDto, EventQueryDto } from './dto/event.dto';
 
 @Injectable()

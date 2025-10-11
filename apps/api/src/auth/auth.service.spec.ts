@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
-import { UserEntity } from '../entities/user.entity';
+import { UserEntity } from '@pro/entities';
 import { UserStatus } from '@pro/types';
 
 describe('AuthService', () => {

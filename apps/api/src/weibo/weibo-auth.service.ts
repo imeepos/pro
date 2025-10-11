@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
 import { Subject, Observable } from 'rxjs';
-import { WeiboAccountEntity } from '../entities/weibo-account.entity';
+import { WeiboAccountEntity } from '@pro/entities';
 import { ScreensGateway } from '../screens/screens.gateway';
 
 /**

@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
-import { UserEntity } from '../entities/user.entity';
+import { UserEntity } from '@pro/entities';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
 import { AuthResponse, JwtPayload, User, UserStatus } from '@pro/types';
 import { RedisClient } from '@pro/redis';

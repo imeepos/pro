@@ -1,17 +1,9 @@
 {
-  "name": "@pro/config",
+  "name": "@pro/entities",
   "version": "1.0.0",
   "description": "Shared configuration",
-  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -19,10 +11,17 @@
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\""
   },
-  "keywords": ["config", "configuration"],
+  "keywords": [
+    "config",
+    "configuration"
+  ],
   "license": "UNLICENSED",
   "devDependencies": {
     "@types/node": "^20.10.0",
     "typescript": "~5.3.3"
+  },
+  "dependencies": {
+    "reflect-metadata": "^0.2.0",
+    "typeorm": "^0.3.27"
   }
 }

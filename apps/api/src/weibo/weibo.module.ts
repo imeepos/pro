@@ -1,8 +1,8 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
-import { WeiboAccountEntity } from '../entities/weibo-account.entity';
-import { WeiboSearchTaskEntity } from '../entities/weibo-search-task.entity';
+import { WeiboAccountEntity } from '@pro/entities';
+import { WeiboSearchTaskEntity } from '@pro/entities';
 import { WeiboController } from './weibo.controller';
 import { WeiboAccountService } from './weibo-account.service';
 import { WeiboAuthService } from './weibo-auth.service';

@@ -14,7 +14,7 @@
     "sourceMap": true,
     "declaration": false,
     "experimentalDecorators": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "importHelpers": true,
     "target": "ES2022",
     "module": "ES2022",
@@ -22,15 +22,7 @@
     "lib": [
       "ES2022",
       "dom"
-    ],
-    "paths": {
-      "@pro/types": ["../../packages/types/src"],
-      "@pro/types/*": ["../../packages/types/src/*"],
-      "@pro/sdk": ["../../packages/sdk/src"],
-      "@pro/sdk/*": ["../../packages/sdk/src/*"],
-      "@pro/components": ["../../packages/components/src"],
-      "@pro/components/*": ["../../packages/components/src/*"]
-    }
+    ]
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

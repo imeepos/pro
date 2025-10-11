@@ -1,7 +1,7 @@
 import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { WeiboAccountEntity, WeiboAccountStatus } from '../entities/weibo-account.entity';
+import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
 import axios, { AxiosError } from 'axios';
 import { ScreensGateway } from '../screens/screens.gateway';
 

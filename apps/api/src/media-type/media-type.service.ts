@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
-import { MediaTypeEntity } from '../entities/media-type.entity';
+import { MediaTypeEntity } from '@pro/entities';
 import { CreateMediaTypeDto } from './dto/create-media-type.dto';
 import { UpdateMediaTypeDto } from './dto/update-media-type.dto';
 import { QueryMediaTypeDto } from './dto/query-media-type.dto';

@@ -25,7 +25,7 @@ import {
   ResumeTaskDto,
   RunNowTaskDto,
 } from './dto/weibo-search-task.dto';
-import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '../entities/weibo-search-task.entity';
+import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
 
 /**
  * 微博搜索任务控制器

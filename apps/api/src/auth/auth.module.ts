@@ -9,8 +9,7 @@ import { ApiKeyService } from './api-key.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { ApiKeyOwnerGuard } from './guards/api-key-owner.guard';
-import { UserEntity } from '../entities/user.entity';
-import { ApiKeyEntity } from '../entities/api-key.entity';
+import { UserEntity, ApiKeyEntity } from '@pro/entities';
 import { getJwtConfig } from '../config';
 
 @Module({

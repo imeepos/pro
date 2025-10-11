@@ -3,12 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 
-import { IndustryTypeEntity } from '../entities/industry-type.entity';
-import { EventTypeEntity } from '../entities/event-type.entity';
-import { EventEntity } from '../entities/event.entity';
-import { TagEntity } from '../entities/tag.entity';
-import { EventTagEntity } from '../entities/event-tag.entity';
-import { EventAttachmentEntity } from '../entities/event-attachment.entity';
+import { IndustryTypeEntity } from '@pro/entities';
+import { EventTypeEntity } from '@pro/entities';
+import { EventEntity } from '@pro/entities';
+import { TagEntity } from '@pro/entities';
+import { EventTagEntity } from '@pro/entities';
+import { EventAttachmentEntity } from '@pro/entities';
 
 import { IndustryTypeService } from './industry-type.service';
 import { EventTypeService } from './event-type.service';

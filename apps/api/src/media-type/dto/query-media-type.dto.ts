@@ -1,6 +1,6 @@
 import { IsOptional, IsInt, IsEnum, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { MediaTypeStatus } from '../../entities/media-type.entity';
+import { MediaTypeStatus } from '@pro/entities';
 
 export class QueryMediaTypeDto {
   @IsOptional()

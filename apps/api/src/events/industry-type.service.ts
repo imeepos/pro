@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IndustryTypeEntity } from '../entities/industry-type.entity';
+import { IndustryTypeEntity } from '@pro/entities';
 import { CreateIndustryTypeDto, UpdateIndustryTypeDto } from './dto/industry-type.dto';
 
 @Injectable()

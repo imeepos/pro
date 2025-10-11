@@ -2,7 +2,7 @@
   "name": "@pro/components",
   "version": "1.0.0",
   "description": "Shared Angular UI components",
-  "main": "./dist/index.js",
+  "main": "./dist/fesm2022/pro-components.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "ng-packagr -p ng-package.json",

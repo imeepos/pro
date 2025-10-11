@@ -206,7 +206,8 @@ export class WeiboSearchTaskEntity {
    * 检查是否已完成历史数据回溯
    */
   get isHistoricalCrawlCompleted(): boolean {
-    return this.currentCrawlTime !== null && this.currentCrawlTime <= this.startDate;
+    if(!this.currentCrawlTime) return false;
+    return this.currentCrawlTime <= this.startDate;
   }
 
   /**

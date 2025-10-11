@@ -10,7 +10,7 @@ import { Repository, MoreThanOrEqual } from 'typeorm';
 import {
   WeiboAccountEntity,
   WeiboAccountStatus,
-} from '../entities/weibo-account.entity';
+} from '@pro/entities';
 import { ScreensGateway } from '../screens/screens.gateway';
 
 /**

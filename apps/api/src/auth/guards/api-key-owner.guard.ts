@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ApiKeyEntity } from '../../entities/api-key.entity';
+import { ApiKeyEntity } from '@pro/entities';
 
 /**
  * API Key 所有者守卫

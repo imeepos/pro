@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 // import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { BrokerModule } from './broker.module';
 
@@ -35,7 +36,8 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
   */
 
-  const port = process.env.PORT || 3003;
+  const config = app.get(ConfigService);
+  const port = config.get('PORT', 3003);
   await app.listen(port);
 
   console.log(`Broker 服务已启动，端口: ${port}`);

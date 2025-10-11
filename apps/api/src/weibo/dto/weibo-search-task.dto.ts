@@ -13,7 +13,7 @@ import {
   IsDecimal,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { WeiboSearchTaskStatus } from '../../entities/weibo-search-task.entity';
+import { WeiboSearchTaskStatus } from '@pro/entities';
 
 /**
  * 创建微博搜索任务DTO
