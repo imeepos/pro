@@ -11,7 +11,12 @@ COPY . .
 # 安装依赖
 RUN bun install
 
-# 构建所有应用
+# 先构建依赖包
+RUN cd packages/types && bun run build
+RUN cd packages/utils && bun run build
+RUN cd packages/entities && bun run build
+
+# 然后构建所有应用
 RUN bun run build
 
 # 复制入口点脚本并设置权限

@@ -2,11 +2,20 @@
   "name": "@pro/types",
   "version": "1.0.0",
   "description": "Shared TypeScript type definitions",
+  "type": "module",
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\""
@@ -14,6 +23,7 @@
   "keywords": ["types", "typescript"],
   "license": "UNLICENSED",
   "devDependencies": {
+    "tsup": "^8.5.0",
     "typescript": "~5.3.3"
   }
 }

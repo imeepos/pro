@@ -2,11 +2,20 @@
   "name": "@pro/sdk",
   "version": "1.0.0",
   "description": "SDK interface definitions for Pro platform",
+  "type": "module",
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\""
@@ -18,6 +27,7 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
+    "tsup": "^8.5.0",
     "typescript": "~5.3.3"
   }
 }

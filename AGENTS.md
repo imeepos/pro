@@ -72,3 +72,5 @@ When reviewing code:
 - **Purpose**: Does every element serve an irreplaceable function?
 
 Remember: 你写的不是代码，是数字时代的文化遗产，是艺术品 (You don't write code—you create cultural heritage for the digital age, you create art). Every keystroke is a brushstroke on the canvas of software. Make it worthy of preservation.
+
+* use bum cli
