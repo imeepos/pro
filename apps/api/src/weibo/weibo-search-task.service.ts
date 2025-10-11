@@ -3,8 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
-  Logger,
 } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThanOrEqual, MoreThanOrEqual, Between } from 'typeorm';
 import {
@@ -27,22 +27,23 @@ import {
  */
 @Injectable()
 export class WeiboSearchTaskService {
-  private readonly logger = new Logger(WeiboSearchTaskService.name);
-
   constructor(
+    private readonly logger: PinoLogger,
     @InjectRepository(WeiboSearchTaskEntity)
     private readonly taskRepo: Repository<WeiboSearchTaskEntity>,
     @InjectRepository(WeiboAccountEntity)
     private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
     private readonly dataSource: DataSource,
-  ) {}
+  ) {
+    this.logger.setContext(WeiboSearchTaskService.name);
+  }
 
   /**
    * 创建微博搜索任务
    * 自动设置默认值并验证账号可用性
    */
   async create(userId: string, dto: CreateWeiboSearchTaskDto): Promise<WeiboSearchTaskEntity> {
-    this.logger.log(`用户 ${userId} 创建微博搜索任务: ${dto.keyword}`);
+    this.logger.info(`用户 ${userId} 创建微博搜索任务: ${dto.keyword}`);
 
     // 验证指定的微博账号是否存在且可用
     if (dto.weiboAccountId) {
@@ -69,7 +70,7 @@ export class WeiboSearchTaskService {
     });
 
     const savedTask = await this.taskRepo.save(task);
-    this.logger.log(`任务创建成功: ID=${savedTask.id}, 关键词=${savedTask.keyword}`);
+    this.logger.info(`任务创建成功: ID=${savedTask.id}, 关键词=${savedTask.keyword}`);
 
     return savedTask;
   }
@@ -208,7 +209,7 @@ export class WeiboSearchTaskService {
     }
 
     await this.taskRepo.update(id, updates);
-    this.logger.log(`任务更新成功: ID=${id}, 更新字段: ${Object.keys(updates).join(', ')}`);
+    this.logger.info(`任务更新成功: ID=${id}, 更新字段: ${Object.keys(updates).join(', ')}`);
 
     return this.findOne(userId, id);
   }
@@ -225,7 +226,7 @@ export class WeiboSearchTaskService {
     }
 
     await this.taskRepo.delete(id);
-    this.logger.log(`任务删除成功: ID=${id}, 关键词=${task.keyword}`);
+    this.logger.info(`任务删除成功: ID=${id}, 关键词=${task.keyword}`);
   }
 
   /**
@@ -243,7 +244,7 @@ export class WeiboSearchTaskService {
       errorMessage: dto?.reason || task.errorMessage,
     });
 
-    this.logger.log(`任务暂停: ID=${id}, 原因: ${dto?.reason || '手动暂停'}`);
+    this.logger.info(`任务暂停: ID=${id}, 原因: ${dto?.reason || '手动暂停'}`);
 
     return this.findOne(userId, id);
   }
@@ -266,7 +267,7 @@ export class WeiboSearchTaskService {
       noDataCount: 0,
     });
 
-    this.logger.log(`任务恢复: ID=${id}, 原因: ${dto?.reason || '手动恢复'}`);
+    this.logger.info(`任务恢复: ID=${id}, 原因: ${dto?.reason || '手动恢复'}`);
 
     return this.findOne(userId, id);
   }
@@ -291,7 +292,7 @@ export class WeiboSearchTaskService {
 
     await this.taskRepo.update(id, updates);
 
-    this.logger.log(`任务立即执行: ID=${id}, 原因: ${dto?.reason || '手动触发'}`);
+    this.logger.info(`任务立即执行: ID=${id}, 原因: ${dto?.reason || '手动触发'}`);
 
     return this.findOne(userId, id);
   }
@@ -305,7 +306,7 @@ export class WeiboSearchTaskService {
       { enabled: false }
     );
 
-    this.logger.log(`用户 ${userId} 的所有任务已暂停，影响行数: ${result.affected}`);
+    this.logger.info(`用户 ${userId} 的所有任务已暂停，影响行数: ${result.affected}`);
 
     return result.affected || 0;
   }
@@ -324,7 +325,7 @@ export class WeiboSearchTaskService {
       }
     );
 
-    this.logger.log(`用户 ${userId} 的所有任务已恢复，影响行数: ${result.affected}`);
+    this.logger.info(`用户 ${userId} 的所有任务已恢复，影响行数: ${result.affected}`);
 
     return result.affected || 0;
   }

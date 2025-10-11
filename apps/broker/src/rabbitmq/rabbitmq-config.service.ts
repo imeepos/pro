@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { RabbitMQClient, RabbitMQConfig } from '@pro/rabbitmq';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger } from 'nestjs-pino';
 import { SubTaskMessage, TaskResultMessage, WEIBO_CRAWL_QUEUE } from '../weibo/interfaces/sub-task-message.interface';
 
 /**
@@ -11,7 +12,10 @@ import { SubTaskMessage, TaskResultMessage, WEIBO_CRAWL_QUEUE } from '../weibo/i
 export class RabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
   private client: RabbitMQClient;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly logger: PinoLogger
+  ) {}
 
   async onModuleInit(): Promise<void> {
     const rabbitmqConfig: RabbitMQConfig = {
@@ -24,12 +28,12 @@ export class RabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
     // 初始化微博抓取队列
     await this.client.publish(WEIBO_CRAWL_QUEUE, null);
 
-    console.log('RabbitMQ 连接已建立，队列已初始化');
+    this.logger.info('RabbitMQ 连接已建立，队列已初始化', 'RabbitMQConfigService');
   }
 
   async onModuleDestroy(): Promise<void> {
     await this.client.close();
-    console.log('RabbitMQ 连接已关闭');
+    this.logger.info('RabbitMQ 连接已关闭', 'RabbitMQConfigService');
   }
 
   /**
@@ -38,10 +42,10 @@ export class RabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
   async publishSubTask(message: SubTaskMessage): Promise<boolean> {
     try {
       const success = await this.client.publish(WEIBO_CRAWL_QUEUE, message);
-      console.log(`已发布子任务: 任务ID=${message.taskId}, 关键词=${message.keyword}, 时间范围=${message.start.toISOString()} ~ ${message.end.toISOString()}`);
+      this.logger.info(`已发布子任务: 任务ID=${message.taskId}, 关键词=${message.keyword}, 时间范围=${message.start.toISOString()} ~ ${message.end.toISOString()}`, 'RabbitMQConfigService');
       return success;
     } catch (error) {
-      console.error('发布子任务失败:', error);
+      this.logger.error('发布子任务失败:', error, 'RabbitMQConfigService');
       throw error;
     }
   }
@@ -53,10 +57,10 @@ export class RabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
     try {
       const resultQueue = 'weibo_task_results';
       const success = await this.client.publish(resultQueue, message);
-      console.log(`已发布任务结果: 任务ID=${message.taskId}, 状态=${message.status}`);
+      this.logger.info(`已发布任务结果: 任务ID=${message.taskId}, 状态=${message.status}`, 'RabbitMQConfigService');
       return success;
     } catch (error) {
-      console.error('发布任务结果失败:', error);
+      this.logger.error('发布任务结果失败:', error, 'RabbitMQConfigService');
       throw error;
     }
   }

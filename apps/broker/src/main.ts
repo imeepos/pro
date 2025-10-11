@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from 'nestjs-pino';
 // import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { BrokerModule } from './broker.module';
 
@@ -37,12 +38,12 @@ async function bootstrap() {
   */
 
   const config = app.get(ConfigService);
+  const logger = app.get(Logger);
   const port = config.get('PORT', 3003);
   await app.listen(port);
 
-  console.log(`Broker 服务已启动，端口: ${port}`);
-  // console.log(`API 文档地址: http://localhost:${port}/api/docs`);
-  console.log('任务调度中心正在运行...');
+  logger.log(`Broker 服务已启动，端口: ${port}`, 'Bootstrap');
+  logger.log('任务调度中心正在运行...', 'Bootstrap');
 }
 
 bootstrap().catch((error) => {

@@ -44,7 +44,10 @@
             </div>
           </div>
           <div class="ml-4">
-            <p class="text-2xl font-bold text-gray-900">{{ stats.totalScreens }}</p>
+            <p class="text-2xl font-bold text-gray-900">
+              <span *ngIf="!loading">{{ stats.totalScreens }}</span>
+              <span *ngIf="loading" class="animate-pulse bg-gray-200 h-8 w-16 rounded inline-block"></span>
+            </p>
             <p class="text-sm text-gray-600">大屏总数</p>
           </div>
         </div>
@@ -60,7 +63,10 @@
             </div>
           </div>
           <div class="ml-4">
-            <p class="text-2xl font-bold text-gray-900">{{ stats.totalEvents }}</p>
+            <p class="text-2xl font-bold text-gray-900">
+              <span *ngIf="!loading">{{ stats.totalEvents }}</span>
+              <span *ngIf="loading" class="animate-pulse bg-gray-200 h-8 w-16 rounded inline-block"></span>
+            </p>
             <p class="text-sm text-gray-600">事件总数</p>
           </div>
         </div>
@@ -76,7 +82,10 @@
             </div>
           </div>
           <div class="ml-4">
-            <p class="text-2xl font-bold text-gray-900">{{ stats.totalWeiboAccounts }}</p>
+            <p class="text-2xl font-bold text-gray-900">
+              <span *ngIf="!loading">{{ stats.totalWeiboAccounts }}</span>
+              <span *ngIf="loading" class="animate-pulse bg-gray-200 h-8 w-16 rounded inline-block"></span>
+            </p>
             <p class="text-sm text-gray-600">微博账号</p>
           </div>
         </div>
@@ -92,7 +101,10 @@
             </div>
           </div>
           <div class="ml-4">
-            <p class="text-2xl font-bold text-gray-900">{{ stats.totalSearchTasks }}</p>
+            <p class="text-2xl font-bold text-gray-900">
+              <span *ngIf="!loading">{{ stats.totalSearchTasks }}</span>
+              <span *ngIf="loading" class="animate-pulse bg-gray-200 h-8 w-16 rounded inline-block"></span>
+            </p>
             <p class="text-sm text-gray-600">搜索任务</p>
           </div>
         </div>
@@ -104,19 +116,45 @@
       <div class="bg-white border border-gray-200 rounded-lg p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">最近活动</h2>
         <div class="space-y-4">
-          @for (activity of recentActivities; track $index) {
-            <div class="flex items-start space-x-3">
-              <div class="flex-shrink-0">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center" [ngClass]="getActivityColor(activity.type)">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
+          <!-- 加载状态 -->
+          @if (loading) {
+            @for (item of [1,2,3]; track item) {
+              <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="bg-gray-200 h-4 rounded animate-pulse mb-2"></div>
+                  <div class="bg-gray-200 h-3 w-20 rounded animate-pulse"></div>
                 </div>
               </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm text-gray-900">{{ activity.message }}</p>
-                <p class="text-sm text-gray-500">{{ activity.time }}</p>
+            }
+          }
+          <!-- 实际活动数据 -->
+          @if (!loading && recentActivities.length > 0) {
+            @for (activity of recentActivities; track $index) {
+              <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center" [ngClass]="getActivityColor(activity.type)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm text-gray-900">{{ activity.message }}</p>
+                  <p class="text-sm text-gray-500">{{ activity.time }}</p>
+                </div>
               </div>
+            }
+          }
+          <!-- 空状态 -->
+          @if (!loading && recentActivities.length === 0) {
+            <div class="text-center py-8">
+              <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+              </svg>
+              <p class="text-sm text-gray-500">暂无活动记录</p>
             </div>
           }
         </div>

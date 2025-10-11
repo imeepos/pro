@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { Logger } from 'nestjs-pino';
 import { Model } from 'mongoose';
 import { createHash } from 'crypto';
 import * as cheerio from 'cheerio';
@@ -18,7 +19,8 @@ export interface RawDataSource {
 @Injectable()
 export class RawDataService {
   constructor(
-    @InjectModel('RawDataSource') private rawDataSourceModel: Model<RawDataSource>
+    @InjectModel('RawDataSource') private rawDataSourceModel: Model<RawDataSource>,
+    private readonly logger: Logger
   ) {}
 
   async create(data: {
@@ -35,7 +37,7 @@ export class RawDataService {
     });
 
     if (existingRecord) {
-      console.log(`发现重复数据，跳过存储: ${data.sourceUrl}`);
+      this.logger.log(`发现重复数据，跳过存储: ${data.sourceUrl}`, 'RawDataService');
       return existingRecord;
     }
 

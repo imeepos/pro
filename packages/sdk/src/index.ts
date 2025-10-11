@@ -22,6 +22,7 @@ export * from './types/config.types.js';
 export * from './types/screen.types.js';
 export * from './types/weibo-search-tasks.types.js';
 export * from './types/weibo.types.js';
+export * from './types/dashboard.types.js';
 
 // HTTP 客户端导出
 export { HttpClient } from './client/http-client.js';
@@ -39,6 +40,7 @@ import { WeiboSearchTasksApi } from './api/weibo-search-tasks-api.js';
 import { ScreenApi } from './api/screen-api.js';
 import { WeiboApi } from './api/weibo-api.js';
 import { ApiKeyApi } from './api/api-key-api.js';
+import { DashboardApi } from './api/dashboard-api.js';
 
 export { EventApi } from './api/event-api.js';
 export { TagApi } from './api/tag-api.js';
@@ -52,6 +54,7 @@ export { WeiboSearchTasksApi } from './api/weibo-search-tasks-api.js';
 export { ScreenApi } from './api/screen-api.js';
 export { WeiboApi } from './api/weibo-api.js';
 export { ApiKeyApi } from './api/api-key-api.js';
+export { DashboardApi } from './api/dashboard-api.js';
 
 /**
  * SDK 主类
@@ -69,6 +72,7 @@ export class SkerSDK {
   public weiboSearchTasks: WeiboSearchTasksApi;
   public screen: ScreenApi;
   public apiKey: ApiKeyApi;
+  public dashboard: DashboardApi;
 
   constructor(baseUrl: string) {
     this.event = new EventApi(baseUrl);
@@ -83,5 +87,6 @@ export class SkerSDK {
     this.weiboSearchTasks = new WeiboSearchTasksApi(baseUrl);
     this.screen = new ScreenApi();
     this.apiKey = new ApiKeyApi(baseUrl);
+    this.dashboard = new DashboardApi(baseUrl);
   }
 }

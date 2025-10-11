@@ -1,56 +1,77 @@
-<div class="w-full flex justify-center items-center min-h-full bg-gradient-to-br from-primary to-primary-dark py-8">
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
-    <h1 class="text-center text-2xl font-semibold text-gray-900 dark:text-white mb-2">后台管理系统</h1>
-    <h2 class="text-center text-lg font-medium text-gray-600 dark:text-gray-400 mb-8">登录</h2>
-
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
-      <div>
-        <label for="usernameOrEmail" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">用户名或邮箱</label>
-        <input
-          id="usernameOrEmail"
-          type="text"
-          formControlName="usernameOrEmail"
-          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          [class.border-red-500]="loginForm.get('usernameOrEmail')?.touched && loginForm.get('usernameOrEmail')?.invalid"
-          placeholder="请输入用户名或邮箱"
-        />
-        <p class="mt-2 text-sm text-red-600 dark:text-red-500" *ngIf="getFieldError('usernameOrEmail')">
-          {{ getFieldError('usernameOrEmail') }}
-        </p>
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full">
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+      <!-- 页面标题区域 -->
+      <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 rounded-t-lg">
+        <div class="text-center">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">后台管理系统</h1>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">欢迎回来，请登录您的账户</p>
+        </div>
       </div>
 
-      <div>
-        <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">密码</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          [class.border-red-500]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid"
-          placeholder="请输入密码"
-        />
-        <p class="mt-2 text-sm text-red-600 dark:text-red-500" *ngIf="getFieldError('password')">
-          {{ getFieldError('password') }}
-        </p>
-      </div>
+      <!-- 表单内容区域 -->
+      <div class="p-6">
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+          <div>
+            <label for="usernameOrEmail" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">用户名或邮箱</label>
+            <input
+              id="usernameOrEmail"
+              type="text"
+              formControlName="usernameOrEmail"
+              class="px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 transition-all duration-300 outline-none text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 block w-full"
+              [class.border-red-500]="loginForm.get('usernameOrEmail')?.touched && loginForm.get('usernameOrEmail')?.invalid"
+              placeholder="请输入用户名或邮箱"
+            />
+            <p class="mt-2 text-sm text-red-600 dark:text-red-500" *ngIf="getFieldError('usernameOrEmail')">
+              {{ getFieldError('usernameOrEmail') }}
+            </p>
+          </div>
 
-      <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" *ngIf="error$ | async as error">
-        {{ error }}
-      </div>
+          <div>
+            <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">密码</label>
+            <input
+              id="password"
+              type="password"
+              formControlName="password"
+              class="px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 transition-all duration-300 outline-none text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 block w-full"
+              [class.border-red-500]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid"
+              placeholder="请输入密码"
+            />
+            <p class="mt-2 text-sm text-red-600 dark:text-red-500" *ngIf="getFieldError('password')">
+              {{ getFieldError('password') }}
+            </p>
+          </div>
 
-      <button
-        type="submit"
-        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-60 disabled:cursor-not-allowed"
-        [disabled]="(loading$ | async) || loginForm.invalid"
-      >
-        <span *ngIf="!(loading$ | async)">登录</span>
-        <span *ngIf="loading$ | async">登录中...</span>
-      </button>
+          <!-- 错误提示 -->
+          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 rounded-lg border-l-4 border-l-red-500" *ngIf="error$ | async as error">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.866-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+              <span class="text-red-700 dark:text-red-400">{{ error }}</span>
+            </div>
+          </div>
 
-      <div class="text-center text-sm text-gray-600 dark:text-gray-400">
-        <span>还没有账号？</span>
-        <a routerLink="/register" class="text-blue-600 hover:underline dark:text-blue-500 font-medium ml-1">立即注册</a>
+          <button
+            type="submit"
+            class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            [disabled]="(loading$ | async) || loginForm.invalid"
+          >
+            <!-- 加载状态 -->
+            <div class="flex items-center justify-center" *ngIf="loading$ | async">
+              <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+              <span>登录中...</span>
+            </div>
+            <!-- 正常状态 -->
+            <span *ngIf="!(loading$ | async)">登录</span>
+          </button>
+
+          <div class="text-center text-sm text-gray-600 dark:text-gray-400">
+            <span>还没有账号？</span>
+            <a routerLink="/register" class="text-blue-600 hover:text-blue-700 dark:text-blue-500 dark:hover:text-blue-400 font-medium ml-1 transition-colors">立即注册</a>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   </div>
 </div>

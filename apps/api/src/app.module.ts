@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigService, ConfigModule as NestConfigModule } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { LoggerModule } from 'nestjs-pino';
+import { createLoggerConfig } from '@pro/logger';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './health.controller';
@@ -12,6 +14,7 @@ import { ScreensModule } from './screens/screens.module';
 import { EventsModule } from './events/events.module';
 import { MediaTypeModule } from './media-type/media-type.module';
 import { ConfigModule } from './config/config.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { createDatabaseConfig } from './config';
 
 @Module({
@@ -20,6 +23,9 @@ import { createDatabaseConfig } from './config';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    LoggerModule.forRoot(createLoggerConfig({
+      serviceName: '@pro/api',
+    })),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => createDatabaseConfig(configService) as TypeOrmModuleOptions,
@@ -32,6 +38,7 @@ import { createDatabaseConfig } from './config';
     ScreensModule,
     EventsModule,
     MediaTypeModule,
+    DashboardModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

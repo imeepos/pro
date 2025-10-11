@@ -1,5 +1,6 @@
 import { Injectable, OnModuleDestroy, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from 'nestjs-pino';
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 
 export interface BrowserConfig {
@@ -16,6 +17,7 @@ export class BrowserService implements OnModuleDestroy {
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly logger: Logger,
     @Inject('CRAWLER_CONFIG') private readonly crawlerConfig: any
   ) {}
 
@@ -45,7 +47,7 @@ export class BrowserService implements OnModuleDestroy {
       ]
     });
 
-    console.log('浏览器初始化成功');
+    this.logger.log('浏览器初始化成功', 'BrowserService');
   }
 
   async createContext(accountId: number, cookies: any[]): Promise<BrowserContext> {

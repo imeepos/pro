@@ -27,7 +27,7 @@ export class ScreensStatsScheduler {
 
       this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
 
-      this.logger.log(
+      this.logger.info(
         `推送微博用户统计: 总计=${stats.total}, 今日新增=${stats.todayNew}, 在线=${stats.online}`,
       );
     } catch (error) {

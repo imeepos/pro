@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthQuery } from '../../state/auth.query';
 import { User } from '@pro/types';
+import { SkerSDK, DashboardStats, RecentActivity } from '@pro/sdk';
 
 @Component({
   selector: 'app-dashboard',
@@ -14,17 +15,16 @@ import { User } from '@pro/types';
 })
 export class DashboardComponent implements OnInit {
   currentUser$: Observable<User | null>;
-  stats = {
+  stats: DashboardStats = {
     totalScreens: 0,
     totalEvents: 0,
     totalWeiboAccounts: 0,
     totalSearchTasks: 0
   };
-  recentActivities = [
-    { type: 'screen', message: '创建了新的大屏', time: '2小时前' },
-    { type: 'event', message: '添加了新事件', time: '4小时前' },
-    { type: 'weibo', message: '更新了微博账号', time: '1天前' }
-  ];
+  recentActivities: RecentActivity[] = [];
+  loading = true;
+
+  private sdk = inject(SkerSDK);
 
   constructor(
     private router: Router,
@@ -34,17 +34,25 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadDashboardStats();
+    this.loadDashboardData();
   }
 
-  private loadDashboardStats(): void {
-    // TODO: 调用API获取统计数据
-    this.stats = {
-      totalScreens: 12,
-      totalEvents: 45,
-      totalWeiboAccounts: 8,
-      totalSearchTasks: 3
-    };
+  private async loadDashboardData(): Promise<void> {
+    try {
+      this.loading = true;
+
+      const [stats, activities] = await Promise.all([
+        this.sdk.dashboard.getStats(),
+        this.sdk.dashboard.getRecentActivities()
+      ]);
+
+      this.stats = stats;
+      this.recentActivities = activities;
+    } catch (error) {
+      console.error('加载 Dashboard 数据失败:', error);
+    } finally {
+      this.loading = false;
+    }
   }
 
   navigateToSection(section: string): void {
@@ -65,6 +73,7 @@ export class DashboardComponent implements OnInit {
       case 'screen': return 'text-blue-600 bg-blue-100';
       case 'event': return 'text-green-600 bg-green-100';
       case 'weibo': return 'text-purple-600 bg-purple-100';
+      case 'task': return 'text-orange-600 bg-orange-100';
       default: return 'text-gray-600 bg-gray-100';
     }
   }

@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
+import { LoggerModule } from 'nestjs-pino';
+import { createLoggerConfig } from '@pro/logger';
+import { Logger } from 'nestjs-pino';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -20,6 +23,9 @@ import { createCrawlerConfig, createRabbitMQConfig, createMongoDBConfig, createW
       isGlobal: true,
       envFilePath: ['.env', '.env.local']
     }),
+    LoggerModule.forRoot(createLoggerConfig({
+      serviceName: '@pro/crawler',
+    })),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -52,14 +58,15 @@ import { createCrawlerConfig, createRabbitMQConfig, createMongoDBConfig, createW
         return {
           uri,
           connectionFactory: (connection) => {
+            const logger = new Logger();
             connection.on('connected', () => {
-              console.log('MongoDB连接成功');
+              logger.log('MongoDB连接成功');
             });
             connection.on('error', (error) => {
-              console.error('MongoDB连接错误:', error);
+              logger.error('MongoDB连接错误:', error);
             });
             connection.on('disconnected', () => {
-              console.log('MongoDB连接断开');
+              logger.log('MongoDB连接断开');
             });
             return connection;
           }

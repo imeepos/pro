@@ -1,4 +1,5 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger, forwardRef, Inject } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, forwardRef, Inject } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
@@ -44,7 +45,6 @@ interface LoginSession {
  */
 @Injectable()
 export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(WeiboAuthService.name);
   private browser: Browser;
   private loginSessions = new Map<string, LoginSession>();
 
@@ -58,23 +58,26 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     '&from=weibopro';
 
   constructor(
+    private readonly logger: PinoLogger,
     @InjectRepository(WeiboAccountEntity)
     private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
     @Inject(forwardRef(() => ScreensGateway))
     private readonly screensGateway: ScreensGateway,
-  ) {}
+  ) {
+    this.logger.setContext(WeiboAuthService.name);
+  }
 
   /**
    * 模块初始化时启动浏览器实例
    */
   async onModuleInit() {
     try {
-      this.logger.log('正在启动 Playwright 浏览器实例...');
+      this.logger.info('正在启动 Playwright 浏览器实例...');
       this.browser = await chromium.launch({
         headless: true, // 生产环境使用无头模式
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
       });
-      this.logger.log('Playwright 浏览器启动成功');
+      this.logger.info('Playwright 浏览器启动成功');
     } catch (error) {
       this.logger.warn('Playwright 浏览器启动失败，微博登录功能将不可用', error.message);
       this.browser = null;
@@ -85,7 +88,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
    * 模块销毁时关闭浏览器实例和所有会话
    */
   async onModuleDestroy() {
-    this.logger.log('正在关闭所有登录会话...');
+    this.logger.info('正在关闭所有登录会话...');
 
     // 关闭所有活动会话
     for (const [sessionId, session] of this.loginSessions.entries()) {
@@ -95,7 +98,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     // 关闭浏览器
     if (this.browser) {
       await this.browser.close();
-      this.logger.log('Playwright 浏览器已关闭');
+      this.logger.info('Playwright 浏览器已关闭');
     }
   }
 
@@ -106,7 +109,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
    */
   async startLogin(userId: string): Promise<Observable<WeiboLoginEvent>> {
     const sessionId = `${userId}_${Date.now()}`;
-    this.logger.log(`启动微博登录会话: ${sessionId}`);
+    this.logger.info(`启动微博登录会话: ${sessionId}`);
 
     // 检查浏览器是否可用
     if (!this.browser) {
@@ -150,12 +153,12 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       try {
         // 导航到微博登录页面
         await page.goto(this.WEIBO_LOGIN_URL, { waitUntil: 'networkidle' });
-        this.logger.log(`已打开微博登录页面: ${sessionId}`);
+        this.logger.info(`已打开微博登录页面: ${sessionId}`);
 
         // 等待二维码元素出现（确保页面完全加载）
         try {
           await page.waitForSelector('img[src*="qrcode"]', { timeout: 10000 });
-          this.logger.log(`二维码元素已加载: ${sessionId}`);
+          this.logger.info(`二维码元素已加载: ${sessionId}`);
         } catch (e) {
           this.logger.warn(`等待二维码元素超时: ${sessionId}`);
         }
@@ -190,7 +193,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
         // 监听二维码生成接口
         if (url.includes('qrcode/image')) {
           const data = await response.json();
-          this.logger.log(`[二维码接口] 响应数据: ${JSON.stringify(data)}, session: ${sessionId}`);
+          this.logger.info(`[二维码接口] 响应数据: ${JSON.stringify(data)}, session: ${sessionId}`);
 
           if (data.data?.image) {
             subject.next({
@@ -200,7 +203,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
                 image: data.data.image,
               },
             });
-            this.logger.log(`[二维码] 已推送给前端: ${data.data.image}`);
+            this.logger.info(`[二维码] 已推送给前端: ${data.data.image}`);
           } else {
             this.logger.error(`[二维码接口] 缺少 image 字段: ${JSON.stringify(data)}`);
           }
@@ -228,7 +231,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
 
             // 50114002: 已扫码,等待手机确认
             else if (data.retcode === 50114002) {
-              this.logger.log(`已扫码,等待确认: ${sessionId}`);
+              this.logger.info(`已扫码,等待确认: ${sessionId}`);
               subject.next({
                 type: 'scanned',
                 data: { message: '成功扫描,请在手机点击确认以登录' },
@@ -275,7 +278,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
 
       // 检测登录成功: 页面跳转到微博首页
       if (url.startsWith('https://weibo.com/')) {
-        this.logger.log(`登录成功,正在提取 Cookie 和用户信息: ${sessionId}`);
+        this.logger.info(`登录成功,正在提取 Cookie 和用户信息: ${sessionId}`);
 
         try {
           // 提取 Cookie
@@ -298,7 +301,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
             },
           });
 
-          this.logger.log(`微博账号保存成功: ${sessionId}, accountId: ${account.id}`);
+          this.logger.info(`微博账号保存成功: ${sessionId}, accountId: ${account.id}`);
 
           subject.complete();
           await this.cleanupSession(sessionId);
@@ -392,7 +395,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       };
     });
 
-    this.logger.log(`用户信息提取结果: ${JSON.stringify(userInfo)}`);
+    this.logger.info(`用户信息提取结果: ${JSON.stringify(userInfo)}`);
 
     if (!userInfo.id) {
       // 记录页面 HTML 用于调试
@@ -416,7 +419,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     cookies: Cookie[],
     userInfo: WeiboUserInfo,
   ): Promise<WeiboAccountEntity> {
-    this.logger.log(`保存微博账号: userId=${userId}, weiboUid=${userInfo.uid}`);
+    this.logger.info(`保存微博账号: userId=${userId}, weiboUid=${userInfo.uid}`);
 
     // 检查是否已存在
     const existing = await this.weiboAccountRepo.findOne({

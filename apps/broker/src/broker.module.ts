@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { LoggerModule } from 'nestjs-pino';
+import { createLoggerConfig } from '@pro/logger';
 import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
 import { TaskMonitor } from './weibo/task-monitor.service';
 import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
@@ -20,6 +22,11 @@ import { AppController } from './app.controller';
       isGlobal: true,
       envFilePath: '.env',
     }),
+
+    // 日志模块
+    LoggerModule.forRoot(createLoggerConfig({
+      serviceName: '@pro/broker',
+    })),
 
     // 数据库配置
     TypeOrmModule.forRootAsync({

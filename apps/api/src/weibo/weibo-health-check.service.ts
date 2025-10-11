@@ -78,7 +78,7 @@ export class WeiboHealthCheckService {
    * @returns 检查结果
    */
   async checkAccount(accountId: number): Promise<CheckResult> {
-    this.logger.log(`开始检查账号: ${accountId}`);
+    this.logger.info(`开始检查账号: ${accountId}`);
 
     // 查询账号
     const account = await this.weiboAccountRepo.findOne({
@@ -144,7 +144,7 @@ export class WeiboHealthCheckService {
             // 账号正常
             newStatus = WeiboAccountStatus.ACTIVE;
             message = '账号状态正常';
-            this.logger.log(`账号 ${accountId} 状态正常`);
+            this.logger.info(`账号 ${accountId} 状态正常`);
           } else if (data.ok === 0) {
             // 检查错误码
             if (data.errno === '100005' || data.errno === '100006') {
@@ -188,7 +188,7 @@ export class WeiboHealthCheckService {
       account.lastCheckAt = checkedAt;
       await this.weiboAccountRepo.save(account);
 
-      this.logger.log(
+      this.logger.info(
         `账号 ${accountId} 检查完成: ${oldStatus} -> ${newStatus}${statusChanged ? ' (状态已变更)' : ''}`,
       );
 
@@ -247,7 +247,7 @@ export class WeiboHealthCheckService {
    * @returns 检查汇总结果
    */
   async checkAllAccounts(): Promise<CheckSummary> {
-    this.logger.log('开始批量检查所有活跃账号...');
+    this.logger.info('开始批量检查所有活跃账号...');
 
     // 查询所有 ACTIVE 状态的账号
     const accounts = await this.weiboAccountRepo.find({
@@ -255,7 +255,7 @@ export class WeiboHealthCheckService {
     });
 
     const total = accounts.length;
-    this.logger.log(`找到 ${total} 个活跃账号待检查`);
+    this.logger.info(`找到 ${total} 个活跃账号待检查`);
 
     const results: CheckResult[] = [];
 
@@ -313,7 +313,7 @@ export class WeiboHealthCheckService {
       }
     }
 
-    this.logger.log(`批量检查完成: ${JSON.stringify(summary)}`);
+    this.logger.info(`批量检查完成: ${JSON.stringify(summary)}`);
     return summary;
   }
 

@@ -18,12 +18,12 @@ export class WeiboHealthCheckScheduler {
    */
   @Cron(CronExpression.EVERY_HOUR)
   async handleHealthCheck() {
-    this.logger.log('定时健康检查任务开始执行...');
+    this.logger.info('定时健康检查任务开始执行...');
 
     try {
       const summary = await this.healthCheckService.checkAllAccounts();
 
-      this.logger.log(
+      this.logger.info(
         `定时健康检查完成 - ` +
           `总计: ${summary.total}, ` +
           `已检查: ${summary.checked}, ` +

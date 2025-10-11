@@ -34,6 +34,7 @@
     "@pro/mongodb": "workspace:*",
     "@pro/rabbitmq": "workspace:*",
     "@pro/entities": "workspace:*",
+    "@pro/logger": "workspace:*",
     "@pro/redis": "workspace:*",
     "@pro/types": "workspace:*",
     "@pro/utils": "workspace:*",

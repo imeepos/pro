@@ -82,7 +82,7 @@ export class TaskMonitor {
             retryCount: task.retryCount + 1,
           });
 
-          this.logger.log(`超时任务 ${task.id} 已安排重试`);
+          this.logger.info(`超时任务 ${task.id} 已安排重试`);
         } else {
           // 超过最大重试次数，标记为失败
           await this.taskRepository.update(task.id, {
@@ -117,7 +117,7 @@ export class TaskMonitor {
       return;
     }
 
-    this.logger.log(`发现 ${retryableTasks.length} 个可重试的失败任务`);
+    this.logger.info(`发现 ${retryableTasks.length} 个可重试的失败任务`);
 
     for (const task of retryableTasks) {
       try {
@@ -133,7 +133,7 @@ export class TaskMonitor {
             retryCount: task.retryCount + 1,
           });
 
-          this.logger.log(`失败任务 ${task.id} 已安排重试 (${task.retryCount + 1}/${task.maxRetries})`);
+          this.logger.info(`失败任务 ${task.id} 已安排重试 (${task.retryCount + 1}/${task.maxRetries})`);
         }
       } catch (error) {
         this.logger.error(`重试失败任务 ${task.id} 失败:`, error);
@@ -191,7 +191,7 @@ export class TaskMonitor {
    * 手动触发监控（用于测试和紧急处理）
    */
   async triggerMonitor(): Promise<void> {
-    this.logger.log('手动触发任务监控');
+    this.logger.info('手动触发任务监控');
     await this.monitorTasks();
   }
 
@@ -265,7 +265,7 @@ export class TaskMonitor {
         noDataCount: 0,
       });
 
-      this.logger.log(`任务 ${taskId} 已重置为待执行状态`);
+      this.logger.info(`任务 ${taskId} 已重置为待执行状态`);
       return true;
     } catch (error) {
       this.logger.error(`重置任务 ${taskId} 失败:`, error);

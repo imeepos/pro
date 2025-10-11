@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual } from 'typeorm';
@@ -33,13 +34,14 @@ function parseInterval(interval: string): number {
  */
 @Injectable()
 export class TaskScannerScheduler {
-  private readonly logger = new Logger(TaskScannerScheduler.name);
-
   constructor(
+    private readonly logger: PinoLogger,
     @InjectRepository(WeiboSearchTaskEntity)
     private readonly taskRepository: Repository<WeiboSearchTaskEntity>,
     private readonly rabbitMQService: RabbitMQConfigService,
-  ) {}
+  ) {
+    this.logger.setContext(TaskScannerScheduler.name);
+  }
 
   /**
    * 每分钟扫描待执行的主任务
@@ -68,7 +70,7 @@ export class TaskScannerScheduler {
         return;
       }
 
-      this.logger.log(`发现 ${tasks.length} 个待执行的主任务`);
+      this.logger.info(`发现 ${tasks.length} 个待执行的主任务`);
 
       // 并行处理主任务（限制并发数）
       const batchSize = 5;
@@ -77,9 +79,14 @@ export class TaskScannerScheduler {
         await Promise.all(batch.map(task => this.dispatchTask(task)));
       }
 
-      this.logger.log(`已完成扫描，处理了 ${tasks.length} 个主任务`);
+      this.logger.info(`已完成扫描，处理了 ${tasks.length} 个主任务`);
     } catch (error) {
-      this.logger.error('扫描主任务失败:', error);
+      this.logger.error({
+        message: '扫描主任务失败',
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
@@ -106,7 +113,7 @@ export class TaskScannerScheduler {
             errorMessage: null,
           });
 
-          this.logger.log(
+          this.logger.info(
             `僵尸任务 ${task.id} [${task.keyword}] 已自动恢复为PENDING状态，允许重新调度`
           );
 
@@ -137,11 +144,11 @@ export class TaskScannerScheduler {
       if (task.needsInitialCrawl) {
         // 首次抓取: startDate ~ NOW
         subTask = this.createInitialSubTask(task);
-        this.logger.log(`任务 ${task.id} 开始首次抓取: ${task.keyword}`);
+        this.logger.info(`任务 ${task.id} 开始首次抓取: ${task.keyword}`);
       } else if (task.isHistoricalCrawlCompleted) {
         // 历史回溯已完成，进入增量模式
         subTask = this.createIncrementalSubTask(task);
-        this.logger.log(`任务 ${task.id} 开始增量更新: ${task.keyword}`);
+        this.logger.info(`任务 ${task.id} 开始增量更新: ${task.keyword}`);
       } else {
         // 历史数据回溯中（这种情况通常由 crawler 自动触发，不应该出现在这里）
         this.logger.warn(`任务 ${task.id} 处于异常状态: 历史回溯中但被调度器扫描到`);
@@ -163,9 +170,16 @@ export class TaskScannerScheduler {
         this.logger.debug(`任务 ${task.id} 下次执行时间已更新: ${new Date(Date.now() + parseInterval(task.crawlInterval)).toISOString()}`);
       }
 
-      this.logger.log(`已成功调度主任务 ${task.id}: ${task.keyword}`);
+      this.logger.info(`已成功调度主任务 ${task.id}: ${task.keyword}`);
     } catch (error) {
-      this.logger.error(`调度主任务 ${task.id} 失败:`, error);
+      this.logger.error({
+        message: `调度主任务失败`,
+        taskId: task.id,
+        keyword: task.keyword,
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
 
       // 更新任务状态为失败
       await this.taskRepository.update(task.id, {
@@ -237,7 +251,7 @@ export class TaskScannerScheduler {
    * 手动触发扫描（用于测试和紧急处理）
    */
   async triggerScan(): Promise<void> {
-    this.logger.log('手动触发任务扫描');
+    this.logger.info('手动触发任务扫描');
     await this.scanTasks();
   }
 
