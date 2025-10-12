@@ -11,6 +11,7 @@ import { TestSimpleComponent } from './features/screens/components/test-simple.c
 import { EventsStore } from './state/events.store';
 import { TagsStore } from './state/tags.store';
 import { UserService } from './state/user.service';
+import { TokenStorageService } from './core/services/token-storage.service';
 import { SkerSDK } from '@pro/sdk';
 import { environment } from '../environments/environment';
 
@@ -62,7 +63,10 @@ export const appConfig: ApplicationConfig = {
     // SDK
     {
       provide: SkerSDK,
-      useFactory: () => new SkerSDK(environment.apiUrl)
+      useFactory: () => {
+        const baseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
+        return new SkerSDK(baseUrl, environment.tokenKey);
+      }
     }
   ]
 };

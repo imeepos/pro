@@ -38,12 +38,10 @@ export const appConfig: ApplicationConfig = {
     // SDK
     {
       provide: SkerSDK,
-      useFactory: (tokenStorage: TokenStorageService) => {
-        const token = tokenStorage.getToken();
+      useFactory: () => {
         const baseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
-        return new SkerSDK(baseUrl, token || undefined);
-      },
-      deps: [TokenStorageService]
+        return new SkerSDK(baseUrl, environment.tokenKey);
+      }
     }
   ]
 };

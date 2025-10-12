@@ -60,6 +60,9 @@ export { DashboardApi } from './api/dashboard-api.js';
  * SDK 主类
  */
 export class SkerSDK {
+  public readonly baseUrl: string;
+  public readonly tokenKey: string;
+
   public event: EventApi;
   public tag: TagApi;
   public attachment: AttachmentApi;
@@ -74,19 +77,22 @@ export class SkerSDK {
   public apiKey: ApiKeyApi;
   public dashboard: DashboardApi;
 
-  constructor(baseUrl: string, token?: string) {
+  constructor(baseUrl: string, tokenKey: string = 'access_token') {
+    this.baseUrl = baseUrl;
+    this.tokenKey = tokenKey;
+
     this.event = new EventApi(baseUrl);
     this.tag = new TagApi(baseUrl);
     this.attachment = new AttachmentApi(baseUrl);
     this.industryType = new IndustryTypeApi(baseUrl);
     this.eventType = new EventTypeApi(baseUrl);
     this.config = new ConfigApi(baseUrl);
-    this.auth = new AuthApi(baseUrl);
-    this.user = new UserApi(baseUrl);
-    this.weibo = new WeiboApi(baseUrl, token);
-    this.weiboSearchTasks = new WeiboSearchTasksApi(baseUrl);
-    this.screen = new ScreenApi(baseUrl, token);
-    this.apiKey = new ApiKeyApi(baseUrl);
-    this.dashboard = new DashboardApi(baseUrl);
+    this.auth = new AuthApi(baseUrl, tokenKey);
+    this.user = new UserApi(baseUrl, tokenKey);
+    this.weibo = new WeiboApi(baseUrl, tokenKey);
+    this.weiboSearchTasks = new WeiboSearchTasksApi(baseUrl, tokenKey);
+    this.screen = new ScreenApi(baseUrl, tokenKey);
+    this.apiKey = new ApiKeyApi(baseUrl, tokenKey);
+    this.dashboard = new DashboardApi(baseUrl, tokenKey);
   }
 }

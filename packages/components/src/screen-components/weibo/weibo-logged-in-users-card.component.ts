@@ -18,8 +18,6 @@ export interface WeiboUsersCardConfig {
   showErrorHandling?: boolean;
   showTrends?: boolean;
   showUpdateTime?: boolean;
-  baseUrl?: string;
-  token?: string;
 }
 
 const DEFAULT_CONFIG: WeiboUsersCardConfig = {
@@ -322,17 +320,15 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
 
   private readonly destroy$ = new Subject<void>();
   private readonly refreshTimer$ = new Subject<void>();
-  private sdk: SkerSDK | null = null;
   private wsService: WebSocketService;
 
   constructor(
     private wsManager: WebSocketManager,
-    @Optional() @Inject(SkerSDK) private injectedSDK?: SkerSDK
+    @Inject(SkerSDK) private sdk: SkerSDK
   ) {}
 
   ngOnInit(): void {
     this.initConfig();
-    this.initSDK();
     this.loadData();
     this.initializeWebSocketConnection();
     this.setupRefreshTimer();
@@ -358,28 +354,13 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     this.config = this.mergeConfig(this.config);
   }
 
-  private initSDK(): void {
-    if (this.injectedSDK) {
-      this.sdk = this.injectedSDK;
-    } else if (this.config.baseUrl) {
-      this.sdk = new SkerSDK(this.config.baseUrl, this.config.token);
-    } else {
-      console.error('未提供 SkerSDK 实例或 baseUrl 配置');
-    }
-  }
-
   private mergeConfig(newConfig?: Partial<WeiboUsersCardConfig>): WeiboUsersCardConfig {
     const baseConfig = this.isEditMode ? DEFAULT_CONFIG : SIMPLE_CONFIG;
     return { ...baseConfig, ...newConfig };
   }
 
   private loadData(): void {
-    if (this.isLoading || !this.sdk) {
-      if (!this.sdk) {
-        this.setDataError('SDK 未初始化');
-      }
-      return;
-    }
+    if (this.isLoading) return;
 
     this.isLoading = true;
     this.clearErrorState();
@@ -400,19 +381,18 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   }
 
   private initializeWebSocketConnection(): void {
-    const baseUrl = this.config.baseUrl;
-    const token = this.config.token;
-
-    if (!baseUrl) {
-      console.error('无法初始化 WebSocket：未提供 baseUrl');
-      this.setNetworkError('WebSocket 配置缺失');
-      return;
-    }
-
-    const wsConfig = createScreensWebSocketConfig(baseUrl, token);
+    const token = this.getToken();
+    const wsConfig = createScreensWebSocketConfig(this.sdk.baseUrl, token);
     this.wsService = this.wsManager.connectToNamespace(wsConfig) as WebSocketService;
     this.observeConnectionState();
     this.subscribeToDataUpdates();
+  }
+
+  private getToken(): string | undefined {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(this.sdk.tokenKey) || undefined;
+    }
+    return undefined;
   }
 
   private observeConnectionState(): void {
