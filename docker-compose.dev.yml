@@ -68,15 +68,17 @@ services:
           memory: 512M
           cpus: '0.5'
 
-  # Web 前端服务
+  # Web 前端服务 - 使用 nginx 部署静态文件
   web:
-    image: imeepos/pro:latest
+    image: nginx:alpine
     container_name: pro-web-dev
     ports:
       - "${WEB_PORT:-8080}:80"
-    environment:
-      SERVICE_NAME: web
-      NODE_ENV: ${NODE_ENV:-development}
+    volumes:
+      # 挂载构建后的静态文件（需要先构建）
+      - ./apps/web/dist/web/browser:/usr/share/nginx/html:ro
+      # 挂载 nginx 配置
+      - ./nginx/web.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       backend:
         condition: service_healthy
@@ -89,22 +91,24 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 10s
     deploy:
       resources:
         limits:
-          memory: 256M
-          cpus: '0.5'
+          memory: 64M
+          cpus: '0.2'
 
-  # Admin 管理后台
+  # Admin 管理后台 - 使用 nginx 部署静态文件
   admin:
-    image: imeepos/pro:latest
+    image: nginx:alpine
     container_name: pro-admin-dev
     ports:
       - "${ADMIN_PORT:-8081}:80"
-    environment:
-      SERVICE_NAME: admin
-      NODE_ENV: ${NODE_ENV:-development}
+    volumes:
+      # 挂载构建后的静态文件（需要先构建）
+      - ./apps/admin/dist/admin/browser:/usr/share/nginx/html:ro
+      # 挂载 nginx 配置
+      - ./nginx/admin.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       backend:
         condition: service_healthy
@@ -117,12 +121,12 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 10s
     deploy:
       resources:
         limits:
-          memory: 256M
-          cpus: '0.5'
+          memory: 64M
+          cpus: '0.2'
 
 networks:
   backend:

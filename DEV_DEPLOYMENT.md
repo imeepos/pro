@@ -8,31 +8,51 @@
 
 ### 生产环境（6个容器）
 ```
-├── pro-api        (独立容器)
-├── pro-broker     (独立容器)
-├── pro-crawler    (独立容器)
-├── pro-cleaner    (独立容器)
-├── pro-web        (独立容器)
-└── pro-admin      (独立容器)
+├── pro-api        (独立容器 - imeepos/pro:latest)
+├── pro-broker     (独立容器 - imeepos/pro:latest)
+├── pro-crawler    (独立容器 - imeepos/pro:latest)
+├── pro-cleaner    (独立容器 - imeepos/pro:latest)
+├── pro-web        (独立容器 - imeepos/pro:latest)
+└── pro-admin      (独立容器 - imeepos/pro:latest)
 ```
 
 ### 开发环境（3个容器）
 ```
-├── pro-backend-dev   (包含: api + broker + crawler + cleaner)
-├── pro-web-dev       (独立容器)
-└── pro-admin-dev     (独立容器)
+├── pro-backend-dev   (包含: api + broker + crawler + cleaner - imeepos/pro:latest + PM2)
+├── pro-web-dev       (nginx:alpine + 静态文件)
+└── pro-admin-dev     (nginx:alpine + 静态文件)
 ```
 
 ## 资源优化效果
 
 - **容器数量**: 6个 → 3个 (减少50%)
-- **内存使用**: ~900MB → ~600MB (节省33%)
-- **CPU开销**: 减少容器管理开销
-- **启动时间**: 更快的整体启动速度
+- **镜像大小**: 前端从 ~2GB 减少到 ~20MB (nginx:alpine)
+- **内存使用**: ~900MB → ~400MB (节省55%)
+- **CPU开销**: 显著减少容器管理开销
+- **启动时间**: 前端容器秒级启动
 
 ## 使用方法
 
-### 1. 启动开发环境
+### 1. 构建前端应用
+
+开发环境的前端服务使用纯静态文件部署，需要先构建：
+
+```bash
+# 构建所有前端应用
+./build-frontend.sh
+
+# 或分别构建
+./build-frontend.sh web      # 构建 Web 应用
+./build-frontend.sh admin    # 构建 Admin 应用
+
+# 生产环境构建
+./build-frontend.sh --prod
+
+# 清理后构建
+./build-frontend.sh --clean
+```
+
+### 2. 启动开发环境
 
 ```bash
 # 使用开发配置启动
@@ -45,7 +65,7 @@ docker compose -f docker-compose.dev.yml ps
 docker compose -f docker-compose.dev.yml logs -f backend
 ```
 
-### 2. 服务端口映射
+### 3. 服务端口映射
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
@@ -56,7 +76,7 @@ docker compose -f docker-compose.dev.yml logs -f backend
 | Web | 8080 | 公共前端应用 |
 | Admin | 8081 | 管理后台 |
 
-### 3. PM2 管理命令
+### 4. PM2 管理命令
 
 ```bash
 # 进入后端容器
@@ -79,7 +99,7 @@ pm2 monit
 pm2 kill
 ```
 
-### 4. 健康检查
+### 5. 健康检查
 
 ```bash
 # 检查所有服务健康状态
@@ -97,16 +117,37 @@ curl http://localhost:8081/health
 
 ### 代码更新后重新部署
 
+**前端代码更新**：
 ```bash
-# 1. 重新构建镜像
+# 1. 重新构建前端
+./build-frontend.sh
+
+# 2. 重启前端服务
+docker compose -f docker-compose.dev.yml restart web admin
+```
+
+**后端代码更新**：
+```bash
+# 1. 重新构建后端镜像
 docker build -f Dockerfile.pro -t imeepos/pro:latest .
 
-# 2. 重启开发环境
-docker compose -f docker-compose.dev.yml down
-docker compose -f docker-compose.dev.yml up -d
+# 2. 重启后端服务
+docker compose -f docker-compose.dev.yml down backend
+docker compose -f docker-compose.dev.yml up -d backend
 
 # 3. 查看启动日志
 docker compose -f docker-compose.dev.yml logs -f backend
+```
+
+**完整重新部署**：
+```bash
+# 重新构建所有
+./build-frontend.sh
+docker build -f Dockerfile.pro -t imeepos/pro:latest .
+
+# 重启环境
+docker compose -f docker-compose.dev.yml down
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 ### 单独重启某个服务
