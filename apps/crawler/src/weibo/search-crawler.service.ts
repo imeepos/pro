@@ -81,6 +81,14 @@ export class WeiboSearchCrawlerService {
         const url = this.buildSearchUrl(keyword, start, end, currentPage);
 
         try {
+          // 检查URL是否已存在
+          const existingRecord = await this.rawDataService.findBySourceUrl(url);
+          if (existingRecord) {
+            this.logger.log(`页面已存在，跳过抓取: 第${currentPage}页 [taskId=${taskId}] [created=${existingRecord.createdAt?.toISOString()}]`);
+            pageCount = currentPage;
+            continue;
+          }
+
           const html = await this.getPageHtml(page, url);
 
           await this.rawDataService.create({

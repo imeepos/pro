@@ -31,14 +31,25 @@ export class RawDataService {
   }): Promise<RawDataSource> {
     const contentHash = this.generateContentHash(data.rawContent);
 
-    const existingRecord = await this.rawDataSourceModel.findOne({
+    // 检查基于 contentHash 的重复
+    const existingByHash = await this.rawDataSourceModel.findOne({
       sourceType: data.sourceType,
       contentHash: contentHash
     });
 
-    if (existingRecord) {
-      this.logger.log(`发现重复数据，跳过存储: ${data.sourceUrl}`, 'RawDataService');
-      return existingRecord;
+    if (existingByHash) {
+      this.logger.log(`发现重复内容，跳过存储: [sourceUrl=${data.sourceUrl}] [contentHash=${contentHash}] [created=${existingByHash.createdAt?.toISOString()}]`, 'RawDataService');
+      return existingByHash;
+    }
+
+    // 检查基于 sourceUrl 的重复
+    const existingByUrl = await this.rawDataSourceModel.findOne({
+      sourceUrl: data.sourceUrl
+    });
+
+    if (existingByUrl) {
+      this.logger.log(`发现重复URL，跳过存储: [sourceUrl=${data.sourceUrl}] [created=${existingByUrl.createdAt?.toISOString()}]`, 'RawDataService');
+      return existingByUrl;
     }
 
     const createdRecord = new this.rawDataSourceModel({
@@ -52,7 +63,34 @@ export class RawDataService {
       updatedAt: new Date()
     });
 
-    return createdRecord.save();
+    try {
+      return await createdRecord.save();
+    } catch (error: any) {
+      // 处理 MongoDB E11000 重复键错误
+      if (error.code === 11000) {
+        this.logger.warn(`检测到MongoDB重复键冲突: [sourceUrl=${data.sourceUrl}] [error=${error.message}]`, 'RawDataService');
+
+        // 根据错误信息判断是 sourceUrl 还是 contentHash 冲突
+        if (error.message.includes('sourceUrl_1')) {
+          const existing = await this.rawDataSourceModel.findOne({ sourceUrl: data.sourceUrl });
+          if (existing) {
+            this.logger.log(`已获取重复URL的现有记录: [sourceUrl=${data.sourceUrl}] [created=${existing.createdAt?.toISOString()}]`, 'RawDataService');
+            return existing;
+          }
+        }
+
+        if (error.message.includes('contentHash')) {
+          const existing = await this.rawDataSourceModel.findOne({ contentHash: contentHash });
+          if (existing) {
+            this.logger.log(`已获取重复内容的现有记录: [contentHash=${contentHash}] [created=${existing.createdAt?.toISOString()}]`, 'RawDataService');
+            return existing;
+          }
+        }
+      }
+
+      // 重新抛出非重复键的其他错误
+      throw error;
+    }
   }
 
   async findBySourceUrl(sourceUrl: string): Promise<RawDataSource | null> {
