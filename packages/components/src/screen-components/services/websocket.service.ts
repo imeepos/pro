@@ -1,3 +1,22 @@
+/**
+ * @deprecated This service is deprecated. Use the new WebSocket architecture:
+ *
+ * Migration Guide:
+ * Old: WebSocketService from '@pro/components'
+ * New: WebSocketManager, WebSocketService from '@pro/components/websocket'
+ *
+ * Example migration:
+ * ```typescript
+ * // Old approach
+ * constructor(private ws: WebSocketService) {}
+ * this.ws.connect(token);
+ *
+ * // New approach
+ * constructor(private wsManager: WebSocketManager) {}
+ * const config = createScreensWebSocketConfig('http://localhost:3000', token);
+ * this.ws = this.wsManager.connectToNamespace(config);
+ * ```
+ */
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, filter, distinctUntilChanged, map } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
