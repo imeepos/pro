@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 
 import { SkerSDK, ApiKey, ApiKeyFilters, ApiKeyListResponse, ApiKeyStats, ApiKeyUsageStats, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyRegenerationResponse } from '@pro/sdk';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -34,9 +35,7 @@ export class ApiKeyService {
   pagination$ = this.paginationSubject.asObservable();
 
   constructor() {
-    // 初始化 SDK，使用环境变量中的 API 地址
-    const apiUrl = 'http://localhost:3000'; // 可以从环境变量获取
-    this.sdk = new SkerSDK(apiUrl);
+    this.sdk = new SkerSDK(environment.apiUrl);
   }
 
   // 加载 API Keys 列表
