@@ -19,10 +19,22 @@ RUN bun install
 RUN cd packages/types && bun run build
 RUN cd packages/utils && bun run build
 RUN cd packages/entities && bun run build
-RUN cd packages/sdk && bun run build
+RUN cd packages/logger && bun run build
 
-# 然后构建所有应用
-RUN bun run build
+RUN cd packages/sdk && bun run build
+RUN cd packages/components && bun run build
+RUN cd packages/redis && bun run build
+RUN cd packages/rabbitmq && bun run build
+
+RUN cd packages/mongodb && bun run build
+RUN cd packages/minio && bun run build
+
+RUN cd apps/admin && bun run build
+RUN cd apps/web && bun run build
+RUN cd apps/api && bun run build
+RUN cd apps/broker && bun run build
+RUN cd apps/cleaner && bun run build
+RUN cd apps/crawler && bun run build
 
 # 复制入口点脚本并设置权限
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
