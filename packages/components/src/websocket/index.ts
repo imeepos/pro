@@ -14,25 +14,11 @@ export { WebSocketService } from './websocket.service';
 export { WebSocketManager } from './websocket.manager';
 export { JwtAuthService } from './auth/jwt-auth.service';
 
-import { WebSocketConfig } from './websocket.types';
+export {
+  createScreensWebSocketConfig,
+  createNotificationWebSocketConfig,
+  createCustomWebSocketConfig,
+  isValidWebSocketUrl
+} from './utils';
 
-export function createWebSocketConfig(
-  url: string,
-  namespace: string,
-  options?: Partial<Omit<WebSocketConfig, 'url' | 'namespace'>>
-): WebSocketConfig {
-  return {
-    url,
-    namespace,
-    ...options
-  };
-}
-
-export function createScreensWebSocketConfig(
-  baseUrl: string = 'http://localhost:3000',
-  token?: string
-): WebSocketConfig {
-  return createWebSocketConfig(baseUrl, 'screens', {
-    auth: token ? { token } : undefined
-  });
-}
+export { WebSocketService as LegacyWebSocketService } from '../screen-components/services/websocket.service';

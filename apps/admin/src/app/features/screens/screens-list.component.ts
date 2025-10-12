@@ -23,6 +23,7 @@ export class ScreensListComponent implements OnInit, OnDestroy {
   showCreateDialog = false;
   showDeleteDialog = false;
   screenToDelete: ScreenPage | null = null;
+  selectedScreens: string[] = [];
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -247,5 +248,98 @@ export class ScreensListComponent implements OnInit, OnDestroy {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  // 选择管理
+  isSelected(screenId: string): boolean {
+    return this.selectedScreens.includes(screenId);
+  }
+
+  toggleSelection(screenId: string): void {
+    const index = this.selectedScreens.indexOf(screenId);
+    if (index > -1) {
+      this.selectedScreens.splice(index, 1);
+    } else {
+      this.selectedScreens.push(screenId);
+    }
+  }
+
+  isAllSelected(): boolean {
+    return this.screens.length > 0 && this.selectedScreens.length === this.screens.length;
+  }
+
+  isIndeterminate(): boolean {
+    return this.selectedScreens.length > 0 && this.selectedScreens.length < this.screens.length;
+  }
+
+  toggleSelectAll(): void {
+    if (this.isAllSelected()) {
+      this.selectedScreens = [];
+    } else {
+      this.selectedScreens = this.screens.map(screen => screen.id);
+    }
+  }
+
+  clearSelection(): void {
+    this.selectedScreens = [];
+  }
+
+  // 批量操作
+  batchPublish(): void {
+    const draftScreens = this.selectedScreens.filter(id => {
+      const screen = this.screens.find(s => s.id === id);
+      return screen?.status === 'draft';
+    });
+
+    if (draftScreens.length === 0) {
+      this.toastService.warning('选中的页面中没有草稿状态的页面');
+      return;
+    }
+
+    const publishPromises = draftScreens.map(id =>
+      this.screensService.publishScreen(id).pipe(takeUntil(this.destroy$))
+    );
+
+    Promise.all(publishPromises.map(obs => obs.toPromise())).then(() => {
+      this.toastService.success(`批量发布成功，共发布 ${draftScreens.length} 个页面`);
+      this.clearSelection();
+    }).catch(error => {
+      this.toastService.error(`批量发布失败: ${error.message}`);
+    });
+  }
+
+  batchDraft(): void {
+    const publishedScreens = this.selectedScreens.filter(id => {
+      const screen = this.screens.find(s => s.id === id);
+      return screen?.status === 'published';
+    });
+
+    if (publishedScreens.length === 0) {
+      this.toastService.warning('选中的页面中没有已发布状态的页面');
+      return;
+    }
+
+    const draftPromises = publishedScreens.map(id =>
+      this.screensService.draftScreen(id).pipe(takeUntil(this.destroy$))
+    );
+
+    Promise.all(draftPromises.map(obs => obs.toPromise())).then(() => {
+      this.toastService.success(`批量设为草稿成功，共处理 ${publishedScreens.length} 个页面`);
+      this.clearSelection();
+    }).catch(error => {
+      this.toastService.error(`批量设为草稿失败: ${error.message}`);
+    });
+  }
+
+  // 统计发布页面数量
+  getPublishedCount(): number {
+    return this.screens.filter(screen => screen.status === 'published').length;
+  }
+
+  // 在大屏上预览
+  previewOnScreen(screenId: string): void {
+    const webUrl = `${window.location.protocol}//${window.location.hostname}:4200/screen/${screenId}`;
+    window.open(webUrl, '_blank');
+    this.toastService.info('已在新窗口打开大屏预览');
   }
 }

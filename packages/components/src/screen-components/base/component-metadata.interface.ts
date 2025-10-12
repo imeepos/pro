@@ -4,4 +4,6 @@ export interface ComponentMetadata {
   icon: string;
   category: string;
   defaultConfig?: any;
+  description?: string;
+  configSchema?: any;
 }

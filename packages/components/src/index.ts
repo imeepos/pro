@@ -6,7 +6,15 @@ export * from './interfaces/component-base.interface';
 export type { IScreenComponent } from './screen-components/base/screen-component.interface';
 export type { ComponentMetadata } from './screen-components/base/component-metadata.interface';
 export { ComponentRegistryService } from './screen-components/base/component-registry.service';
+export { ComponentInitializerService } from './screen-components/component-initializer.service';
 export * from './screen-components/weibo/index';
+
+// Component Validation
+export { ComponentConsistencyService } from './validation/component-consistency.service';
+export type {
+  ComponentValidationResult,
+  ConsistencyValidationReport
+} from './validation/component-consistency.service';
 
 // Legacy WebSocket Service (Backward Compatibility)
 export {
@@ -28,6 +36,8 @@ export {
   WebSocketService,
   WebSocketManager,
   JwtAuthService,
-  createWebSocketConfig,
-  createScreensWebSocketConfig
+  createCustomWebSocketConfig,
+  createNotificationWebSocketConfig,
+  createScreensWebSocketConfig,
+  isValidWebSocketUrl
 } from './websocket/index';

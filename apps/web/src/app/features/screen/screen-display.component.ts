@@ -1,10 +1,11 @@
 import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, interval } from 'rxjs';
+import { takeUntil, switchMap } from 'rxjs/operators';
 import { ScreenPage, Component as ScreenComponent, SkerSDK } from '@pro/sdk';
-import { WebSocketService, ComponentRegistryService, IScreenComponent } from '@pro/components';
+import { LegacyWebSocketService as WebSocketService, ComponentRegistryService, IScreenComponent } from '@pro/components';
+import { TokenStorageService } from '../../core/services/token-storage.service';
 
 @Component({
   selector: 'app-screen-display',
@@ -25,6 +26,45 @@ import { WebSocketService, ComponentRegistryService, IScreenComponent } from '@p
       } @else if (screenConfig) {
         <div class="screen-canvas" [style.background]="screenConfig.layout.background">
           <div class="components-container" #componentsContainer></div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="control-panel" [class.hidden]="isFullscreen">
+          <div class="control-group">
+            <button
+              *ngIf="availableScreens.length > 1"
+              class="control-button"
+              (click)="toggleAutoPlay()"
+              [title]="isAutoPlay ? '停止轮播' : '开始轮播'">
+              {{ isAutoPlay ? '⏸️' : '▶️' }}
+            </button>
+            <button
+              *ngIf="availableScreens.length > 1"
+              class="control-button"
+              (click)="previousScreen()"
+              title="上一页">
+              ⬅️
+            </button>
+            <button
+              *ngIf="availableScreens.length > 1"
+              class="control-button"
+              (click)="nextScreen()"
+              title="下一页">
+              ➡️
+            </button>
+            <select
+              *ngIf="availableScreens.length > 1"
+              class="screen-selector"
+              [value]="currentScreenIndex"
+              (change)="switchToScreen($event)">
+              <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
+                {{ screen.name }}
+              </option>
+            </select>
+            <div *ngIf="availableScreens.length > 1" class="screen-indicator">
+              {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
+            </div>
+          </div>
         </div>
 
         <button
@@ -87,6 +127,68 @@ import { WebSocketService, ComponentRegistryService, IScreenComponent } from '@p
       position: absolute;
     }
 
+    .control-panel {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .control-panel.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-button {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .control-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .screen-selector {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 14px;
+      min-width: 150px;
+    }
+
+    .screen-selector option {
+      background: #374151;
+      color: white;
+    }
+
+    .screen-indicator {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 12px;
+      padding: 0 8px;
+      border-left: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
     .fullscreen-button {
       position: fixed;
       bottom: 24px;
@@ -123,33 +225,46 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   error: string | null = null;
   isFullscreen = false;
 
+  // 轮播和切换功能
+  availableScreens: ScreenPage[] = [];
+  currentScreenIndex = 0;
+  isAutoPlay = false;
+  autoPlayInterval = 30000; // 30秒切换一次
+
   private destroy$ = new Subject<void>();
   private screenId: string | null = null;
   private componentRefs: ComponentRef<any>[] = [];
+  private autoPlaySubscription: any;
 
   constructor(
     private route: ActivatedRoute,
     private sdk: SkerSDK,
     private wsService: WebSocketService,
     private componentRegistry: ComponentRegistryService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private tokenStorage: TokenStorageService
   ) {}
 
   ngOnInit(): void {
     this.screenId = this.route.snapshot.paramMap.get('id');
 
-    if (this.screenId) {
-      this.loadScreen(this.screenId);
-    } else {
-      this.loadDefaultScreen();
-    }
+    // 首先加载所有已发布的页面
+    this.loadAvailableScreens().then(() => {
+      if (this.screenId) {
+        this.loadScreen(this.screenId);
+      } else {
+        this.loadDefaultScreen();
+      }
+    });
 
     this.wsService.connect();
     this.listenToFullscreenChanges();
+    this.setupRealtimeSync();
   }
 
   ngOnDestroy(): void {
     this.clearComponents();
+    this.stopAutoPlay();
     this.destroy$.next();
     this.destroy$.complete();
     this.wsService.disconnect();
@@ -258,6 +373,193 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
     if (this.componentsContainer) {
       this.componentsContainer.clear();
+    }
+  }
+
+  // 加载所有已发布的页面
+  private async loadAvailableScreens(): Promise<void> {
+    try {
+      const response = await this.sdk.screen.getPublishedScreens$().pipe(takeUntil(this.destroy$)).toPromise();
+      if (response) {
+        this.availableScreens = response.items;
+        this.cdr.markForCheck();
+      }
+    } catch (error) {
+      console.error('Failed to load available screens:', error);
+    }
+  }
+
+  // 切换和轮播功能
+  switchToScreen(event: any): void {
+    const index = parseInt(event.target.value);
+    if (index >= 0 && index < this.availableScreens.length) {
+      this.currentScreenIndex = index;
+      const screen = this.availableScreens[index];
+      this.loadScreenConfig(screen);
+    }
+  }
+
+  nextScreen(): void {
+    if (this.availableScreens.length > 1) {
+      this.currentScreenIndex = (this.currentScreenIndex + 1) % this.availableScreens.length;
+      const screen = this.availableScreens[this.currentScreenIndex];
+      this.loadScreenConfig(screen);
+    }
+  }
+
+  previousScreen(): void {
+    if (this.availableScreens.length > 1) {
+      this.currentScreenIndex = this.currentScreenIndex === 0
+        ? this.availableScreens.length - 1
+        : this.currentScreenIndex - 1;
+      const screen = this.availableScreens[this.currentScreenIndex];
+      this.loadScreenConfig(screen);
+    }
+  }
+
+  toggleAutoPlay(): void {
+    if (this.isAutoPlay) {
+      this.stopAutoPlay();
+    } else {
+      this.startAutoPlay();
+    }
+  }
+
+  private startAutoPlay(): void {
+    if (this.availableScreens.length <= 1) return;
+
+    this.isAutoPlay = true;
+    this.autoPlaySubscription = interval(this.autoPlayInterval)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.nextScreen();
+      });
+  }
+
+  private stopAutoPlay(): void {
+    this.isAutoPlay = false;
+    if (this.autoPlaySubscription) {
+      this.autoPlaySubscription.unsubscribe();
+      this.autoPlaySubscription = null;
+    }
+  }
+
+  private loadScreenConfig(screen: ScreenPage): void {
+    this.screenConfig = screen;
+    this.loading = false;
+    this.error = null;
+    this.cdr.markForCheck();
+    this.renderComponents();
+
+    // 更新当前屏幕在可用列表中的索引
+    const screenIndex = this.availableScreens.findIndex(s => s.id === screen.id);
+    if (screenIndex !== -1) {
+      this.currentScreenIndex = screenIndex;
+    }
+  }
+
+  // 实时同步功能
+  private setupRealtimeSync(): void {
+    this.listenToScreenPublishEvents();
+    this.listenToScreenUpdateEvents();
+    this.listenToScreenDeleteEvents();
+  }
+
+  private listenToScreenPublishEvents(): void {
+    this.wsService.on('screen:published')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((data: any) => {
+        console.log('新页面已发布:', data);
+        this.handleNewScreenPublished(data.screen);
+      });
+  }
+
+  private listenToScreenUpdateEvents(): void {
+    this.wsService.on('screen:updated')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((data: any) => {
+        console.log('页面已更新:', data);
+        this.handleScreenUpdated(data.screen);
+      });
+  }
+
+  private listenToScreenDeleteEvents(): void {
+    this.wsService.on('screen:unpublished')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((data: any) => {
+        console.log('页面已取消发布:', data);
+        this.handleScreenUnpublished(data.screenId);
+      });
+  }
+
+  private handleNewScreenPublished(screen: ScreenPage): void {
+    // 检查是否已存在
+    const existingIndex = this.availableScreens.findIndex(s => s.id === screen.id);
+    if (existingIndex === -1) {
+      this.availableScreens.push(screen);
+      this.cdr.markForCheck();
+      this.showNotification('新页面可用', `页面 "${screen.name}" 已发布，可用于展示`);
+    }
+  }
+
+  private handleScreenUpdated(updatedScreen: ScreenPage): void {
+    const index = this.availableScreens.findIndex(s => s.id === updatedScreen.id);
+    if (index !== -1) {
+      this.availableScreens[index] = updatedScreen;
+
+      // 如果更新的是当前显示的页面，重新加载
+      if (this.screenConfig?.id === updatedScreen.id) {
+        this.loadScreenConfig(updatedScreen);
+        this.showNotification('页面已更新', `当前页面 "${updatedScreen.name}" 已更新并重新加载`);
+      }
+
+      this.cdr.markForCheck();
+    }
+  }
+
+  private handleScreenUnpublished(screenId: string): void {
+    const index = this.availableScreens.findIndex(s => s.id === screenId);
+    if (index !== -1) {
+      const screenName = this.availableScreens[index].name;
+      this.availableScreens.splice(index, 1);
+
+      // 如果取消发布的是当前显示的页面
+      if (this.screenConfig?.id === screenId) {
+        if (this.availableScreens.length > 0) {
+          // 切换到第一个可用页面
+          this.currentScreenIndex = 0;
+          this.loadScreenConfig(this.availableScreens[0]);
+          this.showNotification('页面不可用', `页面 "${screenName}" 已取消发布，已切换到其他页面`);
+        } else {
+          // 没有可用页面
+          this.screenConfig = null;
+          this.clearComponents();
+          this.showNotification('无可用页面', '所有页面都已取消发布');
+        }
+      } else {
+        this.showNotification('页面已移除', `页面 "${screenName}" 已取消发布`);
+      }
+
+      this.cdr.markForCheck();
+    }
+  }
+
+  private showNotification(title: string, message: string): void {
+    // 简单的通知实现，可以集成更高级的通知组件
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, {
+        body: message,
+        icon: '/favicon.ico'
+      });
+    } else {
+      console.log(`${title}: ${message}`);
+    }
+  }
+
+  // 请求通知权限
+  requestNotificationPermission(): void {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
     }
   }
 }

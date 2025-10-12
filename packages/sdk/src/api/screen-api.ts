@@ -42,6 +42,28 @@ export class ScreenApi {
   }
 
   /**
+   * 获取已发布的屏幕列表
+   * @param page 页码，默认 1
+   * @param limit 每页数量，默认 20
+   * @returns 已发布的屏幕列表响应
+   */
+  async getPublishedScreens(page = 1, limit = 20): Promise<ScreenListResponse> {
+    const response = await this.httpClient.get<ScreenListResponse>(
+      '/api/screens/published',
+      { page: page.toString(), limit: limit.toString() }
+    );
+
+    if (!response) {
+      throw new Error('API返回数据为空');
+    }
+
+    return {
+      ...response,
+      items: response.items.map(item => normalizeScreenPageData(item))
+    };
+  }
+
+  /**
    * 根据ID获取屏幕详情
    * @param id 屏幕ID
    * @returns 屏幕详情
@@ -191,6 +213,16 @@ export class ScreenApi {
    */
   getScreens$ = (page = 1, limit = 20): Observable<ScreenListResponse> => {
     return this.createObservable(this.getScreens(page, limit));
+  };
+
+  /**
+   * 获取已发布的屏幕列表 (Observable 版本)
+   * @param page 页码，默认 1
+   * @param limit 每页数量，默认 20
+   * @returns 已发布的屏幕列表响应 Observable
+   */
+  getPublishedScreens$ = (page = 1, limit = 20): Observable<ScreenListResponse> => {
+    return this.createObservable(this.getPublishedScreens(page, limit));
   };
 
   /**

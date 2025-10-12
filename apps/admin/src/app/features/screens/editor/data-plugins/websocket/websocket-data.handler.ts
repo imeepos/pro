@@ -1,118 +1,155 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
+import { Observable, Subscription, map, filter, distinctUntilChanged } from 'rxjs';
+import {
+  WebSocketService,
+  ConnectionState,
+  WebSocketConfig,
+  createCustomWebSocketConfig,
+  JwtAuthService,
+  isValidWebSocketUrl
+} from '@pro/components';
 import { DataAcceptor, DataInstance, DataResponse, WebSocketDataConfig } from '../../models/data-source.model';
 import { DataStatus } from '../../models/data-source.enum';
 
 @Injectable({ providedIn: 'root' })
-export class WebSocketDataHandler implements DataInstance {
-  private ws?: WebSocket;
-  private reconnectTimer?: number;
-  private reconnectAttempts = 0;
+export class WebSocketDataHandler implements DataInstance, OnDestroy {
   private acceptor?: DataAcceptor;
   private config?: WebSocketDataConfig;
+  private subscriptions = new Set<Subscription>();
+  private currentNamespace?: string;
+
+  constructor(
+    private readonly webSocketService: WebSocketService,
+    private readonly authService: JwtAuthService
+  ) {}
 
   async connect(acceptor: DataAcceptor, options?: WebSocketDataConfig): Promise<void> {
-    if (!options?.url) {
-      acceptor({ status: DataStatus.ERROR, error: 'WebSocket URL不能为空' });
+    if (!this.validateConnectionOptions(options, acceptor)) {
       return;
     }
 
     this.acceptor = acceptor;
     this.config = options;
-    this.connectWebSocket();
+    this.establishWebSocketConnection();
   }
 
-  private connectWebSocket(): void {
-    if (!this.config?.url) return;
+  private validateConnectionOptions(options?: WebSocketDataConfig, acceptor?: DataAcceptor): boolean {
+    if (!options?.url) {
+      acceptor?.({ status: DataStatus.ERROR, error: 'WebSocket URL不能为空' });
+      return false;
+    }
 
-    try {
-      this.ws = new WebSocket(this.config.url, this.config.protocols);
+    if (!isValidWebSocketUrl(options.url)) {
+      acceptor?.({ status: DataStatus.ERROR, error: 'WebSocket URL格式无效' });
+      return false;
+    }
 
-      this.ws.onopen = () => {
-        this.reconnectAttempts = 0;
-        if (this.acceptor) {
-          this.acceptor({
-            status: DataStatus.SUCCESS,
-            data: { connected: true },
-            timestamp: Date.now()
-          });
-        }
-      };
+    return true;
+  }
 
-      this.ws.onmessage = (event) => {
-        if (!this.acceptor) return;
+  private establishWebSocketConnection(): void {
+    const config = this.createWebSocketConfig();
+    this.currentNamespace = this.extractNamespace();
 
-        try {
-          const data = JSON.parse(event.data);
-          this.acceptor({
-            status: DataStatus.SUCCESS,
-            data,
-            timestamp: Date.now()
-          });
-        } catch {
-          this.acceptor({
-            status: DataStatus.SUCCESS,
-            data: event.data,
-            timestamp: Date.now()
-          });
-        }
-      };
+    this.subscribeToConnectionState();
+    this.subscribeToDataMessages();
 
-      this.ws.onerror = () => {
-        if (this.acceptor) {
-          this.acceptor({
-            status: DataStatus.ERROR,
-            error: 'WebSocket连接错误',
-            timestamp: Date.now()
-          });
-        }
-      };
+    this.webSocketService.connect(config);
+  }
 
-      this.ws.onclose = () => {
-        this.handleReconnect();
-      };
-    } catch (error) {
-      if (this.acceptor) {
-        this.acceptor({
-          status: DataStatus.ERROR,
-          error: error instanceof Error ? error.message : 'WebSocket连接失败',
-          timestamp: Date.now()
-        });
+  private createWebSocketConfig(): WebSocketConfig {
+    const { url, maxReconnectAttempts, reconnectInterval } = this.config!;
+    const namespace = this.extractNamespace();
+    const baseUrl = this.extractBaseUrl(url);
+
+    return createCustomWebSocketConfig(baseUrl, namespace, {
+      auth: this.authService.currentToken ? {
+        token: this.authService.currentToken,
+        autoRefresh: true,
+        onTokenExpired: () => this.authService.refreshToken()
+      } : undefined,
+      reconnection: {
+        maxAttempts: maxReconnectAttempts ?? 5,
+        delay: (attempt: number) => Math.min((reconnectInterval ?? 3000) * Math.pow(2, attempt), 30000)
       }
+    });
+  }
+
+  private extractNamespace(): string {
+    const { url } = this.config!;
+    const urlObj = new URL(url);
+    return urlObj.pathname.replace(/^\/+|\/+$/g, '') || 'default';
+  }
+
+  private extractBaseUrl(url: string): string {
+    const urlObj = new URL(url);
+    return `${urlObj.protocol}//${urlObj.host}`;
+  }
+
+  private subscribeToConnectionState(): void {
+    const subscription = this.webSocketService.state$
+      .pipe(distinctUntilChanged())
+      .subscribe(state => this.handleConnectionStateChange(state));
+
+    this.subscriptions.add(subscription);
+  }
+
+  private subscribeToDataMessages(): void {
+    if (!this.currentNamespace) return;
+
+    const subscription = this.webSocketService.on('data')
+      .pipe(filter(data => data !== null))
+      .subscribe(data => this.handleDataReceived(data));
+
+    this.subscriptions.add(subscription);
+  }
+
+  private handleConnectionStateChange(state: ConnectionState): void {
+    if (!this.acceptor) return;
+
+    const response = this.mapConnectionStateToDataResponse(state);
+    this.acceptor(response);
+  }
+
+  private mapConnectionStateToDataResponse(state: ConnectionState): DataResponse {
+    const timestamp = Date.now();
+
+    switch (state) {
+      case ConnectionState.Connected:
+        return { status: DataStatus.SUCCESS, data: { connected: true }, timestamp };
+
+      case ConnectionState.Connecting:
+      case ConnectionState.Reconnecting:
+        return { status: DataStatus.LOADING, data: { connecting: true }, timestamp };
+
+      case ConnectionState.Failed:
+        return { status: DataStatus.ERROR, error: 'WebSocket连接失败', timestamp };
+
+      case ConnectionState.Disconnected:
+        return { status: DataStatus.ERROR, error: 'WebSocket连接已断开', timestamp };
+
+      default:
+        return { status: DataStatus.ERROR, error: '未知连接状态', timestamp };
     }
   }
 
-  private handleReconnect(): void {
-    if (!this.config) return;
+  private handleDataReceived(data: unknown): void {
+    if (!this.acceptor) return;
 
-    const maxAttempts = this.config.maxReconnectAttempts ?? 5;
-    if (this.reconnectAttempts >= maxAttempts) {
-      if (this.acceptor) {
-        this.acceptor({
-          status: DataStatus.ERROR,
-          error: `重连失败，已尝试${maxAttempts}次`,
-          timestamp: Date.now()
-        });
-      }
-      return;
-    }
-
-    const interval = this.config.reconnectInterval ?? 3000;
-    this.reconnectAttempts++;
-
-    this.reconnectTimer = window.setTimeout(() => {
-      if (this.acceptor) {
-        this.acceptor({
-          status: DataStatus.LOADING,
-          data: { reconnecting: true, attempt: this.reconnectAttempts },
-          timestamp: Date.now()
-        });
-      }
-      this.connectWebSocket();
-    }, interval);
+    this.acceptor({
+      status: DataStatus.SUCCESS,
+      data,
+      timestamp: Date.now()
+    });
   }
 
   async getRespData(): Promise<DataResponse> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+    const connectionState = await this.webSocketService.state$.pipe(
+      filter(state => state !== null),
+      map(state => ({ state, isConnected: state === ConnectionState.Connected }))
+    ).toPromise();
+
+    if (!connectionState?.isConnected) {
       return {
         status: DataStatus.ERROR,
         error: 'WebSocket未连接',
@@ -123,9 +160,9 @@ export class WebSocketDataHandler implements DataInstance {
     return {
       status: DataStatus.SUCCESS,
       data: {
-        readyState: this.ws.readyState,
-        url: this.ws.url,
-        protocol: this.ws.protocol
+        connectionState: connectionState.state,
+        namespace: this.currentNamespace,
+        isConnected: connectionState.isConnected
       },
       timestamp: Date.now()
     };
@@ -137,27 +174,44 @@ export class WebSocketDataHandler implements DataInstance {
   }
 
   disconnect(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = undefined;
-    }
-
-    if (this.ws) {
-      this.ws.close();
-      this.ws = undefined;
-    }
-
-    this.acceptor = undefined;
-    this.config = undefined;
-    this.reconnectAttempts = 0;
+    this.cleanupSubscriptions();
+    this.webSocketService.disconnect();
+    this.resetHandlerState();
   }
 
-  send(data: any): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+  async send(data: unknown): Promise<void> {
+    const connected = await this.isConnected();
+    if (!connected) {
       throw new Error('WebSocket未连接');
     }
 
-    const message = typeof data === 'string' ? data : JSON.stringify(data);
-    this.ws.send(message);
+    this.webSocketService.emit('data', data);
+  }
+
+  ngOnDestroy(): void {
+    this.disconnect();
+  }
+
+  private async isConnected(): Promise<boolean> {
+    try {
+      const connected = await this.webSocketService.isConnected$.pipe(
+        filter(state => state !== null),
+        map(connected => Boolean(connected))
+      ).toPromise();
+      return connected ?? false;
+    } catch {
+      return false;
+    }
+  }
+
+  private cleanupSubscriptions(): void {
+    this.subscriptions.forEach(subscription => subscription.unsubscribe());
+    this.subscriptions.clear();
+  }
+
+  private resetHandlerState(): void {
+    this.acceptor = undefined;
+    this.config = undefined;
+    this.currentNamespace = undefined;
   }
 }

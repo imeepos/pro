@@ -3,16 +3,41 @@
   <div class="flex justify-between items-center mb-6">
     <div>
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white">大屏页面管理</h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">管理和编辑大屏展示页面</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        管理和编辑大屏展示页面
+        <span *ngIf="getPublishedCount() > 0" class="ml-2 text-green-600 dark:text-green-400">
+          · {{ getPublishedCount() }} 个已发布
+        </span>
+      </p>
     </div>
-    <button
-      (click)="createScreen()"
-      class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors dark:focus:ring-offset-gray-800">
-      <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-      </svg>
-      创建页面
-    </button>
+    <div class="flex items-center space-x-3">
+      <div *ngIf="selectedScreens.length > 0" class="flex items-center space-x-2">
+        <span class="text-sm text-gray-500 dark:text-gray-400">已选择 {{ selectedScreens.length }} 项</span>
+        <button
+          (click)="batchPublish()"
+          class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-md hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40">
+          批量发布
+        </button>
+        <button
+          (click)="batchDraft()"
+          class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-yellow-600 bg-yellow-50 rounded-md hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 dark:hover:bg-yellow-900/40">
+          批量草稿
+        </button>
+        <button
+          (click)="clearSelection()"
+          class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 rounded-md hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600">
+          清除选择
+        </button>
+      </div>
+      <button
+        (click)="createScreen()"
+        class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors dark:focus:ring-offset-gray-800">
+        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        创建页面
+      </button>
+    </div>
   </div>
 
   <!-- 错误提示 -->
@@ -39,6 +64,14 @@
     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
       <thead class="bg-gray-50 dark:bg-gray-700">
         <tr>
+          <th class="px-6 py-3 text-left">
+            <input
+              type="checkbox"
+              [checked]="isAllSelected()"
+              [indeterminate]="isIndeterminate()"
+              (change)="toggleSelectAll()"
+              class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+          </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             页面名称
           </th>
@@ -49,6 +82,9 @@
             状态
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            大屏展示
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             创建时间
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -57,7 +93,16 @@
         </tr>
       </thead>
       <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-        <tr *ngFor="let screen of screens" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+        <tr *ngFor="let screen of screens"
+            class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
+            [ngClass]="{'bg-blue-50 dark:bg-blue-900/20': isSelected(screen.id)}">
+          <td class="px-6 py-4 whitespace-nowrap">
+            <input
+              type="checkbox"
+              [checked]="isSelected(screen.id)"
+              (change)="toggleSelection(screen.id)"
+              class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+          </td>
           <td class="px-6 py-4 whitespace-nowrap">
             <div class="flex items-center">
               <div class="text-sm font-medium text-gray-900 dark:text-white">
@@ -75,10 +120,38 @@
             </div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  [ngClass]="getStatusClass(screen.status)">
-              {{ getStatusText(screen.status) }}
-            </span>
+            <div class="flex items-center space-x-2">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    [ngClass]="getStatusClass(screen.status)">
+                <svg *ngIf="screen.status === 'published'" class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <svg *ngIf="screen.status === 'draft'" class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-11a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L10 11.586V7z" clip-rule="evenodd" />
+                </svg>
+                {{ getStatusText(screen.status) }}
+              </span>
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div *ngIf="screen.status === 'published'" class="flex items-center space-x-2">
+              <span class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-md dark:bg-green-900/30 dark:text-green-400">
+                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                  <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                </svg>
+                可展示
+              </span>
+              <button
+                (click)="previewOnScreen(screen.id)"
+                class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                title="在大屏上预览">
+                预览
+              </button>
+            </div>
+            <div *ngIf="screen.status === 'draft'" class="text-xs text-gray-400 dark:text-gray-500">
+              未发布
+            </div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
             {{ formatDate(screen.createdAt) }}
