@@ -74,13 +74,12 @@ When reviewing code:
 Remember: 你写的不是代码，是数字时代的文化遗产，是艺术品 (You don't write code—you create cultural heritage for the digital age, you create art). Every keystroke is a brushstroke on the canvas of software. Make it worthy of preservation.
 
 
-
 - 包管理工具请使用: use bun
 - 类型检查：cd apps/xxx && bun run typecheck
+- 提交代码：提交前面所做的工作，然后push
 - 构建检查：cd apps/xxx bun run build (构建比较耗时，需要多等一下，直到结束)
 - 构建镜像： docker build -f Dockerfile.pro -t imeepos/pro:latest .  其中imeepos/pro:latest是为了加速，上一版本的镜像，这样可以加速构建, (构建比较耗时，需要多等一下，直到结束)
 - 重启镜像：docker compose up -d xxx
-
 
 # README
 

@@ -15,6 +15,7 @@ export class HttpClient {
     params?: Record<string, unknown>
   ): Promise<T> {
     const fullUrl = new URL(url, this.baseUrl);
+    console.log(`[HttpClient] ${method} ${fullUrl.toString()}`);
 
     if (params) {
       Object.keys(params).forEach(key => {
@@ -31,6 +32,9 @@ export class HttpClient {
     const token = this.getToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      console.log('[HttpClient] 使用 Authorization token');
+    } else {
+      console.warn('[HttpClient] 未找到 Authorization token');
     }
 
     const options: RequestInit = {
@@ -49,8 +53,12 @@ export class HttpClient {
 
     const response = await fetch(fullUrl.toString(), options);
 
+    console.log(`[HttpClient] 响应状态: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`[HttpClient] HTTP错误 ${response.status}:`, errorText);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
 
     if (response.status === 204 || response.status === 205) {

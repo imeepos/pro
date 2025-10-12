@@ -47,6 +47,7 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    console.log('微博搜索任务详情页初始化');
     this.initializeSubscriptions();
     this.loadTask();
   }
@@ -61,9 +62,13 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
     // 监听路由参数
     this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
       const id = params.get('id');
+      console.log('路由参数变化，获取到 ID:', id);
       if (id) {
         this.taskId = +id;
+        console.log('设置 taskId:', this.taskId);
         this.loadTask();
+      } else {
+        console.warn('未获取到任务 ID');
       }
     });
 
@@ -86,7 +91,14 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   // 加载任务详情
   private loadTask(): void {
     if (this.taskId) {
-      this.service.findOne(this.taskId);
+      this.service.findOne(this.taskId).pipe(takeUntil(this.destroy$)).subscribe({
+        next: (task) => {
+          console.log('任务详情加载成功:', task);
+        },
+        error: (error) => {
+          console.error('任务详情加载失败:', error);
+        }
+      });
     }
   }
 
@@ -173,12 +185,14 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   // 暂停任务
   pauseTask(): void {
     if (this.task) {
+      console.log('正在暂停任务:', this.task.id);
       this.service.pause(this.task.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
-          // 成功处理在 service 中完成
+          console.log('任务暂停成功');
         },
         error: (error) => {
           console.error('暂停任务失败:', error);
+          alert('暂停任务失败: ' + (error.message || '未知错误'));
         }
       });
     }
@@ -187,12 +201,14 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   // 恢复任务
   resumeTask(): void {
     if (this.task) {
+      console.log('正在恢复任务:', this.task.id);
       this.service.resume(this.task.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
-          // 成功处理在 service 中完成
+          console.log('任务恢复成功');
         },
         error: (error) => {
           console.error('恢复任务失败:', error);
+          alert('恢复任务失败: ' + (error.message || '未知错误'));
         }
       });
     }
@@ -201,12 +217,14 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   // 立即执行
   runNow(): void {
     if (this.task) {
+      console.log('正在立即执行任务:', this.task.id);
       this.service.runNow(this.task.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
-          // 成功处理在 service 中完成
+          console.log('任务执行成功');
         },
         error: (error) => {
           console.error('执行任务失败:', error);
+          alert('执行任务失败: ' + (error.message || '未知错误'));
         }
       });
     }
@@ -215,12 +233,15 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   // 删除任务
   deleteTask(): void {
     if (this.task && confirm('确定要删除这个任务吗？此操作不可恢复。')) {
+      console.log('正在删除任务:', this.task.id);
       this.service.delete(this.task.id).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
+          console.log('任务删除成功');
           this.router.navigate(['/weibo-search-tasks']);
         },
         error: (error) => {
           console.error('删除任务失败:', error);
+          alert('删除任务失败: ' + (error.message || '未知错误'));
         }
       });
     }

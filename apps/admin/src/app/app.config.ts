@@ -73,6 +73,10 @@ export const appConfig: ApplicationConfig = {
       provide: SkerSDK,
       useFactory: () => {
         const baseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
+        console.log('SDK 初始化配置:');
+        console.log('- 原始 apiUrl:', environment.apiUrl);
+        console.log('- 处理后 baseUrl:', baseUrl);
+        console.log('- tokenKey:', environment.tokenKey);
         return new SkerSDK(baseUrl, environment.tokenKey);
       }
     },
