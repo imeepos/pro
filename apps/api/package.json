@@ -43,6 +43,7 @@
     "@pro/redis": "workspace:*",
     "@pro/types": "workspace:*",
     "@pro/utils": "workspace:*",
+    "@pro/sdk": "workspace:*",
     "axios": "^1.7.9",
     "bcryptjs": "^3.0.2",
     "cache-manager": "^7.2.4",

@@ -92,6 +92,7 @@
         "@pro/mongodb": "workspace:*",
         "@pro/rabbitmq": "workspace:*",
         "@pro/redis": "workspace:*",
+        "@pro/sdk": "workspace:*",
         "@pro/types": "workspace:*",
         "@pro/utils": "workspace:*",
         "axios": "^1.7.9",
