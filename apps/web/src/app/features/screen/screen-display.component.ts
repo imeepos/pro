@@ -384,7 +384,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     console.log('- namespace:', environment.wsNamespace);
 
     const token = this.tokenStorage.getToken();
-    const wsConfig = createScreensWebSocketConfig(environment.wsUrl, token);
+    const wsConfig = createScreensWebSocketConfig(environment.wsUrl, token ?? undefined);
 
     // 连接到 screens 命名空间
     this.wsManager.connectToNamespace(wsConfig);
