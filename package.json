@@ -22,6 +22,7 @@
     "claude": "claude --dangerously-skip-permissions"
   },
   "devDependencies": {
+    "@swc/core": "^1.13.5",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
     "eslint": "^9.17.0",

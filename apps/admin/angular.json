@@ -36,7 +36,10 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "@amap/amap-jsapi-loader"
+            ]
           },
           "configurations": {
             "production": {
