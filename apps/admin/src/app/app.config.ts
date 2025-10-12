@@ -85,7 +85,26 @@ export const appConfig: ApplicationConfig = {
     // WebSocket
     {
       provide: WebSocketManager,
-      useFactory: (authService: JwtAuthService) => new WebSocketManager(() => new WebSocketService(authService)),
+      useFactory: (authService: JwtAuthService) => {
+        const baseUrl = environment.wsUrl;
+        const namespace = environment.wsNamespace;
+        console.log('WebSocket Manager 初始化配置:');
+        console.log('- wsUrl:', environment.wsUrl);
+        console.log('- namespace:', environment.wsNamespace);
+
+        const wsManager = new WebSocketManager(() => new WebSocketService(authService));
+        // 预配置默认连接
+        wsManager.connectToNamespace({
+          url: baseUrl,
+          namespace,
+          auth: {
+            token: localStorage.getItem(environment.tokenKey) || undefined,
+            autoRefresh: true
+          }
+        });
+
+        return wsManager;
+      },
       deps: [JwtAuthService]
     }
   ]

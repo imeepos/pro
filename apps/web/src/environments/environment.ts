@@ -3,5 +3,7 @@ export const environment = {
   apiUrl: 'http://localhost:3000/api',
   tokenKey: 'access_token',
   refreshTokenKey: 'refresh_token',
-  timeout: 30000
+  timeout: 30000,
+  wsUrl: 'ws://localhost:3000',
+  wsNamespace: 'screens'
 };

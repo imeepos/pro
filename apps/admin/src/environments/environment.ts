@@ -4,5 +4,7 @@ export const environment = {
   amapApiKey: 'YOUR_AMAP_KEY',
   tokenKey: 'access_token',
   refreshTokenKey: 'refresh_token',
-  timeout: 30000
+  timeout: 30000,
+  wsUrl: 'ws://localhost:3000',
+  wsNamespace: 'screens'
 };
