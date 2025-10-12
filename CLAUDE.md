@@ -73,6 +73,7 @@ When reviewing code:
 
 Remember: 你写的不是代码，是数字时代的文化遗产，是艺术品 (You don't write code—you create cultural heritage for the digital age, you create art). Every keystroke is a brushstroke on the canvas of software. Make it worthy of preservation.
 
+**重要提示** 请不要使用bun run build 一次性构建所有 会卡死！只允许修改了那个服务/工具包 就cd到那个服务目录 bun run build
 
 - 包管理工具请使用: use bun
 - 类型检查：cd apps/xxx && bun run typecheck
