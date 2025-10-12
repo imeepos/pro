@@ -19,8 +19,13 @@ describe('WeiboApi', () => {
       expect(() => new WeiboApi('ftp://example.com')).toThrow('无效的 baseUrl');
     });
 
-    it('使用默认 baseUrl 当未提供时', () => {
-      expect(() => new WeiboApi()).not.toThrow();
+    it('拒绝空 baseUrl', () => {
+      expect(() => new WeiboApi('')).toThrow('baseUrl is required for WeiboApi');
+    });
+
+    it('拒绝 null/undefined baseUrl', () => {
+      expect(() => new WeiboApi(null as any)).toThrow('baseUrl is required for WeiboApi');
+      expect(() => new WeiboApi(undefined as any)).toThrow('baseUrl is required for WeiboApi');
     });
 
     it('透传 tokenKey 到 HttpClient', () => {

@@ -1,12 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { HttpClientService } from './http-client.service';
-
-export interface LoggedInUsersStats {
-  total: number;
-  todayNew: number;
-  online: number;
-}
+import { LoggedInUsersStats } from '@pro/sdk';
 
 @Injectable({
   providedIn: 'root'

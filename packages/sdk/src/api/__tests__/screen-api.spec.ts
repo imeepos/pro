@@ -19,8 +19,13 @@ describe('ScreenApi', () => {
       expect(() => new ScreenApi('ftp://example.com')).toThrow('无效的 baseUrl');
     });
 
-    it('使用默认 baseUrl 当未提供时', () => {
-      expect(() => new ScreenApi()).not.toThrow();
+    it('拒绝空 baseUrl', () => {
+      expect(() => new ScreenApi('')).toThrow('baseUrl is required for ScreenApi');
+    });
+
+    it('拒绝 null/undefined baseUrl', () => {
+      expect(() => new ScreenApi(null as any)).toThrow('baseUrl is required for ScreenApi');
+      expect(() => new ScreenApi(undefined as any)).toThrow('baseUrl is required for ScreenApi');
     });
 
     it('透传 tokenKey 到 HttpClient', () => {

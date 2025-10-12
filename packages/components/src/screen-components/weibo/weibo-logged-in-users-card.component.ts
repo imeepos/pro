@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval, Observable, combineLatest, filter, switchMap } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
 import { WebSocketManager, WebSocketService, ConnectionState, createScreensWebSocketConfig, JwtAuthService } from '../../websocket';
-import { SkerSDK, LoggedInUsersStats } from '@pro/sdk';
+import { SkerSDK, LoggedInUsersStats, ITokenStorage } from '@pro/sdk';
 
 export interface WeiboUsersCardConfig {
   mode?: 'edit' | 'display';
@@ -317,7 +317,8 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
 
   constructor(
     private wsManager: WebSocketManager,
-    @Inject(SkerSDK) private sdk: SkerSDK
+    @Inject(SkerSDK) private sdk: SkerSDK,
+    @Inject('ITokenStorage') private tokenStorage: ITokenStorage
   ) {}
 
   ngOnInit(): void {
@@ -382,10 +383,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   }
 
   private getToken(): string | undefined {
-    if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem(this.sdk.tokenKey) || undefined;
-    }
-    return undefined;
+    return this.tokenStorage.getToken() || undefined;
   }
 
   private observeConnectionState(): void {

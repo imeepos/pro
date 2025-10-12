@@ -33,4 +33,12 @@ export class TokenStorageService {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.refreshTokenKey);
   }
+
+  clearToken(): void {
+    localStorage.removeItem(this.tokenKey);
+  }
+
+  clearRefreshToken(): void {
+    localStorage.removeItem(this.refreshTokenKey);
+  }
 }

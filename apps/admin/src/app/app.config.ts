@@ -12,6 +12,7 @@ import { EventsStore } from './state/events.store';
 import { TagsStore } from './state/tags.store';
 import { UserService } from './state/user.service';
 import { TokenStorageService } from './core/services/token-storage.service';
+import { HttpClientService } from './core/services/http-client.service';
 import { SkerSDK } from '@pro/sdk';
 import { environment } from '../environments/environment';
 
@@ -60,6 +61,13 @@ export const appConfig: ApplicationConfig = {
     TagsStore,
     // Services
     UserService,
+    TokenStorageService,
+    HttpClientService,
+    // Token Storage injection for components
+    {
+      provide: 'ITokenStorage',
+      useExisting: TokenStorageService
+    },
     // SDK
     {
       provide: SkerSDK,
@@ -68,6 +76,8 @@ export const appConfig: ApplicationConfig = {
         return new SkerSDK(baseUrl, environment.tokenKey);
       }
     },
+    // WebSocket Auth Service
+    JwtAuthService,
     // WebSocket
     {
       provide: WebSocketManager,

@@ -9,8 +9,12 @@ export class WeiboApi {
   private http: HttpClient;
   private readonly baseUrl: string;
 
-  constructor(baseUrl?: string, tokenKey?: string) {
-    this.baseUrl = baseUrl || 'http://localhost:3000';
+  constructor(baseUrl: string, tokenKey?: string) {
+    if (!baseUrl) {
+      throw new Error('baseUrl is required for WeiboApi');
+    }
+
+    this.baseUrl = baseUrl;
 
     if (!this.isValidUrl(this.baseUrl)) {
       throw new Error(`无效的 baseUrl: ${this.baseUrl}，必须是有效的 HTTP/HTTPS URL`);

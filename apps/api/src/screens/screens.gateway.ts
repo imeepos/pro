@@ -3,10 +3,13 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { LoggedInUsersStats } from '@pro/sdk';
+import { WeiboAccountService } from '../weibo/weibo-account.service';
 
 /**
  * 大屏系统 WebSocket Gateway
@@ -20,12 +23,22 @@ import { JwtService } from '@nestjs/jwt';
   namespace: '/screens',
 })
 export class ScreensGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayConnection, OnGatewayDisconnect, OnModuleInit
 {
   @WebSocketServer()
   server: Server;
+  private readonly logger = new Logger(ScreensGateway.name);
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    @Inject(forwardRef(() => WeiboAccountService))
+    private readonly weiboAccountService: WeiboAccountService
+  ) {}
+
+  async onModuleInit() {
+    // 启动时广播首帧数据
+    await this.broadcastInitialStats();
+  }
 
   /**
    * WebSocket 连接时的 JWT 认证
@@ -56,13 +69,21 @@ export class ScreensGateway
 
   /**
    * 广播微博已登录用户统计更新
-   * 推送格式：{ total: number, todayNew: number, online: number }
    */
-  broadcastWeiboLoggedInUsersUpdate(stats: {
-    total: number;
-    todayNew: number;
-    online: number;
-  }) {
+  broadcastWeiboLoggedInUsersUpdate(stats: LoggedInUsersStats) {
     this.server.emit('weibo:logged-in-users:update', stats);
+  }
+
+  /**
+   * 启动时广播初始统计数据
+   */
+  private async broadcastInitialStats() {
+    try {
+      const stats = await this.weiboAccountService.getLoggedInUsersStats();
+      this.broadcastWeiboLoggedInUsersUpdate(stats);
+      this.logger.log('广播初始微博用户统计数据', stats);
+    } catch (error) {
+      this.logger.error('获取初始统计数据失败:', error);
+    }
   }
 }

@@ -37,7 +37,8 @@
       "Bash(ng build)",
       "Bash(ng lint)",
       "Bash(ng serve:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebFetch(domain:angular.dev)"
     ],
     "deny": [],
     "ask": []

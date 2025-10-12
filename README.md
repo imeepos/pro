@@ -212,8 +212,16 @@
 # 安装依赖
 bun install
 
-# 启动所有服务 (开发模式)
+# 启动基础服务 (数据库、消息队列等)
+docker compose up -d postgres mongodb redis rabbitmq minio
+
+# 启动所有应用服务 (开发模式)
 bun run dev
+
+# 或者单独启动特定服务
+cd apps/api && bun run dev    # API 服务
+cd apps/admin && bun run dev  # 管理后台
+cd apps/web && bun run dev    # 前端应用
 
 # 构建所有包
 bun run build
@@ -227,6 +235,10 @@ bun run typecheck
 # 代码检查
 bun run lint
 ```
+
+### 多服务本地开发
+
+详细的多服务本地开发指南请参考：[本地开发文档](docs/LOCAL_DEVELOPMENT.md)
 
 ### 单独服务开发
 
@@ -267,8 +279,23 @@ bun run dev
 # 构建生产镜像
 docker build -f Dockerfile.pro -t imeepos/pro:latest .
 
-# 启动服务
+# 启动所有服务
 docker compose up -d
+
+# 查看服务状态
+docker compose ps
+
+# 查看日志
+docker compose logs -f
+```
+
+### 开发环境部署
+```bash
+# 仅启动基础服务
+docker compose up -d postgres mongodb redis rabbitmq minio
+
+# 然后启动应用服务
+bun run dev
 ```
 
 ### 服务端口

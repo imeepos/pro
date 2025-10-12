@@ -78,6 +78,10 @@ export class SkerSDK {
   public dashboard: DashboardApi;
 
   constructor(baseUrl: string, tokenKey: string = 'access_token') {
+    if (!baseUrl) {
+      throw new Error('baseUrl is required');
+    }
+
     this.baseUrl = baseUrl;
     this.tokenKey = tokenKey;
 
