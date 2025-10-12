@@ -1,10 +1,10 @@
 // Base Interfaces
-export type { IScreenComponent } from './base/screen-component.interface.js';
-export type { ComponentMetadata } from './base/component-metadata.interface.js';
+export type { IScreenComponent } from './base/screen-component.interface';
+export type { ComponentMetadata } from './base/component-metadata.interface';
 
 // Services
-export { ComponentRegistryService } from './base/component-registry.service.js';
-export { WebSocketService, type WebSocketConfig } from './services/websocket.service.js';
+export { ComponentRegistryService } from './base/component-registry.service';
+export { WebSocketService, type WebSocketConfig } from './services/websocket.service';
 
 // Weibo Components
-export * from './weibo/index.js';
+export * from './weibo/index';

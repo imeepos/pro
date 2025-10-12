@@ -4,7 +4,6 @@
   "description": "Shared Angular UI components",
   "main": "./dist/fesm2022/pro-components.mjs",
   "types": "./dist/index.d.ts",
-  "type": "module",
   "scripts": {
     "build": "ng-packagr -p ng-package.json",
     "dev": "ng-packagr -p ng-package.json --watch",

@@ -77,4 +77,4 @@ Remember: 你写的不是代码，是数字时代的文化遗产，是艺术品 
 - 包管理工具请使用: use bun
 - 类型检查：bun run typecheck
 - 构建检查：bun run build
-- 更改代码后重启: docker build -f Dockerfile.pro -t imeepos/pro:latest . 然后 docker compose up -d xxx
+- 最后等用户查验反馈

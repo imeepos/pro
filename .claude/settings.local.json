@@ -32,7 +32,8 @@
       "Bash(find:*)",
       "Bash(docker run:*)",
       "WebFetch(domain:blog.csdn.net)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []
