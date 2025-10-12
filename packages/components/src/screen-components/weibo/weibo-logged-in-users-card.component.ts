@@ -411,8 +411,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   private initializeWebSocketConnection(): void {
     // 使用新的 WebSocket 架构创建连接
     const config = createScreensWebSocketConfig('http://localhost:3000', '');
-    this.wsService = this.wsManager.connectToNamespace(config);
-    this.wsService.connect();
+    this.wsService = this.wsManager.connectToNamespace(config) as WebSocketService;
     this.observeConnectionState();
     this.subscribeToDataUpdates();
   }
