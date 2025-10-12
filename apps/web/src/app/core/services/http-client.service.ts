@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { IHttpClient, IHttpRequestOptions } from '@pro/sdk';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class HttpClientService implements IHttpClient {
-  private readonly baseURL = 'http://localhost:3000/api';
+  private readonly baseURL = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 

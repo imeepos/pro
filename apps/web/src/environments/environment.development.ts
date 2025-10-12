@@ -3,5 +3,7 @@ export const environment = {
   apiUrl: 'http://43.240.223.138:3000/api',
   tokenKey: 'access_token',
   refreshTokenKey: 'refresh_token',
-  timeout: 30000
+  timeout: 30000,
+  wsUrl: 'wss://43.240.223.138:3000',
+  wsNamespace: 'screens'
 };

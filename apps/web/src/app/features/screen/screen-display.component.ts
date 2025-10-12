@@ -4,8 +4,9 @@ import { ActivatedRoute } from '@angular/router';
 import { Subject, interval } from 'rxjs';
 import { takeUntil, switchMap } from 'rxjs/operators';
 import { ScreenPage, Component as ScreenComponent, SkerSDK } from '@pro/sdk';
-import { LegacyWebSocketService as WebSocketService, ComponentRegistryService, IScreenComponent } from '@pro/components';
+import { WebSocketManager, createScreensWebSocketConfig, JwtAuthService, ComponentRegistryService, IScreenComponent } from '@pro/components';
 import { TokenStorageService } from '../../core/services/token-storage.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-screen-display',
@@ -239,7 +240,8 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private sdk: SkerSDK,
-    private wsService: WebSocketService,
+    private wsManager: WebSocketManager,
+    private authService: JwtAuthService,
     private componentRegistry: ComponentRegistryService,
     private cdr: ChangeDetectorRef,
     private tokenStorage: TokenStorageService
@@ -257,7 +259,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.wsService.connect();
+    this.initializeWebSocketConnection();
     this.listenToFullscreenChanges();
     this.setupRealtimeSync();
   }
@@ -267,7 +269,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     this.stopAutoPlay();
     this.destroy$.next();
     this.destroy$.complete();
-    this.wsService.disconnect();
+    this.wsManager.disconnectAll();
   }
 
   private loadScreen(id: string): void {
@@ -376,6 +378,18 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     }
   }
 
+  private initializeWebSocketConnection(): void {
+    console.log('WebSocket 连接初始化:');
+    console.log('- wsUrl:', environment.wsUrl);
+    console.log('- namespace:', environment.wsNamespace);
+
+    const token = this.tokenStorage.getToken();
+    const wsConfig = createScreensWebSocketConfig(environment.wsUrl, token);
+
+    // 连接到 screens 命名空间
+    this.wsManager.connectToNamespace(wsConfig);
+  }
+
   // 加载所有已发布的页面
   private async loadAvailableScreens(): Promise<void> {
     try {
@@ -466,30 +480,39 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   }
 
   private listenToScreenPublishEvents(): void {
-    this.wsService.on('screen:published')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((data: any) => {
-        console.log('新页面已发布:', data);
-        this.handleNewScreenPublished(data.screen);
-      });
+    const wsInstance = this.wsManager.getConnection(environment.wsNamespace);
+    if (wsInstance) {
+      wsInstance.on('screen:published')
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((data: any) => {
+          console.log('新页面已发布:', data);
+          this.handleNewScreenPublished(data.screen);
+        });
+    }
   }
 
   private listenToScreenUpdateEvents(): void {
-    this.wsService.on('screen:updated')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((data: any) => {
-        console.log('页面已更新:', data);
-        this.handleScreenUpdated(data.screen);
-      });
+    const wsInstance = this.wsManager.getConnection(environment.wsNamespace);
+    if (wsInstance) {
+      wsInstance.on('screen:updated')
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((data: any) => {
+          console.log('页面已更新:', data);
+          this.handleScreenUpdated(data.screen);
+        });
+    }
   }
 
   private listenToScreenDeleteEvents(): void {
-    this.wsService.on('screen:unpublished')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((data: any) => {
-        console.log('页面已取消发布:', data);
-        this.handleScreenUnpublished(data.screenId);
-      });
+    const wsInstance = this.wsManager.getConnection(environment.wsNamespace);
+    if (wsInstance) {
+      wsInstance.on('screen:unpublished')
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((data: any) => {
+          console.log('页面已取消发布:', data);
+          this.handleScreenUnpublished(data.screenId);
+        });
+    }
   }
 
   private handleNewScreenPublished(screen: ScreenPage): void {
