@@ -65,6 +65,23 @@ export class CrawlQueueConsumer implements OnModuleInit {
       return;
     }
 
+    // 确保 start 和 end 字段是 Date 对象
+    if (typeof subTask.start === 'string') {
+      subTask.start = new Date(subTask.start);
+      if (isNaN(subTask.start.getTime())) {
+        this.logger.error(`消息包含无效的开始时间: ${message.start}，跳过处理`, message);
+        return;
+      }
+    }
+
+    if (typeof subTask.end === 'string') {
+      subTask.end = new Date(subTask.end);
+      if (isNaN(subTask.end.getTime())) {
+        this.logger.error(`消息包含无效的结束时间: ${message.end}，跳过处理`, message);
+        return;
+      }
+    }
+
     this.logger.log(
       `收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}, ` +
         `时间范围=${this.formatDate(subTask.start)}~${this.formatDate(subTask.end)}, ` +

@@ -29,6 +29,7 @@
     "@angular/compiler-cli": "^20.0.0",
     "@angular/core": "^20.0.0",
     "@angular/forms": "^20.0.0",
+    "@pro/sdk": "workspace:*",
     "ng-packagr": "^20.0.0",
     "typescript": "~5.8.0"
   },

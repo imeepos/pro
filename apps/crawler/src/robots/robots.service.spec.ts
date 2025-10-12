@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { RobotsService } from './robots.service';
 import { CrawlerConfig } from '../config/crawler.interface';
+import 'jest-extended';
 
 describe('RobotsService', () => {
   let service: RobotsService;
@@ -247,7 +248,7 @@ describe('RobotsService', () => {
 
       const robots = await service['getRobotsContent']('https://example.com/robots.txt');
 
-      expect(robots?.rules).toHaveLength(2);
+      expect(robots?.rules.length).toBe(2);
       expect(robots?.rules[0].userAgent).toBe('*');
       expect(robots?.rules[0].disallow).toContain('/private/');
       expect(robots?.rules[0].allow).toContain('/public/');
@@ -283,7 +284,7 @@ describe('RobotsService', () => {
       service.clearCache();
       const cacheInfo = service.getCacheInfo();
 
-      expect(cacheInfo).toHaveLength(0);
+      expect(cacheInfo.length).toBe(0);
     });
   });
 

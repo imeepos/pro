@@ -81,46 +81,46 @@
       <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
           <tr>
-            <th scope="col" class="px-6 py-3">关键词</th>
-            <th scope="col" class="px-6 py-3">状态</th>
-            <th scope="col" class="px-6 py-3">启用状态</th>
-            <th scope="col" class="px-6 py-3">进度</th>
-            <th scope="col" class="px-6 py-3">当前抓取时间</th>
-            <th scope="col" class="px-6 py-3">最新数据时间</th>
-            <th scope="col" class="px-6 py-3">下次执行时间</th>
-            <th scope="col" class="px-6 py-3">抓取间隔</th>
-            <th scope="col" class="px-6 py-3">错误信息</th>
-            <th scope="col" class="px-6 py-3">操作</th>
+            <th scope="col" class="px-6 py-3 min-w-[200px]">关键词</th>
+            <th scope="col" class="px-6 py-3 min-w-[80px]">状态</th>
+            <th scope="col" class="px-6 py-3 min-w-[80px]">启用状态</th>
+            <th scope="col" class="px-6 py-3 min-w-[140px]">进度</th>
+            <th scope="col" class="px-6 py-3 min-w-[160px]">当前抓取时间</th>
+            <th scope="col" class="px-6 py-3 min-w-[160px]">最新数据时间</th>
+            <th scope="col" class="px-6 py-3 min-w-[160px]">下次执行时间</th>
+            <th scope="col" class="px-6 py-3 min-w-[100px]">抓取间隔</th>
+            <th scope="col" class="px-6 py-3 min-w-[180px]">操作</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let task of tasks$ | async; trackBy: trackByTaskId" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 min-w-[200px]">
               <div class="keyword-cell">
-                <div class="font-semibold text-gray-900 dark:text-white">{{ task.keyword }}</div>
+                <div class="font-semibold text-gray-900 dark:text-white truncate">{{ task.keyword }}</div>
                 <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   起始: {{ task.startDate | date:'yyyy-MM-dd' }}
                 </div>
               </div>
             </td>
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 min-w-[80px]">
               <!-- 状态标签 -->
               <span
-                class="px-2 py-1 text-xs font-medium rounded-full"
+                class="px-2 py-1 text-xs font-medium rounded-full cursor-pointer whitespace-nowrap"
                 [ngClass]="{
                   'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': task.status === taskStatus.PENDING,
                   'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300': task.status === taskStatus.RUNNING,
                   'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': task.status === taskStatus.PAUSED,
                   'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': task.status === taskStatus.FAILED || task.status === taskStatus.TIMEOUT
                 }"
+                [title]="(task.status === taskStatus.FAILED || task.status === taskStatus.TIMEOUT) && task.errorMessage ? task.errorMessage : ''"
               >
                 {{ getStatusText(task.status) }}
               </span>
             </td>
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 min-w-[80px]">
               <!-- 启用状态标签 -->
               <span
-                class="px-2 py-1 text-xs font-medium rounded-full"
+                class="px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap"
                 [ngClass]="{
                   'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': task.enabled,
                   'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': !task.enabled
@@ -176,21 +176,12 @@
                 </div>
               </div>
             </td>
-            <td class="px-6 py-4">
-              <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full dark:bg-green-900 dark:text-green-300">
+            <td class="px-6 py-4 min-w-[100px]">
+              <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full dark:bg-green-900 dark:text-green-300 whitespace-nowrap">
                 {{ task.crawlInterval }}
               </span>
             </td>
-            <td class="px-6 py-4">
-              <div *ngIf="task.errorMessage" class="flex items-center gap-2 max-w-[200px]">
-                <span class="text-red-500 text-sm">⚠️</span>
-                <span class="text-xs text-red-600 dark:text-red-400 truncate" [title]="task.errorMessage">
-                  {{ task.errorMessage.length > 20 ? task.errorMessage.substring(0, 20) + '...' : task.errorMessage }}
-                </span>
-              </div>
-              <span *ngIf="!task.errorMessage" class="text-sm text-gray-500 dark:text-gray-400">-</span>
-            </td>
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 min-w-[180px]">
               <div class="flex items-center gap-1">
                 <!-- 查看详情 -->
                 <button

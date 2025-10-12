@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RequestMonitorService } from './request-monitor.service';
 import { CrawlerConfig } from '../config/crawler.interface';
+import 'jest-extended';
 
 describe('RequestMonitorService', () => {
   let service: RequestMonitorService;
@@ -158,7 +159,7 @@ describe('RequestMonitorService', () => {
       const detailedStats = service.getDetailedStats();
 
       expect(detailedStats.totalRequests).toBe(4);
-      expect(detailedStats.topUrls).toHaveLength(3);
+      expect(detailedStats.topUrls.length).toBe(3);
 
       // page1 should be the most visited
       const page1Stats = detailedStats.topUrls.find(url => url.url === 'https://example.com/page1');

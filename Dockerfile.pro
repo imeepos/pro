@@ -19,6 +19,7 @@ RUN bun install
 RUN cd packages/types && bun run build
 RUN cd packages/utils && bun run build
 RUN cd packages/entities && bun run build
+RUN cd packages/sdk && bun run build
 
 # 然后构建所有应用
 RUN bun run build

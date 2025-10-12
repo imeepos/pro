@@ -136,7 +136,7 @@
         "ts-loader": "^9.4.3",
         "ts-node": "^10.9.1",
         "tsconfig-paths": "^4.2.0",
-        "typescript": "^5.1.3",
+        "typescript": "~5.8.0",
       },
     },
     "apps/broker": {
@@ -185,7 +185,7 @@
         "ts-loader": "^9.4.3",
         "ts-node": "^10.9.1",
         "tsconfig-paths": "^4.2.0",
-        "typescript": "^5.1.3",
+        "typescript": "~5.8.0",
       },
     },
     "apps/cleaner": {
@@ -228,7 +228,7 @@
         "ts-loader": "^9.4.3",
         "ts-node": "^10.9.1",
         "tsconfig-paths": "^4.2.0",
-        "typescript": "^5.1.3",
+        "typescript": "~5.8.0",
       },
     },
     "apps/crawler": {
@@ -276,6 +276,7 @@
         "eslint-config-prettier": "^9.0.0",
         "eslint-plugin-prettier": "^5.0.0",
         "jest": "^29.5.0",
+        "jest-extended": "^4.0.2",
         "prettier": "^3.0.0",
         "source-map-support": "^0.5.21",
         "supertest": "^7.0.0",
@@ -283,7 +284,7 @@
         "ts-loader": "^9.4.3",
         "ts-node": "^10.9.1",
         "tsconfig-paths": "^4.2.0",
-        "typescript": "^5.1.3",
+        "typescript": "~5.8.0",
       },
     },
     "apps/web": {
@@ -359,7 +360,7 @@
       "devDependencies": {
         "@types/node": "^20.10.0",
         "tsup": "^8.5.0",
-        "typescript": "~5.3.3",
+        "typescript": "~5.8.0",
       },
     },
     "packages/logger": {
@@ -392,7 +393,7 @@
         "jest": "^29.5.0",
         "ts-jest": "^29.1.0",
         "tsup": "^8.5.0",
-        "typescript": "~5.3.3",
+        "typescript": "~5.8.0",
       },
     },
     "packages/mongodb": {
@@ -413,7 +414,7 @@
         "mongodb-memory-server": "^9.1.6",
         "ts-jest": "^29.1.2",
         "tsup": "^8.5.0",
-        "typescript": "~5.3.3",
+        "typescript": "~5.8.0",
       },
     },
     "packages/rabbitmq": {
@@ -429,7 +430,7 @@
         "jest": "^29.5.0",
         "ts-jest": "^29.1.0",
         "tsup": "^8.5.0",
-        "typescript": "~5.3.3",
+        "typescript": "~5.8.0",
       },
     },
     "packages/redis": {
@@ -444,7 +445,7 @@
         "jest": "^29.5.0",
         "ts-jest": "^29.1.0",
         "tsup": "^8.5.0",
-        "typescript": "~5.3.3",
+        "typescript": "~5.8.0",
       },
     },
     "packages/sdk": {
@@ -456,7 +457,7 @@
       },
       "devDependencies": {
         "tsup": "^8.5.0",
-        "typescript": "~5.3.3",
+        "typescript": "~5.8.0",
       },
     },
     "packages/types": {
@@ -464,7 +465,7 @@
       "version": "1.0.0",
       "devDependencies": {
         "tsup": "^8.5.0",
-        "typescript": "~5.3.3",
+        "typescript": "~5.8.0",
       },
     },
     "packages/utils": {
@@ -480,7 +481,7 @@
         "jest": "^29.5.0",
         "ts-jest": "^29.1.0",
         "tsup": "^8.5.0",
-        "typescript": "~5.3.3",
+        "typescript": "~5.8.0",
       },
     },
   },
@@ -2328,6 +2329,8 @@
 
     "jest-environment-node": ["jest-environment-node@29.7.0", "https://registry.npmmirror.com/jest-environment-node/-/jest-environment-node-29.7.0.tgz", { "dependencies": { "@jest/environment": "^29.7.0", "@jest/fake-timers": "^29.7.0", "@jest/types": "^29.6.3", "@types/node": "*", "jest-mock": "^29.7.0", "jest-util": "^29.7.0" } }, "sha512-DOSwCRqXirTOyheM+4d5YZOrWcdu0LNZ87ewUoywbcb2XR4wKgqiG8vNeYwhjFMbEkfju7wx2GYH0P2gevGvFw=="],
 
+    "jest-extended": ["jest-extended@4.0.2", "https://registry.npmmirror.com/jest-extended/-/jest-extended-4.0.2.tgz", { "dependencies": { "jest-diff": "^29.0.0", "jest-get-type": "^29.0.0" }, "peerDependencies": { "jest": ">=27.2.5" }, "optionalPeers": ["jest"] }, "sha512-FH7aaPgtGYHc9mRjriS0ZEHYM5/W69tLrFTIdzm+yJgeoCmmrSB/luSfMSqWP9O29QWHPEmJ4qmU6EwsZideog=="],
+
     "jest-get-type": ["jest-get-type@29.6.3", "https://registry.npmmirror.com/jest-get-type/-/jest-get-type-29.6.3.tgz", {}, "sha512-zrteXnqYxfQh7l5FHyL38jL39di8H8rHoecLH3JNxH3BwOrBsNeabdap5e0I23lD4HHI8W5VFBZqG4Eaq5LNcw=="],
 
     "jest-haste-map": ["jest-haste-map@29.7.0", "https://registry.npmmirror.com/jest-haste-map/-/jest-haste-map-29.7.0.tgz", { "dependencies": { "@jest/types": "^29.6.3", "@types/graceful-fs": "^4.1.3", "@types/node": "*", "anymatch": "^3.0.3", "fb-watchman": "^2.0.0", "graceful-fs": "^4.2.9", "jest-regex-util": "^29.6.3", "jest-util": "^29.7.0", "jest-worker": "^29.7.0", "micromatch": "^4.0.4", "walker": "^1.0.8" }, "optionalDependencies": { "fsevents": "^2.3.2" } }, "sha512-fP8u2pyfqx0K1rGn1R9pyE0/KTn+G7PxktWidOBTqFPLYX0b9ksaMFkhK5vrS3DVun09pckLdlx90QthlW7AmA=="],
@@ -3562,31 +3565,15 @@
 
     "@pro/entities/@types/node": ["@types/node@20.19.21", "https://registry.npmmirror.com/@types/node/-/node-20.19.21.tgz", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-CsGG2P3I5y48RPMfprQGfy4JPRZ6csfC3ltBZSRItG3ngggmNY/qs2uZKp4p9VbrpqNNSMzUZNFZKzgOGnd/VA=="],
 
-    "@pro/entities/typescript": ["typescript@5.3.3", "https://registry.npmmirror.com/typescript/-/typescript-5.3.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw=="],
-
     "@pro/minio/@types/node": ["@types/node@20.19.21", "https://registry.npmmirror.com/@types/node/-/node-20.19.21.tgz", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-CsGG2P3I5y48RPMfprQGfy4JPRZ6csfC3ltBZSRItG3ngggmNY/qs2uZKp4p9VbrpqNNSMzUZNFZKzgOGnd/VA=="],
-
-    "@pro/minio/typescript": ["typescript@5.3.3", "https://registry.npmmirror.com/typescript/-/typescript-5.3.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw=="],
 
     "@pro/mongodb/@types/node": ["@types/node@20.19.21", "https://registry.npmmirror.com/@types/node/-/node-20.19.21.tgz", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-CsGG2P3I5y48RPMfprQGfy4JPRZ6csfC3ltBZSRItG3ngggmNY/qs2uZKp4p9VbrpqNNSMzUZNFZKzgOGnd/VA=="],
 
-    "@pro/mongodb/typescript": ["typescript@5.3.3", "https://registry.npmmirror.com/typescript/-/typescript-5.3.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw=="],
-
     "@pro/rabbitmq/@types/node": ["@types/node@20.19.21", "https://registry.npmmirror.com/@types/node/-/node-20.19.21.tgz", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-CsGG2P3I5y48RPMfprQGfy4JPRZ6csfC3ltBZSRItG3ngggmNY/qs2uZKp4p9VbrpqNNSMzUZNFZKzgOGnd/VA=="],
-
-    "@pro/rabbitmq/typescript": ["typescript@5.3.3", "https://registry.npmmirror.com/typescript/-/typescript-5.3.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw=="],
 
     "@pro/redis/@types/node": ["@types/node@20.19.21", "https://registry.npmmirror.com/@types/node/-/node-20.19.21.tgz", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-CsGG2P3I5y48RPMfprQGfy4JPRZ6csfC3ltBZSRItG3ngggmNY/qs2uZKp4p9VbrpqNNSMzUZNFZKzgOGnd/VA=="],
 
-    "@pro/redis/typescript": ["typescript@5.3.3", "https://registry.npmmirror.com/typescript/-/typescript-5.3.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw=="],
-
-    "@pro/sdk/typescript": ["typescript@5.3.3", "https://registry.npmmirror.com/typescript/-/typescript-5.3.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw=="],
-
-    "@pro/types/typescript": ["typescript@5.3.3", "https://registry.npmmirror.com/typescript/-/typescript-5.3.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw=="],
-
     "@pro/utils/@types/node": ["@types/node@20.19.21", "https://registry.npmmirror.com/@types/node/-/node-20.19.21.tgz", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-CsGG2P3I5y48RPMfprQGfy4JPRZ6csfC3ltBZSRItG3ngggmNY/qs2uZKp4p9VbrpqNNSMzUZNFZKzgOGnd/VA=="],
-
-    "@pro/utils/typescript": ["typescript@5.3.3", "https://registry.npmmirror.com/typescript/-/typescript-5.3.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw=="],
 
     "@schematics/update/@angular-devkit/core": ["@angular-devkit/core@8.3.29", "https://registry.npmmirror.com/@angular-devkit/core/-/core-8.3.29.tgz", { "dependencies": { "ajv": "6.12.3", "fast-json-stable-stringify": "2.0.0", "magic-string": "0.25.3", "rxjs": "6.4.0", "source-map": "0.7.3" } }, "sha512-4jdja9QPwR6XG14ZSunyyOWT3nE2WtZC5IMDIBZADxujXvhzOU0n4oWpy6/JVHLUAxYNNgzLz+/LQORRWndcPg=="],
 

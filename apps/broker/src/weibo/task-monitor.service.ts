@@ -75,20 +75,22 @@ export class TaskMonitor {
 
         if (task.canRetry) {
           // 可以重试，重新调度
+          const retryDelay = this.calculateRetryInterval(task.retryCount);
           await this.taskRepository.update(task.id, {
             status: WeiboSearchTaskStatus.PENDING,
-            nextRunAt: new Date(now.getTime() + 5 * 60 * 1000), // 5分钟后重试
+            nextRunAt: new Date(now.getTime() + retryDelay),
             errorMessage: `任务执行超时，已重试 (${task.retryCount + 1}/${task.maxRetries})`,
             retryCount: task.retryCount + 1,
           });
 
-          this.logger.info(`超时任务 ${task.id} 已安排重试`);
+          this.logger.info(`超时任务 ${task.id} 已安排重试，延迟 ${retryDelay / 1000 / 60} 分钟`);
         } else {
           // 超过最大重试次数，标记为失败
           await this.taskRepository.update(task.id, {
             status: WeiboSearchTaskStatus.TIMEOUT,
             errorMessage: `任务执行超时，已达到最大重试次数 (${task.maxRetries})`,
             enabled: false, // 禁用任务
+            nextRunAt: null, // 清除下次执行时间
           });
 
           this.logger.error(`超时任务 ${task.id} 已标记为失败并禁用`);
@@ -126,14 +128,16 @@ export class TaskMonitor {
         const nextRetryTime = new Date(task.updatedAt.getTime() + retryInterval);
 
         if (new Date() >= nextRetryTime) {
+          // 立即安排重试，但给予适当延迟避免重复调度
+          const immediateRetryDelay = 30 * 1000; // 30秒延迟
           await this.taskRepository.update(task.id, {
             status: WeiboSearchTaskStatus.PENDING,
-            nextRunAt: new Date(),
+            nextRunAt: new Date(Date.now() + immediateRetryDelay),
             errorMessage: null,
             retryCount: task.retryCount + 1,
           });
 
-          this.logger.info(`失败任务 ${task.id} 已安排重试 (${task.retryCount + 1}/${task.maxRetries})`);
+          this.logger.info(`失败任务 ${task.id} 已安排重试 (${task.retryCount + 1}/${task.maxRetries}), 30秒后执行`);
         }
       } catch (error) {
         this.logger.error(`重试失败任务 ${task.id} 失败:`, error);
@@ -169,6 +173,7 @@ export class TaskMonitor {
           status: WeiboSearchTaskStatus.PAUSED,
           enabled: false,
           errorMessage: `连续 ${task.noDataCount} 次无数据，已自动暂停`,
+          nextRunAt: null, // 清除下次执行时间
         });
 
         this.logger.warn(`任务 ${task.id} 因无数据已自动暂停`);
@@ -259,7 +264,7 @@ export class TaskMonitor {
       await this.taskRepository.update(taskId, {
         status: WeiboSearchTaskStatus.PENDING,
         enabled: true,
-        nextRunAt: new Date(),
+        nextRunAt: new Date(Date.now() + 30 * 1000), // 30秒后执行，避免立即重复调度
         errorMessage: null,
         retryCount: 0,
         noDataCount: 0,

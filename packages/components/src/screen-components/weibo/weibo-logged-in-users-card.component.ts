@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, Input, Inject, Optional } from '@angular/
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval, Observable, combineLatest, filter, switchMap } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
-import { WebSocketManager, WebSocketService, ConnectionState, createScreensWebSocketConfig } from '../../websocket';
+import { WebSocketManager, WebSocketService, ConnectionState, createScreensWebSocketConfig, JwtAuthService } from '../../websocket';
 import { SkerSDK, LoggedInUsersStats } from '@pro/sdk';
 
 export interface WeiboUsersCardConfig {
@@ -59,7 +59,8 @@ const SIMPLE_CONFIG: WeiboUsersCardConfig = {
   providers: [
     {
       provide: WebSocketManager,
-      useFactory: () => new WebSocketManager(() => new WebSocketService())
+      useFactory: (authService: JwtAuthService) => new WebSocketManager(() => new WebSocketService(authService)),
+      deps: [JwtAuthService]
     }
   ],
   template: `
