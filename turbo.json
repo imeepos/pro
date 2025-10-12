@@ -4,7 +4,7 @@
     ".env",
     "tsconfig.base.json"
   ],
-  "concurrency": "20",
+  "concurrency": "2",
   "tasks": {
     "build": {
       "dependsOn": [
@@ -37,13 +37,6 @@
       ],
       "outputs": [],
       "cache": true
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true,
-      "dependsOn": [
-        "^build"
-      ]
     },
     "clean": {
       "cache": false
