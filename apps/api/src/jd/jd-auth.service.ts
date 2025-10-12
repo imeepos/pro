@@ -85,7 +85,8 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
     this.logger.log('正在关闭所有登录会话...');
 
     // 关闭所有活动会话
-    for (const [sessionId, session] of this.loginSessions.entries()) {
+    const sessionIds = Array.from(this.loginSessions.keys());
+    for (const sessionId of sessionIds) {
       await this.cleanupSession(sessionId);
     }
 
@@ -171,7 +172,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * 设置二维码监听器
-   * 监听二维码生成接口并提取二维码图片
+   * 监听京东二维码生成接口，优雅处理多种响应格式
    */
   private setupQrCodeListener(
     page: Page,
@@ -179,28 +180,81 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
     sessionId: string,
   ) {
     page.on('response', async (response) => {
-      const url = response.url();
+      const responseUrl = response.url();
 
       try {
-        // 监听二维码生成接口
-        if (url.includes('qrcode') && url.includes('image')) {
-          const buffer = await response.body();
-          const base64Image = buffer.toString('base64');
-          const imageData = `data:image/png;base64,${base64Image}`;
+        // 精确匹配京东二维码接口
+        if (!responseUrl.includes('qr.m.jd.com/show')) {
+          return;
+        }
 
-          this.logger.log(`二维码已生成: ${sessionId}`);
+        this.logger.debug(`捕获京东二维码接口响应: ${responseUrl}, session: ${sessionId}`);
+
+        const imageData = await this.extractQrImageData(response);
+
+        if (imageData) {
+          this.logger.log(`二维码数据提取成功: ${sessionId}`);
 
           subject.next({
             type: 'qrcode',
-            data: {
-              image: imageData,
-            },
+            data: { image: imageData }
+          });
+        } else {
+          this.logger.warn(`二维码数据为空: ${sessionId}`);
+          subject.next({
+            type: 'error',
+            data: { message: '二维码获取失败，请重试' }
           });
         }
       } catch (error) {
-        this.logger.error(`处理二维码响应失败: ${url}`, error);
+        this.logger.error(`二维码监听处理失败: ${responseUrl}, session: ${sessionId}`, error);
+        subject.next({
+          type: 'error',
+          data: { message: '二维码处理异常' }
+        });
       }
     });
+  }
+
+  /**
+   * 从响应中优雅地提取二维码图片数据
+   * 支持直接图片内容和URL重定向两种方式
+   */
+  private async extractQrImageData(response: any): Promise<string | null> {
+    const contentType = response.headers()['content-type'] || '';
+
+    // 处理直接返回图片内容的情况
+    if (contentType.startsWith('image/')) {
+      const buffer = await response.body();
+      if (buffer.length > 0) {
+        const base64Image = buffer.toString('base64');
+        return `data:${contentType};base64,${base64Image}`;
+      }
+    }
+
+    // 处理返回URL重定向的情况
+    const location = response.headers()['location'];
+    if (location) {
+      const imageUrl = location.startsWith('//')
+        ? `https:${location}`
+        : location;
+
+      this.logger.debug(`获取到二维码图片URL: ${imageUrl}`);
+      return imageUrl;
+    }
+
+    // 尝试从响应体中解析URL
+    try {
+      const responseText = await response.text();
+      const urlMatch = responseText.match(/https?:\/\/[^\s"']+\.(?:png|jpg|jpeg|gif)/i);
+      if (urlMatch) {
+        return urlMatch[0];
+      }
+    } catch (error) {
+      this.logger.debug('解析响应体URL失败', error);
+    }
+
+    return null;
   }
 
   /**
