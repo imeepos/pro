@@ -158,8 +158,25 @@ export class KeyboardService {
   private handleKeyDown(event: KeyboardEvent): void {
     const ctrlKey = this.isMac ? event.metaKey : event.ctrlKey;
 
+    // 记录关键的快捷键事件
+    if (event.key === 's' && ctrlKey) {
+      console.log('⌨️ [KeyboardService] Ctrl+S 快捷键被按下');
+      console.log('⌨️ [KeyboardService] 事件详情:', {
+        key: event.key,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        target: event.target?.constructor?.name,
+        enabled: this.enabled,
+        isInputFocused: this.isInputFocused()
+      });
+    }
+
     for (const shortcut of this.shortcuts) {
       if (this.matchShortcut(event, shortcut, ctrlKey)) {
+        if (event.key === 's' && ctrlKey) {
+          console.log('⌨️ [KeyboardService] 保存快捷键匹配成功，准备执行保存');
+        }
         event.preventDefault();
         event.stopPropagation();
         shortcut.handler();
@@ -228,7 +245,13 @@ export class KeyboardService {
   }
 
   private saveScreen(): void {
-    this.canvasService.triggerImmediateSave();
+    console.log('⌨️ [KeyboardService] saveScreen 方法被调用');
+    // 获取当前屏幕名称并传递给保存方法
+    const screenName = this.canvasService.getCurrentScreenName();
+    console.log('⌨️ [KeyboardService] 当前屏幕名称:', screenName);
+    console.log('⌨️ [KeyboardService] 准备调用 triggerImmediateSave');
+    this.canvasService.triggerImmediateSave(screenName);
+    console.log('⌨️ [KeyboardService] triggerImmediateSave 已调用');
   }
 
   getShortcuts(): KeyboardShortcut[] {

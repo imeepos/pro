@@ -8,10 +8,15 @@ import {
   Min,
   Max,
   IsEnum,
-  IsIn
+  IsIn,
+  IsArray
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiKeyType } from '@pro/entities';
+
+// 重新导出，以便其他地方使用
+export { ApiKeyType };
 
 /**
  * API Key状态枚举
@@ -22,6 +27,7 @@ export enum ApiKeyStatus {
   EXPIRED = 'expired',
   ALL = 'all'
 }
+
 
 /**
  * API Key排序字段枚举
@@ -56,12 +62,40 @@ export class CreateApiKeyDto {
   name: string;
 
   @ApiPropertyOptional({
+    description: 'API Key描述',
+    maxLength: 500,
+    example: '用于生产环境数据访问的API密钥'
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: '描述长度不能超过500个字符' })
+  description?: string;
+
+  @ApiProperty({
+    description: 'API Key类型',
+    enum: ApiKeyType,
+    example: ApiKeyType.READ_ONLY
+  })
+  @IsEnum(ApiKeyType, { message: 'API Key类型无效' })
+  type: ApiKeyType;
+
+  @ApiPropertyOptional({
     description: '过期时间（ISO 8601格式）',
     example: '2024-12-31T23:59:59.000Z'
   })
   @IsOptional()
   @IsDateString({}, { message: '过期时间格式无效' })
   expiresAt?: string;
+
+  @ApiPropertyOptional({
+    description: '权限列表',
+    type: [String],
+    example: ['read:events', 'read:users']
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  permissions?: string[];
 }
 
 /**
@@ -79,12 +113,41 @@ export class UpdateApiKeyDto {
   name?: string;
 
   @ApiPropertyOptional({
+    description: 'API Key描述',
+    maxLength: 500,
+    example: '更新后的API密钥描述'
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: '描述长度不能超过500个字符' })
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: 'API Key类型',
+    enum: ApiKeyType,
+    example: ApiKeyType.READ_WRITE
+  })
+  @IsOptional()
+  @IsEnum(ApiKeyType, { message: 'API Key类型无效' })
+  type?: ApiKeyType;
+
+  @ApiPropertyOptional({
     description: '过期时间（ISO 8601格式）',
     example: '2024-12-31T23:59:59.000Z'
   })
   @IsOptional()
   @IsDateString({}, { message: '过期时间格式无效' })
   expiresAt?: string;
+
+  @ApiPropertyOptional({
+    description: '权限列表',
+    type: [String],
+    example: ['read:events', 'write:events', 'read:users']
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  permissions?: string[];
 
   @ApiPropertyOptional({
     description: '是否启用',
@@ -201,6 +264,15 @@ export class ApiKeyResponseDto {
 
   @ApiProperty({ description: 'API Key名称', example: '生产环境API Key' })
   name: string;
+
+  @ApiPropertyOptional({ description: 'API Key描述', example: '用于生产环境数据访问的API密钥' })
+  description?: string;
+
+  @ApiProperty({ description: 'API Key类型', enum: ApiKeyType, example: ApiKeyType.READ_ONLY })
+  type: ApiKeyType;
+
+  @ApiPropertyOptional({ description: '权限列表', type: [String], example: ['read:events', 'read:users'] })
+  permissions?: string[];
 
   @ApiProperty({ description: '是否启用', example: true })
   isActive: boolean;

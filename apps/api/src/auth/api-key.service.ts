@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, Like, SelectQueryBuilder } from 'typeorm';
-import { ApiKeyEntity } from '@pro/entities';
+import { ApiKeyEntity, ApiKeyType } from '@pro/entities';
 import { UserEntity } from '@pro/entities';
 import { UserStatus } from '@pro/types';
 import {
@@ -51,6 +51,9 @@ export class ApiKeyService {
       key,
       userId,
       name: createDto.name,
+      description: createDto.description || null,
+      type: createDto.type,
+      permissions: createDto.permissions || [],
       expiresAt: createDto.expiresAt ? new Date(createDto.expiresAt) : null,
       createdIp,
     });
@@ -409,6 +412,9 @@ export class ApiKeyService {
       id: apiKey.id,
       key: `${apiKey.key.substring(0, 7)}...${apiKey.key.substring(apiKey.key.length - 4)}`,
       name: apiKey.name,
+      description: apiKey.description,
+      type: apiKey.type,
+      permissions: apiKey.permissions,
       isActive: apiKey.isActive,
       lastUsedAt: apiKey.lastUsedAt,
       usageCount: apiKey.usageCount,

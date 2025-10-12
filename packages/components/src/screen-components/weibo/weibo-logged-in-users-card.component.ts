@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil, interval, Observable } from 'rxjs';
+import { Subject, takeUntil, interval, Observable, combineLatest, filter, switchMap } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
-import { WebSocketService } from '../services/websocket.service';
+import { WebSocketService, ConnectionState } from '../services/websocket.service';
 
 // 临时类型定义，避免直接依赖@pro/sdk
 export interface LoggedInUsersStats {
@@ -79,8 +79,13 @@ const SIMPLE_CONFIG: WeiboUsersCardConfig = {
             <span *ngIf="config.showIcons" class="icon-title">📊</span>
             {{ config.title }}
           </h3>
-          <div *ngIf="isLoading" class="loading-indicator">
-            <span class="animate-spin inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full"></span>
+          <div class="status-indicators flex items-center gap-2">
+            <div *ngIf="isLoading" class="loading-indicator">
+              <span class="animate-spin inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full"></span>
+            </div>
+            <div class="connection-status" [ngClass]="getConnectionStatusClass()">
+              <span class="status-dot w-2 h-2 rounded-full inline-block"></span>
+            </div>
           </div>
         </div>
 
@@ -271,6 +276,29 @@ const SIMPLE_CONFIG: WeiboUsersCardConfig = {
       justify-content: center;
     }
 
+    .connection-status .status-dot {
+      transition: all 0.3s ease;
+    }
+
+    .connection-status.connected .status-dot {
+      background-color: #10b981;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+
+    .connection-status.connecting .status-dot {
+      background-color: #f59e0b;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .connection-status.disconnected .status-dot {
+      background-color: #ef4444;
+    }
+
+    .connection-status.failed .status-dot {
+      background-color: #dc2626;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
     /* 响应式设计 */
     @media (max-width: 768px) {
       .stats-grid.cols-3 {
@@ -293,9 +321,10 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   lastUpdateTime: Date = new Date();
   isLoading = false;
   errorMessage = '';
-  private destroy$ = new Subject<void>();
-  private refreshTimer$ = new Subject<void>();
+  connectionState: ConnectionState = ConnectionState.Disconnected;
 
+  private readonly destroy$ = new Subject<void>();
+  private readonly refreshTimer$ = new Subject<void>();
   private sdk: any;
 
   constructor(
@@ -327,7 +356,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   ngOnInit(): void {
     this.initConfig();
     this.loadData();
-    this.setupWebSocket();
+    this.initializeWebSocketConnection();
     this.setupRefreshTimer();
   }
 
@@ -360,7 +389,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     if (this.isLoading) return;
 
     this.isLoading = true;
-    this.errorMessage = '';
+    this.clearErrorState();
 
     this.sdk.weibo.getLoggedInUsersStats().pipe(
       takeUntil(this.destroy$)
@@ -371,25 +400,81 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
       },
       error: (error: any) => {
         console.error('获取微博用户统计数据失败:', error);
-        if (this.config.showErrorHandling) {
-          this.errorMessage = '数据加载失败';
-        }
+        this.setDataError('数据加载失败');
         this.isLoading = false;
       }
     });
   }
 
-  private setupWebSocket(): void {
-    this.wsService.on('weibo:logged-in-users:update').pipe(
+  private initializeWebSocketConnection(): void {
+    this.wsService.connect();
+    this.observeConnectionState();
+    this.subscribeToDataUpdates();
+  }
+
+  private observeConnectionState(): void {
+    this.wsService.state$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(state => {
+      this.connectionState = state;
+      this.handleConnectionStateChange(state);
+    });
+  }
+
+  private handleConnectionStateChange(state: ConnectionState): void {
+    switch (state) {
+      case ConnectionState.Connecting:
+      case ConnectionState.Reconnecting:
+        this.clearErrorState();
+        break;
+      case ConnectionState.Failed:
+        this.setNetworkError('WebSocket连接失败');
+        break;
+      case ConnectionState.Disconnected:
+        if (this.connectionState !== ConnectionState.Disconnected) {
+          this.setNetworkError('WebSocket连接已断开');
+        }
+        break;
+    }
+  }
+
+  private subscribeToDataUpdates(): void {
+    this.wsService.isConnected$.pipe(
+      filter(connected => connected),
+      switchMap(() => this.wsService.on('weibo:logged-in-users:update')),
       takeUntil(this.destroy$)
     ).subscribe({
-      next: (stats) => {
-        this.updateStats(stats);
-      },
-      error: (error) => {
-        console.error('WebSocket 更新失败:', error);
-      }
+      next: (stats) => this.updateStatsFromWebSocket(stats),
+      error: (error) => this.handleWebSocketError(error)
     });
+  }
+
+  private updateStatsFromWebSocket(newStats: LoggedInUsersStats): void {
+    this.clearErrorState();
+    this.updateStats(newStats);
+  }
+
+  private handleWebSocketError(error: any): void {
+    console.error('WebSocket数据更新失败:', error);
+    this.setDataError('实时数据更新失败');
+  }
+
+  private clearErrorState(): void {
+    if (this.errorMessage) {
+      this.errorMessage = '';
+    }
+  }
+
+  private setNetworkError(message: string): void {
+    if (this.config.showErrorHandling) {
+      this.errorMessage = message;
+    }
+  }
+
+  private setDataError(message: string): void {
+    if (this.config.showErrorHandling) {
+      this.errorMessage = message;
+    }
   }
 
   private setupRefreshTimer(): void {
@@ -497,5 +582,20 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     };
 
     return `${baseClass} ${colorClasses[theme]?.[field] || colorClasses.default[field]}`;
+  }
+
+  getConnectionStatusClass(): string {
+    switch (this.connectionState) {
+      case ConnectionState.Connected:
+        return 'connected';
+      case ConnectionState.Connecting:
+      case ConnectionState.Reconnecting:
+        return 'connecting';
+      case ConnectionState.Failed:
+        return 'failed';
+      case ConnectionState.Disconnected:
+      default:
+        return 'disconnected';
+    }
   }
 }

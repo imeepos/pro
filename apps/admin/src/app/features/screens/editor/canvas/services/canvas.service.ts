@@ -34,15 +34,28 @@ export class CanvasService implements OnDestroy {
   }
 
   initPage(pageId: string): void {
+    console.log('🚀 [CanvasService] 初始化页面');
+    console.log('🚀 [CanvasService] 页面ID:', pageId);
+
+    if (!pageId) {
+      console.error('❌ [CanvasService] 页面ID为空，这可能导致保存失败');
+    }
+
     this.currentPageId = pageId;
     this.snapshotService.setPageId(pageId);
     this.clearErrorState();
     this.setDirty(false);
     this.setSaveStatus('saved');
+
+    console.log('✅ [CanvasService] 页面初始化完成');
   }
 
   setCurrentScreenName(screenName: string): void {
     this.currentScreenName = screenName;
+  }
+
+  getCurrentScreenName(): string {
+    return this.currentScreenName || '未命名页面';
   }
 
   setCanvasSize(width: number, height: number): void {
@@ -775,28 +788,55 @@ export class CanvasService implements OnDestroy {
 
   // 自动保存相关方法
   private initAutoSave(): void {
+    console.log('🚀 [CanvasService] 初始化自动保存流');
+
     // 合并防抖保存、立即保存和手动重试触发器
-    merge(
+    const mergedStream$ = merge(
       this.saveTrigger$.pipe(
         debounceTime(this.DEBOUNCE_TIME),
-        tap(() => console.log('防抖保存触发'))
+        tap(() => console.log('🔄 [CanvasService] 防抖保存触发'))
       ),
       this.immediateSave$.pipe(
-        tap(() => console.log('立即保存触发'))
+        tap(() => console.log('🔄 [CanvasService] 立即保存触发'))
       ),
       this.manualRetry$.pipe(
-        tap(() => console.log('手动重试保存触发'))
+        tap(() => console.log('🔄 [CanvasService] 手动重试保存触发'))
       )
-    ).pipe(
-      distinctUntilChanged(),
+    );
+
+    console.log('🚀 [CanvasService] 合并流已创建，开始设置管道操作');
+
+    mergedStream$.pipe(
+      tap(() => console.log('🔄 [CanvasService] 合并流收到信号')),
+      tap(() => console.log('🔄 [CanvasService] distinctUntilChanged 之前')),
+      // distinctUntilChanged(), // 临时移除以排查问题
+      tap(() => console.log('🔄 [CanvasService] distinctUntilChanged 通过')),
       switchMap(() => {
         const pageName = this.pendingSaveData?.pageName;
+        console.log('🔄 [CanvasService] switchMap 执行，开始保存流程, pageName:', pageName);
+        console.log('🔄 [CanvasService] 当前待保存数据:', this.pendingSaveData);
+
         // 清除待保存的数据
         this.pendingSaveData = null;
+        console.log('🔄 [CanvasService] 待保存数据已清除，调用 performSaveWithRetry');
+
         return this.performSaveWithRetry(pageName);
       }),
       takeUntil(this.destroy$)
-    ).subscribe();
+    ).subscribe({
+      next: (result) => {
+        console.log('✅ [CanvasService] 自动保存流程完成, 结果:', result);
+      },
+      error: (error) => {
+        console.error('❌ [CanvasService] 自动保存流程错误:', error);
+        console.error('❌ [CanvasService] 错误堆栈:', error.stack);
+      },
+      complete: () => {
+        console.log('🔚 [CanvasService] 自动保存流完成 (complete)');
+      }
+    });
+
+    console.log('🚀 [CanvasService] 自动保存流订阅已设置');
   }
 
   triggerAutoSave(): void {
@@ -807,14 +847,25 @@ export class CanvasService implements OnDestroy {
   }
 
   triggerImmediateSave(pageName?: string): void {
-    if (!this.currentPageId) return;
+    console.log('🔄 [CanvasService] triggerImmediateSave 被调用');
+    console.log('🔄 [CanvasService] 参数:', { pageName, currentPageId: this.currentPageId });
+
+    if (!this.currentPageId) {
+      console.error('❌ [CanvasService] currentPageId 为空，无法保存');
+      return;
+    }
 
     this.setDirty(true);
     // 如果没有提供页面名称，使用当前屏幕名称
     const finalPageName = pageName || this.currentScreenName || '未命名页面';
+    console.log('🔄 [CanvasService] 最终页面名称:', finalPageName);
+
     // 保存待保存的数据
     this.pendingSaveData = { pageName: finalPageName };
+    console.log('🔄 [CanvasService] 待保存数据已设置:', this.pendingSaveData);
+
     this.immediateSave$.next();
+    console.log('🔄 [CanvasService] immediateSave$ 信号已发送');
   }
 
   // 手动重试保存
@@ -855,14 +906,25 @@ export class CanvasService implements OnDestroy {
 
   // 带重试机制的保存方法
   private performSaveWithRetry(pageName?: string): Observable<unknown> {
+    console.log('💾 [CanvasService] performSaveWithRetry 开始');
+    console.log('💾 [CanvasService] 参数:', { pageName, currentPageId: this.currentPageId });
+
     if (!this.currentPageId) {
+      console.error('❌ [CanvasService] currentPageId 为空');
       return throwError(() => new Error('未设置页面ID'));
     }
 
     const state = this.query.getValue();
+    console.log('💾 [CanvasService] 当前状态:', {
+      isOnline: state.isOnline,
+      saveStatus: state.saveStatus,
+      isDirty: state.isDirty,
+      componentCount: state.componentData.length
+    });
 
     // 检查网络状态
     if (!state.isOnline) {
+      console.warn('⚠️ [CanvasService] 网络离线，无法保存');
       const networkError: SaveError = {
         type: 'network',
         message: '网络连接不可用，请检查网络设置',
@@ -874,6 +936,7 @@ export class CanvasService implements OnDestroy {
       return EMPTY; // 网络不可用时不执行保存
     }
 
+    console.log('💾 [CanvasService] 设置保存状态为 saving');
     this.setSaveStatus('saving');
 
     return this.performSave(pageName).pipe(
@@ -919,16 +982,32 @@ export class CanvasService implements OnDestroy {
       ),
       catchError(error => {
         const saveError = this.classifyError(error);
+        console.error('❌ [CanvasService] 保存失败，错误分类:', saveError);
+        console.error('❌ [CanvasService] 原始错误信息:', error);
+
         this.setErrorState(saveError);
         this.setSaveStatus('error');
-        console.error('保存失败:', error);
+
+        // 为常见错误提供更友好的处理
+        if (saveError.type === 'network') {
+          console.warn('⚠️ [CanvasService] 网络错误，将在网络恢复后自动重试');
+        } else if (saveError.type === 'permission') {
+          console.warn('⚠️ [CanvasService] 权限错误，需要用户重新登录');
+        } else if (saveError.type === 'server') {
+          console.warn('⚠️ [CanvasService] 服务器错误，建议稍后重试');
+        }
+
         return EMPTY; // 返回空流，避免中断订阅
       })
     );
   }
 
   private performSave(pageName?: string): Observable<unknown> {
+    console.log('📡 [CanvasService] performSave 开始执行');
+    console.log('📡 [CanvasService] 页面名称:', pageName);
+
     if (!this.currentPageId) {
+      console.error('❌ [CanvasService] currentPageId 为空，无法执行保存');
       return throwError(() => new Error('未设置页面ID'));
     }
 
@@ -944,14 +1023,25 @@ export class CanvasService implements OnDestroy {
       components: this.convertComponentsToApiFormat(state.componentData)
     };
 
+    console.log('📡 [CanvasService] 准备发送的更新数据:', {
+      pageId: this.currentPageId,
+      name: updateDto.name,
+      layoutSize: updateDto.layout ? `${updateDto.layout.width}x${updateDto.layout.height}` : 'undefined',
+      componentCount: updateDto.components?.length || 0
+    });
+
+    console.log('📡 [CanvasService] 调用 SDK updateScreen API');
+
     return this.sdk.screen.updateScreen$(this.currentPageId, updateDto).pipe(
       tap(() => {
+        console.log('✅ [CanvasService] API 调用成功，更新状态');
         this.clearErrorState();
         this.setDirty(false);
         this.setSaveStatus('saved');
-        console.log('画布保存成功');
+        console.log('✅ [CanvasService] 画布保存成功');
       }),
       catchError(error => {
+        console.error('❌ [CanvasService] API 调用失败:', error);
         throw error; // 让重试机制处理错误
       })
     );

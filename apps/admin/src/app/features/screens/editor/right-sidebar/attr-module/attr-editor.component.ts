@@ -8,7 +8,7 @@ import { FormContainerComponent } from '../form-controls/form-container.componen
 import { FormItemComponent } from '../form-controls/form-item.component';
 import { ValidationService } from '../../services/validation.service';
 import { CanvasService } from '../../canvas/services/canvas.service';
-import { ComponentRegistryService } from '../../../../../core/services/component-registry.service';
+import { ComponentRegistryService } from '@pro/components';
 
 @Component({
   selector: 'app-attr-editor',

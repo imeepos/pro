@@ -6,7 +6,7 @@ import { CanvasQuery } from '../../services/canvas.query';
 import { RulerGridService } from '../../services/ruler-grid.service';
 import { ErrorBoundaryService } from '../../services/error-boundary.service';
 import { ComponentEventHandlerService } from '../../../services/component-event-handler.service';
-import { ComponentRegistryService } from '../../../../../../core/services/component-registry.service';
+import { ComponentRegistryService } from '@pro/components';
 import { ComponentHostDirective } from '../../../component-host.directive';
 import { ComponentItem, ComponentStyle, Point, ComponentErrorInfo } from '../../../models/component.model';
 import { throttleFrame } from '../../../utils/throttle.util';

@@ -33,7 +33,10 @@
       "Bash(docker run:*)",
       "WebFetch(domain:blog.csdn.net)",
       "WebSearch",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(ng build)",
+      "Bash(ng lint)",
+      "Bash(ng serve:*)"
     ],
     "deny": [],
     "ask": []

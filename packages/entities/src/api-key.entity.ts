@@ -11,6 +11,15 @@ import {
 import { UserEntity } from './user.entity.js';
 
 /**
+ * API Key 类型枚举
+ */
+export enum ApiKeyType {
+  READ_ONLY = 'read_only',
+  READ_WRITE = 'read_write',
+  ADMIN = 'admin'
+}
+
+/**
  * API Key 实体
  * 用于API访问认证，绑定特定用户
  */
@@ -40,6 +49,28 @@ export class ApiKeyEntity {
    */
   @Column({ type: 'varchar', length: 100 })
   name: string;
+
+  /**
+   * API Key 详细描述
+   */
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  description?: string;
+
+  /**
+   * API Key 类型
+   */
+  @Column({
+    type: 'enum',
+    enum: ApiKeyType,
+    default: ApiKeyType.READ_ONLY
+  })
+  type: ApiKeyType;
+
+  /**
+   * 权限列表
+   */
+  @Column({ type: 'json', default: () => "'[]'" })
+  permissions: string[];
 
   /**
    * 是否启用

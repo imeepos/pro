@@ -7,7 +7,7 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
 import { ScreensService } from '../../../state/screens.service';
 import { ScreensQuery } from '../../../state/screens.query';
 import { ScreenPage, UpdateScreenDto } from '@pro/sdk';
-import { ComponentRegistryService } from '../../../core/services/component-registry.service';
+import { ComponentRegistryService } from '@pro/components';
 import { CanvasComponent } from './canvas/canvas.component';
 import { LayerPanelComponent } from './canvas/layer-panel/layer-panel.component';
 import { RightSidebarComponent } from './right-sidebar/right-sidebar.component';
@@ -304,6 +304,8 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   }
 
   private handleSaveStatusChange(status: 'saved' | 'saving' | 'unsaved' | 'error' | 'retrying'): void {
+    console.log('🔄 [ScreenEditor] 保存状态变化:', status);
+
     switch (status) {
       case 'saved':
         // 只在从保存中或错误状态恢复时显示成功提示
@@ -311,6 +313,7 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
         if (currentStatus === 'saving' || currentStatus === 'error') {
           this.clearSaveToasts();
           this.showSuccessToast('保存成功', '页面已自动保存');
+          console.log('✅ [ScreenEditor] 保存成功提示已显示');
         }
         break;
       case 'saving':
@@ -318,12 +321,26 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
         this.showSavingToastWithDelay();
         break;
       case 'error':
-        // 显示保存失败提示
+        // 显示更详细的保存失败提示
         this.clearSaveToasts();
-        this.showErrorToast('保存失败', '网络异常，请检查连接后重试');
+        const errorInfo = this.canvasService.getErrorState();
+        const userFriendlyMessage = this.canvasService.getUserFriendlyErrorMessage();
+
+        console.error('❌ [ScreenEditor] 保存失败:', errorInfo);
+
+        if (errorInfo?.type === 'network') {
+          this.showErrorToast('网络错误', userFriendlyMessage || '网络连接异常，请检查网络后重试');
+        } else if (errorInfo?.type === 'permission') {
+          this.showErrorToast('权限错误', userFriendlyMessage || '权限不足，请重新登录后重试');
+        } else if (errorInfo?.type === 'server') {
+          this.showErrorToast('服务器错误', userFriendlyMessage || '服务器暂时不可用，请稍后重试');
+        } else {
+          this.showErrorToast('保存失败', userFriendlyMessage || '保存时发生未知错误，请重试');
+        }
         break;
       case 'unsaved':
         // 脏数据状态，不需要特别提示
+        console.log('ℹ️ [ScreenEditor] 页面有未保存的修改');
         break;
       case 'retrying':
         // 重试保存状态，显示重试提示
@@ -335,6 +352,7 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
           persistent: true,
           duration: 0
         });
+        console.log('🔄 [ScreenEditor] 重试保存提示已显示');
         break;
     }
   }
@@ -437,8 +455,46 @@ export class ScreenEditorComponent implements OnInit, OnDestroy {
   }
 
   save(): void {
+    console.log('💾 [ScreenEditor] 保存按钮被点击');
+
+    // 检查基本条件
+    if (!this.screenId) {
+      console.error('❌ [ScreenEditor] screenId 为空');
+      this.showErrorToast('保存失败', '页面ID缺失，无法保存');
+      return;
+    }
+
+    const currentState = this.canvasQuery.getValue();
+    console.log('💾 [ScreenEditor] 当前页面信息:', {
+      screenId: this.screenId,
+      pageName: this.getCurrentPageName(),
+      isDirty: currentState.isDirty,
+      saveStatus: currentState.saveStatus,
+      componentCount: currentState.componentData.length,
+      networkStatus: this.canvasService.getNetworkStatus()
+    });
+
+    // 检查是否有需要保存的内容
+    if (!currentState.isDirty && currentState.saveStatus === 'saved') {
+      console.log('ℹ️ [ScreenEditor] 页面没有修改，无需保存');
+      this.showInfoToast('提示', '页面没有修改，无需保存');
+      return;
+    }
+
+    // 检查网络状态
+    const networkStatus = this.canvasService.getNetworkStatus();
+    if (!networkStatus.isOnline) {
+      console.warn('⚠️ [ScreenEditor] 网络离线，无法保存');
+      this.showErrorToast('保存失败', '网络连接不可用，请检查网络后重试');
+      return;
+    }
+
+    // 给用户即时反馈
+    this.showInfoToast('保存中', '正在保存页面数据...');
+
     // 触发立即保存，包含页面名称
     this.canvasService.triggerImmediateSave(this.getCurrentPageName());
+    console.log('💾 [ScreenEditor] triggerImmediateSave 已调用');
   }
 
   // 为CanvasService提供页面名称
