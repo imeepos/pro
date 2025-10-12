@@ -147,7 +147,7 @@ export class AttachmentService {
       .getRawOne();
 
     if (existingFile) {
-      this.logger.info(
+      this.logger.log(
         `检测到重复文件 - MD5: ${fileMd5}, 复用已有文件: ${existingFile.objectName}`,
       );
 
@@ -166,7 +166,7 @@ export class AttachmentService {
 
       const savedAttachment = await this.attachmentRepository.save(newAttachment);
 
-      this.logger.info(
+      this.logger.log(
         `文件去重成功 - eventId: ${eventId}, 文件名: ${file.originalname}, MD5: ${fileMd5}`,
       );
 
@@ -202,7 +202,7 @@ export class AttachmentService {
 
       const savedAttachment = await this.attachmentRepository.save(attachment);
 
-      this.logger.info(
+      this.logger.log(
         `文件上传成功 - eventId: ${eventId}, 文件名: ${file.originalname}, 大小: ${file.size} bytes, MD5: ${fileMd5}`,
       );
 
@@ -245,7 +245,7 @@ export class AttachmentService {
           attachment.bucketName,
           attachment.objectName,
         );
-        this.logger.info(
+        this.logger.log(
           `附件删除成功，已删除 MinIO 文件 - eventId: ${eventId}, attachmentId: ${attachmentId}, objectName: ${attachment.objectName}`,
         );
       } catch (error) {
@@ -255,7 +255,7 @@ export class AttachmentService {
         );
       }
     } else {
-      this.logger.info(
+      this.logger.log(
         `附件删除成功，文件仍有 ${referenceCount} 个引用，保留 MinIO 文件 - eventId: ${eventId}, attachmentId: ${attachmentId}, objectName: ${attachment.objectName}`,
       );
     }

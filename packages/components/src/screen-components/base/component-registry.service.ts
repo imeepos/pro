@@ -1,5 +1,5 @@
 import { Injectable, Type } from '@angular/core';
-import { ComponentMetadata } from './component-metadata.interface';
+import { ComponentMetadata } from './component-metadata.interface.js';
 
 interface RegisteredComponent {
   component: Type<any>;

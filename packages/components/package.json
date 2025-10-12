@@ -4,11 +4,12 @@
   "description": "Shared Angular UI components",
   "main": "./dist/fesm2022/pro-components.mjs",
   "types": "./dist/index.d.ts",
+  "type": "module",
   "scripts": {
     "build": "ng-packagr -p ng-package.json",
     "dev": "ng-packagr -p ng-package.json --watch",
     "lint": "eslint src/**/*.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "echo \"Angular components use ng-packagr for type checking\"",
     "test": "echo \"No tests yet\""
   },
   "keywords": [

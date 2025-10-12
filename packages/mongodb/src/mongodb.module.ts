@@ -1,7 +1,7 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { RawDataSource, RawDataSourceSchema } from './schemas/raw-data-source.schema';
-import { RawDataSourceService } from './services/raw-data-source.service';
+import { RawDataSource, RawDataSourceSchema } from './schemas/raw-data-source.schema.js';
+import { RawDataSourceService } from './services/raw-data-source.service.js';
 
 /**
  * MongoDB 模块配置选项

@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { PinoLogger } from 'nestjs-pino';
+import { PinoLogger } from '@pro/logger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThanOrEqual, MoreThanOrEqual, Between } from 'typeorm';
 import {

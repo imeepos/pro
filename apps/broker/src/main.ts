@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Logger } from 'nestjs-pino';
+import { Logger } from '@pro/logger';
 // import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { BrokerModule } from './broker.module';
 

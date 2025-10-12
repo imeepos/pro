@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { calculateContentHash } from './hash.util';
+import { calculateContentHash } from './hash.util.js';
 
 describe('Hash Util', () => {
   describe('calculateContentHash', () => {

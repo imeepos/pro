@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { RawDataSourceService } from './raw-data-source.service';
-import { RawDataSource, RawDataSourceDoc } from '../schemas/raw-data-source.schema';
-import { SourceType, ProcessingStatus, CreateRawDataSourceDto } from '../types/raw-data-source.types';
-import { calculateContentHash } from '../utils/hash.util';
+import { RawDataSourceService } from './raw-data-source.service.js';
+import { RawDataSource, RawDataSourceDoc } from '../schemas/raw-data-source.schema.js';
+import { SourceType, ProcessingStatus, CreateRawDataSourceDto } from '../types/raw-data-source.types.js';
+import { calculateContentHash } from '../utils/hash.util.js';
 
 // Mock the hash util
 jest.mock('../utils/hash.util');

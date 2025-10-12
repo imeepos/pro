@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Logger } from 'nestjs-pino';
+import { Logger } from '@pro/logger';
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 
 export interface BrowserConfig {

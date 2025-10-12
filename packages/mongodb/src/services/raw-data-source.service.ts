@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { RawDataSource, RawDataSourceDoc } from '../schemas/raw-data-source.schema';
-import { CreateRawDataSourceDto, ProcessingStatus } from '../types/raw-data-source.types';
-import { calculateContentHash } from '../utils/hash.util';
+import { RawDataSource, RawDataSourceDoc } from '../schemas/raw-data-source.schema.js';
+import { CreateRawDataSourceDto, ProcessingStatus } from '../types/raw-data-source.types.js';
+import { calculateContentHash } from '../utils/hash.util.js';
 
 /**
  * 原始数据源服务

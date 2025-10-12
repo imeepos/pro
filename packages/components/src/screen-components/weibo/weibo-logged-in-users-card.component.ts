@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval, Observable } from 'rxjs';
-import { IScreenComponent } from '../base/screen-component.interface';
-import { WebSocketService } from '../services/websocket.service';
+import { IScreenComponent } from '../base/screen-component.interface.js';
+import { WebSocketService } from '../services/websocket.service.js';
 
 // 临时类型定义，避免直接依赖@pro/sdk
 export interface LoggedInUsersStats {

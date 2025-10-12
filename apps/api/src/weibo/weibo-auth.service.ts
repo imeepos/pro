@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, forwardRef, Inject } from '@nestjs/common';
-import { PinoLogger } from 'nestjs-pino';
+import { PinoLogger } from '@pro/logger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';

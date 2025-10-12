@@ -48,27 +48,30 @@ export function createLoggerConfig(options: LoggerOptions): any {
     });
   }
 
-  return {
-    pinoHttp: {
-      name: serviceName,
-      level,
-      transport: targets.length > 1 ? { targets } : targets[0],
-      formatters: {
-        level: (label: string) => ({ level: label }),
-      },
-      timestamp: () => `,"time":"${new Date().toISOString()}"`,
-      serializers: {
-        req: (req: any) => ({
-          id: req.id,
-          method: req.method,
-          url: req.url,
-          remoteAddress: req.remoteAddress,
-          remotePort: req.remotePort,
-        }),
-        res: (res: any) => ({
-          statusCode: res.statusCode,
-        }),
-      },
+  const useMultipleTargets = targets.length > 1;
+
+  const baseConfig = {
+    name: serviceName,
+    level,
+    transport: useMultipleTargets ? { targets } : targets[0],
+    timestamp: () => `,"time":"${new Date().toISOString()}"`,
+    serializers: {
+      req: (req: any) => ({
+        id: req.id,
+        method: req.method,
+        url: req.url,
+        remoteAddress: req.remoteAddress,
+        remotePort: req.remotePort,
+      }),
+      res: (res: any) => ({
+        statusCode: res.statusCode,
+      }),
     },
+    ...(useMultipleTargets
+      ? {}
+      : { formatters: { level: (label: string) => ({ level: label }) } }
+    ),
   };
+
+  return { pinoHttp: baseConfig };
 }

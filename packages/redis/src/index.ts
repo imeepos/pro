@@ -1,4 +1,4 @@
-import Redis, { RedisOptions } from 'ioredis';
+import { Redis, RedisOptions } from 'ioredis';
 
 export class RedisClient {
   private client: Redis;

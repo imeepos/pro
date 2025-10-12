@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Logger } from 'nestjs-pino';
+import { Logger } from '@pro/logger';
 import { Model } from 'mongoose';
 import { createHash } from 'crypto';
 import * as cheerio from 'cheerio';

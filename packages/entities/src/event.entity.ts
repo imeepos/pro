@@ -74,7 +74,7 @@ export class EventEntity {
   })
   status: EventStatus;
 
-  @Column({ type: 'bigint', nullable: true, name: 'created_by' })
+  @Column({ type: 'varchar', nullable: true, name: 'created_by' })
   createdBy: string;
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })

@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, And } from 'typeorm';
 import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
 import { RabbitMQConfigService } from '../rabbitmq/rabbitmq-config.service';
+import { PinoLogger } from '@pro/logger';
+
 /**
  * 任务超时时间配置（毫秒）
  */
@@ -15,9 +17,8 @@ const TASK_TIMEOUT = 30 * 60 * 1000; // 30分钟
  */
 @Injectable()
 export class TaskMonitor {
-  private readonly logger = new Logger(TaskMonitor.name);
-
   constructor(
+    private readonly logger: PinoLogger,
     @InjectRepository(WeiboSearchTaskEntity)
     private readonly taskRepository: Repository<WeiboSearchTaskEntity>,
     private readonly rabbitMQService: RabbitMQConfigService,

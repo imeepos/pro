@@ -54,7 +54,7 @@ export class JdHealthCheckService {
       // 更新账号状态
       if (oldStatus !== newStatus) {
         await this.jdAccountService.updateAccountStatus(accountId, newStatus);
-        this.logger.info(`账号状态更新: ${account.jdUid} ${oldStatus} → ${newStatus}`);
+        this.logger.log(`账号状态更新: ${account.jdUid} ${oldStatus} → ${newStatus}`);
       }
 
       return {

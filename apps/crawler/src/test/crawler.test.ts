@@ -5,7 +5,7 @@ import { BrowserService } from '../browser/browser.service';
 import { RawDataService } from '../raw-data/raw-data.service';
 import { ConfigService } from '@nestjs/config';
 import { CrawlerConfig, RabbitMQConfig, WeiboConfig } from '../config/crawler.interface';
-import { WeiboAccountStatus } from '../entities/weibo-account.entity';
+import { WeiboAccountStatus } from '@pro/entities';
 
 describe('WeiboSearchCrawlerService', () => {
   let service: WeiboSearchCrawlerService;

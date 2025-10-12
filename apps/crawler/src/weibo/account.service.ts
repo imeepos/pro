@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
-import { WeiboAccountEntity, WeiboAccountStatus } from '../entities/weibo-account.entity';
+import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
 
 export interface WeiboAccount {
   id: number;

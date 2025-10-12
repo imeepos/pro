@@ -1,7 +1,11 @@
 import { Injectable, OnModuleInit, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitMQClient } from '@pro/rabbitmq';
-import { WeiboSearchCrawlerService, SubTaskMessage, CrawlResult } from './weibo/search-crawler.service';
+import {
+  WeiboSearchCrawlerService,
+  SubTaskMessage,
+  CrawlResult,
+} from './weibo/search-crawler.service';
 import { RabbitMQConfig } from './config/crawler.interface';
 
 @Injectable()
@@ -12,7 +16,7 @@ export class CrawlQueueConsumer implements OnModuleInit {
   constructor(
     private readonly weiboSearchCrawlerService: WeiboSearchCrawlerService,
     private readonly configService: ConfigService,
-    @Inject('RABBITMQ_CONFIG') private readonly rabbitmqConfig: RabbitMQConfig
+    @Inject('RABBITMQ_CONFIG') private readonly rabbitmqConfig: RabbitMQConfig,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -23,15 +27,20 @@ export class CrawlQueueConsumer implements OnModuleInit {
     try {
       this.rabbitMQClient = new RabbitMQClient({
         url: this.rabbitmqConfig.url,
-        queue: this.rabbitmqConfig.queues.crawlQueue
+        queue: this.rabbitmqConfig.queues.crawlQueue,
       });
       await this.rabbitMQClient.connect();
 
-      await this.rabbitMQClient.consume(this.rabbitmqConfig.queues.crawlQueue, async (message: any) => {
-        await this.handleMessage(message);
-      });
+      await this.rabbitMQClient.consume(
+        this.rabbitmqConfig.queues.crawlQueue,
+        async (message: any) => {
+          await this.handleMessage(message);
+        },
+      );
 
-      this.logger.log(`已启动队列消费者: ${this.rabbitmqConfig.queues.crawlQueue}`);
+      this.logger.log(
+        `已启动队列消费者: ${this.rabbitmqConfig.queues.crawlQueue}`,
+      );
     } catch (error) {
       this.logger.error('设置队列消费者失败:', error);
       throw error;
@@ -45,7 +54,7 @@ export class CrawlQueueConsumer implements OnModuleInit {
     // 检查消息是否为空或无效
     if (!message) {
       this.logger.error('收到空消息，跳过处理');
-      throw new Error('Invalid message: message is null or undefined');
+      return;
     }
 
     subTask = message;
@@ -53,26 +62,29 @@ export class CrawlQueueConsumer implements OnModuleInit {
     // 检查taskId是否存在
     if (!subTask.taskId) {
       this.logger.error('消息缺少taskId，跳过处理', message);
-      throw new Error('Invalid message: missing taskId');
+      return;
     }
 
-    this.logger.log(`收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}, ` +
-                   `时间范围=${this.formatDate(subTask.start)}~${this.formatDate(subTask.end)}, ` +
-                   `isInitialCrawl=${subTask.isInitialCrawl}`);
+    this.logger.log(
+      `收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}, ` +
+        `时间范围=${this.formatDate(subTask.start)}~${this.formatDate(subTask.end)}, ` +
+        `isInitialCrawl=${subTask.isInitialCrawl}`,
+    );
 
     const result = await this.weiboSearchCrawlerService.crawl(subTask);
 
     await this.handleCrawlResult(subTask, result);
 
     const duration = Date.now() - startTime;
-    this.logger.log(`任务完成: taskId=${subTask.taskId}, 耗时=${duration}ms, 成功=${result.success}`);
+    this.logger.log(
+      `任务完成: taskId=${subTask.taskId}, 耗时=${duration}ms, 成功=${result.success}`,
+    );
 
     // 如果爬取失败，抛出异常触发 RabbitMQ 重试机制
     if (!result.success) {
       throw new Error(`爬取失败: ${result.error || '未知错误'}`);
     }
   }
-
 
   private formatDate(date: any): string {
     if (!date) {
@@ -142,13 +154,18 @@ export class CrawlQueueConsumer implements OnModuleInit {
     }
   }
 
-  private async handleCrawlResult(subTask: SubTaskMessage, result: CrawlResult): Promise<void> {
+  private async handleCrawlResult(
+    subTask: SubTaskMessage,
+    result: CrawlResult,
+  ): Promise<void> {
     // 安全处理日期时间显示
     const firstPostTimeStr = this.formatDateTime(result.firstPostTime);
     const lastPostTimeStr = this.formatDateTime(result.lastPostTime);
 
-    this.logger.log(`爬取任务成功完成: taskId=${subTask.taskId}, pageCount=${result.pageCount}, ` +
-                   `首条时间=${firstPostTimeStr}, 末条时间=${lastPostTimeStr}`);
+    this.logger.log(
+      `爬取任务成功完成: taskId=${subTask.taskId}, pageCount=${result.pageCount}, ` +
+        `首条时间=${firstPostTimeStr}, 末条时间=${lastPostTimeStr}`,
+    );
 
     // 状态更新逻辑已移至 WeiboSearchCrawlerService.handleTaskResult()
     // 这里只做日志记录
