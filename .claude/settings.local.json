@@ -36,7 +36,8 @@
       "Bash(dir:*)",
       "Bash(ng build)",
       "Bash(ng lint)",
-      "Bash(ng serve:*)"
+      "Bash(ng serve:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval, Observable, combineLatest, filter, switchMap } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
-import { WebSocketService, ConnectionState } from '../services/websocket.service';
+import { WebSocketManager, WebSocketService, ConnectionState, createScreensWebSocketConfig } from '../../websocket';
 
 // 临时类型定义，避免直接依赖@pro/sdk
 export interface LoggedInUsersStats {
@@ -66,6 +66,7 @@ const SIMPLE_CONFIG: WeiboUsersCardConfig = {
   selector: 'pro-weibo-logged-in-users-card',
   standalone: true,
   imports: [CommonModule],
+  providers: [WebSocketManager],
   template: `
     <div class="weibo-stats-card h-full rounded-lg shadow-lg transition-all duration-300"
          [ngClass]="getContainerClasses()"
@@ -326,9 +327,10 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   private readonly destroy$ = new Subject<void>();
   private readonly refreshTimer$ = new Subject<void>();
   private sdk: any;
+  private wsService: WebSocketService;
 
   constructor(
-    private wsService: WebSocketService
+    private wsManager: WebSocketManager
   ) {
     // 创建一个模拟实例，实际使用时应该由应用通过配置提供真实的SDK
     this.sdk = {
@@ -407,6 +409,9 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   }
 
   private initializeWebSocketConnection(): void {
+    // 使用新的 WebSocket 架构创建连接
+    const config = createScreensWebSocketConfig('http://localhost:3000', '');
+    this.wsService = this.wsManager.connectToNamespace(config);
     this.wsService.connect();
     this.observeConnectionState();
     this.subscribeToDataUpdates();
