@@ -12,8 +12,8 @@ COPY . .
 RUN bun install
 
 # 安装 Playwright 浏览器（仅在有 playwright 依赖的应用中）
-RUN cd apps/api && bunx playwright install chromium
-RUN cd apps/crawler && bunx playwright install chromium
+# RUN cd apps/api && bunx playwright install chromium
+# RUN cd apps/crawler && bunx playwright install chromium
 
 # 先构建依赖包
 RUN cd packages/types && bun run build
