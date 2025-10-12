@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://localhost:3000/api',
+  apiUrl: 'http://43.240.223.138:3000/api',
   amapApiKey: 'YOUR_AMAP_KEY',
   tokenKey: 'access_token',
   refreshTokenKey: 'refresh_token',
