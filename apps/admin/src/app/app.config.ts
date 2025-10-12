@@ -6,7 +6,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { ComponentRegistryService, WeiboLoggedInUsersCardComponent } from '@pro/components';
+import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketManager, WebSocketService, JwtAuthService } from '@pro/components';
 import { TestSimpleComponent } from './features/screens/components/test-simple.component';
 import { EventsStore } from './state/events.store';
 import { TagsStore } from './state/tags.store';
@@ -67,6 +67,12 @@ export const appConfig: ApplicationConfig = {
         const baseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
         return new SkerSDK(baseUrl, environment.tokenKey);
       }
+    },
+    // WebSocket
+    {
+      provide: WebSocketManager,
+      useFactory: (authService: JwtAuthService) => new WebSocketManager(() => new WebSocketService(authService)),
+      deps: [JwtAuthService]
     }
   ]
 };

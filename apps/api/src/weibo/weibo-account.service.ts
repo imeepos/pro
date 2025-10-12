@@ -11,6 +11,7 @@ import {
   WeiboAccountEntity,
   WeiboAccountStatus,
 } from '@pro/entities';
+import { LoggedInUsersStats } from '@pro/sdk';
 import { ScreensGateway } from '../screens/screens.gateway';
 
 /**

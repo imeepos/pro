@@ -54,13 +54,6 @@ const SIMPLE_CONFIG: WeiboUsersCardConfig = {
   selector: 'pro-weibo-logged-in-users-card',
   standalone: true,
   imports: [CommonModule],
-  providers: [
-    {
-      provide: WebSocketManager,
-      useFactory: (authService: JwtAuthService) => new WebSocketManager(() => new WebSocketService(authService)),
-      deps: [JwtAuthService]
-    }
-  ],
   template: `
     <div class="weibo-stats-card h-full rounded-lg shadow-lg transition-all duration-300"
          [ngClass]="getContainerClasses()"
