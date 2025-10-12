@@ -2,15 +2,18 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import { TokenStorageService } from './token-storage.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WebSocketService {
   private socket: Socket | null = null;
-  private readonly wsUrl = 'http://localhost:3000';
+  private readonly wsUrl: string;
 
-  constructor(private tokenStorage: TokenStorageService) {}
+  constructor(private tokenStorage: TokenStorageService) {
+    this.wsUrl = environment.apiUrl.replace('/api', '');
+  }
 
   connect(): void {
     if (this.socket?.connected) {
