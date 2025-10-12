@@ -1,21 +1,9 @@
-import { Component, OnInit, OnDestroy, Input } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, Inject, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval, Observable, combineLatest, filter, switchMap } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
 import { WebSocketManager, WebSocketService, ConnectionState, createScreensWebSocketConfig } from '../../websocket';
-
-// 临时类型定义，避免直接依赖@pro/sdk
-export interface LoggedInUsersStats {
-  total: number;
-  todayNew: number;
-  online: number;
-}
-
-export interface SkerSDK {
-  weibo: {
-    getLoggedInUsersStats: () => any;
-  };
-}
+import { SkerSDK, LoggedInUsersStats } from '@pro/sdk';
 
 export interface WeiboUsersCardConfig {
   mode?: 'edit' | 'display';
@@ -30,6 +18,8 @@ export interface WeiboUsersCardConfig {
   showErrorHandling?: boolean;
   showTrends?: boolean;
   showUpdateTime?: boolean;
+  baseUrl?: string;
+  token?: string;
 }
 
 const DEFAULT_CONFIG: WeiboUsersCardConfig = {
@@ -331,37 +321,17 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
 
   private readonly destroy$ = new Subject<void>();
   private readonly refreshTimer$ = new Subject<void>();
-  private sdk: any;
+  private sdk: SkerSDK | null = null;
   private wsService: WebSocketService;
 
   constructor(
-    private wsManager: WebSocketManager
-  ) {
-    // 创建一个模拟实例，实际使用时应该由应用通过配置提供真实的SDK
-    this.sdk = {
-      weibo: {
-        getLoggedInUsersStats: () => {
-          // 模拟数据，实际使用时应该由应用提供真实的SDK
-          return new Observable(observer => {
-            observer.next({
-              total: 0,
-              todayNew: 0,
-              online: 0
-            });
-            observer.complete();
-          });
-        }
-      }
-    };
-  }
-
-  // 提供一个方法让应用可以设置真实的SDK
-  setSDK(sdk: any): void {
-    this.sdk = sdk;
-  }
+    private wsManager: WebSocketManager,
+    @Optional() @Inject(SkerSDK) private injectedSDK?: SkerSDK
+  ) {}
 
   ngOnInit(): void {
     this.initConfig();
+    this.initSDK();
     this.loadData();
     this.initializeWebSocketConnection();
     this.setupRefreshTimer();
@@ -387,13 +357,28 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     this.config = this.mergeConfig(this.config);
   }
 
+  private initSDK(): void {
+    if (this.injectedSDK) {
+      this.sdk = this.injectedSDK;
+    } else if (this.config.baseUrl) {
+      this.sdk = new SkerSDK(this.config.baseUrl, this.config.token);
+    } else {
+      console.error('未提供 SkerSDK 实例或 baseUrl 配置');
+    }
+  }
+
   private mergeConfig(newConfig?: Partial<WeiboUsersCardConfig>): WeiboUsersCardConfig {
     const baseConfig = this.isEditMode ? DEFAULT_CONFIG : SIMPLE_CONFIG;
     return { ...baseConfig, ...newConfig };
   }
 
   private loadData(): void {
-    if (this.isLoading) return;
+    if (this.isLoading || !this.sdk) {
+      if (!this.sdk) {
+        this.setDataError('SDK 未初始化');
+      }
+      return;
+    }
 
     this.isLoading = true;
     this.clearErrorState();
@@ -401,7 +386,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     this.sdk.weibo.getLoggedInUsersStats().pipe(
       takeUntil(this.destroy$)
     ).subscribe({
-      next: (stats: any) => {
+      next: (stats: LoggedInUsersStats) => {
         this.updateStats(stats);
         this.isLoading = false;
       },
@@ -414,9 +399,17 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   }
 
   private initializeWebSocketConnection(): void {
-    // 使用新的 WebSocket 架构创建连接
-    const config = createScreensWebSocketConfig('http://localhost:3000', '');
-    this.wsService = this.wsManager.connectToNamespace(config) as WebSocketService;
+    const baseUrl = this.config.baseUrl;
+    const token = this.config.token;
+
+    if (!baseUrl) {
+      console.error('无法初始化 WebSocket：未提供 baseUrl');
+      this.setNetworkError('WebSocket 配置缺失');
+      return;
+    }
+
+    const wsConfig = createScreensWebSocketConfig(baseUrl, token);
+    this.wsService = this.wsManager.connectToNamespace(wsConfig) as WebSocketService;
     this.observeConnectionState();
     this.subscribeToDataUpdates();
   }

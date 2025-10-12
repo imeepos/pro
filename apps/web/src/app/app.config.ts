@@ -6,6 +6,7 @@ import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { ComponentRegistryService, WeiboLoggedInUsersCardComponent } from '@pro/components';
 import { SkerSDK } from '@pro/sdk';
+import { TokenStorageService } from './core/services/token-storage.service';
 import { environment } from '../environments/environment';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
@@ -37,7 +38,12 @@ export const appConfig: ApplicationConfig = {
     // SDK
     {
       provide: SkerSDK,
-      useFactory: () => new SkerSDK(environment.apiUrl)
+      useFactory: (tokenStorage: TokenStorageService) => {
+        const token = tokenStorage.getToken();
+        const baseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
+        return new SkerSDK(baseUrl, token || undefined);
+      },
+      deps: [TokenStorageService]
     }
   ]
 };

@@ -74,7 +74,7 @@ export class SkerSDK {
   public apiKey: ApiKeyApi;
   public dashboard: DashboardApi;
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, token?: string) {
     this.event = new EventApi(baseUrl);
     this.tag = new TagApi(baseUrl);
     this.attachment = new AttachmentApi(baseUrl);
@@ -83,9 +83,9 @@ export class SkerSDK {
     this.config = new ConfigApi(baseUrl);
     this.auth = new AuthApi(baseUrl);
     this.user = new UserApi(baseUrl);
-    this.weibo = new WeiboApi();
+    this.weibo = new WeiboApi(baseUrl, token);
     this.weiboSearchTasks = new WeiboSearchTasksApi(baseUrl);
-    this.screen = new ScreenApi();
+    this.screen = new ScreenApi(baseUrl, token);
     this.apiKey = new ApiKeyApi(baseUrl);
     this.dashboard = new DashboardApi(baseUrl);
   }

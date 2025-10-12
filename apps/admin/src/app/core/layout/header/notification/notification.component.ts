@@ -1,6 +1,6 @@
 import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { WebSocketService } from '../../../services/websocket.service';
+import { LegacyWebSocketService as WebSocketService } from '@pro/components';
 import { Subscription } from 'rxjs';
 
 interface Notification {

@@ -11,7 +11,21 @@ export class WeiboApi {
 
   constructor(baseUrl?: string, tokenKey?: string) {
     this.baseUrl = baseUrl || 'http://localhost:3000';
+
+    if (!this.isValidUrl(this.baseUrl)) {
+      throw new Error(`无效的 baseUrl: ${this.baseUrl}，必须是有效的 HTTP/HTTPS URL`);
+    }
+
     this.http = new HttpClient(this.baseUrl, tokenKey);
+  }
+
+  private isValidUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      return ['http:', 'https:'].includes(parsed.protocol);
+    } catch {
+      return false;
+    }
   }
 
   /**

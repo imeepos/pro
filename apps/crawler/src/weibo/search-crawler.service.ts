@@ -6,6 +6,8 @@ import { WeiboAccountService, WeiboAccount } from './account.service';
 import { BrowserService } from '../browser/browser.service';
 import { RawDataService } from '../raw-data/raw-data.service';
 import { RabbitMQClient } from '@pro/rabbitmq';
+import { RobotsService } from '../robots/robots.service';
+import { RequestMonitorService } from '../monitoring/request-monitor.service';
 import { CrawlerConfig, RabbitMQConfig, WeiboConfig } from '../config/crawler.interface';
 
 export interface SubTaskMessage {
@@ -36,6 +38,8 @@ export class WeiboSearchCrawlerService {
     private readonly accountService: WeiboAccountService,
     private readonly browserService: BrowserService,
     private readonly rawDataService: RawDataService,
+    private readonly robotsService: RobotsService,
+    private readonly requestMonitorService: RequestMonitorService,
     @Inject('CRAWLER_CONFIG') private readonly crawlerConfig: CrawlerConfig,
     @Inject('RABBITMQ_CONFIG') private readonly rabbitmqConfig: RabbitMQConfig,
     @Inject('WEIBO_CONFIG') private readonly weiboConfig: WeiboConfig
@@ -168,7 +172,27 @@ export class WeiboSearchCrawlerService {
   }
 
   private async getPageHtml(page: Page, url: string): Promise<string> {
+    const startTime = Date.now();
+    let success = false;
+
     try {
+      // 检查 robots.txt 规则
+      const isAllowed = await this.robotsService.isUrlAllowed(url);
+      if (!isAllowed) {
+        throw new Error(`被 robots.txt 规则阻止访问: ${url}`);
+      }
+
+      // 等待适当的延迟时间
+      await this.requestMonitorService.waitForNextRequest();
+
+      // 获取推荐的爬取延迟
+      const crawlDelay = await this.robotsService.getCrawlDelay(url);
+      const actualDelay = Math.max(crawlDelay * 1000, this.requestMonitorService.getCurrentDelay());
+
+      if (actualDelay > this.crawlerConfig.requestDelay.max) {
+        this.logger.warn(`根据 robots.txt 或监控规则调整延迟为: ${actualDelay}ms`);
+      }
+
       await page.goto(url, {
         waitUntil: 'networkidle',
         timeout: this.crawlerConfig.pageTimeout
@@ -179,9 +203,18 @@ export class WeiboSearchCrawlerService {
       });
 
       const html = await page.content();
+      success = true;
+
+      const duration = Date.now() - startTime;
+      this.requestMonitorService.recordRequest(url, success, duration);
+
+      this.logger.debug(`成功获取页面: ${url} - 耗时: ${duration}ms`);
       return html;
     } catch (error) {
-      this.logger.error(`获取页面HTML失败: ${url}`, error);
+      const duration = Date.now() - startTime;
+      this.requestMonitorService.recordRequest(url, success, duration);
+
+      this.logger.error(`获取页面HTML失败: ${url} - 耗时: ${duration}ms`, error);
       throw error;
     }
   }
@@ -324,8 +357,13 @@ export class WeiboSearchCrawlerService {
   }
 
   private async randomDelay(minMs: number, maxMs: number): Promise<void> {
-    const delay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-    await new Promise(resolve => setTimeout(resolve, delay));
+    // 结合监控系统的自适应延迟和传统的随机延迟
+    const adaptiveDelay = this.requestMonitorService.getCurrentDelay();
+    const randomDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+    const finalDelay = Math.max(adaptiveDelay, randomDelay);
+
+    this.logger.debug(`应用延迟: ${finalDelay}ms (自适应: ${adaptiveDelay}ms, 随机: ${randomDelay}ms)`);
+    await new Promise(resolve => setTimeout(resolve, finalDelay));
   }
 
   private async handleTaskResult(message: SubTaskMessage, result: CrawlResult): Promise<void> {
@@ -468,5 +506,22 @@ export class WeiboSearchCrawlerService {
       await this.accountService.markAccountBanned(accountId);
       return false;
     }
+  }
+
+  // 新增方法：获取请求统计信息
+  async getRequestStats(): Promise<any> {
+    return {
+      rateStats: this.requestMonitorService.getCurrentStats(),
+      detailedStats: this.requestMonitorService.getDetailedStats(),
+      robotsCache: this.robotsService.getCacheInfo(),
+      currentDelay: this.requestMonitorService.getCurrentDelay(),
+    };
+  }
+
+  // 新增方法：重置监控系统
+  async resetMonitoring(): Promise<void> {
+    this.requestMonitorService.reset();
+    this.robotsService.clearCache();
+    this.logger.log('请求监控和 robots.txt 缓存已重置');
   }
 }

@@ -33,6 +33,29 @@ export interface CrawlerConfig {
     blockResources: boolean; // 是否拦截资源文件
     simulateHuman: boolean; // 是否模拟人类行为
   };
+
+  // Robots.txt 配置
+  robots: {
+    enabled: boolean; // 是否启用 robots.txt 检查
+    userAgent: string; // 机器人名称，默认 '*'
+    respectCrawlDelay: boolean; // 是否遵守 crawl-delay
+    fallbackDelay: number; // 无法获取 crawl-delay 时的默认延迟（秒）
+    cacheTimeout: number; // robots.txt 缓存时间（毫秒）
+  };
+
+  // 请求频率监控配置
+  rateMonitoring: {
+    enabled: boolean; // 是否启用请求频率监控
+    windowSizeMs: number; // 监控窗口大小（毫秒）
+    maxRequestsPerWindow: number; // 每个窗口最大请求数
+    adaptiveDelay: {
+      enabled: boolean; // 是否启用自适应延迟
+      increaseFactor: number; // 延迟增加因子
+      decreaseFactor: number; // 延迟减少因子
+      maxDelayMs: number; // 最大延迟毫秒数
+      minDelayMs: number; // 最小延迟毫秒数
+    };
+  };
 }
 
 export interface RabbitMQConfig {

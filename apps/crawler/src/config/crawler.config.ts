@@ -35,6 +35,27 @@ export const createCrawlerConfig = (configService: ConfigService): CrawlerConfig
     ],
     blockResources: true,
     simulateHuman: true
+  },
+
+  robots: {
+    enabled: configService.get<boolean>('ROBOTS_ENABLED', true),
+    userAgent: configService.get<string>('ROBOTS_USER_AGENT', 'ProCrawler'),
+    respectCrawlDelay: configService.get<boolean>('ROBOTS_RESPECT_CRAWL_DELAY', true),
+    fallbackDelay: configService.get<number>('ROBOTS_FALLBACK_DELAY', 3),
+    cacheTimeout: configService.get<number>('ROBOTS_CACHE_TIMEOUT', 3600000) // 1小时
+  },
+
+  rateMonitoring: {
+    enabled: configService.get<boolean>('RATE_MONITORING_ENABLED', true),
+    windowSizeMs: configService.get<number>('RATE_WINDOW_SIZE_MS', 60000), // 1分钟
+    maxRequestsPerWindow: configService.get<number>('RATE_MAX_REQUESTS_PER_WINDOW', 10),
+    adaptiveDelay: {
+      enabled: configService.get<boolean>('ADAPTIVE_DELAY_ENABLED', true),
+      increaseFactor: configService.get<number>('ADAPTIVE_DELAY_INCREASE_FACTOR', 1.5),
+      decreaseFactor: configService.get<number>('ADAPTIVE_DELAY_DECREASE_FACTOR', 0.8),
+      maxDelayMs: configService.get<number>('ADAPTIVE_DELAY_MAX_MS', 30000),
+      minDelayMs: configService.get<number>('ADAPTIVE_DELAY_MIN_MS', 1000)
+    }
   }
 });
 

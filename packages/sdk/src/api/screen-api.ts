@@ -14,9 +14,25 @@ import {
  */
 export class ScreenApi {
   private readonly httpClient: HttpClient;
+  private readonly baseUrl: string;
 
   constructor(baseUrl?: string, tokenKey?: string) {
-    this.httpClient = new HttpClient(baseUrl || 'http://localhost:3000', tokenKey);
+    this.baseUrl = baseUrl || 'http://localhost:3000';
+
+    if (!this.isValidUrl(this.baseUrl)) {
+      throw new Error(`无效的 baseUrl: ${this.baseUrl}，必须是有效的 HTTP/HTTPS URL`);
+    }
+
+    this.httpClient = new HttpClient(this.baseUrl, tokenKey);
+  }
+
+  private isValidUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      return ['http:', 'https:'].includes(parsed.protocol);
+    } catch {
+      return false;
+    }
   }
 
   /**

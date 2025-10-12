@@ -3,6 +3,8 @@ import { WeiboSearchCrawlerService, SubTaskMessage } from '../weibo/search-crawl
 import { WeiboAccountService } from '../weibo/account.service';
 import { BrowserService } from '../browser/browser.service';
 import { RawDataService } from '../raw-data/raw-data.service';
+import { RobotsService } from '../robots/robots.service';
+import { RequestMonitorService } from '../monitoring/request-monitor.service';
 import { ConfigService } from '@nestjs/config';
 import { CrawlerConfig, RabbitMQConfig, WeiboConfig } from '../config/crawler.interface';
 import { WeiboAccountStatus } from '@pro/entities';
@@ -12,6 +14,8 @@ describe('WeiboSearchCrawlerService', () => {
   let mockAccountService: jest.Mocked<WeiboAccountService>;
   let mockBrowserService: jest.Mocked<BrowserService>;
   let mockRawDataService: jest.Mocked<RawDataService>;
+  let mockRobotsService: jest.Mocked<RobotsService>;
+  let mockRequestMonitorService: jest.Mocked<RequestMonitorService>;
   let mockConfigService: jest.Mocked<ConfigService>;
 
   const mockCrawlerConfig: CrawlerConfig = {
@@ -33,6 +37,25 @@ describe('WeiboSearchCrawlerService', () => {
       randomUserAgents: ['test-agent'],
       blockResources: true,
       simulateHuman: true
+    },
+    robots: {
+      enabled: true,
+      userAgent: 'TestCrawler',
+      respectCrawlDelay: true,
+      fallbackDelay: 3,
+      cacheTimeout: 3600000
+    },
+    rateMonitoring: {
+      enabled: true,
+      windowSizeMs: 60000,
+      maxRequestsPerWindow: 10,
+      adaptiveDelay: {
+        enabled: true,
+        increaseFactor: 1.5,
+        decreaseFactor: 0.8,
+        maxDelayMs: 30000,
+        minDelayMs: 1000
+      }
     }
   };
 
@@ -104,6 +127,37 @@ describe('WeiboSearchCrawlerService', () => {
       searchContent: jest.fn()
     } as any;
 
+    mockRobotsService = {
+      isUrlAllowed: jest.fn().mockResolvedValue(true),
+      getCrawlDelay: jest.fn().mockResolvedValue(3),
+      clearCache: jest.fn(),
+      getCacheInfo: jest.fn().mockReturnValue([])
+    } as any;
+
+    mockRequestMonitorService = {
+      recordRequest: jest.fn(),
+      waitForNextRequest: jest.fn().mockResolvedValue(undefined),
+      getCurrentStats: jest.fn().mockReturnValue({
+        currentDelayMs: 1500,
+        requestsPerSecond: 0.5,
+        successRate: 1,
+        averageResponseTime: 500,
+        windowSize: 60,
+        maxRequestsPerWindow: 10,
+        isThrottling: false
+      }),
+      getDetailedStats: jest.fn().mockReturnValue({
+        totalRequests: 10,
+        lastMinuteStats: {},
+        lastHourStats: {},
+        topUrls: [],
+        errorPattern: []
+      }),
+      getCurrentDelay: jest.fn().mockReturnValue(1500),
+      setCurrentDelay: jest.fn(),
+      reset: jest.fn()
+    } as any;
+
     mockConfigService = {
       get: jest.fn()
     } as any;
@@ -122,6 +176,14 @@ describe('WeiboSearchCrawlerService', () => {
         {
           provide: RawDataService,
           useValue: mockRawDataService
+        },
+        {
+          provide: RobotsService,
+          useValue: mockRobotsService
+        },
+        {
+          provide: RequestMonitorService,
+          useValue: mockRequestMonitorService
         },
         {
           provide: ConfigService,

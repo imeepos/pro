@@ -12,6 +12,8 @@ import { BrowserService } from './browser/browser.service';
 import { WeiboSearchCrawlerService } from './weibo/search-crawler.service';
 import { RawDataService } from './raw-data/raw-data.service';
 import { CrawlQueueConsumer } from './crawl-queue.consumer';
+import { RobotsService } from './robots/robots.service';
+import { RequestMonitorService } from './monitoring/request-monitor.service';
 import {
   createCrawlerConfig,
   createRabbitMQConfig,
@@ -98,6 +100,8 @@ import { createDatabaseConfig } from '@pro/entities';
     AppService,
     WeiboAccountService,
     BrowserService,
+    RobotsService,
+    RequestMonitorService,
     WeiboSearchCrawlerService,
     RawDataService,
     CrawlQueueConsumer,
