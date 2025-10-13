@@ -238,25 +238,49 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
     return cleaned;
   }
 
+  // 根据类型获取对应的权限数组
+  private getPermissionsByType(type: ApiKeyType): string[] {
+    switch (type) {
+      case ApiKeyType.READ_ONLY:
+        return ['read:events', 'read:users', 'read:config'];
+      case ApiKeyType.READ_WRITE:
+        return ['read:events', 'write:events', 'read:users', 'read:config'];
+      case ApiKeyType.ADMIN:
+        return ['read:events', 'write:events', 'delete:events', 'read:users', 'write:users', 'read:config', 'write:config', 'admin:all'];
+      default:
+        return [];
+    }
+  }
+
   // 创建更新数据对象
   private createUpdateData(formValue: any, typeValue: ApiKeyType, expiresAt: string | null | undefined): UpdateApiKeyDto {
+    // 如果权限为空或未定义，根据类型自动设置对应的权限
+    const permissions = formValue.permissions && formValue.permissions.length > 0
+      ? formValue.permissions
+      : this.getPermissionsByType(typeValue);
+
     return {
       name: formValue.name?.trim() || '',
       description: formValue.description?.trim() || undefined,
       type: typeValue,
       expiresAt: expiresAt,
-      permissions: formValue.permissions || []
+      permissions: permissions
     };
   }
 
   // 创建数据对象
   private createCreateData(formValue: any, typeValue: ApiKeyType, expiresAt: string | null | undefined): CreateApiKeyDto {
+    // 如果权限为空或未定义，根据类型自动设置对应的权限
+    const permissions = formValue.permissions && formValue.permissions.length > 0
+      ? formValue.permissions
+      : this.getPermissionsByType(typeValue);
+
     return {
       name: formValue.name?.trim() || '',
       description: formValue.description?.trim() || undefined,
       type: typeValue,
       expiresAt: expiresAt,
-      permissions: formValue.permissions || []
+      permissions: permissions
     };
   }
 

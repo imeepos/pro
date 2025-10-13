@@ -119,7 +119,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     ).subscribe(types => {
       this.industryTypeOptions = types.map(type => ({
         value: String(type.id),
-        label: type.industryName
+        label: type.industryCode
       }));
     });
   }
