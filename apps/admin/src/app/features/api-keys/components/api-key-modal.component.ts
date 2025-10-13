@@ -132,14 +132,29 @@ export class ApiKeyModalComponent implements OnInit, OnDestroy {
   private handleEdit(data: UpdateApiKeyDto): void {
     if (!this.apiKey) return;
 
+    console.log('🔍 [API Key Modal] 开始处理编辑操作:', {
+      apiKeyId: this.apiKey.id,
+      currentType: this.apiKey.type,
+      updateData: data
+    });
+
     this.apiKeyService.updateApiKey(this.apiKey.id, data)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (apiKey) => {
-          this.updated.emit(apiKey);
+          console.log('✅ [API Key Modal] API Key 更新成功，准备发送事件:', apiKey);
+          // 确保数据更新后再关闭模态框
+          setTimeout(() => {
+            this.updated.emit(apiKey);
+            console.log('📤 [API Key Modal] 已发送更新事件，将在延迟后关闭模态框');
+            // 延迟关闭以确保列表组件接收到更新事件
+            setTimeout(() => {
+              this.onClose();
+            }, 100);
+          }, 50);
         },
         error: (error) => {
-          console.error('更新 API Key 失败:', error);
+          console.error('❌ [API Key Modal] 更新 API Key 失败:', error);
         }
       });
   }

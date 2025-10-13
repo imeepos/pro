@@ -1,19 +1,16 @@
 <!-- 模态框背景 -->
-<div class="overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
      *ngIf="visible"
      (click)="onBackdropClick($event)"
      (keydown)="onKeydown($event)"
      tabindex="-1">
-
-  <!-- 背景遮罩 -->
-  <div class="fixed inset-0 bg-gray-900 bg-opacity-50 dark:bg-opacity-80"></div>
 
   <!-- 模态框容器 -->
   <div class="relative p-4 w-full max-w-3xl max-h-full"
        (click)="onModalClick($event)">
 
     <!-- 创建/编辑表单 -->
-    <div class="relative bg-white rounded-lg shadow dark:bg-gray-700"
+    <div class="relative bg-white rounded-lg shadow-xl dark:bg-gray-700"
          *ngIf="isFormVisible()">
 
       <!-- 模态框头部 -->
@@ -58,7 +55,7 @@
     </div>
 
     <!-- 删除/重新生成确认 -->
-    <div class="relative bg-white rounded-lg shadow dark:bg-gray-700"
+    <div class="relative bg-white rounded-lg shadow-xl dark:bg-gray-700"
          *ngIf="isConfirmVisible()">
 
       <!-- 模态框头部 -->
@@ -157,7 +154,7 @@
         <!-- 操作按钮 -->
         <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">
           <button type="button"
-                  class="py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   (click)="onClose()"
                   [disabled]="loading">
             取消
@@ -178,7 +175,7 @@
     </div>
 
     <!-- 新 API Key 显示 -->
-    <div class="relative bg-white rounded-lg shadow dark:bg-gray-700"
+    <div class="relative bg-white rounded-lg shadow-xl dark:bg-gray-700"
          *ngIf="isNewKeyVisible()">
 
       <!-- 模态框头部 -->

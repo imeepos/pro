@@ -44,20 +44,7 @@
             </p>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-              行业类型 <span class="text-red-500">*</span>
-            </label>
-            <app-select
-              [options]="industryOptions"
-              [formControl]="industryIdControl"
-              placeholder="请选择行业类型"
-            ></app-select>
-            <p *ngIf="isFieldInvalid('industryId')" class="mt-1 text-sm text-red-600 dark:text-red-400">
-              {{ getFieldError('industryId') }}
-            </p>
-          </div>
-
+  
           <div>
             <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
               描述

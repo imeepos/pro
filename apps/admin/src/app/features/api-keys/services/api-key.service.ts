@@ -116,15 +116,21 @@ export class ApiKeyService {
 
   // 更新 API Key
   updateApiKey(id: number, updates: UpdateApiKeyDto): Observable<ApiKey> {
+    console.log('🔍 [API Key Service] 开始更新 API Key:', { id, updates });
     this.setLoading(true);
     this.clearError();
 
     return this.sdk.apiKey.update(id, updates).pipe(
       tap((apiKey: ApiKey) => {
+        console.log('✅ [API Key Service] API Key 更新成功:', apiKey);
         this.setLoading(false);
         this.updateApiKeyInList(apiKey);
+        // 强制重新加载列表以确保数据一致性
+        console.log('🔄 [API Key Service] 重新加载列表以确保数据一致性');
+        this.loadApiKeys();
       }),
       catchError((error) => {
+        console.error('❌ [API Key Service] API Key 更新失败:', error);
         this.handleError('更新 API Key 失败', error);
         return of();
       })
@@ -339,13 +345,24 @@ export class ApiKeyService {
   }
 
   private updateApiKeyInList(updatedApiKey: ApiKey): void {
+    console.log('🔍 [API Key Service] 更新列表中的 API Key:', updatedApiKey);
     const currentApiKeys = this.apiKeysSubject.value;
     const index = currentApiKeys.findIndex(key => key.id === updatedApiKey.id);
 
     if (index !== -1) {
       const updatedList = [...currentApiKeys];
+      const oldKey = updatedList[index];
       updatedList[index] = updatedApiKey;
+      console.log('🔄 [API Key Service] 列表更新:', {
+        id: updatedApiKey.id,
+        oldType: oldKey.type,
+        newType: updatedApiKey.type,
+        oldStatus: oldKey.status,
+        newStatus: updatedApiKey.status
+      });
       this.apiKeysSubject.next(updatedList);
+    } else {
+      console.warn('⚠️ [API Key Service] 未找到要更新的 API Key:', updatedApiKey.id);
     }
   }
 

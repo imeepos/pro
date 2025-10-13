@@ -8,6 +8,7 @@ import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig, createNotificationWebSocketConfig } from '@pro/components';
 import { TestSimpleComponent } from './features/screens/components/test-simple.component';
 import { TokenStorageService } from './core/services/token-storage.service';
+import { AuthService } from './state/auth.service';
 import { SkerSDK } from '@pro/sdk';
 import { environment } from '../environments/environment';
 
@@ -50,6 +51,12 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
   };
 }
 
+function initializeAuth(authService: AuthService) {
+  return () => {
+    return authService.restoreAuthSession().toPromise();
+  };
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     // Angular 核心 providers
@@ -78,6 +85,14 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER,
       useFactory: initializeComponentRegistry,
       deps: [ComponentRegistryService],
+      multi: true
+    },
+
+    // 认证状态初始化
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeAuth,
+      deps: [AuthService],
       multi: true
     },
 

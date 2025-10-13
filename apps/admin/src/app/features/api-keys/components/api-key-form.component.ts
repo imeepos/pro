@@ -162,6 +162,12 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
       }
     }
 
+    console.log('🔄 [API Key Form] 类型转换结果:', {
+      original: formValue.type,
+      converted: typeValue,
+      convertedType: typeof typeValue
+    });
+
     if (this.isEditMode && this.apiKey) {
       const updateData: UpdateApiKeyDto = {
         name: formValue.name?.trim() || '',
@@ -170,7 +176,12 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
         expiresAt: formValue.expiresAt || undefined,
         permissions: formValue.permissions || []
       };
-      console.log('✅ [API Key Form] 发送更新数据:', updateData);
+      console.log('✅ [API Key Form] 准备发送更新数据:', {
+        id: this.apiKey.id,
+        currentType: this.apiKey.type,
+        newType: updateData.type,
+        updateData
+      });
       this.submit.emit(updateData);
     } else {
       const createData: CreateApiKeyDto = {
