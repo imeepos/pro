@@ -124,7 +124,7 @@ src/
 ```typescript
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000/api',
+  apiUrl: 'xxx',
   amapApiKey: 'YOUR_AMAP_KEY',
   tokenKey: 'access_token',
   refreshTokenKey: 'refresh_token',

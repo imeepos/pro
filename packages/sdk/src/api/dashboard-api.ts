@@ -9,7 +9,10 @@ export class DashboardApi {
   private readonly http: HttpClient;
 
   constructor(baseUrl?: string, tokenKey?: string) {
-    this.http = new HttpClient(baseUrl || 'http://localhost:3000', tokenKey);
+    if (!baseUrl) {
+      throw new Error(`DashboardApi missing base url`);
+    }
+    this.http = new HttpClient(baseUrl, tokenKey);
   }
 
   /**
@@ -30,13 +33,13 @@ export class DashboardApi {
    * 获取 Dashboard 统计数据 (Observable 版本)
    */
   getStats$ = (): Observable<DashboardStats> => {
-    return new Observable<DashboardStats>(subscriber => {
+    return new Observable<DashboardStats>((subscriber) => {
       this.getStats()
-        .then(result => {
+        .then((result) => {
           subscriber.next(result);
           subscriber.complete();
         })
-        .catch(error => {
+        .catch((error) => {
           subscriber.error(error);
         });
     });
@@ -46,13 +49,13 @@ export class DashboardApi {
    * 获取最近活动数据 (Observable 版本)
    */
   getRecentActivities$ = (): Observable<RecentActivity[]> => {
-    return new Observable<RecentActivity[]>(subscriber => {
+    return new Observable<RecentActivity[]>((subscriber) => {
       this.getRecentActivities()
-        .then(result => {
+        .then((result) => {
           subscriber.next(result);
           subscriber.complete();
         })
-        .catch(error => {
+        .catch((error) => {
           subscriber.error(error);
         });
     });

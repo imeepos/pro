@@ -11,7 +11,10 @@ export class AuthApi implements IAuthService {
   private http: HttpClient;
 
   constructor(baseUrl?: string, tokenKey?: string) {
-    const apiBaseUrl = baseUrl || 'http://localhost:3000';
+    if(!baseUrl){
+      throw new Error(`AuthApi missing base url!`)
+    }
+    const apiBaseUrl = baseUrl;
     this.http = new HttpClient(apiBaseUrl, tokenKey);
   }
 

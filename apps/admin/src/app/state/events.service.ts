@@ -20,7 +20,7 @@ export class EventsService {
     private store: EventsStore,
     private query: EventsQuery
   ) {
-    this.api = new EventApi(environment.apiUrl || 'http://localhost:3000');
+    this.api = new EventApi(environment.apiUrl);
   }
 
   loadEvents(params: EventQueryParams): Observable<void> {

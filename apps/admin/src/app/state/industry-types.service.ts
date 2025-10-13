@@ -18,7 +18,7 @@ export class IndustryTypesService {
     private store: IndustryTypesStore,
     private query: IndustryTypesQuery
   ) {
-    this.api = new IndustryTypeApi(environment.apiUrl || 'http://localhost:3000');
+    this.api = new IndustryTypeApi(environment.apiUrl);
   }
 
   loadIndustryTypes(): Observable<void> {

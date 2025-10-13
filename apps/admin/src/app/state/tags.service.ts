@@ -13,7 +13,7 @@ export class TagsService {
     private store: TagsStore,
     private query: TagsQuery
   ) {
-    this.api = new TagApi(environment.apiUrl || 'http://localhost:3000');
+    this.api = new TagApi(environment.apiUrl);
   }
 
   loadTags(params?: { page?: number; pageSize?: number; keyword?: string }): Observable<void> {

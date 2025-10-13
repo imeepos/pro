@@ -11,7 +11,10 @@ export class UserApi {
   private readonly baseUrl: string;
 
   constructor(baseUrl?: string, tokenKey?: string) {
-    this.baseUrl = baseUrl || 'http://localhost:3000';
+    if (!baseUrl) {
+      throw new Error(`UserApi missing base url!`);
+    }
+    this.baseUrl = baseUrl;
     this.http = new HttpClient(this.baseUrl, tokenKey);
   }
 

@@ -316,7 +316,7 @@ bun run dev
 ### 健康检查
 ```bash
 # API 健康检查
-curl http://localhost:3000/health
+curl http://xxx:3000/health
 
 # 各服务状态监控
 docker compose ps

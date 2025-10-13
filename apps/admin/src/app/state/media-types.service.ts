@@ -18,7 +18,7 @@ export class MediaTypesService {
     private store: MediaTypesStore,
     private query: MediaTypesQuery
   ) {
-    this.sdk = new MediaTypeSdkImpl(environment.apiUrl || 'http://localhost:3000');
+    this.sdk = new MediaTypeSdkImpl(environment.apiUrl);
   }
 
   loadMediaTypes(): Observable<void> {

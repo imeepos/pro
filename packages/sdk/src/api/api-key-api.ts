@@ -72,7 +72,10 @@ export class ApiKeyApi {
   private readonly baseUrl = '/api/api-keys';
 
   constructor(baseUrl?: string, tokenKey?: string) {
-    const resolvedBaseUrl = baseUrl || 'http://localhost:3000';
+    if (!baseUrl) {
+      throw new Error(`ApiKeyApi missing base url!`);
+    }
+    const resolvedBaseUrl = baseUrl;
     this.http = new HttpClient(resolvedBaseUrl, tokenKey);
   }
 
@@ -90,13 +93,15 @@ export class ApiKeyApi {
 
   create(dto: CreateApiKeyDto): Observable<ApiKey> {
     return fromPromise(
-      this.http.post<ApiKeyRecord>(this.baseUrl, dto).then((record) => adaptApiKey(record))
+      this.http.post<ApiKeyRecord>(this.baseUrl, dto).then((record) => adaptApiKey(record)),
     );
   }
 
   update(id: number, updates: UpdateApiKeyDto): Observable<ApiKey> {
     return fromPromise(
-      this.http.put<ApiKeyRecord>(`${this.baseUrl}/${id}`, updates).then((record) => adaptApiKey(record))
+      this.http
+        .put<ApiKeyRecord>(`${this.baseUrl}/${id}`, updates)
+        .then((record) => adaptApiKey(record)),
     );
   }
 
@@ -106,17 +111,13 @@ export class ApiKeyApi {
 
   activate(id: number): Observable<ApiKey> {
     return fromPromise(
-      this.http
-        .put<void>(`${this.baseUrl}/${id}/enable`, {})
-        .then(() => this.fetchOne(id))
+      this.http.put<void>(`${this.baseUrl}/${id}/enable`, {}).then(() => this.fetchOne(id)),
     );
   }
 
   deactivate(id: number): Observable<ApiKey> {
     return fromPromise(
-      this.http
-        .put<void>(`${this.baseUrl}/${id}/disable`, {})
-        .then(() => this.fetchOne(id))
+      this.http.put<void>(`${this.baseUrl}/${id}/disable`, {}).then(() => this.fetchOne(id)),
     );
   }
 
@@ -126,15 +127,13 @@ export class ApiKeyApi {
 
   regenerate(id: number): Observable<ApiKeyRegenerationResponse> {
     return fromPromise(
-      this.http
-        .post<string>(`${this.baseUrl}/${id}/regenerate`, {})
-        .then((newKey) =>
-          this.fetchOne(id).then((apiKey) => ({
-            oldKeyId: id,
-            newApiKey: { ...apiKey, key: newKey },
-            message: '新的 API Key 已生成，请立即保存。',
-          }))
-        )
+      this.http.post<string>(`${this.baseUrl}/${id}/regenerate`, {}).then((newKey) =>
+        this.fetchOne(id).then((apiKey) => ({
+          oldKeyId: id,
+          newApiKey: { ...apiKey, key: newKey },
+          message: '新的 API Key 已生成，请立即保存。',
+        })),
+      ),
     );
   }
 
@@ -149,7 +148,7 @@ export class ApiKeyApi {
         averageRequestsPerDay: stats.averageDailyUsage,
         peakUsageDay: undefined,
         endpointsUsed: [],
-      }))
+      })),
     );
   }
 
@@ -158,7 +157,7 @@ export class ApiKeyApi {
       Promise.resolve({
         valid: false,
         error: 'API Key 验证功能暂未开放',
-      })
+      }),
     );
   }
 
@@ -195,11 +194,14 @@ export class ApiKeyApi {
         page,
         limit,
         totalPages: 0,
-      })
+      }),
     );
   }
 
-  getActivityLogsForApiKey(_id: number, filters?: ApiKeyActivityFilters): Observable<ApiKeyActivityListResponse> {
+  getActivityLogsForApiKey(
+    _id: number,
+    filters?: ApiKeyActivityFilters,
+  ): Observable<ApiKeyActivityListResponse> {
     return this.getActivityLogs(filters);
   }
 
@@ -212,7 +214,10 @@ export class ApiKeyApi {
   }
 
   private async fetchList(filters?: ApiKeyFilters): Promise<ApiKeyListResponse> {
-    const payload = await this.http.get<ApiKeyListPayload>(this.baseUrl, this.buildQueryParams(filters));
+    const payload = await this.http.get<ApiKeyListPayload>(
+      this.baseUrl,
+      this.buildQueryParams(filters),
+    );
 
     return {
       data: payload.items.map((item) => adaptApiKey(item)),

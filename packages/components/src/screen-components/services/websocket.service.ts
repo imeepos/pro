@@ -7,13 +7,21 @@
  *
  * Example migration:
  * ```typescript
- * // Old approach
+ * // Old approach (before fix)
  * constructor(private ws: WebSocketService) {}
  * this.ws.connect(token);
  *
- * // New approach
+ * // Fixed approach (after this fix)
+ * constructor(private ws: WebSocketService) {}
+ * this.ws.connect({
+ *   url: environment.wsUrl,
+ *   token: token,
+ *   namespace: environment.wsNamespace || 'screens'
+ * });
+ *
+ * // New approach (recommended)
  * constructor(private wsManager: WebSocketManager) {}
- * const config = createScreensWebSocketConfig('http://localhost:3000', token);
+ * const config = createScreensWebSocketConfig(environment.wsUrl, token);
  * this.ws = this.wsManager.connectToNamespace(config);
  * ```
  */
@@ -23,7 +31,8 @@ import { io, Socket } from 'socket.io-client';
 
 export interface WebSocketConfig {
   token?: string;
-  url?: string;
+  url: string;
+  namespace?: string;
 }
 
 export enum ConnectionState {
@@ -44,7 +53,6 @@ interface PendingSubscription {
 })
 export class WebSocketService {
   private socket: Socket | null = null;
-  private readonly wsUrl = 'http://localhost:3000';
   private config: WebSocketConfig | null = null;
 
   private readonly connectionState$ = new BehaviorSubject<ConnectionState>(ConnectionState.Disconnected);
@@ -65,10 +73,10 @@ export class WebSocketService {
     );
   }
 
-  connect(token?: string): void {
+  connect(config: WebSocketConfig): void {
     if (this.connectionState$.value === ConnectionState.Connected) return;
 
-    this.config = { token, url: this.wsUrl };
+    this.config = config;
     this.establishConnection();
   }
 
@@ -96,11 +104,17 @@ export class WebSocketService {
   }
 
   private establishConnection(): void {
-    const { token } = this.config || {};
+    const { token, url, namespace = 'screens' } = this.config || {};
+
+    if (!url) {
+      console.error('WebSocket URL not provided');
+      this.connectionState$.next(ConnectionState.Failed);
+      return;
+    }
 
     this.connectionState$.next(ConnectionState.Connecting);
 
-    this.socket = io(`${this.wsUrl}/screens`, {
+    this.socket = io(`${url}/${namespace}`, {
       auth: { token },
       transports: ['websocket', 'polling'],
       timeout: 5000,

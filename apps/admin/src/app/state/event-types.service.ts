@@ -18,7 +18,7 @@ export class EventTypesService {
     private store: EventTypesStore,
     private query: EventTypesQuery
   ) {
-    this.api = new EventTypeApi(environment.apiUrl || 'http://localhost:3000');
+    this.api = new EventTypeApi(environment.apiUrl);
   }
 
   loadEventTypes(): Observable<void> {

@@ -116,7 +116,7 @@ wsService.on('weibo:logged-in-users:update').subscribe(stats => {
 ```typescript
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000/api',
+  apiUrl: 'http://xxx:3000/api',
   tokenKey: 'access_token',
   refreshTokenKey: 'refresh_token',
   timeout: 30000
