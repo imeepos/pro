@@ -307,38 +307,22 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
         componentClass: componentClass.name
       });
 
-      // 增强的组件创建过程
-      this.componentRef = this.createComponentWithRetry(viewContainerRef, componentClass);
+      // 异步组件创建过程
+      this.createComponentAsync(viewContainerRef, componentClass)
+        .then(componentRef => {
+          if (!componentRef) {
+            console.error('[ShapeComponent] 组件创建返回 null');
+            this.setRenderError(`组件 "${this.component.type}" 创建失败`, 'render');
+            return;
+          }
 
-      if (!this.componentRef) {
-        console.error('[ShapeComponent] 组件创建返回 null');
-        this.setRenderError(`组件 "${this.component.type}" 创建失败`, 'render');
-        return;
-      }
+          this.componentRef = componentRef;
+          this.applyComponentInputs();
+        })
+        .catch(error => {
+          this.handleComponentCreationError(error, componentClass);
+        });
 
-      console.log('[ShapeComponent] 组件实例创建成功', {
-        hasComponentRef: !!this.componentRef,
-        componentRefType: this.componentRef?.instance?.constructor?.name
-      });
-
-      const inputs = this.getComponentInputs();
-      console.log('[ShapeComponent] 设置组件输入', {
-        inputs,
-        inputKeys: Object.keys(inputs)
-      });
-
-      Object.entries(inputs).forEach(([key, value]) => {
-        if (this.componentRef) {
-          console.log(`[ShapeComponent] 设置输入 ${key}:`, value);
-          this.componentRef.setInput(key, value);
-        }
-      });
-
-      if (this.componentRef) {
-        console.log('[ShapeComponent] 触发变更检测');
-        this.componentRef.changeDetectorRef.detectChanges();
-        console.log('[ShapeComponent] 组件创建完成');
-      }
     } catch (error) {
       this.handleComponentCreationError(error, componentClass);
     }
@@ -372,30 +356,67 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * 带重试机制的组件创建
+   * 异步组件创建，优雅处理重试逻辑
    */
-  private createComponentWithRetry(viewContainerRef: any, componentClass: any, retryCount = 0): any {
-    try {
-      return viewContainerRef.createComponent(componentClass);
-    } catch (error) {
-      // 如果是 NG0203 错误且重试次数小于 3，则进行重试
-      if (retryCount < 3 && error instanceof Error && error.message.includes('NG0203')) {
+  private async createComponentAsync(viewContainerRef: any, componentClass: any): Promise<any> {
+    const maxRetries = 3;
+
+    for (let retryCount = 0; retryCount <= maxRetries; retryCount++) {
+      try {
+        return viewContainerRef.createComponent(componentClass);
+      } catch (error) {
+        const isRetryableError = error instanceof Error && error.message.includes('NG0203');
+        const isLastAttempt = retryCount === maxRetries;
+
+        if (!isRetryableError || isLastAttempt) {
+          throw error;
+        }
+
         console.warn(`[ShapeComponent] NG0203 错误，第 ${retryCount + 1} 次重试`, {
           componentType: this.component.type,
           error: error.message
         });
 
-        // 短暂延迟后重试
-        setTimeout(() => {
-          return this.createComponentWithRetry(viewContainerRef, componentClass, retryCount + 1);
-        }, 100 * (retryCount + 1));
-
-        return null;
+        // 渐进式延迟重试
+        await this.delay(100 * (retryCount + 1));
       }
-
-      // 如果重试失败或非 NG0203 错误，抛出异常
-      throw error;
     }
+  }
+
+  /**
+   * 延迟工具函数
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * 应用组件输入并完成初始化
+   */
+  private applyComponentInputs(): void {
+    if (!this.componentRef) return;
+
+    console.log('[ShapeComponent] 组件实例创建成功', {
+      hasComponentRef: !!this.componentRef,
+      componentRefType: this.componentRef?.instance?.constructor?.name
+    });
+
+    const inputs = this.getComponentInputs();
+    console.log('[ShapeComponent] 设置组件输入', {
+      inputs,
+      inputKeys: Object.keys(inputs)
+    });
+
+    Object.entries(inputs).forEach(([key, value]) => {
+      if (this.componentRef) {
+        console.log(`[ShapeComponent] 设置输入 ${key}:`, value);
+        this.componentRef.setInput(key, value);
+      }
+    });
+
+    console.log('[ShapeComponent] 触发变更检测');
+    this.componentRef.changeDetectorRef.detectChanges();
+    console.log('[ShapeComponent] 组件创建完成');
   }
 
   /**
