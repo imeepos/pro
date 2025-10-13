@@ -4,7 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketManager, WebSocketService, JwtAuthService } from '@pro/components';
+import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig } from '@pro/components';
 import { SkerSDK } from '@pro/sdk';
 import { TokenStorageService } from './core/services/token-storage.service';
 import { HttpClientService } from './core/services/http-client.service';
@@ -63,15 +63,11 @@ export const appConfig: ApplicationConfig = {
         console.log('- namespace:', environment.wsNamespace);
 
         const wsManager = new WebSocketManager(() => new WebSocketService(authService));
-        // 预配置默认连接
-        wsManager.connectToNamespace({
-          url: environment.wsUrl,
-          namespace: environment.wsNamespace,
-          auth: {
-            token: localStorage.getItem(environment.tokenKey) || undefined,
-            autoRefresh: true
-          }
-        });
+
+        // 预配置默认screens连接
+        const token = localStorage.getItem(environment.tokenKey) || undefined;
+        const screensConfig = createScreensWebSocketConfig(environment.wsUrl, token);
+        wsManager.connectToNamespace(screensConfig);
 
         return wsManager;
       },

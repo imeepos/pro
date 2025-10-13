@@ -1,6 +1,6 @@
 import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LegacyWebSocketService as WebSocketService } from '@pro/components';
+import { WebSocketManager, createNotificationWebSocketConfig } from '@pro/components';
 import { Subscription } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 
@@ -23,13 +23,9 @@ export class NotificationComponent implements OnInit, OnDestroy {
   notifications: Notification[] = [];
   private subscription?: Subscription;
 
-  constructor(private websocketService: WebSocketService) {}
+  constructor(private wsManager: WebSocketManager) {}
 
   ngOnInit(): void {
-    this.websocketService.connect({
-      url: environment.wsUrl,
-      namespace: environment.wsNamespace
-    });
     this.subscribeToNotifications();
   }
 
@@ -85,24 +81,40 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   private subscribeToNotifications(): void {
-    this.subscription = this.websocketService.on('notification')
-      .subscribe((data: any) => {
-        const notification: Notification = {
-          id: data.id || Date.now().toString(),
-          title: data.title || '新通知',
-          message: data.message,
-          timestamp: new Date(data.timestamp || Date.now()),
-          read: false
-        };
+    const notificationWs = this.wsManager.getConnection('notifications');
 
-        // Add new notification to the beginning
-        this.notifications.unshift(notification);
+    if (!notificationWs) {
+      console.warn('通知WebSocket连接未找到，将创建新连接');
+      const token = localStorage.getItem(environment.tokenKey);
+      const config = createNotificationWebSocketConfig(environment.wsUrl, token || undefined);
+      const ws = this.wsManager.connectToNamespace(config);
 
-        // Keep only the latest 50 notifications
-        if (this.notifications.length > 50) {
-          this.notifications = this.notifications.slice(0, 50);
-        }
-      });
+      this.subscription = ws.on('notification')
+        .subscribe((data: any) => {
+          this.handleNotification(data);
+        });
+    } else {
+      this.subscription = notificationWs.on('notification')
+        .subscribe((data: any) => {
+          this.handleNotification(data);
+        });
+    }
+  }
+
+  private handleNotification(data: any): void {
+    const notification: Notification = {
+      id: data.id || Date.now().toString(),
+      title: data.title || '新通知',
+      message: data.message,
+      timestamp: new Date(data.timestamp || Date.now()),
+      read: false
+    };
+
+    this.notifications.unshift(notification);
+
+    if (this.notifications.length > 50) {
+      this.notifications = this.notifications.slice(0, 50);
+    }
   }
 
   @HostListener('document:click', ['$event'])

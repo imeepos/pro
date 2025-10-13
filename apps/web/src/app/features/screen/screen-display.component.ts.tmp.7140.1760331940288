@@ -269,6 +269,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     this.stopAutoPlay();
     this.destroy$.next();
     this.destroy$.complete();
+    this.wsManager.disconnectAll();
   }
 
   private loadScreen(id: string): void {

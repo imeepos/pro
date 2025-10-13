@@ -13,7 +13,9 @@ import { WeiboAccountService } from '../weibo/weibo-account.service';
 
 /**
  * 大屏系统 WebSocket Gateway
- * 支持实时数据推送，包括微博已登录用户统计
+ * 支持多命名空间实时数据推送：
+ * - /screens: 大屏内容和微博数据
+ * - /notifications: 系统通知
  */
 @Injectable()
 @WebSocketGateway({

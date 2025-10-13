@@ -6,7 +6,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketManager, WebSocketService, JwtAuthService } from '@pro/components';
+import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig, createNotificationWebSocketConfig } from '@pro/components';
 import { TestSimpleComponent } from './features/screens/components/test-simple.component';
 import { EventsStore } from './state/events.store';
 import { TagsStore } from './state/tags.store';
@@ -117,20 +117,21 @@ export const appConfig: ApplicationConfig = {
       useFactory: (authService: JwtAuthService) => {
         const baseUrl = environment.wsUrl;
         const namespace = environment.wsNamespace;
+        const token = localStorage.getItem(environment.tokenKey) || undefined;
+
         console.log('WebSocket Manager 初始化配置:');
         console.log('- wsUrl:', environment.wsUrl);
         console.log('- namespace:', environment.wsNamespace);
 
         const wsManager = new WebSocketManager(() => new WebSocketService(authService));
-        // 预配置默认连接
-        wsManager.connectToNamespace({
-          url: baseUrl,
-          namespace,
-          auth: {
-            token: localStorage.getItem(environment.tokenKey) || undefined,
-            autoRefresh: true
-          }
-        });
+
+        // 预配置screens连接
+        const screensConfig = createScreensWebSocketConfig(baseUrl, token);
+        wsManager.connectToNamespace(screensConfig);
+
+        // 预配置notifications连接
+        const notificationsConfig = createNotificationWebSocketConfig(baseUrl, token);
+        wsManager.connectToNamespace(notificationsConfig);
 
         return wsManager;
       },

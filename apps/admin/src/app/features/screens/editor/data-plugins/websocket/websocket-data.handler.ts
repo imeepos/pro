@@ -1,7 +1,8 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { Observable, Subscription, map, filter, distinctUntilChanged } from 'rxjs';
 import {
-  WebSocketService,
+  WebSocketManager,
+  WebSocketInstance,
   ConnectionState,
   WebSocketConfig,
   createCustomWebSocketConfig,
@@ -17,9 +18,10 @@ export class WebSocketDataHandler implements DataInstance, OnDestroy {
   private config?: WebSocketDataConfig;
   private subscriptions = new Set<Subscription>();
   private currentNamespace?: string;
+  private webSocketInstance?: WebSocketInstance;
 
   constructor(
-    private readonly webSocketService: WebSocketService,
+    private readonly wsManager: WebSocketManager,
     private readonly authService: JwtAuthService
   ) {}
 
@@ -51,10 +53,16 @@ export class WebSocketDataHandler implements DataInstance, OnDestroy {
     const config = this.createWebSocketConfig();
     this.currentNamespace = this.extractNamespace();
 
+    const existingConnection = this.wsManager.getConnection(this.currentNamespace);
+
+    if (existingConnection) {
+      this.webSocketInstance = existingConnection;
+    } else {
+      this.webSocketInstance = this.wsManager.connectToNamespace(config);
+    }
+
     this.subscribeToConnectionState();
     this.subscribeToDataMessages();
-
-    this.webSocketService.connect(config);
   }
 
   private createWebSocketConfig(): WebSocketConfig {
@@ -87,7 +95,9 @@ export class WebSocketDataHandler implements DataInstance, OnDestroy {
   }
 
   private subscribeToConnectionState(): void {
-    const subscription = this.webSocketService.state$
+    if (!this.webSocketInstance) return;
+
+    const subscription = this.webSocketInstance.state$
       .pipe(distinctUntilChanged())
       .subscribe(state => this.handleConnectionStateChange(state));
 
@@ -95,9 +105,9 @@ export class WebSocketDataHandler implements DataInstance, OnDestroy {
   }
 
   private subscribeToDataMessages(): void {
-    if (!this.currentNamespace) return;
+    if (!this.webSocketInstance) return;
 
-    const subscription = this.webSocketService.on('data')
+    const subscription = this.webSocketInstance.on('data')
       .pipe(filter(data => data !== null))
       .subscribe(data => this.handleDataReceived(data));
 
@@ -144,7 +154,15 @@ export class WebSocketDataHandler implements DataInstance, OnDestroy {
   }
 
   async getRespData(): Promise<DataResponse> {
-    const connectionState = await this.webSocketService.state$.pipe(
+    if (!this.webSocketInstance) {
+      return {
+        status: DataStatus.ERROR,
+        error: 'WebSocket实例未初始化',
+        timestamp: Date.now()
+      };
+    }
+
+    const connectionState = await this.webSocketInstance.state$.pipe(
       filter(state => state !== null),
       map(state => ({ state, isConnected: state === ConnectionState.Connected }))
     ).toPromise();
@@ -175,7 +193,6 @@ export class WebSocketDataHandler implements DataInstance, OnDestroy {
 
   disconnect(): void {
     this.cleanupSubscriptions();
-    this.webSocketService.disconnect();
     this.resetHandlerState();
   }
 
@@ -185,7 +202,11 @@ export class WebSocketDataHandler implements DataInstance, OnDestroy {
       throw new Error('WebSocket未连接');
     }
 
-    this.webSocketService.emit('data', data);
+    if (!this.webSocketInstance) {
+      throw new Error('WebSocket实例未初始化');
+    }
+
+    this.webSocketInstance.emit('data', data);
   }
 
   ngOnDestroy(): void {
@@ -194,7 +215,11 @@ export class WebSocketDataHandler implements DataInstance, OnDestroy {
 
   private async isConnected(): Promise<boolean> {
     try {
-      const connected = await this.webSocketService.isConnected$.pipe(
+      if (!this.webSocketInstance) {
+        return false;
+      }
+
+      const connected = await this.webSocketInstance.isConnected$.pipe(
         filter(state => state !== null),
         map(connected => Boolean(connected))
       ).toPromise();
@@ -213,5 +238,6 @@ export class WebSocketDataHandler implements DataInstance, OnDestroy {
     this.acceptor = undefined;
     this.config = undefined;
     this.currentNamespace = undefined;
+    this.webSocketInstance = undefined;
   }
 }

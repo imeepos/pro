@@ -20,5 +20,3 @@ export {
   createCustomWebSocketConfig,
   isValidWebSocketUrl
 } from './utils';
-
-export { WebSocketService as LegacyWebSocketService } from '../screen-components/services/websocket.service';

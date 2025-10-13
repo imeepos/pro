@@ -16,13 +16,7 @@ export type {
   ConsistencyValidationReport
 } from './validation/component-consistency.service';
 
-// Legacy WebSocket Service (Backward Compatibility)
-export {
-  WebSocketService as LegacyWebSocketService,
-  type WebSocketConfig as LegacyWebSocketConfig
-} from './screen-components/services/websocket.service';
-
-// WebSocket Services (New Architecture)
+// WebSocket Services (Unified Architecture)
 export {
   ConnectionState,
   type WebSocketConfig,
