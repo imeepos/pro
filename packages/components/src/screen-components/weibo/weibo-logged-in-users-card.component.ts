@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, Inject, Optional, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, Inject, Optional, ViewEncapsulation, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval, Observable, combineLatest, filter, switchMap } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
@@ -324,7 +324,8 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   constructor(
     @Optional() private wsManager: WebSocketManager | null,
     @Optional() private sdk: SkerSDK | null,
-    @Optional() @Inject('ITokenStorage') private tokenStorage: ITokenStorage | null
+    @Optional() @Inject('ITokenStorage') private tokenStorage: ITokenStorage | null,
+    private cdr: ChangeDetectorRef
   ) {
     console.log('[WeiboLoggedInUsersCardComponent] 构造函数调用 - 可选依赖模式', {
       componentName: 'weibo-logged-in-users-card',
@@ -531,33 +532,23 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   private initializeWebSocketConnection(): void {
     console.log('[WeiboLoggedInUsersCardComponent] WebSocket连接初始化开始');
 
-    if (!this.wsManager || !this.tokenStorage || !this.sdk) {
-      console.warn('[WeiboLoggedInUsersCardComponent] WebSocket依赖服务不完整，跳过初始化', {
-        hasWsManager: !!this.wsManager,
-        hasTokenStorage: !!this.tokenStorage,
-        hasSDK: !!this.sdk
-      });
+    if (!this.wsManager) {
+      console.warn('[WeiboLoggedInUsersCardComponent] WebSocketManager不可用，跳过实时连接');
       return;
     }
 
     try {
-      const token = this.getToken();
-      console.log('[WeiboLoggedInUsersCardComponent] 获取令牌', {
-        hasToken: !!token,
-        tokenLength: token?.length
-      });
-
-      const wsConfig = createScreensWebSocketConfig(this.sdk.baseUrl, token);
-      console.log('[WeiboLoggedInUsersCardComponent] WebSocket配置创建', {
-        baseUrl: this.sdk.baseUrl,
-        hasConfig: !!wsConfig
-      });
-
-      this.wsService = this.wsManager.connectToNamespace(wsConfig) as WebSocketService;
-      console.log('[WeiboLoggedInUsersCardComponent] WebSocket服务创建', {
+      // 使用现有的 WebSocket 连接，而不是创建新的连接
+      this.wsService = this.wsManager.getConnection('screens') as WebSocketService;
+      console.log('[WeiboLoggedInUsersCardComponent] 获取现有WebSocket服务', {
         hasWsService: !!this.wsService,
         wsServiceType: this.wsService?.constructor?.name
       });
+
+      if (!this.wsService) {
+        console.warn('[WeiboLoggedInUsersCardComponent] 未找到screens命名空间的WebSocket连接');
+        return;
+      }
 
       this.observeConnectionState();
       console.log('[WeiboLoggedInUsersCardComponent] 连接状态监听设置');
@@ -609,14 +600,22 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
       switchMap(() => this.wsService.on('weibo:logged-in-users:update')),
       takeUntil(this.destroy$)
     ).subscribe({
-      next: (stats) => this.updateStatsFromWebSocket(stats),
-      error: (error) => this.handleWebSocketError(error)
+      next: (stats) => {
+        console.log('[WeiboLoggedInUsersCardComponent] 收到WebSocket数据更新', { stats });
+        this.updateStatsFromWebSocket(stats);
+      },
+      error: (error) => {
+        console.error('[WeiboLoggedInUsersCardComponent] WebSocket数据更新失败', error);
+        this.handleWebSocketError(error);
+      }
     });
   }
 
   private updateStatsFromWebSocket(newStats: LoggedInUsersStats): void {
     this.clearErrorState();
     this.updateStats(newStats);
+    // 手动触发变更检测确保WebSocket数据更新能反映到视图
+    this.cdr.detectChanges();
   }
 
   private handleWebSocketError(error: any): void {
@@ -627,6 +626,8 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   private clearErrorState(): void {
     if (this.errorMessage) {
       this.errorMessage = '';
+      // 清除错误状态时触发变更检测
+      this.cdr.markForCheck();
     }
   }
 
@@ -639,6 +640,8 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   private setDataError(message: string): void {
     if (this.config.showErrorHandling) {
       this.errorMessage = message;
+      // 错误状态时也触发变更检测
+      this.cdr.markForCheck();
     }
   }
 
@@ -659,9 +662,18 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
 
   private updateStats(newStats: LoggedInUsersStats): void {
     if (newStats) {
+      console.log('[WeiboLoggedInUsersCardComponent] 更新统计数据', {
+        oldStats: this.stats,
+        newStats: newStats,
+        hasChanges: JSON.stringify(this.stats) !== JSON.stringify(newStats)
+      });
+
       this.lastStats = this.stats;
       this.stats = newStats;
       this.lastUpdateTime = new Date();
+
+      // 确保数据变更时触发变更检测
+      this.cdr.markForCheck();
     }
   }
 

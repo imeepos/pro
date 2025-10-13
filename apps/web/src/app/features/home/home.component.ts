@@ -338,14 +338,22 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private initializeWebSocketConnection(): void {
+    console.log('[HomeComponent] WebSocket连接初始化开始');
+
     const existingConnection = this.wsManager.getConnection(environment.wsNamespace);
     if (existingConnection) {
+      console.log('[HomeComponent] WebSocket连接已存在，跳过重复创建');
       return;
     }
 
     const token = this.tokenStorage.getToken();
+    console.log('[HomeComponent] 获取认证令牌', { hasToken: !!token, tokenLength: token?.length });
+
     const wsConfig = createScreensWebSocketConfig(environment.wsUrl, token ?? undefined);
+    console.log('[HomeComponent] 创建WebSocket配置', { wsUrl: environment.wsUrl, namespace: environment.wsNamespace });
+
     this.wsManager.connectToNamespace(wsConfig);
+    console.log('[HomeComponent] WebSocket连接请求已发送');
   }
 
   private async loadAvailableScreens(): Promise<void> {
@@ -448,33 +456,45 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private listenToScreenPublishEvents(): void {
     const wsInstance = this.wsManager.getConnection(environment.wsNamespace);
     if (wsInstance) {
+      console.log('[HomeComponent] 设置屏幕发布事件监听');
       wsInstance.on('screen:published')
         .pipe(takeUntil(this.destroy$))
         .subscribe((data: any) => {
+          console.log('[HomeComponent] 收到屏幕发布事件', { data });
           this.handleNewScreenPublished(data.screen);
         });
+    } else {
+      console.warn('[HomeComponent] 未找到WebSocket实例，无法设置屏幕发布事件监听');
     }
   }
 
   private listenToScreenUpdateEvents(): void {
     const wsInstance = this.wsManager.getConnection(environment.wsNamespace);
     if (wsInstance) {
+      console.log('[HomeComponent] 设置屏幕更新事件监听');
       wsInstance.on('screen:updated')
         .pipe(takeUntil(this.destroy$))
         .subscribe((data: any) => {
+          console.log('[HomeComponent] 收到屏幕更新事件', { data });
           this.handleScreenUpdated(data.screen);
         });
+    } else {
+      console.warn('[HomeComponent] 未找到WebSocket实例，无法设置屏幕更新事件监听');
     }
   }
 
   private listenToScreenDeleteEvents(): void {
     const wsInstance = this.wsManager.getConnection(environment.wsNamespace);
     if (wsInstance) {
+      console.log('[HomeComponent] 设置屏幕删除事件监听');
       wsInstance.on('screen:unpublished')
         .pipe(takeUntil(this.destroy$))
         .subscribe((data: any) => {
+          console.log('[HomeComponent] 收到屏幕删除事件', { data });
           this.handleScreenUnpublished(data.screenId);
         });
+    } else {
+      console.warn('[HomeComponent] 未找到WebSocket实例，无法设置屏幕删除事件监听');
     }
   }
 
