@@ -328,11 +328,19 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
                 await this.cleanupSession(sessionId);
                 break;
 
+              case 206:
+                this.logger.log(`登录确认成功,正在跳转: ${sessionId}`);
+                subject.next({
+                  type: 'scanned',
+                  data: { message: '登录确认成功，正在跳转...' }
+                });
+                break;
+
               default:
-                this.logger.warn(`未知状态码: ${statusData.code}, session: ${sessionId}`);
+                this.logger.warn(`未知状态码: ${statusData.code}, 响应数据: ${JSON.stringify(statusData)}, session: ${sessionId}`);
                 subject.next({
                   type: 'error',
-                  data: { message: statusData.msg || '未知错误' }
+                  data: { message: statusData.msg || `登录流程异常(状态码:${statusData.code})` }
                 });
                 break;
             }

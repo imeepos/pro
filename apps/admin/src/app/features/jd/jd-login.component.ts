@@ -26,6 +26,7 @@ export class JdLoginComponent implements OnDestroy {
   isLoading = false;
   showSuccess = false;
   accountInfo: any = null;
+  canRetry = false;
 
   private jdSDK: JdAuthSDK;
   private eventSource?: EventSource;
@@ -99,8 +100,9 @@ export class JdLoginComponent implements OnDestroy {
           break;
 
         case 'error':
-          this.status = `错误: ${event.data.message}`;
+          this.status = `登录失败: ${event.data.message}`;
           this.isLoading = false;
+          this.canRetry = this.isRetryableError(event.data.message);
           break;
       }
     });
@@ -122,10 +124,25 @@ export class JdLoginComponent implements OnDestroy {
   }
 
   /**
+   * 判断错误是否可以重试
+   */
+  private isRetryableError(message: string): boolean {
+    const retryableMessages = [
+      '二维码获取失败',
+      '打开登录页面失败',
+      'Playwright浏览器未就绪',
+      '网络连接失败',
+      '登录流程异常'
+    ];
+    return retryableMessages.some(msg => message.includes(msg));
+  }
+
+  /**
    * 重置状态,开始新的登录
    */
   resetAndStartNew(): void {
     this.closeConnection();
+    this.canRetry = false;
     this.startJdLogin();
   }
 }

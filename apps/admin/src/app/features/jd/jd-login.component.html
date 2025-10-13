@@ -57,10 +57,10 @@
     </button>
 
     <button
-      *ngIf="qrcodeUrl && !isLoading && (status.includes('过期') || status.includes('错误'))"
+      *ngIf="qrcodeUrl && !isLoading && ((status.includes('过期') || status.includes('错误')) || canRetry)"
       (click)="resetAndStartNew()"
       class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-      重新获取二维码
+      {{ canRetry ? '重试登录' : '重新获取二维码' }}
     </button>
 
     <button
