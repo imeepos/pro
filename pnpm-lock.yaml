@@ -797,6 +797,12 @@ importers:
       '@pro/types':
         specifier: workspace:*
         version: link:../../packages/types
+      flowbite:
+        specifier: ^3.1.2
+        version: 3.1.2(rollup@4.52.4)
+      flowbite-angular:
+        specifier: ^20.1.0
+        version: 20.1.0(@angular/cdk@20.2.8(@angular/common@20.3.4(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1))(@ng-icons/core@31.4.0(@angular/common@20.3.4(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@ng-primitives/state@0.57.0(naxx3y7q5sgb7q32ddsthtkd4i))(@tailwindcss/postcss@4.1.14)(ng-primitives@0.57.0(naxx3y7q5sgb7q32ddsthtkd4i))(rxjs@7.8.2)(tailwind-merge@2.5.5)(tailwindcss@3.4.18)
       jwt-decode:
         specifier: ^4.0.0
         version: 4.0.0

@@ -1,30 +1,35 @@
-<div class="home-container">
+<div class="w-screen h-screen flex flex-col bg-black overflow-hidden">
   <!-- 标题栏 -->
-  <header class="header" *ngIf="currentUser$ | async as user">
-    <div class="header-content">
-      <h1 class="title">数据大屏</h1>
-      <div class="user-info">
-        <span class="user-name">{{ user.username || user.id }}</span>
-        <button class="logout-btn" (click)="logout()">退出登录</button>
+  <header *ngIf="currentUser$ | async as user" class="bg-black/80 backdrop-blur-lg border-b border-white/10 p-4 lg:px-8 z-[1000]">
+    <div class="flex justify-between items-center w-full">
+      <h1 class="text-white text-xl lg:text-2xl font-semibold m-0">数据大屏</h1>
+      <div class="flex items-center gap-4">
+        <span class="text-white/80 text-sm">{{ user.username || user.id }}</span>
+        <button (click)="logout()" class="px-4 py-2 bg-white/10 text-white border border-white/20 rounded-lg cursor-pointer text-sm transition-all duration-200 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-0">
+          退出登录
+        </button>
       </div>
     </div>
   </header>
 
   <!-- 大屏展示区域 -->
-  <main class="main-content">
-    <div class="screen-container" [style.width.px]="screenConfig?.layout?.width" [style.height.px]="screenConfig?.layout?.height">
+  <main class="screen-viewport" #screenWrapper>
+    <div class="screen-stage"
+         [style.width.px]="screenConfig?.layout?.width"
+         [style.height.px]="screenConfig?.layout?.height"
+         [style.transform]="getScaleTransform()">
       @if (loading) {
         <div class="loading-container">
           <div class="loading-spinner"></div>
-          <p>加载中...</p>
+          <p class="text-white">加载中...</p>
         </div>
       } @else if (error) {
         <div class="error-container">
           <p class="error-message">{{ error }}</p>
         </div>
       } @else if (screenConfig) {
-        <div class="screen-canvas" [style.background]="screenConfig.layout.background">
-          <div class="components-container" #componentsContainer></div>
+        <div [style.background]="screenConfig.layout.background" class="screen-canvas">
+          <div #componentsContainer class="components-container"></div>
         </div>
 
         <!-- 控制面板 -->

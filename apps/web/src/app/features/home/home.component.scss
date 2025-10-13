@@ -1,121 +1,31 @@
-.home-container {
+/* ===== 屏幕显示组件样式 ===== */
+
+/* 视口容器 */
+.screen-viewport {
   width: 100vw;
-  height: 100vh;
+  height: 100%;
   display: flex;
-  flex-direction: column;
-  background: #000;
-  overflow: hidden;
-}
-
-.header {
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 1rem 2rem;
-  z-index: 1000;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 100%;
-}
-
-.title {
-  color: white;
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.user-name {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.9rem;
-}
-
-.logout-btn {
-  padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-}
-
-.main-content {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-  position: relative;
-}
-
-.screen-container {
-  margin: 0 auto;
-  position: relative;
-  overflow: hidden;
-}
-
-.loading-container,
-.error-container {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  background: #000;
-  color: white;
+  overflow: hidden;
+  background: radial-gradient(circle at center,
+    #0f172a 0%,
+    rgba(15, 23, 42, 0.95) 50%,
+    rgba(0, 0, 0, 1) 100%
+  );
 }
 
-.loading-spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.error-message {
-  color: #ef4444;
-  font-size: 1.125rem;
-}
-
-.screen-canvas {
-  width: 100%;
-  height: 100%;
+/* 屏幕舞台 */
+.screen-stage {
   position: relative;
+  transform-origin: center center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  will-change: transform;
 }
 
-.components-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.component-wrapper {
-  position: absolute;
-}
-
+/* 保留必要的自定义样式和特殊效果 */
 .control-panel {
   position: fixed;
   bottom: 24px;
@@ -183,7 +93,7 @@
   bottom: 24px;
   right: 24px;
   padding: 12px 24px;
-  background: #3b82f6;
+  background: theme('colors.primary.500');
   color: white;
   border: none;
   border-radius: 8px;
@@ -195,7 +105,7 @@
   z-index: 9999;
 
   &:hover {
-    background: #2563eb;
+    background: theme('colors.primary.600');
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   }
 }
@@ -203,4 +113,77 @@
 :host ::ng-deep :fullscreen .fullscreen-button {
   bottom: 12px;
   right: 12px;
+}
+
+/* 保留加载和错误状态的样式 */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #000;
+  color: white;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: theme('colors.primary.500');
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.error-message {
+  color: theme('colors.error');
+  font-size: 1.125rem;
+}
+
+/* 组件容器样式 */
+.screen-canvas {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: transparent;
+}
+
+.components-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.component-wrapper {
+  position: absolute;
+  box-sizing: border-box;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(156, 163, 175, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  animation: componentEnter 0.5s ease-out;
+  contain: layout style paint;
+}
+
+.component-wrapper:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.16);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+  transform: translateZ(0);
+}
+
+@keyframes componentEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
