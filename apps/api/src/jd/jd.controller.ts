@@ -51,7 +51,9 @@ export class JdController {
     const events$ = await this.jdAuthService.startLogin(userId);
 
     return events$.pipe(
-      map((event: JdLoginEvent) => event as MessageEvent)
+      map((event: JdLoginEvent) => ({
+        data: event,
+      } as MessageEvent))
     );
   }
 

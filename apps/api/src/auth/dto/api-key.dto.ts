@@ -9,7 +9,8 @@ import {
   Max,
   IsEnum,
   IsIn,
-  IsArray
+  IsArray,
+  ValidateIf
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -80,12 +81,13 @@ export class CreateApiKeyDto {
   type: ApiKeyType;
 
   @ApiPropertyOptional({
-    description: '过期时间（ISO 8601格式）',
+    description: '过期时间（ISO 8601格式），null表示永不过期',
     example: '2024-12-31T23:59:59.000Z'
   })
   @IsOptional()
+  @ValidateIf(o => o.expiresAt !== null)
   @IsDateString({}, { message: '过期时间格式无效' })
-  expiresAt?: string;
+  expiresAt?: string | null;
 
   @ApiPropertyOptional({
     description: '权限列表',
@@ -132,12 +134,13 @@ export class UpdateApiKeyDto {
   type?: ApiKeyType;
 
   @ApiPropertyOptional({
-    description: '过期时间（ISO 8601格式）',
+    description: '过期时间（ISO 8601格式），null表示永不过期',
     example: '2024-12-31T23:59:59.000Z'
   })
   @IsOptional()
+  @ValidateIf(o => o.expiresAt !== null)
   @IsDateString({}, { message: '过期时间格式无效' })
-  expiresAt?: string;
+  expiresAt?: string | null;
 
   @ApiPropertyOptional({
     description: '权限列表',

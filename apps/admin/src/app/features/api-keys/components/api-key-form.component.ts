@@ -139,6 +139,13 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
     console.log('🔍 [API Key Form] 表单有效性:', this.apiKeyForm.valid);
     console.log('🔍 [API Key Form] 表单原始值:', this.apiKeyForm.value);
     console.log('🔍 [API Key Form] 原始API Key数据:', this.apiKey);
+    console.log('🔍 [API Key Form] 当前加载状态:', this.loading);
+
+    // 防止重复提交
+    if (this.loading) {
+      console.warn('⚠️ [API Key Form] 表单正在提交中，忽略重复提交');
+      return;
+    }
 
     if (this.apiKeyForm.invalid) {
       console.warn('⚠️ [API Key Form] 表单验证失败，标记为已触摸');
@@ -168,12 +175,28 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
       convertedType: typeof typeValue
     });
 
+    // 处理过期时间：明确区分永久过期（null）和未设置（undefined）
+    let expiresAt: string | null | undefined;
+    if (formValue.expiresAt === null || formValue.expiresAt === '') {
+      // 用户选择永久过期或清空字段
+      expiresAt = null;
+      console.log('🔍 [API Key Form] 设置永久过期时间');
+    } else if (formValue.expiresAt) {
+      // 用户设置了具体的过期时间
+      expiresAt = formValue.expiresAt;
+      console.log('🔍 [API Key Form] 设置具体过期时间:', expiresAt);
+    } else {
+      // 未设置过期时间（编辑时可能保持原值）
+      expiresAt = undefined;
+      console.log('🔍 [API Key Form] 过期时间未设置');
+    }
+
     if (this.isEditMode && this.apiKey) {
       const updateData: UpdateApiKeyDto = {
         name: formValue.name?.trim() || '',
         description: formValue.description?.trim() || undefined,
         type: typeValue,
-        expiresAt: formValue.expiresAt || undefined,
+        expiresAt: expiresAt,
         permissions: formValue.permissions || []
       };
       console.log('✅ [API Key Form] 准备发送更新数据:', {
@@ -188,7 +211,7 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
         name: formValue.name?.trim() || '',
         description: formValue.description?.trim() || undefined,
         type: typeValue,
-        expiresAt: formValue.expiresAt || undefined,
+        expiresAt: expiresAt,
         permissions: formValue.permissions || []
       };
       console.log('✅ [API Key Form] 发送创建数据:', createData);
