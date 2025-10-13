@@ -127,11 +127,11 @@ export class ApiKeyApi {
   regenerate(id: number): Observable<ApiKeyRegenerationResponse> {
     return fromPromise(
       this.http
-        .post<{ key: string }>(`${this.baseUrl}/${id}/regenerate`, {})
-        .then((result) =>
+        .post<string>(`${this.baseUrl}/${id}/regenerate`, {})
+        .then((newKey) =>
           this.fetchOne(id).then((apiKey) => ({
             oldKeyId: id,
-            newApiKey: { ...apiKey, key: result.key },
+            newApiKey: { ...apiKey, key: newKey },
             message: '新的 API Key 已生成，请立即保存。',
           }))
         )

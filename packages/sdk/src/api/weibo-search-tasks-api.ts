@@ -108,11 +108,11 @@ export class WeiboSearchTasksApi {
   /**
    * 暂停任务
    */
-  pause(id: number): Observable<void> {
-    return new Observable<void>((subscriber) => {
-      this.http.post<void>(`${this.baseUrl}/${id}/pause`, {})
-        .then(() => {
-          subscriber.next();
+  pause(id: number): Observable<WeiboSearchTask> {
+    return new Observable<WeiboSearchTask>((subscriber) => {
+      this.http.post<WeiboSearchTask>(`${this.baseUrl}/${id}/pause`, {})
+        .then((task) => {
+          subscriber.next(task);
           subscriber.complete();
         })
         .catch((error) => {
@@ -124,11 +124,11 @@ export class WeiboSearchTasksApi {
   /**
    * 恢复任务
    */
-  resume(id: number): Observable<void> {
-    return new Observable<void>((subscriber) => {
-      this.http.post<void>(`${this.baseUrl}/${id}/resume`, {})
-        .then(() => {
-          subscriber.next();
+  resume(id: number): Observable<WeiboSearchTask> {
+    return new Observable<WeiboSearchTask>((subscriber) => {
+      this.http.post<WeiboSearchTask>(`${this.baseUrl}/${id}/resume`, {})
+        .then((task) => {
+          subscriber.next(task);
           subscriber.complete();
         })
         .catch((error) => {
@@ -140,11 +140,11 @@ export class WeiboSearchTasksApi {
   /**
    * 立即执行任务
    */
-  runNow(id: number): Observable<void> {
-    return new Observable<void>((subscriber) => {
-      this.http.post<void>(`${this.baseUrl}/${id}/run-now`, {})
-        .then(() => {
-          subscriber.next();
+  runNow(id: number): Observable<WeiboSearchTask> {
+    return new Observable<WeiboSearchTask>((subscriber) => {
+      this.http.post<WeiboSearchTask>(`${this.baseUrl}/${id}/run-now`, {})
+        .then((task) => {
+          subscriber.next(task);
           subscriber.complete();
         })
         .catch((error) => {

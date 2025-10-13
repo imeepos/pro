@@ -42,12 +42,7 @@ export class WeiboSearchTaskController {
   @Post()
   async create(@Request() req, @Body() dto: CreateWeiboSearchTaskDto) {
     const userId = req.user.userId;
-    const task = await this.taskService.create(userId, dto);
-    return {
-      success: true,
-      data: task,
-      message: '微博搜索任务创建成功',
-    };
+    return await this.taskService.create(userId, dto);
   }
 
   /**
@@ -77,12 +72,7 @@ export class WeiboSearchTaskController {
   @Get(':id')
   async findOne(@Request() req, @Param('id', ParseIntPipe) id: number) {
     const userId = req.user.userId;
-    const task = await this.taskService.findOne(userId, id);
-    return {
-      success: true,
-      data: task,
-      message: '获取任务详情成功',
-    };
+    return await this.taskService.findOne(userId, id);
   }
 
   /**
@@ -95,12 +85,7 @@ export class WeiboSearchTaskController {
     @Body() dto: UpdateWeiboSearchTaskDto
   ) {
     const userId = req.user.userId;
-    const task = await this.taskService.update(userId, id, dto);
-    return {
-      success: true,
-      data: task,
-      message: '任务更新成功',
-    };
+    return await this.taskService.update(userId, id, dto);
   }
 
   /**
@@ -123,12 +108,7 @@ export class WeiboSearchTaskController {
     @Body() dto?: PauseTaskDto
   ) {
     const userId = req.user.userId;
-    const task = await this.taskService.pause(userId, id, dto);
-    return {
-      success: true,
-      data: task,
-      message: '任务暂停成功',
-    };
+    return await this.taskService.pause(userId, id, dto);
   }
 
   /**
@@ -141,12 +121,7 @@ export class WeiboSearchTaskController {
     @Body() dto?: ResumeTaskDto
   ) {
     const userId = req.user.userId;
-    const task = await this.taskService.resume(userId, id, dto);
-    return {
-      success: true,
-      data: task,
-      message: '任务恢复成功',
-    };
+    return await this.taskService.resume(userId, id, dto);
   }
 
   /**
@@ -159,12 +134,7 @@ export class WeiboSearchTaskController {
     @Body() dto?: RunNowTaskDto
   ) {
     const userId = req.user.userId;
-    const task = await this.taskService.runNow(userId, id, dto);
-    return {
-      success: true,
-      data: task,
-      message: '任务已触发立即执行',
-    };
+    return await this.taskService.runNow(userId, id, dto);
   }
 
   /**
@@ -174,11 +144,7 @@ export class WeiboSearchTaskController {
   async pauseAll(@Request() req) {
     const userId = req.user.userId;
     const affectedCount = await this.taskService.pauseAllTasks(userId);
-    return {
-      success: true,
-      data: { affectedCount },
-      message: `已暂停 ${affectedCount} 个任务`,
-    };
+    return { affectedCount };
   }
 
   /**
@@ -188,11 +154,7 @@ export class WeiboSearchTaskController {
   async resumeAll(@Request() req) {
     const userId = req.user.userId;
     const affectedCount = await this.taskService.resumeAllTasks(userId);
-    return {
-      success: true,
-      data: { affectedCount },
-      message: `已恢复 ${affectedCount} 个任务`,
-    };
+    return { affectedCount };
   }
 
   /**
@@ -201,12 +163,7 @@ export class WeiboSearchTaskController {
   @Get('stats/overview')
   async getStats(@Request() req) {
     const userId = req.user.userId;
-    const stats = await this.taskService.getTaskStats(userId);
-    return {
-      success: true,
-      data: stats,
-      message: '获取统计信息成功',
-    };
+    return await this.taskService.getTaskStats(userId);
   }
 
   /**
@@ -214,7 +171,7 @@ export class WeiboSearchTaskController {
    */
   @Get('status/options')
   async getStatusOptions() {
-    const statusOptions = Object.values(WeiboSearchTaskStatus).map(status => ({
+    return Object.values(WeiboSearchTaskStatus).map(status => ({
       value: status,
       label: {
         [WeiboSearchTaskStatus.PENDING]: '等待执行',
@@ -224,12 +181,6 @@ export class WeiboSearchTaskController {
         [WeiboSearchTaskStatus.TIMEOUT]: '执行超时',
       }[status],
     }));
-
-    return {
-      success: true,
-      data: statusOptions,
-      message: '获取状态选项成功',
-    };
   }
 
   /**
@@ -260,11 +211,6 @@ export class WeiboSearchTaskController {
   @UseGuards(ApiKeyAuthGuard)
   async testFindOne(@Request() req, @Param('id', ParseIntPipe) id: number) {
     const userId = req.user.userId;
-    const task = await this.taskService.findOne(userId, id);
-    return {
-      success: true,
-      data: task,
-      message: '获取任务详情成功',
-    };
+    return await this.taskService.findOne(userId, id);
   }
 }

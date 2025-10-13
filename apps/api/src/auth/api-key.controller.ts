@@ -155,8 +155,7 @@ export class ApiKeyController {
     @Request() req,
     @Param('id', ParseIntPipe) id: number,
     @Ip() ip: string,
-  ): Promise<{ key: string }> {
-    const newKey = await this.apiKeyService.regenerateApiKey(req.user.userId, id, ip);
-    return { key: newKey };
+  ): Promise<string> {
+    return await this.apiKeyService.regenerateApiKey(req.user.userId, id, ip);
   }
 }

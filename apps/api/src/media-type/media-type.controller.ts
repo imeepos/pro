@@ -9,6 +9,8 @@ import {
   Query,
   ParseIntPipe,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { MediaTypeService } from './media-type.service';
 import { CreateMediaTypeDto } from './dto/create-media-type.dto';
@@ -45,8 +47,8 @@ export class MediaTypeController {
   }
 
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number) {
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     await this.mediaTypeService.remove(id);
-    return { success: true };
   }
 }
