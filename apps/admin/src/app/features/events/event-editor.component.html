@@ -161,7 +161,10 @@
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">标签设置</h2>
         <app-tag-selector
           [selectedTagIds]="selectedTagIds"
+          [allTags]="(allTags$ | async) || []"
+          [popularTags]="(popularTags$ | async) || []"
           (tagsChange)="onTagsChange($event)"
+          (tagCreate)="onTagCreate($event)"
         ></app-tag-selector>
       </div>
 
