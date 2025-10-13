@@ -9,8 +9,7 @@
   </app-area>
   <app-shape
     *ngFor="let component of componentData$ | async; trackBy: trackByComponent"
-    [component]="component"
-    [editor]="this">
+    [component]="component">
   </app-shape>
 
   <app-context-menu

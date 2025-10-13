@@ -1,8 +1,9 @@
-import { Component, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, HostListener, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CanvasService } from '../services/canvas.service';
 import { CanvasQuery } from '../services/canvas.query';
 import { RulerGridService } from '../services/ruler-grid.service';
+import { MarkLineService } from '../services/mark-line.service';
 import { ShapeComponent } from './shape/shape.component';
 import { MarkLineComponent } from './mark-line/mark-line.component';
 import { AreaComponent } from './area/area.component';
@@ -17,7 +18,7 @@ import { ContextMenuComponent, MenuItem } from './context-menu/context-menu.comp
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss']
 })
-export class EditorComponent {
+export class EditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild(MarkLineComponent, { static: false }) markLine!: MarkLineComponent;
 
   componentData$ = this.query.componentData$;
@@ -35,6 +36,7 @@ export class EditorComponent {
     private canvasService: CanvasService,
     private query: CanvasQuery,
     private rulerGridService: RulerGridService,
+    private markLineService: MarkLineService,
     private elementRef: ElementRef<HTMLElement>
   ) {}
 
@@ -196,21 +198,20 @@ export class EditorComponent {
     return component.id;
   }
 
+  ngAfterViewInit(): void {
+    if (this.markLine) {
+      this.markLineService.registerMarkLine(this.markLine);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.markLineService.unregisterMarkLine();
+  }
+
   private generateId(): string {
     return `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  showMarkLine(dragComponent: ComponentItem): Partial<ComponentStyle> | null {
-    if (!this.markLine) return null;
-    const allComponents = this.query.getValue().componentData;
-    return this.markLine.showLine(dragComponent, allComponents);
-  }
-
-  hideMarkLine(): void {
-    if (this.markLine) {
-      this.markLine.hideAllLines();
-    }
-  }
 
   get multiSelectContextMenuItems(): MenuItem[] {
     const selectedIds = this.query.getValue().selectedComponentIds;

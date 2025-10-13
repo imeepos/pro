@@ -4,6 +4,7 @@ import { Subject, takeUntil, combineLatest } from 'rxjs';
 import { CanvasService } from '../../services/canvas.service';
 import { CanvasQuery } from '../../services/canvas.query';
 import { RulerGridService } from '../../services/ruler-grid.service';
+import { MarkLineService } from '../../services/mark-line.service';
 import { ErrorBoundaryService } from '../../services/error-boundary.service';
 import { ComponentEventHandlerService } from '../../../services/component-event-handler.service';
 import { ComponentRegistryService } from '@pro/components';
@@ -23,7 +24,6 @@ import { ContextMenuComponent, MenuItem } from '../context-menu/context-menu.com
 export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(ComponentHostDirective, { static: false }) componentHost!: ComponentHostDirective;
   @Input() component!: ComponentItem;
-  @Input() editor?: any;
 
   isActive = false;
   private isDragging = false;
@@ -47,6 +47,7 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
     private canvasService: CanvasService,
     private query: CanvasQuery,
     private rulerGridService: RulerGridService,
+    private markLineService: MarkLineService,
     private errorBoundary: ErrorBoundaryService,
     private elementRef: ElementRef,
     private eventHandler: ComponentEventHandlerService,
@@ -625,7 +626,7 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
       // 计算最终位置，先处理吸附，再统一更新
       let finalStyle = { left: newLeft, top: newTop };
 
-      if (this.editor) {
+      if (this.markLineService) {
         // 创建包含新位置的临时组件对象，用于对齐计算
         const dragComponent = {
           ...this.component,
@@ -636,7 +637,8 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
           }
         };
 
-        const snapStyle = this.editor.showMarkLine(dragComponent);
+        const allComponents = this.query.getValue().componentData;
+        const snapStyle = this.markLineService.showMarkLine(dragComponent, allComponents);
         if (snapStyle) {
           // 吸附样式与计算的位置合并
           finalStyle = { ...finalStyle, ...snapStyle };
@@ -656,9 +658,7 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
       });
 
       this.isDragging = false;
-      if (this.editor) {
-        this.editor.hideMarkLine();
-      }
+      this.markLineService.hideMarkLine();
       this.canvasService.recordSnapshot();
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
