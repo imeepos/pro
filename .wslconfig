@@ -1,0 +1,11 @@
+[wsl2]
+# WSL2优化配置 - 针对大型monorepo构建优化
+memory=8GB
+processors=4
+swap=2GB
+localhostForwarding=true
+
+# 文件系统优化
+[experimental]
+autoMemoryReclaim=gradual
+sparseVhd=true
