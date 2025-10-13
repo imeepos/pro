@@ -4,6 +4,8 @@ import { FormBuilder, FormGroup, FormControl, ReactiveFormsModule, Validators } 
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { EventTypesService } from '../../state/event-types.service';
+import { IndustryTypesService } from '../../state/industry-types.service';
+import { IndustryTypesQuery } from '../../state/industry-types.query';
 import { CreateEventTypeDto, UpdateEventTypeDto } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
 import { SelectComponent } from '../../shared/components/select';
@@ -29,16 +31,21 @@ export class EventTypeEditorComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
+  industryOptions: SelectOption[] = [];
+
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
     private eventTypesService: EventTypesService,
+    private industryTypesService: IndustryTypesService,
+    private industryTypesQuery: IndustryTypesQuery,
     private toastService: ToastService
   ) {
     this.eventTypeForm = this.fb.group({
       eventCode: ['', [Validators.required, Validators.maxLength(50)]],
       eventName: ['', [Validators.required, Validators.maxLength(100)]],
+      industryId: ['', Validators.required],
       description: ['', [Validators.maxLength(500)]],
       sortOrder: [0, [Validators.required, Validators.min(0)]],
       status: [1, Validators.required]
@@ -46,6 +53,8 @@ export class EventTypeEditorComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.loadIndustryTypes();
+
     this.route.params.pipe(
       takeUntil(this.destroy$)
     ).subscribe(params => {
@@ -72,6 +81,7 @@ export class EventTypeEditorComponent implements OnInit, OnDestroy {
         this.eventTypeForm.patchValue({
           eventCode: eventType.eventCode,
           eventName: eventType.eventName,
+          industryId: (eventType as any).industryId,
           description: eventType.description,
           sortOrder: eventType.sortOrder,
           status: eventType.status
@@ -81,6 +91,20 @@ export class EventTypeEditorComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.toastService.error(`加载失败: ${error.message}`);
         this.loading = false;
+      }
+    });
+  }
+
+  loadIndustryTypes(): void {
+    this.industryTypesService.loadIndustryTypes().subscribe({
+      next: () => {
+        this.industryOptions = this.industryTypesQuery.getAll().map(industry => ({
+          value: industry.id,
+          label: industry.industryName
+        }));
+      },
+      error: (error) => {
+        this.toastService.error(`加载行业类型失败: ${error.message}`);
       }
     });
   }
@@ -163,5 +187,9 @@ export class EventTypeEditorComponent implements OnInit, OnDestroy {
 
   get statusControl(): FormControl {
     return this.eventTypeForm.get('status') as FormControl;
+  }
+
+  get industryIdControl(): FormControl {
+    return this.eventTypeForm.get('industryId') as FormControl;
   }
 }

@@ -108,41 +108,79 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
 
   // 填充表单数据
   private patchForm(apiKey: ApiKey): void {
-    this.apiKeyForm.patchValue({
-      name: apiKey.name,
+    console.log('🔍 [API Key Form] 填充表单数据，API Key:', apiKey);
+
+    // 确保权限数组有默认值
+    const permissions = apiKey.permissions || [];
+
+    const formData = {
+      name: apiKey.name || '',
       description: apiKey.description || '',
-      type: apiKey.type,
+      type: apiKey.type || ApiKeyType.READ_ONLY,
       expiresAt: apiKey.expiresAt ? new Date(apiKey.expiresAt).toISOString().slice(0, 16) : null,
-      permissions: apiKey.permissions || []
-    });
+      permissions: permissions
+    };
+
+    console.log('🔍 [API Key Form] 准备填充的表单数据:', formData);
+
+    this.apiKeyForm.patchValue(formData);
+
+    // 确保权限控制根据类型正确设置
+    setTimeout(() => {
+      this.updatePermissionsByType(apiKey.type);
+      console.log('🔍 [API Key Form] 表单填充完成，当前值:', this.apiKeyForm.value);
+    }, 0);
   }
 
   // 表单提交
   onSubmit(): void {
+    console.log('🔍 [API Key Form] 表单提交开始');
+    console.log('🔍 [API Key Form] 编辑模式:', this.isEditMode);
+    console.log('🔍 [API Key Form] 表单有效性:', this.apiKeyForm.valid);
+    console.log('🔍 [API Key Form] 表单原始值:', this.apiKeyForm.value);
+    console.log('🔍 [API Key Form] 原始API Key数据:', this.apiKey);
+
     if (this.apiKeyForm.invalid) {
+      console.warn('⚠️ [API Key Form] 表单验证失败，标记为已触摸');
       this.markFormGroupTouched(this.apiKeyForm);
       return;
     }
 
     const formValue = this.apiKeyForm.value;
+    console.log('🔍 [API Key Form] 处理后的表单值:', formValue);
+
+    // 确保类型字段正确映射
+    let typeValue = formValue.type;
+    if (typeof typeValue === 'string') {
+      // 如果是字符串形式，确保转换为正确的枚举值
+      if (typeValue === 'admin') {
+        typeValue = ApiKeyType.ADMIN;
+      } else if (typeValue === 'read_write') {
+        typeValue = ApiKeyType.READ_WRITE;
+      } else if (typeValue === 'read_only') {
+        typeValue = ApiKeyType.READ_ONLY;
+      }
+    }
 
     if (this.isEditMode && this.apiKey) {
       const updateData: UpdateApiKeyDto = {
-        name: formValue.name,
-        description: formValue.description || undefined,
-        type: formValue.type,
+        name: formValue.name?.trim() || '',
+        description: formValue.description?.trim() || undefined,
+        type: typeValue,
         expiresAt: formValue.expiresAt || undefined,
-        permissions: formValue.permissions
+        permissions: formValue.permissions || []
       };
+      console.log('✅ [API Key Form] 发送更新数据:', updateData);
       this.submit.emit(updateData);
     } else {
       const createData: CreateApiKeyDto = {
-        name: formValue.name,
-        description: formValue.description || undefined,
-        type: formValue.type,
+        name: formValue.name?.trim() || '',
+        description: formValue.description?.trim() || undefined,
+        type: typeValue,
         expiresAt: formValue.expiresAt || undefined,
-        permissions: formValue.permissions
+        permissions: formValue.permissions || []
       };
+      console.log('✅ [API Key Form] 发送创建数据:', createData);
       this.submit.emit(createData);
     }
   }

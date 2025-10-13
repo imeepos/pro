@@ -164,6 +164,7 @@
   *ngIf="showEditModal"
   [title]="'编辑 API Key'"
   [visible]="showEditModal"
+  [mode]="'edit'"
   [apiKey]="selectedApiKey"
   (close)="onModalClose()"
   (updated)="onApiKeyUpdated($event)">

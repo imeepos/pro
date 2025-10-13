@@ -90,16 +90,24 @@ export class ApiKeyModalComponent implements OnInit, OnDestroy {
 
   // 表单提交处理
   onFormSubmit(data: CreateApiKeyDto | UpdateApiKeyDto): void {
+    console.log('🔍 [API Key Modal] 表单提交处理开始');
+    console.log('🔍 [API Key Modal] 当前模式:', this.mode);
+    console.log('🔍 [API Key Modal] 接收到的数据:', data);
+    console.log('🔍 [API Key Modal] 当前API Key:', this.apiKey);
+
     this.clearError();
 
     switch (this.mode) {
       case 'create':
+        console.log('✅ [API Key Modal] 处理创建模式');
         this.handleCreate(data as CreateApiKeyDto);
         break;
       case 'edit':
+        console.log('✅ [API Key Modal] 处理编辑模式');
         this.handleEdit(data as UpdateApiKeyDto);
         break;
       default:
+        console.warn('⚠️ [API Key Modal] 未知模式:', this.mode);
         break;
     }
   }
