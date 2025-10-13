@@ -14,6 +14,7 @@ import { EventsModule } from './events/events.module';
 import { MediaTypeModule } from './media-type/media-type.module';
 import { ConfigModule } from './config/config.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { createDatabaseConfig } from './config';
 
 @Module({
@@ -38,6 +39,7 @@ import { createDatabaseConfig } from './config';
     EventsModule,
     MediaTypeModule,
     DashboardModule,
+    NotificationsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
