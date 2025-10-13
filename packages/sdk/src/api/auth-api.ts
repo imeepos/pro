@@ -1,7 +1,7 @@
 import { Observable, from } from 'rxjs';
 import { HttpClient } from '../client/http-client.js';
 import { IAuthService } from '../auth.interface.js';
-import { LoginDto, RegisterDto, AuthResponse, User } from '@pro/types';
+import { LoginDto, RegisterDto, AuthResponse, UserProfile } from '@pro/types';
 
 /**
  * 认证 API 接口封装
@@ -49,7 +49,7 @@ export class AuthApi implements IAuthService {
   /**
    * 获取用户个人资料
    */
-  getProfile(): Observable<User> {
-    return from(this.http.get<User>('/api/auth/profile'));
+  getProfile(): Observable<UserProfile> {
+    return from(this.http.get<UserProfile>('/api/auth/profile'));
   }
 }
