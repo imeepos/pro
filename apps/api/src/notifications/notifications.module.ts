@@ -1,14 +1,11 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { NotificationsGateway } from './notifications.gateway';
+import { createJwtConfig } from '../config';
 
 @Module({
   imports: [
-    JwtModule.register({
-      global: true,
-      secret: process.env.JWT_SECRET || 'dev-secret-key',
-      signOptions: { expiresIn: '7d' },
-    }),
+    JwtModule.registerAsync(createJwtConfig()),
   ],
   providers: [NotificationsGateway],
   exports: [NotificationsGateway],
