@@ -155,16 +155,99 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  private scheduleComponentCreation(): void {
+    console.log('[HomeComponent] scheduleComponentCreation 开始', {
+      hasScreenConfig: !!this.screenConfig,
+      isViewInitialized: this.isViewInitialized,
+      hasComponentsContainer: !!this.componentsContainer,
+      componentCount: this.screenConfig?.components?.length || 0
+    });
+
+    if (!this.screenConfig?.components) {
+      console.log('[HomeComponent] 没有组件需要创建');
+      return;
+    }
+
+    if (!this.isViewInitialized || !this.componentsContainer) {
+      console.log('[HomeComponent] 视图未初始化或容器不可用，标记待处理');
+      this.pendingComponentCreation = true;
+      return;
+    }
+
+    // 使用 setTimeout + requestAnimationFrame 确保DOM完全准备好
+    setTimeout(() => {
+      if (this.isViewInitialized && this.componentsContainer) {
+        requestAnimationFrame(() => {
+          this.renderComponentsWithRetry();
+        });
+      }
+    }, 0);
+  }
+
+  private renderComponentsWithRetry(): void {
+    console.log('[HomeComponent] renderComponentsWithRetry 开始', {
+      retryCount: this.componentCreationRetryCount,
+      maxRetryCount: this.maxRetryCount
+    });
+
+    try {
+      this.renderComponents();
+      this.componentCreationRetryCount = 0; // 成功后重置计数
+    } catch (error) {
+      console.error('[HomeComponent] renderComponents 失败', error);
+      this.componentCreationRetryCount++;
+
+      if (this.componentCreationRetryCount < this.maxRetryCount) {
+        console.log(`[HomeComponent] 将在 ${1000 * this.componentCreationRetryCount}ms 后重试`);
+        setTimeout(() => {
+          this.renderComponentsWithRetry();
+        }, 1000 * this.componentCreationRetryCount);
+      } else {
+        console.error('[HomeComponent] 组件创建重试次数已达上限，放弃重试');
+        this.error = '组件创建失败，请刷新页面重试';
+        this.cdr.markForCheck();
+      }
+    }
+  }
+
   private renderComponents(): void {
+    console.log('[HomeComponent] renderComponents 开始', {
+      hasScreenConfig: !!this.screenConfig,
+      hasComponentsContainer: !!this.componentsContainer,
+      componentCount: this.screenConfig?.components?.length || 0
+    });
+
     if (!this.screenConfig?.components || !this.componentsContainer) {
+      console.warn('[HomeComponent] renderComponents 条件不满足', {
+        hasScreenConfig: !!this.screenConfig,
+        hasComponentsContainer: !!this.componentsContainer
+      });
       return;
     }
 
     this.clearComponents();
 
-    this.screenConfig.components.forEach((componentConfig: ScreenComponent) => {
-      this.createComponent(componentConfig);
+    const componentConfigs = this.screenConfig.components;
+    console.log(`[HomeComponent] 准备创建 ${componentConfigs.length} 个组件`);
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    componentConfigs.forEach((componentConfig: ScreenComponent, index: number) => {
+      try {
+        const success = this.createComponent(componentConfig, index);
+        if (success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+      } catch (error) {
+        console.error(`[HomeComponent] 创建组件 ${index} 时发生错误`, error);
+        failureCount++;
+      }
     });
+
+    console.log(`[HomeComponent] 组件创建完成: 成功 ${successCount}，失败 ${failureCount}`);
 
     // 确保DOM更新完成后再计算缩放
     requestAnimationFrame(() => {
@@ -173,31 +256,76 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  private createComponent(componentConfig: ScreenComponent): void {
-    const componentType = this.componentRegistry.get(componentConfig.type);
+  private createComponent(componentConfig: ScreenComponent, index: number): boolean {
+    console.log(`[HomeComponent] createComponent 开始`, {
+      componentType: componentConfig.type,
+      componentIndex: index,
+      position: componentConfig.position
+    });
 
-    if (!componentType) {
-      console.error(`组件类型未注册: ${componentConfig.type}`);
-      return;
+    try {
+      // 验证容器是否可用
+      if (!this.componentsContainer) {
+        console.error('[HomeComponent] 组件容器不可用');
+        return false;
+      }
+
+      // 获取组件类型
+      const componentType = this.componentRegistry.get(componentConfig.type);
+      if (!componentType) {
+        console.error(`[HomeComponent] 组件类型未注册: ${componentConfig.type}`);
+        return false;
+      }
+
+      console.log(`[HomeComponent] 开始创建组件实例: ${componentConfig.type}`);
+
+      // 创建组件实例
+      const componentRef = this.componentsContainer.createComponent(componentType);
+      console.log(`[HomeComponent] 组件实例创建成功: ${componentConfig.type}`);
+
+      // 设置组件样式和位置
+      const wrapper = componentRef.location.nativeElement;
+      wrapper.classList.add('component-wrapper');
+      wrapper.style.position = 'absolute';
+      wrapper.style.left = `${componentConfig.position.x}px`;
+      wrapper.style.top = `${componentConfig.position.y}px`;
+      wrapper.style.width = `${componentConfig.position.width}px`;
+      wrapper.style.height = `${componentConfig.position.height}px`;
+      wrapper.style.zIndex = `${componentConfig.position.zIndex}`;
+
+      console.log(`[HomeComponent] 组件样式设置完成: ${componentConfig.type}`);
+
+      // 设置组件配置
+      const instance = componentRef.instance as IScreenComponent;
+      if (instance.onConfigChange && componentConfig.config) {
+        try {
+          instance.onConfigChange(componentConfig.config);
+          console.log(`[HomeComponent] 组件配置设置完成: ${componentConfig.type}`);
+        } catch (configError) {
+          console.error(`[HomeComponent] 设置组件配置失败: ${componentConfig.type}`, configError);
+          // 配置失败不应该阻止组件显示，继续执行
+        }
+      }
+
+      // 触发组件的变更检测
+      if (componentRef.changeDetectorRef) {
+        componentRef.changeDetectorRef.detectChanges();
+      }
+
+      this.componentRefs.push(componentRef);
+      console.log(`[HomeComponent] 组件创建完成: ${componentConfig.type}`);
+
+      return true;
+
+    } catch (error) {
+      console.error(`[HomeComponent] 创建组件失败: ${componentConfig.type}`, {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        componentConfig,
+        index
+      });
+      return false;
     }
-
-    const componentRef = this.componentsContainer.createComponent(componentType);
-
-    const wrapper = componentRef.location.nativeElement;
-    wrapper.classList.add('component-wrapper');
-    wrapper.style.position = 'absolute';
-    wrapper.style.left = `${componentConfig.position.x}px`;
-    wrapper.style.top = `${componentConfig.position.y}px`;
-    wrapper.style.width = `${componentConfig.position.width}px`;
-    wrapper.style.height = `${componentConfig.position.height}px`;
-    wrapper.style.zIndex = `${componentConfig.position.zIndex}`;
-
-    const instance = componentRef.instance as IScreenComponent;
-    if (instance.onConfigChange && componentConfig.config) {
-      instance.onConfigChange(componentConfig.config);
-    }
-
-    this.componentRefs.push(componentRef);
   }
 
   private clearComponents(): void {
@@ -292,16 +420,22 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadScreenConfig(screen: ScreenPage): void {
+    console.log('[HomeComponent] loadScreenConfig 开始', { screenId: screen.id, screenName: screen.name });
     this.screenConfig = screen;
     this.loading = false;
+    this.componentCreationRetryCount = 0; // 重置重试计数
     this.error = null;
     this.cdr.markForCheck();
-    this.renderComponents();
+
+    // 使用改进的组件创建调度
+    this.scheduleComponentCreation();
 
     const screenIndex = this.availableScreens.findIndex(s => s.id === screen.id);
     if (screenIndex !== -1) {
       this.currentScreenIndex = screenIndex;
     }
+
+    console.log('[HomeComponent] loadScreenConfig 完成');
   }
 
   // 实时同步功能
