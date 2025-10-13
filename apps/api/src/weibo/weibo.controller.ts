@@ -10,9 +10,11 @@ import {
   Sse,
   Headers,
   ForbiddenException,
+  MessageEvent,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { WeiboAccountService } from './weibo-account.service';
 import { WeiboAuthService, WeiboLoginEvent } from './weibo-auth.service';
 import { WeiboHealthCheckService } from './weibo-health-check.service';
@@ -57,9 +59,15 @@ export class WeiboController {
   @Get('login/start')
   @UseGuards(JwtSseAuthGuard)
   @Sse()
-  async startLogin(@Request() req): Promise<Observable<WeiboLoginEvent>> {
+  async startLogin(@Request() req): Promise<Observable<MessageEvent>> {
     const userId = req.user.userId;
-    return this.weiboAuthService.startLogin(userId);
+    const events$ = await this.weiboAuthService.startLogin(userId);
+
+    return events$.pipe(
+      map((event: WeiboLoginEvent) => ({
+        data: event,
+      } as MessageEvent))
+    );
   }
 
   /**
