@@ -344,12 +344,12 @@
     <app-canvas class="flex-1 bg-gray-100 overflow-hidden p-1" [class.dark-theme]="darkTheme$ | async"></app-canvas>
 
     <!-- 右侧图层面板 -->
-    <app-layer-panel *ngIf="!layerPanelCollapsed && !(isFullscreen$ | async)"></app-layer-panel>
+    <!-- <app-layer-panel *ngIf="!layerPanelCollapsed && !(isFullscreen$ | async)"></app-layer-panel> -->
 
     <!-- 右侧属性编辑面板 -->
-    <app-right-sidebar
+    <!-- <app-right-sidebar
       *ngIf="!(isFullscreen$ | async)"
       [(collapsed)]="rightPanelCollapsed"
-    ></app-right-sidebar>
+    ></app-right-sidebar> -->
   </div>
 </div>

@@ -1,9 +1,9 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000/api',
+  apiUrl: 'http://43.240.223.138:3000/api',
   tokenKey: 'access_token',
   refreshTokenKey: 'refresh_token',
   timeout: 30000,
-  wsUrl: 'ws://localhost:3000',
+  wsUrl: 'ws://43.240.223.138:3000',
   wsNamespace: 'screens'
 };

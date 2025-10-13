@@ -30,7 +30,7 @@ interface ToastMessage {
 @Component({
   selector: 'app-screen-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, CanvasComponent, LayerPanelComponent, RightSidebarComponent],
+  imports: [CommonModule, FormsModule, CanvasComponent],
   templateUrl: './screen-editor.component.html',
   styleUrls: ['./screen-editor.component.scss'],
   animations: [
