@@ -125,9 +125,6 @@ export class ApiKeyService {
         console.log('✅ [API Key Service] API Key 更新成功:', apiKey);
         this.setLoading(false);
         this.updateApiKeyInList(apiKey);
-        // 强制重新加载列表以确保数据一致性
-        console.log('🔄 [API Key Service] 重新加载列表以确保数据一致性');
-        this.loadApiKeys();
       }),
       catchError((error) => {
         console.error('❌ [API Key Service] API Key 更新失败:', error);

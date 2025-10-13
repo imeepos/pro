@@ -42,7 +42,8 @@
       "WebFetch(domain:docs.nestjs.com)",
       "Bash(pnpm run build:*)",
       "Read(//home/ubuntu/**)",
-      "Bash(pnpm run typecheck:*)"
+      "Bash(pnpm run typecheck:*)",
+      "Bash(/dev/null)"
     ],
     "deny": [],
     "ask": []

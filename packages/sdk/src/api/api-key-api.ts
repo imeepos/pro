@@ -23,11 +23,16 @@ interface ApiKeyRecord {
   id: number;
   key: string;
   name: string;
+  description?: string;
+  type?: string;
+  permissions?: string[];
+  userId?: string;
   isActive: boolean;
   lastUsedAt?: string | Date | null;
   usageCount: number;
   expiresAt?: string | Date | null;
   createdIp?: string | null;
+  updatedIp?: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
   isExpired: boolean;
@@ -282,12 +287,29 @@ function deriveStatus(isActive: boolean, isExpired: boolean): ApiKeyStatus {
 }
 
 function adaptApiKey(record: ApiKeyRecord): ApiKey {
+  // 映射类型字符串到枚举值
+  let type: ApiKeyType = ApiKeyType.READ_ONLY;
+  if (record.type) {
+    switch (record.type.toLowerCase()) {
+      case 'admin':
+        type = ApiKeyType.ADMIN;
+        break;
+      case 'read_write':
+        type = ApiKeyType.READ_WRITE;
+        break;
+      case 'read_only':
+      default:
+        type = ApiKeyType.READ_ONLY;
+        break;
+    }
+  }
+
   return {
     id: record.id,
     key: record.key,
     name: record.name,
-    description: undefined,
-    type: ApiKeyType.READ_ONLY,
+    description: record.description,
+    type: type,
     status: deriveStatus(record.isActive, record.isExpired),
     isActive: record.isActive,
     lastUsedAt: normalizeDate(record.lastUsedAt),
@@ -298,8 +320,8 @@ function adaptApiKey(record: ApiKeyRecord): ApiKey {
     updatedAt: normalizeDate(record.updatedAt) ?? new Date(),
     isExpired: record.isExpired,
     isValid: record.isValid,
-    userId: 0,
-    permissions: [],
+    userId: record.userId ? parseInt(record.userId, 10) : 0,
+    permissions: record.permissions || [],
   };
 }
 
