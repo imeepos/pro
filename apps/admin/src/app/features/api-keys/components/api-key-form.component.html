@@ -201,11 +201,11 @@
     </div>
 
     <!-- 有效期设置 -->
-    <div class="space-y-4">
-      <h3 class="text-lg font-semibold text-slate-700 pb-2 border-b border-slate-200">有效期设置</h3>
+    <div class="space-y-3">
+      <h3 class="text-base font-semibold text-gray-900 dark:text-white pb-2 border-b border-gray-200 dark:border-gray-600">有效期设置</h3>
 
-      <div class="space-y-2">
-        <label for="expiresAt" class="block text-sm font-medium text-slate-700">
+      <div>
+        <label for="expiresAt" class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
           过期时间
         </label>
         <div class="flex gap-2">
@@ -213,44 +213,42 @@
             type="datetime-local"
             id="expiresAt"
             formControlName="expiresAt"
-            class="flex-1 px-4 py-2.5 text-sm border-2 border-slate-200 rounded-lg bg-white transition-all duration-300 outline-none text-slate-800 focus:border-primary focus:shadow-[0_0_0_4px_rgba(102,126,234,0.1)]"
+            class="flex-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
             [min]="getMinDateTime()"
             [max]="getMaxDateTime()"
           />
           <button type="button"
-                  class="px-4 py-2.5 text-sm text-slate-600 bg-slate-100 border border-slate-300 rounded-lg hover:bg-slate-200 transition-colors"
+                  class="px-3 py-2.5 text-sm text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
                   (click)="setDefaultExpiryDate()">
             1年
           </button>
           <button type="button"
-                  class="px-4 py-2.5 text-sm text-slate-600 bg-slate-100 border border-slate-300 rounded-lg hover:bg-slate-200 transition-colors"
+                  class="px-3 py-2.5 text-sm text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
                   (click)="clearExpiryDate()">
             永久
           </button>
         </div>
-        <p class="text-xs text-slate-500">
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
           留空表示永不过期。建议设置合理的过期时间以提高安全性。
         </p>
       </div>
     </div>
 
     <!-- 操作按钮 -->
-    <div class="flex justify-end gap-4 pt-6 border-t border-slate-200">
+    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">
       <button type="button"
-              class="px-6 py-2.5 text-sm font-medium text-slate-600 bg-white border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-all duration-200"
+              class="py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
               (click)="onCancel()">
         取消
       </button>
       <button type="submit"
-              class="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-primary to-primary-dark border-none rounded-lg cursor-pointer transition-all duration-300 shadow-[0_4px_12px_rgba(102,126,234,0.4)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(102,126,234,0.6)] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+              class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
               [disabled]="!isFormValid() || loading">
-        <span class="flex items-center gap-2">
-          <span *ngIf="!loading">{{ getSubmitButtonText() }}</span>
-          <span *ngIf="loading" class="flex items-center gap-2">
-            <span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-            处理中...
-          </span>
-        </span>
+        <svg *ngIf="loading" class="w-4 h-4 me-2 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        {{ loading ? '处理中...' : getSubmitButtonText() }}
       </button>
     </div>
   </form>
