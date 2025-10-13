@@ -22,10 +22,11 @@ export class AuthStateService {
 
     return this.authService.login(dto).pipe(
       tap(response => {
-        this.tokenStorage.setToken(response.accessToken);
-        this.tokenStorage.setRefreshToken(response.refreshToken);
+        const actualResponse = (response as any).data || response;
+        this.tokenStorage.setToken(actualResponse.accessToken);
+        this.tokenStorage.setRefreshToken(actualResponse.refreshToken);
         this.authStore.update({
-          user: response.user,
+          user: actualResponse.user,
           isAuthenticated: true,
           loading: false,
           error: null
@@ -47,10 +48,11 @@ export class AuthStateService {
 
     return this.authService.register(dto).pipe(
       tap(response => {
-        this.tokenStorage.setToken(response.accessToken);
-        this.tokenStorage.setRefreshToken(response.refreshToken);
+        const actualResponse = (response as any).data || response;
+        this.tokenStorage.setToken(actualResponse.accessToken);
+        this.tokenStorage.setRefreshToken(actualResponse.refreshToken);
         this.authStore.update({
-          user: response.user,
+          user: actualResponse.user,
           isAuthenticated: true,
           loading: false,
           error: null

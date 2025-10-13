@@ -1,6 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AuthStateService } from './core/state/auth-state.service';
 
 @Component({
   selector: 'app-root',
@@ -9,10 +8,4 @@ import { AuthStateService } from './core/state/auth-state.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent implements OnInit {
-  constructor(private authStateService: AuthStateService) {}
-
-  ngOnInit(): void {
-    this.authStateService.checkAuth().subscribe();
-  }
-}
+export class AppComponent {}

@@ -8,6 +8,7 @@ import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketMan
 import { SkerSDK } from '@pro/sdk';
 import { TokenStorageService } from './core/services/token-storage.service';
 import { HttpClientService } from './core/services/http-client.service';
+import { AuthStateService } from './core/state/auth-state.service';
 import { environment } from '../environments/environment';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
@@ -24,6 +25,12 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
   };
 }
 
+function initializeAuth(authStateService: AuthStateService) {
+  return () => {
+    return authStateService.checkAuth().toPromise();
+  };
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
@@ -34,6 +41,12 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER,
       useFactory: initializeComponentRegistry,
       deps: [ComponentRegistryService],
+      multi: true
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeAuth,
+      deps: [AuthStateService],
       multi: true
     },
     // Services
