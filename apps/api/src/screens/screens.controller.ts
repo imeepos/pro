@@ -36,6 +36,16 @@ export class ScreensController {
     return this.screensService.findAll(page, limit, userId);
   }
 
+  @Get('published')
+  findPublished(
+    @Query('page', ParseIntPipe) page = 1,
+    @Query('limit', ParseIntPipe) limit = 10,
+    @Request() req,
+  ) {
+    const userId = req.user.userId;
+    return this.screensService.findPublished(page, limit, userId);
+  }
+
   @Get('default')
   getDefault(@Request() req) {
     const userId = req.user.userId;
