@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { fromEvent, merge, Subject, filter, takeUntil } from 'rxjs';
 import { CanvasService } from '../canvas/services/canvas.service';
 import { CanvasQuery } from '../canvas/services/canvas.query';
@@ -14,8 +14,10 @@ interface KeyboardShortcut {
 
 @Injectable({ providedIn: 'root' })
 export class KeyboardService {
-  private readonly canvasService = inject(CanvasService);
-  private readonly canvasQuery = inject(CanvasQuery);
+  constructor(
+    private readonly canvasService: CanvasService,
+    private readonly canvasQuery: CanvasQuery
+  ) {}
 
   private readonly destroy$ = new Subject<void>();
   private enabled = true;
