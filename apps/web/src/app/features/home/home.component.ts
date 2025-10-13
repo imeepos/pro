@@ -51,7 +51,10 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadAvailableScreens().then(() => {
-      this.loadDefaultScreen();
+      // 在加载可用屏幕后，确保选中正确的默认屏幕
+      this.identifyAndSelectDefaultScreen().then(() => {
+        this.loadDefaultScreen();
+      });
     });
 
     this.initializeWebSocketConnection();
@@ -171,6 +174,10 @@ export class HomeComponent implements OnInit, OnDestroy {
       const response = await this.sdk.screen.getPublishedScreens$().pipe(takeUntil(this.destroy$)).toPromise();
       if (response) {
         this.availableScreens = response.items;
+
+        // 识别并选中默认屏幕
+        await this.identifyAndSelectDefaultScreen();
+
         this.cdr.markForCheck();
       }
     } catch (error) {
@@ -290,7 +297,17 @@ export class HomeComponent implements OnInit, OnDestroy {
     const existingIndex = this.availableScreens.findIndex(s => s.id === screen.id);
     if (existingIndex === -1) {
       this.availableScreens.push(screen);
-      this.cdr.markForCheck();
+
+      // 检查新发布的屏幕是否是默认屏幕
+      if (screen.isDefault) {
+        this.currentScreenIndex = this.availableScreens.length - 1;
+        this.cdr.markForCheck();
+      } else {
+        // 检查是否需要重新识别默认屏幕
+        this.identifyAndSelectDefaultScreen().then(() => {
+          this.cdr.markForCheck();
+        });
+      }
     }
   }
 
@@ -298,6 +315,16 @@ export class HomeComponent implements OnInit, OnDestroy {
     const index = this.availableScreens.findIndex(s => s.id === updatedScreen.id);
     if (index !== -1) {
       this.availableScreens[index] = updatedScreen;
+
+      // 如果更新的屏幕成为默认屏幕，更新当前选中
+      if (updatedScreen.isDefault) {
+        this.currentScreenIndex = index;
+      } else if (this.currentScreenIndex === index && !updatedScreen.isDefault) {
+        // 如果当前选中的屏幕不再是默认屏幕，重新识别默认屏幕
+        this.identifyAndSelectDefaultScreen().then(() => {
+          this.cdr.markForCheck();
+        });
+      }
 
       if (this.screenConfig?.id === updatedScreen.id) {
         this.loadScreenConfig(updatedScreen);
@@ -314,8 +341,15 @@ export class HomeComponent implements OnInit, OnDestroy {
 
       if (this.screenConfig?.id === screenId) {
         if (this.availableScreens.length > 0) {
-          this.currentScreenIndex = 0;
-          this.loadScreenConfig(this.availableScreens[0]);
+          // 尝试重新识别并选中默认屏幕
+          this.identifyAndSelectDefaultScreen().then(() => {
+            if (this.currentScreenIndex < this.availableScreens.length) {
+              this.loadScreenConfig(this.availableScreens[this.currentScreenIndex]);
+            } else {
+              this.currentScreenIndex = 0;
+              this.loadScreenConfig(this.availableScreens[0]);
+            }
+          });
         } else {
           this.screenConfig = null;
           this.clearComponents();
@@ -323,6 +357,36 @@ export class HomeComponent implements OnInit, OnDestroy {
       }
 
       this.cdr.markForCheck();
+    }
+  }
+
+  private async identifyAndSelectDefaultScreen(): Promise<void> {
+    if (this.availableScreens.length === 0) {
+      return;
+    }
+
+    try {
+      // 获取默认屏幕配置
+      const defaultScreen = await this.sdk.screen.getDefaultScreen$().pipe(takeUntil(this.destroy$)).toPromise();
+
+      if (defaultScreen) {
+        // 在可用屏幕列表中找到默认屏幕
+        const defaultIndex = this.availableScreens.findIndex(screen => screen.id === defaultScreen.id);
+
+        if (defaultIndex !== -1) {
+          this.currentScreenIndex = defaultIndex;
+        } else {
+          // 如果默认屏幕不在已发布列表中，使用第一个屏幕
+          this.currentScreenIndex = 0;
+        }
+      } else {
+        // 如果没有默认屏幕，使用第一个屏幕
+        this.currentScreenIndex = 0;
+      }
+    } catch (error) {
+      console.warn('Failed to load default screen, using first screen:', error);
+      // 如果获取默认屏幕失败，使用第一个屏幕
+      this.currentScreenIndex = 0;
     }
   }
 }

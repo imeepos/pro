@@ -9,27 +9,27 @@ $transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   transition: background-color $transition, color $transition, padding 300ms $transition;
 
   &:hover { @apply bg-primary-light dark:bg-gray-700; }
-  &.active { @apply bg-primary text-white; .menu-icon svg { @apply text-white; } }
+  &.active { @apply bg-primary/15 dark:bg-primary/20 text-primary dark:text-primary-300; }
   &.collapsed { @apply px-0 justify-center; }
 }
 
 .menu-icon {
   @apply flex items-center justify-center w-5 h-5 flex-shrink-0;
   svg { @apply w-5 h-5 text-gray-500 dark:text-gray-400; transition: color $transition; }
-  .menu-item.active & svg { @apply text-white; }
+  .menu-item.active & svg { @apply text-primary dark:text-primary-300; }
 }
 
 .menu-label {
   @apply ml-3 text-sm font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap overflow-hidden text-ellipsis flex-1;
   transition: opacity $transition, color $transition;
-  .menu-item.active & { @apply text-white; }
+  .menu-item.active & { @apply text-primary dark:text-primary-300; }
 }
 
 .expand-icon {
   @apply w-4 h-4 ml-auto text-gray-500 dark:text-gray-400;
   transition: transform $transition, color $transition;
   &.expanded { @apply rotate-180; }
-  .menu-item.active & { @apply text-white; }
+  .menu-item.active & { @apply text-primary dark:text-primary-300; }
 }
 
 .submenu {

@@ -87,6 +87,12 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
     if (!type) return;
     const permissionsControl = this.apiKeyForm.get('permissions');
 
+    // 避免在表单初始化期间触发权限更新
+    if (this.apiKeyForm.pristine && !permissionsControl?.dirty) {
+      console.log('🔍 [API Key Form] 跳过权限更新，表单尚未被用户修改');
+      return;
+    }
+
     switch (type) {
       case ApiKeyType.READ_ONLY:
         permissionsControl?.setValue(['read:events', 'read:users', 'read:config']);
@@ -104,6 +110,8 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
         permissionsControl?.enable();
         break;
     }
+
+    console.log('🔍 [API Key Form] 权限已根据类型更新:', { type, permissions: permissionsControl?.value });
   }
 
   // 填充表单数据
@@ -125,11 +133,9 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
 
     this.apiKeyForm.patchValue(formData);
 
-    // 确保权限控制根据类型正确设置
-    setTimeout(() => {
-      this.updatePermissionsByType(apiKey.type);
-      console.log('🔍 [API Key Form] 表单填充完成，当前值:', this.apiKeyForm.value);
-    }, 0);
+    // 避免立即触发权限更新，防止意外的表单值变化
+    // 权限的设置会由用户交互或表单的 valueChanges 监听器处理
+    console.log('🔍 [API Key Form] 表单填充完成，当前值:', this.apiKeyForm.value);
   }
 
   // 表单提交
@@ -156,8 +162,12 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
     const formValue = this.apiKeyForm.value;
     console.log('🔍 [API Key Form] 处理后的表单值:', formValue);
 
+    // 清理表单数据，移除意外的字段
+    const cleanedFormValue = this.cleanFormData(formValue);
+    console.log('🧹 [API Key Form] 清理后的表单值:', cleanedFormValue);
+
     // 确保类型字段正确映射
-    let typeValue = formValue.type;
+    let typeValue = cleanedFormValue.type;
     if (typeof typeValue === 'string') {
       // 如果是字符串形式，确保转换为正确的枚举值
       if (typeValue === 'admin') {
@@ -170,20 +180,20 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
     }
 
     console.log('🔄 [API Key Form] 类型转换结果:', {
-      original: formValue.type,
+      original: cleanedFormValue.type,
       converted: typeValue,
       convertedType: typeof typeValue
     });
 
     // 处理过期时间：明确区分永久过期（null）和未设置（undefined）
     let expiresAt: string | null | undefined;
-    if (formValue.expiresAt === null || formValue.expiresAt === '') {
+    if (cleanedFormValue.expiresAt === null || cleanedFormValue.expiresAt === '') {
       // 用户选择永久过期或清空字段
       expiresAt = null;
       console.log('🔍 [API Key Form] 设置永久过期时间');
-    } else if (formValue.expiresAt) {
+    } else if (cleanedFormValue.expiresAt) {
       // 用户设置了具体的过期时间
-      expiresAt = formValue.expiresAt;
+      expiresAt = cleanedFormValue.expiresAt;
       console.log('🔍 [API Key Form] 设置具体过期时间:', expiresAt);
     } else {
       // 未设置过期时间（编辑时可能保持原值）
@@ -192,13 +202,7 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
     }
 
     if (this.isEditMode && this.apiKey) {
-      const updateData: UpdateApiKeyDto = {
-        name: formValue.name?.trim() || '',
-        description: formValue.description?.trim() || undefined,
-        type: typeValue,
-        expiresAt: expiresAt,
-        permissions: formValue.permissions || []
-      };
+      const updateData: UpdateApiKeyDto = this.createUpdateData(cleanedFormValue, typeValue, expiresAt);
       console.log('✅ [API Key Form] 准备发送更新数据:', {
         id: this.apiKey.id,
         currentType: this.apiKey.type,
@@ -207,16 +211,53 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
       });
       this.submit.emit(updateData);
     } else {
-      const createData: CreateApiKeyDto = {
-        name: formValue.name?.trim() || '',
-        description: formValue.description?.trim() || undefined,
-        type: typeValue,
-        expiresAt: expiresAt,
-        permissions: formValue.permissions || []
-      };
+      const createData: CreateApiKeyDto = this.createCreateData(cleanedFormValue, typeValue, expiresAt);
       console.log('✅ [API Key Form] 发送创建数据:', createData);
       this.submit.emit(createData);
     }
+  }
+
+  // 清理表单数据，移除意外添加的字段
+  private cleanFormData(formValue: any): any {
+    const allowedFields = ['name', 'description', 'type', 'expiresAt', 'permissions'];
+    const cleaned: any = {};
+
+    for (const field of allowedFields) {
+      if (formValue.hasOwnProperty(field)) {
+        cleaned[field] = formValue[field];
+      }
+    }
+
+    // 移除所有可能的意外字段，如 isTrusted 等
+    Object.keys(formValue).forEach(key => {
+      if (!allowedFields.includes(key)) {
+        console.warn('⚠️ [API Key Form] 移除意外字段:', key, formValue[key]);
+      }
+    });
+
+    return cleaned;
+  }
+
+  // 创建更新数据对象
+  private createUpdateData(formValue: any, typeValue: ApiKeyType, expiresAt: string | null | undefined): UpdateApiKeyDto {
+    return {
+      name: formValue.name?.trim() || '',
+      description: formValue.description?.trim() || undefined,
+      type: typeValue,
+      expiresAt: expiresAt,
+      permissions: formValue.permissions || []
+    };
+  }
+
+  // 创建数据对象
+  private createCreateData(formValue: any, typeValue: ApiKeyType, expiresAt: string | null | undefined): CreateApiKeyDto {
+    return {
+      name: formValue.name?.trim() || '',
+      description: formValue.description?.trim() || undefined,
+      type: typeValue,
+      expiresAt: expiresAt,
+      permissions: formValue.permissions || []
+    };
   }
 
   // 取消操作
