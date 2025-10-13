@@ -1,4 +1,4 @@
-import { Component, Input, HostListener, ElementRef, OnInit, OnDestroy, ErrorHandler, ViewChild, AfterViewInit, ComponentRef, Type } from '@angular/core';
+import { Component, Input, HostListener, ElementRef, OnInit, OnDestroy, ErrorHandler, ViewChild, AfterViewInit, ComponentRef, Type, EnvironmentInjector, runInInjectionContext } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, combineLatest } from 'rxjs';
 import { CanvasService } from '../../services/canvas.service';
@@ -51,7 +51,8 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
     private errorBoundary: ErrorBoundaryService,
     private elementRef: ElementRef,
     private eventHandler: ComponentEventHandlerService,
-    private componentRegistry: ComponentRegistryService
+    private componentRegistry: ComponentRegistryService,
+    private environmentInjector: EnvironmentInjector
   ) {}
 
   isSelected = false;
@@ -357,14 +358,16 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * 异步组件创建，优雅处理重试逻辑
+   * 异步组件创建，使用 runInInjectionContext 确保正确的DI上下文
    */
   private async createComponentAsync(viewContainerRef: any, componentClass: any): Promise<any> {
     const maxRetries = 3;
 
     for (let retryCount = 0; retryCount <= maxRetries; retryCount++) {
       try {
-        return viewContainerRef.createComponent(componentClass);
+        return runInInjectionContext(this.environmentInjector, () => {
+          return viewContainerRef.createComponent(componentClass);
+        });
       } catch (error) {
         const isRetryableError = error instanceof Error && error.message.includes('NG0203');
         const isLastAttempt = retryCount === maxRetries;
@@ -378,7 +381,6 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
           error: error.message
         });
 
-        // 渐进式延迟重试
         await this.delay(100 * (retryCount + 1));
       }
     }
@@ -430,7 +432,7 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (error instanceof Error) {
       if (error.message.includes('NG0203')) {
         errorMessage = '动态组件创建失败 (NG0203)';
-        errorDetails = '可能是由于生产构建时的代码压缩导致，请检查组件注册';
+        errorDetails = 'EnvironmentInjector 上下文错误，已尝试使用 runInInjectionContext 修复';
       } else if (error.message.includes('NG0201')) {
         errorMessage = '组件类型错误 (NG0201)';
         errorDetails = '组件不是有效的 Angular 组件';
@@ -448,7 +450,8 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
       componentType: this.component.type,
       componentClass: componentClass?.name,
       angularVersion: '17+',
-      isProduction: !!(window as any)['ng']?.getInjector,
+      usingEnvironmentInjector: true,
+      usingRunInInjectionContext: true,
       registeredComponents: this.componentRegistry.getAll().map(c => c.type)
     });
 
