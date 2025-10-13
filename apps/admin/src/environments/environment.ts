@@ -1,6 +1,7 @@
 export const environment = {
   production: false,
   apiUrl: 'http://43.240.223.138:3000/api',
+  webUrl: 'http://43.240.223.138:4200',
   amapApiKey: 'YOUR_AMAP_KEY',
   tokenKey: 'access_token',
   refreshTokenKey: 'refresh_token',

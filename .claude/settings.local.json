@@ -38,7 +38,8 @@
       "Bash(ng lint)",
       "Bash(ng serve:*)",
       "Bash(curl:*)",
-      "WebFetch(domain:angular.dev)"
+      "WebFetch(domain:angular.dev)",
+      "WebFetch(domain:docs.nestjs.com)"
     ],
     "deny": [],
     "ask": []
