@@ -1,6 +1,6 @@
 import { Component, OnDestroy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { createJdAuthSDK, JdLoginEvent, JdAuthSDK } from '@pro/sdk';
+import { createJdAuthSDK, JdLoginEvent, JdAuthSDK, JdErrorEventData } from '@pro/sdk';
 import { environment } from '../../../environments/environment';
 import { TokenStorageService } from '../../core/services/token-storage.service';
 
@@ -27,6 +27,8 @@ export class JdLoginComponent implements OnDestroy {
   showSuccess = false;
   accountInfo: any = null;
   canRetry = false;
+  currentAttempt = 0;
+  maxRetries = 3;
 
   private jdSDK: JdAuthSDK;
   private eventSource?: EventSource;
@@ -58,6 +60,8 @@ export class JdLoginComponent implements OnDestroy {
     this.qrcodeUrl = '';
     this.status = '正在初始化...';
     this.accountInfo = null;
+    this.canRetry = false;
+    this.currentAttempt = 0;
 
     const token = this.tokenStorage.getToken();
     if (!token) {
@@ -100,12 +104,28 @@ export class JdLoginComponent implements OnDestroy {
           break;
 
         case 'error':
-          this.status = `登录失败: ${event.data.message}`;
-          this.isLoading = false;
-          this.canRetry = this.isRetryableError(event.data.message);
+          this.handleErrorEvent(event.data as JdErrorEventData);
           break;
       }
     });
+  }
+
+  /**
+   * 处理错误事件
+   */
+  private handleErrorEvent(errorData: JdErrorEventData): void {
+    this.currentAttempt = errorData.attempt;
+    this.canRetry = errorData.canRetry;
+    this.isLoading = false;
+
+    // 根据重试状态和次数显示不同的错误信息
+    if (errorData.canRetry && errorData.attempt < this.maxRetries) {
+      this.status = `${errorData.message} (尝试 ${errorData.attempt}/${this.maxRetries})`;
+    } else if (errorData.canRetry && errorData.attempt >= this.maxRetries) {
+      this.status = `${errorData.message} (已达到最大重试次数)`;
+    } else {
+      this.status = `${errorData.message} (无法重试)`;
+    }
   }
 
   private onLoginSuccess(data: any): void {
@@ -124,17 +144,45 @@ export class JdLoginComponent implements OnDestroy {
   }
 
   /**
-   * 判断错误是否可以重试
+   * 手动重试登录
    */
-  private isRetryableError(message: string): boolean {
-    const retryableMessages = [
-      '二维码获取失败',
-      '打开登录页面失败',
-      'Playwright浏览器未就绪',
-      '网络连接失败',
-      '登录流程异常'
-    ];
-    return retryableMessages.some(msg => message.includes(msg));
+  manualRetry(): void {
+    if (!this.canRetry) {
+      return;
+    }
+
+    this.closeConnection();
+    this.canRetry = false;
+    this.startJdLogin();
+  }
+
+  /**
+   * 获取重试按钮的提示文本
+   */
+  getRetryButtonText(): string {
+    if (!this.canRetry) {
+      return '无法重试';
+    }
+
+    if (this.currentAttempt >= this.maxRetries) {
+      return '已达到最大重试次数';
+    }
+
+    return `重试 (${this.currentAttempt + 1}/${this.maxRetries})`;
+  }
+
+  /**
+   * 获取错误状态的详细描述
+   */
+  getErrorStatusDescription(): string {
+    if (!this.isLoading && this.canRetry) {
+      if (this.currentAttempt >= this.maxRetries) {
+        return '操作失败，已达到最大重试次数。请稍后再试或联系技术支持。';
+      }
+      return '操作失败，您可以点击重试按钮再次尝试。';
+    }
+
+    return this.status;
   }
 
   /**
@@ -143,6 +191,7 @@ export class JdLoginComponent implements OnDestroy {
   resetAndStartNew(): void {
     this.closeConnection();
     this.canRetry = false;
+    this.currentAttempt = 0;
     this.startJdLogin();
   }
 }

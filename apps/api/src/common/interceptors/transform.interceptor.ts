@@ -13,7 +13,14 @@ export class TransformInterceptor implements NestInterceptor {
     const response = context.switchToHttp().getResponse();
     const statusCode = response.statusCode;
 
+    // 跳过 204 No Content 响应
     if (statusCode === 204) {
+      return next.handle();
+    }
+
+    // 跳过 SSE 响应（Content-Type: text/event-stream）
+    const contentType = response.getHeader('Content-Type');
+    if (contentType && contentType.includes('text/event-stream')) {
       return next.handle();
     }
 
