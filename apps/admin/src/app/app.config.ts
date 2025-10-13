@@ -2,69 +2,49 @@ import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig, createNotificationWebSocketConfig } from '@pro/components';
 import { TestSimpleComponent } from './features/screens/components/test-simple.component';
-import { EventsStore } from './state/events.store';
-import { TagsStore } from './state/tags.store';
-import { UserService } from './state/user.service';
 import { TokenStorageService } from './core/services/token-storage.service';
-import { HttpClientService } from './core/services/http-client.service';
 import { SkerSDK } from '@pro/sdk';
 import { environment } from '../environments/environment';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
   return () => {
-    console.log('[App] 组件注册开始');
-
     try {
-      console.log('[App] 注册 weibo-logged-in-users-card 组件');
-      registry.register(
+      const components = [
         {
-          type: 'weibo-logged-in-users-card',
-          name: '微博已登录用户统计',
-          icon: 'users',
-          category: 'weibo'
+          definition: {
+            type: 'weibo-logged-in-users-card',
+            name: '微博已登录用户统计',
+            icon: 'users',
+            category: 'weibo'
+          },
+          component: WeiboLoggedInUsersCardComponent
         },
-        WeiboLoggedInUsersCardComponent
-      );
-      console.log('[App] weibo-logged-in-users-card 组件注册成功');
-
-      // 注册测试组件
-      console.log('[App] 注册 test-simple 组件');
-      registry.register(
         {
-          type: 'test-simple',
-          name: '测试组件',
-          icon: 'test',
-          category: 'test'
-        },
-        TestSimpleComponent
-      );
-      console.log('[App] test-simple 组件注册成功');
+          definition: {
+            type: 'test-simple',
+            name: '测试组件',
+            icon: 'test',
+            category: 'test'
+          },
+          component: TestSimpleComponent
+        }
+      ];
 
-      // 验证注册结果
-      const registeredComponents = registry.getAll();
-      console.log('[App] 组件注册完成', {
-        totalComponents: registeredComponents.length,
-        componentTypes: registeredComponents.map(c => c.type)
+      components.forEach(({ definition, component }) => {
+        registry.register(definition, component);
       });
 
-      // 验证特定组件
-      const weiboComponent = registry.get('weibo-logged-in-users-card');
-      console.log('[App] weibo-logged-in-users-card 验证', {
-        isRegistered: !!weiboComponent,
-        componentName: weiboComponent?.name
-      });
+      const registeredCount = registry.getAll().length;
+      console.log(`[App] 成功注册${registeredCount}个组件`);
 
     } catch (error) {
-      console.error('[App] 组件注册失败', {
-        error: error instanceof Error ? error.message : error,
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[App] 组件注册失败: ${errorMessage}`);
       throw error;
     }
   };
@@ -72,12 +52,27 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    // Angular 核心 providers
     provideRouter(routes),
-    provideHttpClient(
-      withInterceptors([tokenInterceptor, errorInterceptor])
-    ),
+    provideHttpClient(withInterceptors([tokenInterceptor, errorInterceptor])),
     provideAnimations(),
-    // FormBuilder 依赖 ReactiveFormsModule 中的 providers
+
+    // Token存储服务的接口适配
+    {
+      provide: 'ITokenStorage',
+      useExisting: TokenStorageService
+    },
+
+    // SDK 配置
+    {
+      provide: SkerSDK,
+      useFactory: () => {
+        const baseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
+        return new SkerSDK(baseUrl, environment.tokenKey);
+      }
+    },
+
+    // 组件注册服务
     ComponentRegistryService,
     {
       provide: APP_INITIALIZER,
@@ -85,55 +80,31 @@ export const appConfig: ApplicationConfig = {
       deps: [ComponentRegistryService],
       multi: true
     },
-    // Akita stores
-    EventsStore,
-    TagsStore,
-    // Services
-    UserService,
-    TokenStorageService,
-    HttpClientService,
-    // Token Storage injection for components
-    {
-      provide: 'ITokenStorage',
-      useExisting: TokenStorageService
-    },
-    // SDK
-    {
-      provide: SkerSDK,
-      useFactory: () => {
-        const baseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
-        console.log('SDK 初始化配置:');
-        console.log('- 原始 apiUrl:', environment.apiUrl);
-        console.log('- 处理后 baseUrl:', baseUrl);
-        console.log('- tokenKey:', environment.tokenKey);
-        return new SkerSDK(baseUrl, environment.tokenKey);
-      }
-    },
-    // WebSocket Auth Service
+
+    // WebSocket 认证服务
     JwtAuthService,
-    // WebSocket
+
+    // WebSocket 管理器
     {
       provide: WebSocketManager,
       useFactory: (authService: JwtAuthService) => {
-        const baseUrl = environment.wsUrl;
-        const namespace = environment.wsNamespace;
-        const token = localStorage.getItem(environment.tokenKey) || undefined;
+        try {
+          const wsManager = new WebSocketManager(() => new WebSocketService(authService));
 
-        console.log('WebSocket Manager 初始化配置:');
-        console.log('- wsUrl:', environment.wsUrl);
-        console.log('- namespace:', environment.wsNamespace);
+          const token = localStorage.getItem(environment.tokenKey);
+          if (token) {
+            const screensConfig = createScreensWebSocketConfig(environment.wsUrl, token);
+            const notificationsConfig = createNotificationWebSocketConfig(environment.wsUrl, token);
 
-        const wsManager = new WebSocketManager(() => new WebSocketService(authService));
+            wsManager.connectToNamespace(screensConfig);
+            wsManager.connectToNamespace(notificationsConfig);
+          }
 
-        // 预配置screens连接
-        const screensConfig = createScreensWebSocketConfig(baseUrl, token);
-        wsManager.connectToNamespace(screensConfig);
-
-        // 预配置notifications连接
-        const notificationsConfig = createNotificationWebSocketConfig(baseUrl, token);
-        wsManager.connectToNamespace(notificationsConfig);
-
-        return wsManager;
+          return wsManager;
+        } catch (error) {
+          console.warn('[App] WebSocket初始化失败，将在后续需要时重试', error);
+          return new WebSocketManager(() => new WebSocketService(authService));
+        }
       },
       deps: [JwtAuthService]
     }
