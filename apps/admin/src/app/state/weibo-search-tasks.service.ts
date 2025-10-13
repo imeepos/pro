@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { inject } from '@angular/core';
-import { Observable, tap, catchError, throwError, finalize } from 'rxjs';
+import { Observable, tap, catchError, throwError, finalize, map } from 'rxjs';
 import { WeiboSearchTasksStore } from './weibo-search-tasks.store';
 import { WeiboSearchTasksQuery } from './weibo-search-tasks.query';
 import { SkerSDK } from '@pro/sdk';
@@ -135,13 +135,14 @@ export class WeiboSearchTasksService {
     this.updateLoading(true);
 
     return this.sdk.weiboSearchTasks.pause(id).pipe(
-      tap(() => {
+      tap((updatedTask) => {
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
-            task.id === id ? { ...task, enabled: false, status: WeiboSearchTaskStatus.PAUSED } : task
+            task.id === id ? updatedTask : task
           )
         }));
       }),
+      map(() => void 0),
       catchError(error => {
         this.updateError(error.message || '暂停任务失败');
         return throwError(() => error);
@@ -155,13 +156,14 @@ export class WeiboSearchTasksService {
     this.updateLoading(true);
 
     return this.sdk.weiboSearchTasks.resume(id).pipe(
-      tap(() => {
+      tap((updatedTask) => {
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
-            task.id === id ? { ...task, enabled: true, status: WeiboSearchTaskStatus.PENDING, nextRunAt: new Date() } : task
+            task.id === id ? updatedTask : task
           )
         }));
       }),
+      map(() => void 0),
       catchError(error => {
         this.updateError(error.message || '恢复任务失败');
         return throwError(() => error);
@@ -175,13 +177,14 @@ export class WeiboSearchTasksService {
     this.updateLoading(true);
 
     return this.sdk.weiboSearchTasks.runNow(id).pipe(
-      tap(() => {
+      tap((updatedTask) => {
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
-            task.id === id ? { ...task, status: WeiboSearchTaskStatus.RUNNING, nextRunAt: new Date() } : task
+            task.id === id ? updatedTask : task
           )
         }));
       }),
+      map(() => void 0),
       catchError(error => {
         this.updateError(error.message || '执行任务失败');
         return throwError(() => error);
