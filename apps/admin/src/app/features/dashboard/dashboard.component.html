@@ -6,7 +6,7 @@
         <div>
           <h1 class="text-2xl font-bold text-gray-900">工作台</h1>
           <p class="text-sm text-gray-600 mt-1" *ngIf="currentUser$ | async as user">
-            欢迎回来，{{ user?.username }}！今天是个管理数据的好日子！
+            欢迎回来，{{ user?.userId }}！今天是个管理数据的好日子！
           </p>
         </div>
         <div class="flex gap-3">

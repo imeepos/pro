@@ -115,12 +115,20 @@ export class AuthService {
     }
   }
 
+  private convertUserToProfile(user: User): UserProfile {
+    return {
+      userId: user.id
+    };
+  }
+
   private handleAuthSuccess(response: AuthResponse): void {
     this.tokenStorage.setToken(response.accessToken);
     this.tokenStorage.setRefreshToken(response.refreshToken);
 
+    const userProfile = this.convertUserToProfile(response.user);
+
     this.store.update({
-      user: response.user,
+      user: userProfile,
       isAuthenticated: true,
       error: null
     });

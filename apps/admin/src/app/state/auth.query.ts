@@ -2,11 +2,11 @@ import { Injectable } from '@angular/core';
 import { Query } from '@datorama/akita';
 import { AuthStore, AuthState } from './auth.store';
 import { Observable } from 'rxjs';
-import { User } from '@pro/types';
+import { UserProfile } from '@pro/types';
 
 @Injectable({ providedIn: 'root' })
 export class AuthQuery extends Query<AuthState> {
-  currentUser$: Observable<User | null> = this.select(state => state.user);
+  currentUser$: Observable<UserProfile | null> = this.select(state => state.user);
   isAuthenticated$: Observable<boolean> = this.select(state => state.isAuthenticated);
   loading$: Observable<boolean> = this.select(state => state.loading);
   error$: Observable<string | null> = this.select(state => state.error);
@@ -15,7 +15,7 @@ export class AuthQuery extends Query<AuthState> {
     super(store);
   }
 
-  get currentUser(): User | null {
+  get currentUser(): UserProfile | null {
     return this.getValue().user;
   }
 

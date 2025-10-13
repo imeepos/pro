@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthQuery } from '../../state/auth.query';
-import { User } from '@pro/types';
+import { UserProfile } from '@pro/types';
 import { SkerSDK, DashboardStats, RecentActivity } from '@pro/sdk';
 
 @Component({
@@ -14,7 +14,7 @@ import { SkerSDK, DashboardStats, RecentActivity } from '@pro/sdk';
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit {
-  currentUser$: Observable<User | null>;
+  currentUser$: Observable<UserProfile | null>;
   stats: DashboardStats = {
     totalScreens: 0,
     totalEvents: 0,

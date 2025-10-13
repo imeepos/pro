@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../state/auth.service';
 import { AuthQuery } from '../../../../state/auth.query';
-import { User } from '@pro/types';
+import { UserProfile } from '@pro/types';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -14,7 +14,7 @@ import { Observable } from 'rxjs';
   styleUrls: ['./user-info.component.scss']
 })
 export class UserInfoComponent {
-  currentUser$: Observable<User | null>;
+  currentUser$: Observable<UserProfile | null>;
   isDropdownOpen = false;
 
   constructor(
@@ -29,9 +29,9 @@ export class UserInfoComponent {
     this.currentUser$ = this.authQuery.currentUser$;
   }
 
-  getUserInitials(user: User | null): string {
-    if (!user?.username) return '?';
-    return user.username.charAt(0).toUpperCase();
+  getUserInitials(user: UserProfile | null): string {
+    if (!user?.userId) return '?';
+    return user.userId.charAt(0).toUpperCase();
   }
 
   toggleDropdown(): void {
