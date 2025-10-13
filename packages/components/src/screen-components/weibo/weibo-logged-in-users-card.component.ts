@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, Inject, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, Inject, Optional, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval, Observable, combineLatest, filter, switchMap } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
@@ -54,6 +54,7 @@ const SIMPLE_CONFIG: WeiboUsersCardConfig = {
   selector: 'pro-weibo-logged-in-users-card',
   standalone: true,
   imports: [CommonModule],
+  encapsulation: ViewEncapsulation.None,
   template: `
     <div class="weibo-stats-card h-full rounded-lg shadow-lg transition-all duration-300"
          [ngClass]="getContainerClasses()"
@@ -173,6 +174,11 @@ const SIMPLE_CONFIG: WeiboUsersCardConfig = {
     </div>
   `,
   styles: [`
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
+
+    /* 组件特定样式 */
     :host {
       display: block;
       width: 100%;

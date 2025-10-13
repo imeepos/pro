@@ -331,6 +331,17 @@ import { environment } from '../../../environments/environment';
       transform: translateZ(0);
     }
 
+    .component-element--error {
+      background: rgba(239, 68, 68, var(--pro-opacity-glass-medium));
+      border: 2px dashed rgba(239, 68, 68, 0.6);
+      animation: errorPulse 2s ease-in-out infinite;
+    }
+
+    .component-element--error:hover {
+      background: rgba(239, 68, 68, calc(var(--pro-opacity-glass-medium) * 1.5));
+      border-color: rgba(239, 68, 68, 0.8);
+    }
+
     .component-element ::ng-deep > * {
       width: 100%;
       height: 100%;
@@ -569,6 +580,17 @@ import { environment } from '../../../environments/environment';
       }
     }
 
+    @keyframes errorPulse {
+      0%, 100% {
+        opacity: 0.8;
+        transform: translateY(0) scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: translateY(0) scale(1.02);
+      }
+    }
+
     /* ===== 响应式设计系统 ===== */
     @media (max-width: 768px) {
       .control-dock {
@@ -676,6 +698,10 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private screenId: string | null = null;
   private componentRefs: ComponentRef<any>[] = [];
+  private componentCache = new Map<string, ComponentRef<any>>();
+  private componentMetadata = new Map<ComponentRef<any>, { id: string; type: string; config: ScreenComponent }>();
+  private componentLifecycleCallbacks = new Map<ComponentRef<any>, { onDestroy?: () => void; onMount?: () => void }>();
+  private componentPerformanceMetrics = new Map<string, { created: number; renderTime: number; errorCount: number }>();
   private autoPlaySubscription: any;
 
   constructor(
@@ -715,7 +741,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.clearComponents();
+    this.destroyComponents();
     this.stopAutoPlay();
     this.destroy$.next();
     this.destroy$.complete();
@@ -792,25 +818,30 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     });
   }
 
-  private renderComponents(): void {
+  private async renderComponents(): Promise<void> {
     if (!this.screenConfig?.components || !this.componentsContainer) {
       return;
     }
 
-    this.clearComponents();
+    this.destroyComponents();
 
-    // 批量创建组件以提高性能
-    this.screenConfig.components.forEach((componentConfig: ScreenComponent) => {
-      this.createComponent(componentConfig);
-    });
+    try {
+      // 批量创建组件以提高性能
+      const componentPromises = this.screenConfig.components.map((componentConfig: ScreenComponent) =>
+        this.createComponentOptimized(componentConfig)
+      );
 
-    // 确保DOM更新完成后再计算缩放
-    // 使用更长的延迟确保组件完全渲染
-    setTimeout(() => {
-      this.calculateScale();
-    }, 50);
+      await Promise.allSettled(componentPromises);
 
-    this.cdr.markForCheck();
+      // 确保DOM更新完成后再计算缩放
+      requestAnimationFrame(() => {
+        this.calculateScale();
+        this.cdr.markForCheck();
+      });
+    } catch (error) {
+      console.error('[ScreenDisplay] 组件渲染失败:', error);
+      this.handleComponentRenderingError(error);
+    }
   }
 
   private calculateScale(): void {
@@ -880,35 +911,144 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     return `translate(${this.scaleOffsetX}px, ${this.scaleOffsetY}px) scale(${this.scale})`;
   }
 
-  private createComponent(componentConfig: ScreenComponent): void {
-    const componentType = this.componentRegistry.get(componentConfig.type);
+  private async createComponentOptimized(componentConfig: ScreenComponent): Promise<ComponentRef<any> | null> {
+    const startTime = performance.now();
+    const componentId = `${componentConfig.type}_${componentConfig.position.x}_${componentConfig.position.y}`;
 
-    if (!componentType) {
-      console.error(`组件类型未注册: ${componentConfig.type}`);
-      return;
+    try {
+      // 记录性能指标
+      const existingMetrics = this.componentPerformanceMetrics.get(componentId);
+      if (existingMetrics) {
+        existingMetrics.created++;
+      } else {
+        this.componentPerformanceMetrics.set(componentId, {
+          created: 1,
+          renderTime: 0,
+          errorCount: 0
+        });
+      }
+
+      const cachedRef = this.componentCache.get(componentId);
+      if (cachedRef) {
+        // 复用缓存组件
+        return this.reuseCachedComponent(cachedRef, componentConfig, componentId);
+      }
+
+      const componentType = this.componentRegistry.get(componentConfig.type);
+      if (!componentType) {
+        throw new Error(`组件类型未注册: ${componentConfig.type}`);
+      }
+
+      // 使用createComponent的工厂函数模式创建组件
+      const componentRef = await this.createComponentInstance(componentType, componentConfig);
+
+      // 注册生命周期回调
+      this.registerComponentLifecycle(componentRef, componentConfig);
+
+      // 异步应用样式和配置
+      this.applyComponentConfiguration(componentRef, componentConfig);
+
+      // 存储组件元数据
+      this.componentMetadata.set(componentRef, {
+        id: componentId,
+        type: componentConfig.type,
+        config: componentConfig
+      });
+
+      this.componentRefs.push(componentRef);
+      this.componentCache.set(componentId, componentRef);
+
+      // 记录性能指标
+      const renderTime = performance.now() - startTime;
+      const metrics = this.componentPerformanceMetrics.get(componentId)!;
+      metrics.renderTime = renderTime;
+
+      // 调用组件挂载回调
+      this.executeComponentMount(componentRef);
+
+      return componentRef;
+    } catch (error) {
+      console.error(`[ScreenDisplay] 组件创建失败 ${componentConfig.type}:`, error);
+
+      // 更新错误计数
+      const metrics = this.componentPerformanceMetrics.get(componentId);
+      if (metrics) {
+        metrics.errorCount++;
+      }
+
+      await this.handleComponentCreationError(componentConfig, error);
+      return null;
     }
+  }
 
-    const componentRef = this.componentsContainer.createComponent(componentType);
+  private async createComponentInstance(componentType: any, componentConfig: ScreenComponent): Promise<ComponentRef<any>> {
+    return new Promise((resolve, reject) => {
+      try {
+        const componentRef = this.componentsContainer.createComponent(componentType);
 
+        // 确保组件视图初始化完成
+        componentRef.changeDetectorRef.detectChanges();
+
+        // 微任务中解析，确保DOM更新完成
+        Promise.resolve().then(() => resolve(componentRef));
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  private applyComponentConfiguration(componentRef: ComponentRef<any>, componentConfig: ScreenComponent): void {
     const wrapper = componentRef.location.nativeElement;
-    wrapper.classList.add('component-element');
+
+    // 使用CSS类名批量应用样式，减少重排
+    wrapper.className = 'component-element';
 
     // 计算经过边界检查的位置和尺寸
     const { x, y, width, height } = this.calculateComponentBounds(componentConfig);
 
-    wrapper.style.position = 'absolute';
-    wrapper.style.left = `${x}px`;
-    wrapper.style.top = `${y}px`;
-    wrapper.style.width = `${width}px`;
-    wrapper.style.height = `${height}px`;
-    wrapper.style.zIndex = `${componentConfig.position.zIndex || 1}`;
+    // 使用transform替代left/top提高性能
+    const styles = {
+      position: 'absolute',
+      transform: `translate(${x}px, ${y}px)`,
+      width: `${width}px`,
+      height: `${height}px`,
+      zIndex: `${componentConfig.position.zIndex || 1}`
+    };
 
+    // 批量设置样式以减少重排
+    Object.assign(wrapper.style, styles);
+
+    // 异步设置组件配置，避免阻塞渲染
+    this.applyComponentData(componentRef, componentConfig);
+  }
+
+  private applyComponentData(componentRef: ComponentRef<any>, componentConfig: ScreenComponent): void {
     const instance = componentRef.instance as IScreenComponent;
-    if (instance.onConfigChange && componentConfig.config) {
-      instance.onConfigChange(componentConfig.config);
-    }
 
-    this.componentRefs.push(componentRef);
+    if (instance.onConfigChange && componentConfig.config) {
+      // 使用setTimeout确保在下一个事件循环中执行
+      setTimeout(() => {
+        try {
+          instance.onConfigChange?.(componentConfig.config);
+          componentRef.changeDetectorRef.detectChanges();
+        } catch (error) {
+          console.error(`[ScreenDisplay] 组件配置应用失败:`, error);
+        }
+      }, 0);
+    }
+  }
+
+  private reuseCachedComponent(cachedRef: ComponentRef<any>, componentConfig: ScreenComponent, componentId: string): ComponentRef<any> {
+    // 更新缓存的组件配置
+    this.applyComponentConfiguration(cachedRef, componentConfig);
+
+    this.componentMetadata.set(cachedRef, {
+      id: componentId,
+      type: componentConfig.type,
+      config: componentConfig
+    });
+
+    return cachedRef;
   }
 
   private calculateComponentBounds(componentConfig: ScreenComponent): { x: number; y: number; width: number; height: number } {
@@ -951,13 +1091,137 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     return { x, y, width, height };
   }
 
-  private clearComponents(): void {
-    this.componentRefs.forEach(ref => ref.destroy());
+  private destroyComponents(): void {
+    // 执行组件销毁回调
+    this.componentRefs.forEach(ref => {
+      this.executeComponentDestroy(ref);
+    });
+
+    // 清理组件元数据
+    this.componentMetadata.clear();
+    this.componentLifecycleCallbacks.clear();
+    this.componentCache.clear();
+
+    // 销毁所有组件引用
+    this.componentRefs.forEach(ref => {
+      try {
+        if (ref && ref.destroy) {
+          ref.destroy();
+        }
+      } catch (error) {
+        console.error('[ScreenDisplay] 组件销毁失败:', error);
+      }
+    });
     this.componentRefs = [];
 
+    // 清理容器
     if (this.componentsContainer) {
-      this.componentsContainer.clear();
+      try {
+        this.componentsContainer.clear();
+      } catch (error) {
+        console.error('[ScreenDisplay] 容器清理失败:', error);
+      }
     }
+  }
+
+  private registerComponentLifecycle(componentRef: ComponentRef<any>, componentConfig: ScreenComponent): void {
+    const instance = componentRef.instance as IScreenComponent;
+    const callbacks: { onDestroy?: () => void; onMount?: () => void } = {};
+
+    // 检查组件是否实现了生命周期方法
+    if (instance.onMount && typeof instance.onMount === 'function') {
+      callbacks.onMount = () => {
+        try {
+          instance.onMount?.();
+        } catch (error) {
+          console.error('[ScreenDisplay] 组件onMount回调失败:', error);
+        }
+      };
+    }
+
+    if (instance.onDestroy && typeof instance.onDestroy === 'function') {
+      callbacks.onDestroy = () => {
+        try {
+          instance.onDestroy?.();
+        } catch (error) {
+          console.error('[ScreenDisplay] 组件onDestroy回调失败:', error);
+        }
+      };
+    }
+
+    this.componentLifecycleCallbacks.set(componentRef, callbacks);
+  }
+
+  private executeComponentMount(componentRef: ComponentRef<any>): void {
+    const callbacks = this.componentLifecycleCallbacks.get(componentRef);
+    if (callbacks?.onMount) {
+      setTimeout(() => {
+        callbacks.onMount?.();
+      }, 0);
+    }
+  }
+
+  private executeComponentDestroy(componentRef: ComponentRef<any>): void {
+    const callbacks = this.componentLifecycleCallbacks.get(componentRef);
+    if (callbacks?.onDestroy) {
+      try {
+        callbacks.onDestroy();
+      } catch (error) {
+        console.error('[ScreenDisplay] 组件销毁回调执行失败:', error);
+      }
+    }
+  }
+
+  private async handleComponentCreationError(componentConfig: ScreenComponent, error: any): Promise<void> {
+    // 记录错误信息
+    console.error(`[ScreenDisplay] 组件创建失败详情:`, {
+      componentType: componentConfig.type,
+      position: componentConfig.position,
+      error: error.message
+    });
+
+    // 尝试创建占位符组件
+    await this.createFallbackComponent(componentConfig);
+  }
+
+  private async createFallbackComponent(componentConfig: ScreenComponent): Promise<void> {
+    try {
+      // 创建一个简单的错误占位符组件
+      const fallbackElement = document.createElement('div');
+      fallbackElement.className = 'component-element component-element--error';
+      fallbackElement.style.position = 'absolute';
+
+      const { x, y, width, height } = this.calculateComponentBounds(componentConfig);
+      fallbackElement.style.transform = `translate(${x}px, ${y}px)`;
+      fallbackElement.style.width = `${width}px`;
+      fallbackElement.style.height = `${height}px`;
+      fallbackElement.style.zIndex = `${componentConfig.position.zIndex || 1}`;
+
+      fallbackElement.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #ef4444; font-size: 12px; text-align: center; padding: 8px;">
+          <div>
+            <div>组件加载失败</div>
+            <div style="opacity: 0.7; margin-top: 4px;">${componentConfig.type}</div>
+          </div>
+        </div>
+      `;
+
+      this.componentsContainer?.element.nativeElement.appendChild(fallbackElement);
+    } catch (error) {
+      console.error('[ScreenDisplay] 占位符组件创建失败:', error);
+    }
+  }
+
+  private handleComponentRenderingError(error: any): void {
+    console.error('[ScreenDisplay] 批量渲染发生错误:', error);
+
+    // 清理可能部分创建的组件
+    this.destroyComponents();
+
+    // 显示错误信息
+    this.error = '组件渲染失败，请刷新页面重试';
+    this.loading = false;
+    this.cdr.markForCheck();
   }
 
   private initializeWebSocketConnection(): void {
@@ -1045,18 +1309,79 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     }
   }
 
-  private loadScreenConfig(screen: ScreenPage): void {
-    this.screenConfig = screen;
-    this.loading = false;
-    this.error = null;
-    this.cdr.markForCheck();
-    this.renderComponents();
+  private async loadScreenConfig(screen: ScreenPage): Promise<void> {
+    try {
+      this.loading = true;
+      this.error = null;
 
-    // 更新当前屏幕在可用列表中的索引
-    const screenIndex = this.availableScreens.findIndex(s => s.id === screen.id);
-    if (screenIndex !== -1) {
-      this.currentScreenIndex = screenIndex;
+      // 智能检测是否需要重新渲染组件
+      const needsRerender = this.shouldRerenderComponents(screen);
+
+      this.screenConfig = screen;
+      this.cdr.markForCheck();
+
+      if (needsRerender) {
+        await this.renderComponents();
+      }
+
+      // 更新当前屏幕在可用列表中的索引
+      const screenIndex = this.availableScreens.findIndex(s => s.id === screen.id);
+      if (screenIndex !== -1) {
+        this.currentScreenIndex = screenIndex;
+      }
+
+      this.loading = false;
+      this.cdr.markForCheck();
+    } catch (error) {
+      console.error('[ScreenDisplay] 屏幕配置加载失败:', error);
+      this.loading = false;
+      this.error = '屏幕配置加载失败';
+      this.cdr.markForCheck();
     }
+  }
+
+  private shouldRerenderComponents(newScreen: ScreenPage): boolean {
+    if (!this.screenConfig || this.componentRefs.length === 0) {
+      return true;
+    }
+
+    // 比较组件数量
+    if (newScreen.components?.length !== this.screenConfig.components?.length) {
+      return true;
+    }
+
+    // 比较组件配置
+    if (!newScreen.components || !this.screenConfig.components) {
+      return newScreen.components !== this.screenConfig.components;
+    }
+
+    // 深度比较组件配置
+    for (let i = 0; i < newScreen.components.length; i++) {
+      const newComponent = newScreen.components[i];
+      const oldComponent = this.screenConfig.components[i];
+
+      if (!this.areComponentsEqual(newComponent, oldComponent)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private areComponentsEqual(comp1: ScreenComponent, comp2: ScreenComponent): boolean {
+    // 基本属性比较
+    if (comp1.type !== comp2.type) return false;
+    if (comp1.position.x !== comp2.position.x) return false;
+    if (comp1.position.y !== comp2.position.y) return false;
+    if (comp1.position.width !== comp2.position.width) return false;
+    if (comp1.position.height !== comp2.position.height) return false;
+    if (comp1.position.zIndex !== comp2.position.zIndex) return false;
+
+    // 配置深度比较
+    const config1 = JSON.stringify(comp1.config || {});
+    const config2 = JSON.stringify(comp2.config || {});
+
+    return config1 === config2;
   }
 
   // 实时同步功能
@@ -1143,7 +1468,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         } else {
           // 没有可用页面
           this.screenConfig = null;
-          this.clearComponents();
+          this.destroyComponents();
           this.showNotification('无可用页面', '所有页面都已取消发布');
         }
       } else {
@@ -1164,6 +1489,55 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     } else {
       console.log(`${title}: ${message}`);
     }
+  }
+
+  // 性能监控和调试方法
+  public getComponentMetrics(): Array<{ id: string; metrics: any }> {
+    const metrics: Array<{ id: string; metrics: any }> = [];
+
+    this.componentPerformanceMetrics.forEach((value, key) => {
+      metrics.push({
+        id: key,
+        metrics: {
+          created: value.created,
+          renderTime: Math.round(value.renderTime * 100) / 100,
+          errorCount: value.errorCount,
+          isCached: this.componentCache.has(key)
+        }
+      });
+    });
+
+    return metrics.sort((a, b) => b.metrics.renderTime - a.metrics.renderTime);
+  }
+
+  public logPerformanceReport(): void {
+    const metrics = this.getComponentMetrics();
+    console.group('[ScreenDisplay] 组件性能报告');
+
+    if (metrics.length === 0) {
+      console.log('暂无组件性能数据');
+    } else {
+      const totalRenderTime = metrics.reduce((sum, item) => sum + item.metrics.renderTime, 0);
+      const avgRenderTime = totalRenderTime / metrics.length;
+      const totalErrors = metrics.reduce((sum, item) => sum + item.metrics.errorCount, 0);
+
+      console.log(`总组件数: ${metrics.length}`);
+      console.log(`平均渲染时间: ${Math.round(avgRenderTime * 100) / 100}ms`);
+      console.log(`总渲染时间: ${Math.round(totalRenderTime * 100) / 100}ms`);
+      console.log(`错误总数: ${totalErrors}`);
+
+      if (metrics.length > 0) {
+        console.table(metrics.map(item => ({
+          '组件ID': item.id,
+          '创建次数': item.metrics.created,
+          '渲染时间(ms)': item.metrics.renderTime,
+          '错误次数': item.metrics.errorCount,
+          '已缓存': item.metrics.isCached
+        })));
+      }
+    }
+
+    console.groupEnd();
   }
 
   // 请求通知权限
