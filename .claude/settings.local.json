@@ -39,7 +39,10 @@
       "Bash(ng serve:*)",
       "Bash(curl:*)",
       "WebFetch(domain:angular.dev)",
-      "WebFetch(domain:docs.nestjs.com)"
+      "WebFetch(domain:docs.nestjs.com)",
+      "Bash(pnpm run build:*)",
+      "Read(//home/ubuntu/**)",
+      "Bash(pnpm run typecheck:*)"
     ],
     "deny": [],
     "ask": []
