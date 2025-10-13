@@ -13,6 +13,6 @@ export class AppComponent implements OnInit {
   constructor(private authStateService: AuthStateService) {}
 
   ngOnInit(): void {
-    this.authStateService.checkAuth();
+    this.authStateService.checkAuth().subscribe();
   }
 }

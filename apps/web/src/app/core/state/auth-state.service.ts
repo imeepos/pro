@@ -97,35 +97,44 @@ export class AuthStateService {
 
   checkAuth() {
     const token = this.tokenStorage.getToken();
-    if (token) {
-      this.authStore.update({ loading: true });
-      this.authService.getProfile().pipe(
-        tap((profile) => {
-          this.authStore.update({
-            user: {
-              id: profile.userId,
-              username: '',
-              email: '',
-              status: 'active' as any,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            },
-            isAuthenticated: true,
-            loading: false,
-            error: null
-          });
-        }),
-        catchError(() => {
-          this.tokenStorage.clearAll();
-          this.authStore.update({
-            user: null,
-            isAuthenticated: false,
-            loading: false,
-            error: null
-          });
-          return of(null);
-        })
-      ).subscribe();
+    if (!token) {
+      this.tokenStorage.clearAll();
+      this.authStore.update({
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        error: null
+      });
+      return of(null);
     }
+
+    this.authStore.update({ loading: true });
+    return this.authService.getProfile().pipe(
+      tap((profile) => {
+        this.authStore.update({
+          user: {
+            id: profile.userId,
+            username: '',
+            email: '',
+            status: 'active' as any,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          },
+          isAuthenticated: true,
+          loading: false,
+          error: null
+        });
+      }),
+      catchError(() => {
+        this.tokenStorage.clearAll();
+        this.authStore.update({
+          user: null,
+          isAuthenticated: false,
+          loading: false,
+          error: null
+        });
+        return of(null);
+      })
+    );
   }
 }
