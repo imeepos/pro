@@ -64,6 +64,7 @@ export class TaskMonitor {
     });
 
     if (timeoutTasks.length === 0) {
+      this.logger.debug('未发现超时任务');
       return;
     }
 
@@ -71,7 +72,8 @@ export class TaskMonitor {
 
     for (const task of timeoutTasks) {
       try {
-        this.logger.warn(`任务 ${task.id} (${task.keyword}) 执行超时`);
+        const runningTime = Math.round((now.getTime() - new Date(task.updatedAt).getTime()) / 1000 / 60);
+        this.logger.warn(`任务 ${task.id} (${task.keyword}) 执行超时 - 运行时间: ${runningTime}分钟, 最后更新: ${task.updatedAt.toISOString()}`);
 
         if (task.canRetry) {
           // 可以重试，重新调度
@@ -83,7 +85,7 @@ export class TaskMonitor {
             retryCount: task.retryCount + 1,
           });
 
-          this.logger.info(`超时任务 ${task.id} 已安排重试，延迟 ${retryDelay / 1000 / 60} 分钟`);
+          this.logger.info(`超时任务 ${task.id} 已安排重试，延迟 ${retryDelay / 1000 / 60} 分钟, 状态: RUNNING -> PENDING`);
         } else {
           // 超过最大重试次数，标记为失败
           await this.taskRepository.update(task.id, {
@@ -93,7 +95,7 @@ export class TaskMonitor {
             nextRunAt: null, // 清除下次执行时间
           });
 
-          this.logger.error(`超时任务 ${task.id} 已标记为失败并禁用`);
+          this.logger.error(`超时任务 ${task.id} 已标记为超时并禁用, 状态: RUNNING -> TIMEOUT, enabled: true -> false`);
         }
       } catch (error) {
         this.logger.error(`处理超时任务 ${task.id} 失败:`, error);
@@ -252,12 +254,14 @@ export class TaskMonitor {
       const task = await this.taskRepository.findOne({ where: { id: taskId } });
 
       if (!task) {
-        this.logger.error(`任务 ${taskId} 不存在`);
+        this.logger.error(`重置失败: 任务 ${taskId} 不存在`);
         return false;
       }
 
+      this.logger.info(`开始重置任务 ${taskId} - 当前状态: ${task.status}, 启用状态: ${task.enabled}, 错误信息: ${task.errorMessage || '无'}`);
+
       if (task.status !== WeiboSearchTaskStatus.FAILED && task.status !== WeiboSearchTaskStatus.TIMEOUT) {
-        this.logger.warn(`任务 ${taskId} 状态不是失败或超时，无需重置`);
+        this.logger.warn(`重置失败: 任务 ${taskId} 状态不是失败或超时 (当前: ${task.status})，无需重置`);
         return false;
       }
 
@@ -270,7 +274,7 @@ export class TaskMonitor {
         noDataCount: 0,
       });
 
-      this.logger.info(`任务 ${taskId} 已重置为待执行状态`);
+      this.logger.info(`任务 ${taskId} 重置成功: ${task.status} -> PENDING, enabled: ${task.enabled} -> true, 30秒后执行`);
       return true;
     } catch (error) {
       this.logger.error(`重置任务 ${taskId} 失败:`, error);

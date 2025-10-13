@@ -25,11 +25,15 @@ export class CrawlQueueConsumer implements OnModuleInit {
 
   private async setupConsumer(): Promise<void> {
     try {
+      this.logger.log(`[Crawler] 🔄 正在初始化RabbitMQ消费者, URL: ${this.rabbitmqConfig.url}`);
+
       this.rabbitMQClient = new RabbitMQClient({
         url: this.rabbitmqConfig.url,
         queue: this.rabbitmqConfig.queues.crawlQueue,
       });
       await this.rabbitMQClient.connect();
+
+      this.logger.log(`[Crawler] 📡 RabbitMQ连接成功, 队列: ${this.rabbitmqConfig.queues.crawlQueue}`);
 
       await this.rabbitMQClient.consume(
         this.rabbitmqConfig.queues.crawlQueue,
@@ -39,21 +43,22 @@ export class CrawlQueueConsumer implements OnModuleInit {
       );
 
       this.logger.log(
-        `已启动队列消费者: ${this.rabbitmqConfig.queues.crawlQueue}`,
+        `[Crawler] ✅ 队列消费者启动成功: ${this.rabbitmqConfig.queues.crawlQueue}, 等待消息...`,
       );
     } catch (error) {
-      this.logger.error('设置队列消费者失败:', error);
+      this.logger.error(`[Crawler] ❌ 设置队列消费者失败:`, error);
       throw error;
     }
   }
 
   private async handleMessage(message: any): Promise<void> {
     const startTime = Date.now();
+    const messageReceivedAt = new Date().toISOString();
     let subTask: SubTaskMessage;
 
     // 检查消息是否为空或无效
     if (!message) {
-      this.logger.error('收到空消息，跳过处理');
+      this.logger.error(`[Crawler] 收到空消息，跳过处理, 时间: ${messageReceivedAt}`);
       return;
     }
 
@@ -61,7 +66,7 @@ export class CrawlQueueConsumer implements OnModuleInit {
 
     // 检查taskId是否存在
     if (!subTask.taskId) {
-      this.logger.error('消息缺少taskId，跳过处理', message);
+      this.logger.error(`[Crawler] 消息缺少taskId，跳过处理, 时间: ${messageReceivedAt}`, message);
       return;
     }
 
@@ -69,7 +74,7 @@ export class CrawlQueueConsumer implements OnModuleInit {
     if (typeof subTask.start === 'string') {
       subTask.start = new Date(subTask.start);
       if (isNaN(subTask.start.getTime())) {
-        this.logger.error(`消息包含无效的开始时间: ${message.start}，跳过处理`, message);
+        this.logger.error(`[Crawler] 消息包含无效的开始时间: ${message.start}，跳过处理, 时间: ${messageReceivedAt}`, message);
         return;
       }
     }
@@ -77,29 +82,40 @@ export class CrawlQueueConsumer implements OnModuleInit {
     if (typeof subTask.end === 'string') {
       subTask.end = new Date(subTask.end);
       if (isNaN(subTask.end.getTime())) {
-        this.logger.error(`消息包含无效的结束时间: ${message.end}，跳过处理`, message);
+        this.logger.error(`[Crawler] 消息包含无效的结束时间: ${message.end}，跳过处理, 时间: ${messageReceivedAt}`, message);
         return;
       }
     }
 
     this.logger.log(
-      `收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}, ` +
+      `[Crawler] 🎯 收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}, ` +
         `时间范围=${this.formatDate(subTask.start)}~${this.formatDate(subTask.end)}, ` +
-        `isInitialCrawl=${subTask.isInitialCrawl}`,
+        `isInitialCrawl=${subTask.isInitialCrawl}, 接收时间: ${messageReceivedAt}`,
     );
+
+    // 添加爬取前的状态日志
+    this.logger.log(`[Crawler] 🚀 开始爬取任务 ${subTask.taskId}, 关键词: ${subTask.keyword}`);
 
     const result = await this.weiboSearchCrawlerService.crawl(subTask);
 
     await this.handleCrawlResult(subTask, result);
 
     const duration = Date.now() - startTime;
-    this.logger.log(
-      `任务完成: taskId=${subTask.taskId}, 耗时=${duration}ms, 成功=${result.success}`,
-    );
+    const completedAt = new Date().toISOString();
+
+    if (result.success) {
+      this.logger.log(
+        `[Crawler] ✅ 任务完成: taskId=${subTask.taskId}, 耗时=${duration}ms, 页数=${result.pageCount}, 完成时间: ${completedAt}`,
+      );
+    } else {
+      this.logger.error(
+        `[Crawler] ❌ 任务失败: taskId=${subTask.taskId}, 耗时=${duration}ms, 错误: ${result.error || '未知错误'}, 完成时间: ${completedAt}`,
+      );
+    }
 
     // 如果爬取失败，抛出异常触发 RabbitMQ 重试机制
     if (!result.success) {
-      throw new Error(`爬取失败: ${result.error || '未知错误'}`);
+      throw new Error(`[Crawler] 爬取失败: ${result.error || '未知错误'}`);
     }
   }
 

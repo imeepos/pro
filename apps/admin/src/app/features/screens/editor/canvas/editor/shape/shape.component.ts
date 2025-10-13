@@ -236,8 +236,25 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private createComponent(): void {
+    console.log('[ShapeComponent] createComponent 开始', {
+      componentId: this.component.id,
+      componentType: this.component.type,
+      hasComponentHost: !!this.componentHost,
+      hasViewContainer: !!this.componentHost?.viewContainerRef
+    });
+
     const componentClass = this.getComponentClass();
+    console.log('[ShapeComponent] 获取组件类', {
+      componentType: this.component.type,
+      hasComponentClass: !!componentClass,
+      componentClassName: componentClass?.name
+    });
+
     if (!componentClass) {
+      console.error('[ShapeComponent] 组件类未找到', {
+        componentType: this.component.type,
+        registeredComponents: this.componentRegistry.getAll().map(c => c.type)
+      });
       this.setRenderError(`组件类型 "${this.component.type}" 未注册`, 'render');
       return;
     }
@@ -245,35 +262,62 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       // 优雅地检查 componentHost 是否已初始化
       if (!this.componentHost) {
+        console.error('[ShapeComponent] componentHost 未初始化');
         this.setRenderError('组件容器未初始化，请稍后重试', 'render');
         return;
       }
 
       // 检查 viewContainerRef 是否可用
       if (!this.componentHost.viewContainerRef) {
+        console.error('[ShapeComponent] viewContainerRef 未准备就绪');
         this.setRenderError('组件视图容器未准备就绪，请稍后重试', 'render');
         return;
       }
 
       const viewContainerRef = this.componentHost.viewContainerRef;
+      console.log('[ShapeComponent] 清理现有组件');
       viewContainerRef.clear();
 
+      console.log('[ShapeComponent] 创建组件实例', {
+        componentType: this.component.type,
+        componentClass: componentClass.name
+      });
+
       this.componentRef = viewContainerRef.createComponent(componentClass);
+      console.log('[ShapeComponent] 组件实例创建成功', {
+        hasComponentRef: !!this.componentRef,
+        componentRefType: this.componentRef?.instance?.constructor?.name
+      });
 
       const inputs = this.getComponentInputs();
+      console.log('[ShapeComponent] 设置组件输入', {
+        inputs,
+        inputKeys: Object.keys(inputs)
+      });
+
       Object.entries(inputs).forEach(([key, value]) => {
         if (this.componentRef) {
+          console.log(`[ShapeComponent] 设置输入 ${key}:`, value);
           this.componentRef.setInput(key, value);
         }
       });
 
       if (this.componentRef) {
+        console.log('[ShapeComponent] 触发变更检测');
         this.componentRef.changeDetectorRef.detectChanges();
+        console.log('[ShapeComponent] 组件创建完成');
       }
     } catch (error) {
       // 提供更详细的错误信息以便调试
       const errorMessage = error instanceof Error ? error.message : '组件创建失败';
-      console.error(`[ShapeComponent] 创建组件失败 (${this.component.type}):`, error);
+      console.error(`[ShapeComponent] 创建组件失败 (${this.component.type}):`, {
+        error: errorMessage,
+        errorType: typeof error,
+        stack: error instanceof Error ? error.stack : undefined,
+        componentId: this.component.id,
+        componentType: this.component.type,
+        componentClass: componentClass?.name
+      });
       this.setRenderError(errorMessage, 'render');
     }
   }

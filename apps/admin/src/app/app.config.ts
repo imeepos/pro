@@ -18,26 +18,55 @@ import { environment } from '../environments/environment';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
   return () => {
-    registry.register(
-      {
-        type: 'weibo-logged-in-users-card',
-        name: '微博已登录用户统计',
-        icon: 'users',
-        category: 'weibo'
-      },
-      WeiboLoggedInUsersCardComponent
-    );
+    console.log('[App] 组件注册开始');
 
-    // 注册测试组件
-    registry.register(
-      {
-        type: 'test-simple',
-        name: '测试组件',
-        icon: 'test',
-        category: 'test'
-      },
-      TestSimpleComponent
-    );
+    try {
+      console.log('[App] 注册 weibo-logged-in-users-card 组件');
+      registry.register(
+        {
+          type: 'weibo-logged-in-users-card',
+          name: '微博已登录用户统计',
+          icon: 'users',
+          category: 'weibo'
+        },
+        WeiboLoggedInUsersCardComponent
+      );
+      console.log('[App] weibo-logged-in-users-card 组件注册成功');
+
+      // 注册测试组件
+      console.log('[App] 注册 test-simple 组件');
+      registry.register(
+        {
+          type: 'test-simple',
+          name: '测试组件',
+          icon: 'test',
+          category: 'test'
+        },
+        TestSimpleComponent
+      );
+      console.log('[App] test-simple 组件注册成功');
+
+      // 验证注册结果
+      const registeredComponents = registry.getAll();
+      console.log('[App] 组件注册完成', {
+        totalComponents: registeredComponents.length,
+        componentTypes: registeredComponents.map(c => c.type)
+      });
+
+      // 验证特定组件
+      const weiboComponent = registry.get('weibo-logged-in-users-card');
+      console.log('[App] weibo-logged-in-users-card 验证', {
+        isRegistered: !!weiboComponent,
+        componentName: weiboComponent?.name
+      });
+
+    } catch (error) {
+      console.error('[App] 组件注册失败', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
+    }
   };
 }
 

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval, Observable, combineLatest, filter, switchMap } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
 import { WebSocketManager, WebSocketService, ConnectionState, createScreensWebSocketConfig, JwtAuthService } from '../../websocket';
-import { SkerSDK, LoggedInUsersStats, ITokenStorage } from '@pro/sdk';
+import { SkerSDK, type LoggedInUsersStats, type ITokenStorage } from '@pro/sdk';
 
 export interface WeiboUsersCardConfig {
   mode?: 'edit' | 'display';
@@ -313,19 +313,56 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
 
   private readonly destroy$ = new Subject<void>();
   private readonly refreshTimer$ = new Subject<void>();
-  private wsService: WebSocketService;
+  private wsService!: WebSocketService;
 
   constructor(
     private wsManager: WebSocketManager,
-    @Inject(SkerSDK) private sdk: SkerSDK,
+    private sdk: SkerSDK,
     @Inject('ITokenStorage') private tokenStorage: ITokenStorage
-  ) {}
+  ) {
+    console.log('[WeiboLoggedInUsersCardComponent] 构造函数调用', {
+      componentName: 'weibo-logged-in-users-card',
+      wsManager: !!this.wsManager,
+      sdk: !!this.sdk,
+      tokenStorage: !!this.tokenStorage,
+      wsManagerType: this.wsManager?.constructor?.name,
+      sdkType: this.sdk?.constructor?.name,
+      tokenStorageType: this.tokenStorage?.constructor?.name
+    });
+  }
 
   ngOnInit(): void {
-    this.initConfig();
-    this.loadData();
-    this.initializeWebSocketConnection();
-    this.setupRefreshTimer();
+    console.log('[WeiboLoggedInUsersCardComponent] ngOnInit 开始', {
+      componentId: 'weibo-logged-in-users-card',
+      config: this.config,
+      hasWsManager: !!this.wsManager,
+      hasSdk: !!this.sdk,
+      hasTokenStorage: !!this.tokenStorage
+    });
+
+    try {
+      this.initConfig();
+      console.log('[WeiboLoggedInUsersCardComponent] 配置初始化完成', {
+        mergedConfig: this.config
+      });
+
+      this.loadData();
+      console.log('[WeiboLoggedInUsersCardComponent] 数据加载启动');
+
+      this.initializeWebSocketConnection();
+      console.log('[WeiboLoggedInUsersCardComponent] WebSocket连接初始化');
+
+      this.setupRefreshTimer();
+      console.log('[WeiboLoggedInUsersCardComponent] 刷新定时器设置完成');
+
+      console.log('[WeiboLoggedInUsersCardComponent] ngOnInit 完成');
+    } catch (error) {
+      console.error('[WeiboLoggedInUsersCardComponent] ngOnInit 失败', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
+    }
   }
 
   ngOnDestroy(): void {
@@ -354,32 +391,88 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   }
 
   private loadData(): void {
-    if (this.isLoading) return;
+    console.log('[WeiboLoggedInUsersCardComponent] loadData 开始', {
+      isLoading: this.isLoading,
+      hasSdk: !!this.sdk,
+      sdkWeiboMethod: typeof this.sdk?.weibo?.getLoggedInUsersStats
+    });
+
+    if (this.isLoading) {
+      console.warn('[WeiboLoggedInUsersCardComponent] 数据正在加载中，跳过重复请求');
+      return;
+    }
 
     this.isLoading = true;
     this.clearErrorState();
 
-    this.sdk.weibo.getLoggedInUsersStats().pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      next: (stats: LoggedInUsersStats) => {
-        this.updateStats(stats);
-        this.isLoading = false;
-      },
-      error: (error: any) => {
-        console.error('获取微博用户统计数据失败:', error);
-        this.setDataError('数据加载失败');
-        this.isLoading = false;
-      }
-    });
+    console.log('[WeiboLoggedInUsersCardComponent] 调用 SDK API');
+
+    try {
+      this.sdk.weibo.getLoggedInUsersStats().pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (stats: LoggedInUsersStats) => {
+          console.log('[WeiboLoggedInUsersCardComponent] 数据加载成功', {
+            stats,
+            statsType: typeof stats
+          });
+          this.updateStats(stats);
+          this.isLoading = false;
+        },
+        error: (error: any) => {
+          console.error('[WeiboLoggedInUsersCardComponent] 获取微博用户统计数据失败', {
+            error: error instanceof Error ? error.message : error,
+            errorType: typeof error,
+            stack: error instanceof Error ? error.stack : undefined
+          });
+          this.setDataError('数据加载失败');
+          this.isLoading = false;
+        }
+      });
+    } catch (syncError) {
+      console.error('[WeiboLoggedInUsersCardComponent] SDK调用同步错误', {
+        error: syncError instanceof Error ? syncError.message : syncError,
+        stack: syncError instanceof Error ? syncError.stack : undefined
+      });
+      this.setDataError('SDK调用失败');
+      this.isLoading = false;
+    }
   }
 
   private initializeWebSocketConnection(): void {
-    const token = this.getToken();
-    const wsConfig = createScreensWebSocketConfig(this.sdk.baseUrl, token);
-    this.wsService = this.wsManager.connectToNamespace(wsConfig) as WebSocketService;
-    this.observeConnectionState();
-    this.subscribeToDataUpdates();
+    console.log('[WeiboLoggedInUsersCardComponent] WebSocket连接初始化开始');
+
+    try {
+      const token = this.getToken();
+      console.log('[WeiboLoggedInUsersCardComponent] 获取令牌', {
+        hasToken: !!token,
+        tokenLength: token?.length
+      });
+
+      const wsConfig = createScreensWebSocketConfig(this.sdk.baseUrl, token);
+      console.log('[WeiboLoggedInUsersCardComponent] WebSocket配置创建', {
+        baseUrl: this.sdk.baseUrl,
+        hasConfig: !!wsConfig
+      });
+
+      this.wsService = this.wsManager.connectToNamespace(wsConfig) as WebSocketService;
+      console.log('[WeiboLoggedInUsersCardComponent] WebSocket服务创建', {
+        hasWsService: !!this.wsService,
+        wsServiceType: this.wsService?.constructor?.name
+      });
+
+      this.observeConnectionState();
+      console.log('[WeiboLoggedInUsersCardComponent] 连接状态监听设置');
+
+      this.subscribeToDataUpdates();
+      console.log('[WeiboLoggedInUsersCardComponent] 数据更新订阅设置');
+
+    } catch (error) {
+      console.error('[WeiboLoggedInUsersCardComponent] WebSocket初始化失败', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    }
   }
 
   private getToken(): string | undefined {

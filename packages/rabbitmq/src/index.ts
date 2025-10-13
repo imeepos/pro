@@ -74,13 +74,28 @@ export class RabbitMQClient {
     if (!this.channel) throw new Error('Channel not initialized');
     await this.setupQueue(queue);
 
-    return this.channel.sendToQueue(
+    const messageSize = Buffer.byteLength(JSON.stringify(message));
+    const startTime = Date.now();
+
+    console.log(`[RabbitMQ] 正在发布消息到队列 ${queue}, 消息大小: ${messageSize} bytes, 时间: ${new Date().toISOString()}`);
+
+    const result = this.channel.sendToQueue(
       queue,
       Buffer.from(JSON.stringify(message)),
       {
         persistent: options?.persistent ?? true
       }
     );
+
+    const duration = Date.now() - startTime;
+
+    if (result) {
+      console.log(`[RabbitMQ] 消息发布成功到队列 ${queue}, 耗时: ${duration}ms`);
+    } else {
+      console.warn(`[RabbitMQ] 消息发布失败到队列 ${queue} - sendToQueue返回false, 可能原因: 队列缓冲区满/背压, 耗时: ${duration}ms`);
+    }
+
+    return result;
   }
 
   /**
@@ -106,23 +121,32 @@ export class RabbitMQClient {
       async (msg: any) => {
         if (!msg) return;
 
+        const messageId = msg.properties.messageId || 'unknown';
+        const receivedAt = new Date().toISOString();
+
+        console.log(`[RabbitMQ] 开始处理消息 ${messageId} from queue ${queue}, 接收时间: ${receivedAt}`);
+
         try {
           const content = JSON.parse(msg.content.toString());
+          const processStart = Date.now();
 
           // 等待回调完成
           await callback(content);
 
+          const processDuration = Date.now() - processStart;
+          console.log(`[RabbitMQ] 消息 ${messageId} 处理成功, 耗时: ${processDuration}ms`);
+
           // 成功后 ACK
           this.channel?.ack(msg);
         } catch (error) {
-          console.error('消息处理失败:', error);
+          console.error(`[RabbitMQ] 消息 ${messageId} 处理失败:`, error);
 
           const retryCount = this.getRetryCount(msg);
 
           // 判断是否超过重试次数
           if (retryCount >= this.maxRetries) {
             console.error(
-              `消息重试次数已达上限 (${this.maxRetries}), 发送到死信队列`,
+              `[RabbitMQ] 消息 ${messageId} 重试次数已达上限 (${this.maxRetries}), 发送到死信队列`,
               { messageId: msg.properties.messageId }
             );
 
@@ -130,7 +154,7 @@ export class RabbitMQClient {
             this.channel?.nack(msg, false, false);
           } else {
             console.warn(
-              `消息处理失败，重新入队 (重试次数: ${retryCount + 1}/${this.maxRetries})`,
+              `[RabbitMQ] 消息 ${messageId} 处理失败，重新入队 (重试次数: ${retryCount + 1}/${this.maxRetries})`,
               { messageId: msg.properties.messageId }
             );
 
