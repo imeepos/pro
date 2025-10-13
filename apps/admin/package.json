@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "ng": "ng",
+    "clean": "rimraf dist",
     "dev": "ng serve --port 4201",
     "start": "ng serve --port 4201",
     "build": "ng build",

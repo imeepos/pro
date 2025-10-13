@@ -17,6 +17,7 @@
     "build": "tsup && tsc --project tsconfig.types.json",
     "build:js": "tsup",
     "build:types": "tsc --project tsconfig.types.json",
+    "clean": "rimraf dist",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "jest",

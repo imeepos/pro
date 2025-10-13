@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "ng": "ng",
+    "clean": "rimraf dist",
     "dev": "ng serve",
     "start": "ng serve",
     "build": "ng build",

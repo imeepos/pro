@@ -6,6 +6,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "ng-packagr -p ng-package.json",
+    "clean": "rimraf dist",
     "dev": "ng-packagr -p ng-package.json --watch",
     "lint": "eslint src/**/*.ts",
     "typecheck": "echo \"Angular components use ng-packagr for type checking\"",

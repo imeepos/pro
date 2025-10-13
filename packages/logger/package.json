@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "clean": "rimraf dist",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit"
   },
