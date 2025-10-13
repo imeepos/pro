@@ -5,7 +5,7 @@
 ## 🏗️ 项目架构
 
 ### 技术栈
-- **包管理**: Bun (快速的JavaScript包管理器和运行时)
+- **包管理**: pnpm (快速的、节省磁盘空间的包管理器)
 - **构建工具**: Turbo (高性能构建系统)
 - **后端框架**: NestJS (可扩展的Node.js框架)
 - **前端框架**: Angular 20 (现代化的前端框架)
@@ -199,7 +199,7 @@
 
 ### 环境要求
 - Node.js >= 20.0.0
-- Bun >= 1.3.0
+- pnpm >= 9.0.0
 - Docker & Docker Compose
 - PostgreSQL 14+
 - MongoDB 6+
@@ -210,30 +210,30 @@
 
 ```bash
 # 安装依赖
-bun install
+pnpm install
 
 # 启动基础服务 (数据库、消息队列等)
 docker compose up -d postgres mongodb redis rabbitmq minio
 
 # 启动所有应用服务 (开发模式)
-bun run dev
+pnpm run dev
 
 # 或者单独启动特定服务
-cd apps/api && bun run dev    # API 服务
-cd apps/admin && bun run dev  # 管理后台
-cd apps/web && bun run dev    # 前端应用
+cd apps/api && pnpm run dev    # API 服务
+cd apps/admin && pnpm run dev  # 管理后台
+cd apps/web && pnpm run dev    # 前端应用
 
 # 构建所有包
-bun run build
+pnpm run build
 
 # 运行测试
-bun run test
+pnpm run test
 
 # 类型检查
-bun run typecheck
+pnpm run typecheck
 
 # 代码检查
-bun run lint
+pnpm run lint
 ```
 
 ### 多服务本地开发
@@ -245,19 +245,19 @@ bun run lint
 ```bash
 # API服务开发
 cd apps/api
-bun run dev
+pnpm run dev
 
 # 爬虫服务开发
 cd apps/crawler
-bun run dev
+pnpm run dev
 
 # 前端开发
 cd apps/web
-bun run dev
+pnpm run dev
 
 # 管理后台开发
 cd apps/admin
-bun run dev
+pnpm run dev
 ```
 
 ### 包开发
@@ -265,11 +265,11 @@ bun run dev
 ```bash
 # 类型包
 cd packages/types
-bun run dev
+pnpm run dev
 
 # 组件包
 cd packages/components
-bun run dev
+pnpm run dev
 ```
 
 ## 🐳 Docker 部署
@@ -295,7 +295,7 @@ docker compose logs -f
 docker compose up -d postgres mongodb redis rabbitmq minio
 
 # 然后启动应用服务
-bun run dev
+pnpm run dev
 ```
 
 ### 服务端口
@@ -361,5 +361,5 @@ UNLICENSED - 仅供内部使用
 ---
 
 **构建状态**: 使用 Turbo 实现快速构建缓存
-**包管理**: 使用 Bun 实现高性能依赖管理
+**包管理**: 使用 pnpm 实现高效依赖管理
 **架构模式**: 微服务 + 单体仓库的混合架构

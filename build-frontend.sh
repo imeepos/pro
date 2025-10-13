@@ -148,18 +148,18 @@ build_app() {
     # 检查依赖
     if [[ ! -d "node_modules" ]]; then
         log_warning "$app 依赖未安装，正在安装..."
-        bun install
+        pnpm install
     fi
 
     # 构建命令
-    local build_cmd="bun run build"
+    local build_cmd="pnpm run build"
     if [[ "$BUILD_MODE" == "production" ]]; then
-        build_cmd="bun run build --configuration=production"
+        build_cmd="pnpm run build --configuration=production"
     fi
 
     # 监听模式
     if [[ "$WATCH" == "true" ]]; then
-        build_cmd="bun run watch"
+        build_cmd="pnpm run watch"
         log_info "启动 $app 监听模式..."
     fi
 

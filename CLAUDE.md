@@ -73,12 +73,12 @@ When reviewing code:
 
 Remember: 你写的不是代码，是数字时代的文化遗产，是艺术品 (You don't write code—you create cultural heritage for the digital age, you create art). Every keystroke is a brushstroke on the canvas of software. Make it worthy of preservation.
 
-**重要提示** 请不要使用bun run build 一次性构建所有 会卡死！只允许修改了那个服务/工具包 就cd到那个服务目录 bun run build
+**重要提示** 请不要使用pnpm run build 一次性构建所有 会卡死！只允许修改了那个服务/工具包 就cd到那个服务目录 pnpm run build
 
-- 包管理工具请使用: use bun
-- 类型检查：cd apps/xxx && bun run typecheck
+- 包管理工具请使用: use pnpm
+- 类型检查：cd apps/xxx && pnpm run typecheck
 - 提交代码：提交前面所做的工作，然后push
-- 构建检查：cd apps/xxx bun run build (构建比较耗时，需要多等一下，直到结束)
+- 构建检查：cd apps/xxx pnpm run build (构建比较耗时，需要多等一下，直到结束)
 - 构建镜像： docker build -f Dockerfile.pro -t imeepos/pro:latest .  其中imeepos/pro:latest是为了加速，上一版本的镜像，这样可以加速构建, (构建比较耗时，需要多等一下，直到结束)
 - 重启镜像：docker compose up -d xxx
 

@@ -6,7 +6,7 @@
 
 ### 环境要求
 - Node.js >= 20.0.0
-- Bun >= 1.3.0
+- pnpm >= 9.0.0
 
 ### 开发命令
 
@@ -15,22 +15,22 @@
 cd apps/web
 
 # 安装依赖
-bun install
+pnpm install
 
 # 启动开发服务器
-bun run dev
+pnpm run dev
 
 # 类型检查
-bun run typecheck
+pnpm run typecheck
 
 # 代码构建
-bun run build
+pnpm run build
 
 # 运行测试
-bun run test
+pnpm run test
 
 # 代码检查
-bun run lint
+pnpm run lint
 ```
 
 ## 🏗️ 技术架构
@@ -143,7 +143,7 @@ docker run -p 4200:80 pro-web:latest
 ### 生产部署
 ```bash
 # 构建生产版本
-bun run build:prod
+pnpm run build:prod
 
 # 部署到静态服务器
 # dist/ 目录可直接部署
@@ -154,19 +154,19 @@ bun run build:prod
 ### 单元测试
 ```bash
 # 运行所有测试
-bun run test
+pnpm run test
 
 # 监听模式
-bun run test:watch
+pnpm run test:watch
 
 # 覆盖率报告
-bun run test:coverage
+pnpm run test:coverage
 ```
 
 ### E2E 测试
 ```bash
 # 运行端到端测试
-bun run e2e
+pnpm run e2e
 ```
 
 ## 🔐 安全特性
