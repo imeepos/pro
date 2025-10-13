@@ -20,13 +20,11 @@ export class RabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit(): Promise<void> {
     const rabbitmqConfig: RabbitMQConfig = {
       url: this.configService.get<string>('RABBITMQ_URL') || 'amqp://localhost:5672',
+      queue: WEIBO_CRAWL_QUEUE,
     };
 
     this.client = new RabbitMQClient(rabbitmqConfig);
     await this.client.connect();
-
-    // 初始化微博抓取队列
-    await this.client.publish(WEIBO_CRAWL_QUEUE, null);
 
     this.logger.info('RabbitMQ 连接已建立，队列已初始化', 'RabbitMQConfigService');
   }
