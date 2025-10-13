@@ -54,19 +54,19 @@
     </div>
   </div>
 
-  <div class="coordinates-label" *ngIf="isShowCoordinates && !hasRenderError">
+  <div class="coordinates-label" *ngIf="isShowCoordinates && !hasRenderError && isEditMode">
     <span class="coordinates-text">X: {{ component.style.left | number:'1.0-0' }}, Y: {{ component.style.top | number:'1.0-0' }}</span>
     <span class="coordinates-size">W: {{ component.style.width | number:'1.0-0' }}, H: {{ component.style.height | number:'1.0-0' }}</span>
     <span class="coordinates-rotate" *ngIf="component.style.rotate">R: {{ component.style.rotate | number:'1.0-0' }}°</span>
   </div>
 
-  <div class="control-bar" *ngIf="isActive && !component.locked">
+  <div class="control-bar" *ngIf="isActive && !component.locked && isEditMode">
     <button class="delete-btn" (click)="onDelete()" title="删除">
       ×
     </button>
   </div>
 
-  <div class="resize-points" *ngIf="isActive && !component.locked && !hasRenderError">
+  <div class="resize-points" *ngIf="isActive && !component.locked && !hasRenderError && isEditMode">
     <div
       *ngFor="let point of resizePoints"
       [class]="'resize-point resize-point-' + point"
@@ -77,7 +77,7 @@
 
   <div
     class="rotate-point"
-    *ngIf="isActive && !component.locked && !hasRenderError"
+    *ngIf="isActive && !component.locked && !hasRenderError && isEditMode"
     (mousedown)="onRotateStart($event)">
   </div>
 

@@ -55,6 +55,7 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   isSelected = false;
   isShowCoordinates = false;
+  isEditMode = true; // 默认为编辑模式
 
   ngOnInit(): void {
     try {
@@ -68,6 +69,17 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
 
       this.query.isShowCoordinates$.pipe(takeUntil(this.destroy$)).subscribe((show) => {
         this.isShowCoordinates = show;
+      });
+
+      // 订阅编辑模式状态
+      this.query.editMode$.pipe(takeUntil(this.destroy$)).subscribe((mode) => {
+        this.isEditMode = mode === 'edit';
+        console.log('[ShapeComponent] 编辑模式变化', {
+          componentId: this.component.id,
+          componentType: this.component.type,
+          editMode: mode,
+          isEditMode: this.isEditMode
+        });
       });
 
       this.validateComponent();
@@ -259,6 +271,18 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
+    // 验证组件类的完整性
+    if (!this.validateComponentClass(componentClass)) {
+      console.error('[ShapeComponent] 组件类验证失败', {
+        componentType: this.component.type,
+        componentClass: componentClass?.name,
+        isStandalone: (componentClass as any)?.ɵcmp?.standalone,
+        hasFactory: !!(componentClass as any)?.ɵfac
+      });
+      this.setRenderError(`组件类 "${this.component.type}" 不是有效的 Angular 组件`, 'render');
+      return;
+    }
+
     try {
       // 优雅地检查 componentHost 是否已初始化
       if (!this.componentHost) {
@@ -283,7 +307,15 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
         componentClass: componentClass.name
       });
 
-      this.componentRef = viewContainerRef.createComponent(componentClass);
+      // 增强的组件创建过程
+      this.componentRef = this.createComponentWithRetry(viewContainerRef, componentClass);
+
+      if (!this.componentRef) {
+        console.error('[ShapeComponent] 组件创建返回 null');
+        this.setRenderError(`组件 "${this.component.type}" 创建失败`, 'render');
+        return;
+      }
+
       console.log('[ShapeComponent] 组件实例创建成功', {
         hasComponentRef: !!this.componentRef,
         componentRefType: this.componentRef?.instance?.constructor?.name
@@ -308,18 +340,97 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
         console.log('[ShapeComponent] 组件创建完成');
       }
     } catch (error) {
-      // 提供更详细的错误信息以便调试
-      const errorMessage = error instanceof Error ? error.message : '组件创建失败';
-      console.error(`[ShapeComponent] 创建组件失败 (${this.component.type}):`, {
-        error: errorMessage,
-        errorType: typeof error,
-        stack: error instanceof Error ? error.stack : undefined,
-        componentId: this.component.id,
-        componentType: this.component.type,
-        componentClass: componentClass?.name
-      });
-      this.setRenderError(errorMessage, 'render');
+      this.handleComponentCreationError(error, componentClass);
     }
+  }
+
+  /**
+   * 验证组件类的完整性
+   */
+  private validateComponentClass(componentClass: any): boolean {
+    try {
+      // 检查是否为有效的 Angular 组件类
+      if (!componentClass || typeof componentClass !== 'function') {
+        return false;
+      }
+
+      // 检查组件是否有 Angular 的元数据
+      const hasComponentMetadata = componentClass.ɵcmp || componentClass.decorators;
+      if (!hasComponentMetadata) {
+        console.warn('[ShapeComponent] 组件缺少 Angular 元数据', {
+          componentType: this.component.type,
+          componentClass: componentClass.name
+        });
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[ShapeComponent] 组件类验证异常', error);
+      return false;
+    }
+  }
+
+  /**
+   * 带重试机制的组件创建
+   */
+  private createComponentWithRetry(viewContainerRef: any, componentClass: any, retryCount = 0): any {
+    try {
+      return viewContainerRef.createComponent(componentClass);
+    } catch (error) {
+      // 如果是 NG0203 错误且重试次数小于 3，则进行重试
+      if (retryCount < 3 && error instanceof Error && error.message.includes('NG0203')) {
+        console.warn(`[ShapeComponent] NG0203 错误，第 ${retryCount + 1} 次重试`, {
+          componentType: this.component.type,
+          error: error.message
+        });
+
+        // 短暂延迟后重试
+        setTimeout(() => {
+          return this.createComponentWithRetry(viewContainerRef, componentClass, retryCount + 1);
+        }, 100 * (retryCount + 1));
+
+        return null;
+      }
+
+      // 如果重试失败或非 NG0203 错误，抛出异常
+      throw error;
+    }
+  }
+
+  /**
+   * 处理组件创建错误
+   */
+  private handleComponentCreationError(error: any, componentClass: any): void {
+    let errorMessage = '组件创建失败';
+    let errorDetails = '';
+
+    if (error instanceof Error) {
+      if (error.message.includes('NG0203')) {
+        errorMessage = '动态组件创建失败 (NG0203)';
+        errorDetails = '可能是由于生产构建时的代码压缩导致，请检查组件注册';
+      } else if (error.message.includes('NG0201')) {
+        errorMessage = '组件类型错误 (NG0201)';
+        errorDetails = '组件不是有效的 Angular 组件';
+      } else {
+        errorMessage = error.message;
+        errorDetails = error.stack || '';
+      }
+    }
+
+    console.error(`[ShapeComponent] 创建组件失败 (${this.component.type}):`, {
+      error: errorMessage,
+      errorType: typeof error,
+      stack: errorDetails,
+      componentId: this.component.id,
+      componentType: this.component.type,
+      componentClass: componentClass?.name,
+      angularVersion: '17+',
+      isProduction: !!(window as any)['ng']?.getInjector,
+      registeredComponents: this.componentRegistry.getAll().map(c => c.type)
+    });
+
+    this.setRenderError(errorMessage, 'render');
   }
 
   ngOnDestroy(): void {
