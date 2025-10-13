@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LegacyWebSocketService as WebSocketService } from '@pro/components';
 import { Subscription } from 'rxjs';
+import { environment } from '../../../../../environments/environment';
 
 interface Notification {
   id: string;
@@ -25,7 +26,10 @@ export class NotificationComponent implements OnInit, OnDestroy {
   constructor(private websocketService: WebSocketService) {}
 
   ngOnInit(): void {
-    this.websocketService.connect();
+    this.websocketService.connect({
+      url: environment.wsUrl,
+      namespace: environment.wsNamespace
+    });
     this.subscribeToNotifications();
   }
 
