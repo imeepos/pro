@@ -117,20 +117,20 @@
               尚未选择地图位置，可直接在地图上点击或通过上方搜索定位。
             </div>
 
-            <nz-descriptions nzBordered nzSize="small" nzColumn="2">
+            <nz-descriptions nzBordered nzSize="small" [nzColumn]="2">
               <nz-descriptions-item nzTitle="省份">{{ locationFieldValue('province') }}</nz-descriptions-item>
               <nz-descriptions-item nzTitle="城市">{{ locationFieldValue('city') }}</nz-descriptions-item>
               <nz-descriptions-item nzTitle="区县">{{ locationFieldValue('district') }}</nz-descriptions-item>
               <nz-descriptions-item nzTitle="街道">{{ locationFieldValue('street') }}</nz-descriptions-item>
             </nz-descriptions>
 
-            <nz-descriptions nzBordered nzSize="small" nzColumn="1">
+            <nz-descriptions nzBordered nzSize="small" [nzColumn]="1">
               <nz-descriptions-item nzTitle="地点描述">
                 {{ locationFieldValue('locationText') }}
               </nz-descriptions-item>
             </nz-descriptions>
 
-            <nz-descriptions nzBordered nzSize="small" nzColumn="2">
+            <nz-descriptions nzBordered nzSize="small" [nzColumn]="2">
               <nz-descriptions-item nzTitle="经度">{{ coordinateValue('longitude') }}</nz-descriptions-item>
               <nz-descriptions-item nzTitle="纬度">{{ coordinateValue('latitude') }}</nz-descriptions-item>
             </nz-descriptions>

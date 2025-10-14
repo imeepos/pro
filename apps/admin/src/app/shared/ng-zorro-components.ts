@@ -169,6 +169,7 @@ export const FORM_NZ_MODULES = [
   NzButtonModule,
   NzDatePickerModule,
   NzUploadModule,
+  NzDescriptionsModule,
   NzLayoutModule,
   NzGridModule
 ];
