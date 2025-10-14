@@ -116,6 +116,7 @@ export class WebSocketService implements WebSocketInstance {
     this.socket.on('connect', () => this.handleConnection());
     this.socket.on('disconnect', (reason) => this.handleDisconnection(reason));
     this.socket.on('connect_error', (error) => this.handleConnectionError(error));
+    this.socket.on('auth:error', (error) => this.handleAuthError(error));
   }
 
   private handleConnection(): void {
@@ -257,9 +258,27 @@ export class WebSocketService implements WebSocketInstance {
     this.eventStreams.clear();
   }
 
+  private handleAuthError(error: { message: string; code: string }): void {
+    console.error('[WebSocketService] Authentication error:', error);
+
+    if (error.code === 'TOKEN_EXPIRED') {
+      this.updateConnectionState(ConnectionState.Failed);
+      this.emitTokenExpired();
+    } else {
+      this.updateConnectionState(ConnectionState.Failed);
+      this.emitAuthError(error);
+    }
+  }
+
   private emitTokenExpired(): void {
     if (this.socket) {
       this.socket.emit('auth:token-expired');
+    }
+  }
+
+  private emitAuthError(error: { message: string; code: string }): void {
+    if (this.socket) {
+      this.socket.emit('auth:authentication-failed', error);
     }
   }
 }

@@ -104,6 +104,12 @@ export class NotificationComponent implements OnInit, OnDestroy {
           console.log('[NotificationComponent] Token 过期，跳转登录页');
           this.handleTokenExpired();
         });
+
+      ws.on('auth:authentication-failed')
+        .subscribe((error: any) => {
+          console.log('[NotificationComponent] 认证失败，跳转登录页', error);
+          this.handleTokenExpired();
+        });
     } else {
       this.subscription = notificationWs.on('notification')
         .subscribe((data: any) => {
@@ -114,6 +120,12 @@ export class NotificationComponent implements OnInit, OnDestroy {
       notificationWs.on('auth:token-expired')
         .subscribe(() => {
           console.log('[NotificationComponent] Token 过期，跳转登录页');
+          this.handleTokenExpired();
+        });
+
+      notificationWs.on('auth:authentication-failed')
+        .subscribe((error: any) => {
+          console.log('[NotificationComponent] 认证失败，跳转登录页', error);
           this.handleTokenExpired();
         });
     }

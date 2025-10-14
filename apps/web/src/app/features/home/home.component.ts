@@ -329,7 +329,21 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     });
     console.log('[HomeComponent] 创建WebSocket配置', { wsUrl: environment.wsUrl, namespace: environment.wsNamespace });
 
-    this.wsManager.connectToNamespace(wsConfig);
+    const wsInstance = this.wsManager.connectToNamespace(wsConfig);
+
+    // 监听认证错误事件
+    wsInstance.on('auth:token-expired')
+      .subscribe(() => {
+        console.log('[HomeComponent] JWT Token 已过期，跳转到登录页');
+        this.handleTokenExpired();
+      });
+
+    wsInstance.on('auth:authentication-failed')
+      .subscribe((error: any) => {
+        console.log('[HomeComponent] 认证失败，跳转到登录页', error);
+        this.handleTokenExpired();
+      });
+
     console.log('[HomeComponent] WebSocket连接请求已发送');
   }
 

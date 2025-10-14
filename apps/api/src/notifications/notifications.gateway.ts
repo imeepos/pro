@@ -37,7 +37,9 @@ export class NotificationsGateway
       const token = client.handshake.auth.token;
 
       if (!token) {
-        throw new UnauthorizedException('Missing token');
+        client.emit('auth:error', { message: 'Missing token', code: 'MISSING_TOKEN' });
+        setTimeout(() => client.disconnect(), 1000);
+        return;
       }
 
       // 验证 JWT token
@@ -47,7 +49,16 @@ export class NotificationsGateway
       this.logger.log(`Notification client connected: ${client.id}, userId: ${payload.userId}`);
     } catch (error) {
       this.logger.error('Notification WebSocket authentication failed:', error.message);
-      client.disconnect();
+
+      // 发送认证失败事件给客户端
+      const errorCode = error.message.includes('jwt expired') ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN';
+      client.emit('auth:error', {
+        message: error.message,
+        code: errorCode
+      });
+
+      // 延迟断开连接，确保客户端收到错误消息
+      setTimeout(() => client.disconnect(), 1000);
     }
   }
 
