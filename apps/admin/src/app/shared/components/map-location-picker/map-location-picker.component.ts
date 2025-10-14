@@ -57,7 +57,7 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
 
   @ViewChild('mapHost', { static: true }) private mapHostRef?: ElementRef<HTMLDivElement>;
 
-  isLoading = false;
+  isLoading = true;
   errorMessage = '';
   selectedPoint: MapPoint | null = null;
   searchTerm = '';
