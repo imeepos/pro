@@ -46,7 +46,8 @@
       "Bash(/dev/null)",
       "WebFetch(domain:lbs.amap.com)",
       "WebFetch(domain:ng.ant.design)",
-      "WebFetch(domain:flowbite-angular.com)"
+      "WebFetch(domain:flowbite-angular.com)",
+      "Bash(pm2:*)"
     ],
     "deny": [],
     "ask": []

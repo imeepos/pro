@@ -185,7 +185,8 @@ export const DISPLAY_NZ_MODULES = [
   NzProgressModule,
   NzAvatarModule,
   NzSkeletonModule,
-  NzEmptyModule
+  NzEmptyModule,
+  NzRadioModule
 ];
 
 // 布局相关组件

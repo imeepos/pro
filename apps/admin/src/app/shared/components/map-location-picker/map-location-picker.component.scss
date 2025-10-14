@@ -1,0 +1,128 @@
+.map-location-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.map-canvas {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.08));
+
+  &--inactive {
+    opacity: 0.35;
+    filter: grayscale(0.6);
+  }
+}
+
+.status-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.16);
+  color: #1d4ed8;
+
+  &.error {
+    background: rgba(248, 113, 113, 0.08);
+    border-color: rgba(248, 113, 113, 0.16);
+    color: #b91c1c;
+  }
+}
+
+.status-icon {
+  font-size: 18px;
+}
+
+.status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-title {
+  font-weight: 600;
+  margin: 0;
+}
+
+.status-message,
+.status-hint {
+  margin: 0;
+  font-size: 13px;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid rgba(37, 99, 235, 0.28);
+  border-top-color: rgba(37, 99, 235, 0.88);
+  animation: spin 0.8s linear infinite;
+}
+
+.selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  align-items: center;
+}
+
+.coord {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 120px;
+
+  span {
+    font-size: 12px;
+    color: rgba(15, 23, 42, 0.6);
+  }
+
+  strong {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+  }
+}
+
+.address {
+  flex: 1 1 auto;
+  min-width: 220px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(15, 23, 42, 0.08);
+  color: rgba(17, 24, 39, 0.82);
+}
+
+.clear {
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(79, 70, 229, 0.28);
+  background: rgba(79, 70, 229, 0.08);
+  color: #4338ca;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba(79, 70, 229, 0.48);
+    background: rgba(79, 70, 229, 0.18);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

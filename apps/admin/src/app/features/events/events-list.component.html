@@ -14,6 +14,7 @@
         <input
           type="text"
           [(ngModel)]="filterParams.keyword"
+          name="keyword"
           (keyup.enter)="onSearch(filterParams.keyword || '')"
           nz-input
           placeholder="搜索事件名称、描述..."
@@ -21,7 +22,7 @@
       </nz-input-group>
 
       <!-- 视图切换 -->
-      <nz-radio-group [(ngModel)]="viewMode" nzButtonStyle="solid">
+      <nz-radio-group [(ngModel)]="viewMode" name="viewMode" nzButtonStyle="solid">
         <label nz-radio-button nzValue="list">
           <span nz-icon nzType="unordered-list"></span>
           列表
