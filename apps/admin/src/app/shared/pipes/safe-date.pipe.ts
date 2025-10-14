@@ -1,6 +1,9 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import { Pipe, PipeTransform, Injectable } from '@angular/core';
 import { DatePipe } from '@angular/common';
 
+@Injectable({
+  providedIn: 'root'
+})
 @Pipe({
   name: 'date',
   pure: true
@@ -14,6 +17,12 @@ export class SafeDatePipe extends DatePipe implements PipeTransform {
       format = format.replace(/YYYY/g, 'y').replace(/DD/g, 'dd');
     }
 
-    return super.transform(value, format, timezone, locale);
+    try {
+      return super.transform(value, format, timezone, locale);
+    } catch (error: any) {
+      // 如果仍然出错，尝试使用默认格式
+      console.warn('Date format error, falling back to default format:', error.message);
+      return super.transform(value, 'y-MM-dd HH:mm:ss', timezone, locale);
+    }
   }
 }

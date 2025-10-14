@@ -80,6 +80,7 @@ export const appConfig: ApplicationConfig = {
       useClass: SafeDatePipe
     },
 
+    
     // Token存储服务的接口适配
     {
       provide: 'ITokenStorage',
