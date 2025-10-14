@@ -17,8 +17,6 @@ import {
   provideFlowbiteDropdownItemConfig,
   FlowbiteDropdownStateToken
 } from 'flowbite-angular/dropdown';
-import { NgpRovingFocusGroupToken } from 'ng-primitives/roving-focus';
-
 export interface SelectOption {
   value: string | number;
   label: string;
@@ -60,10 +58,6 @@ export interface SelectOption {
         toggle: () => {},
         dropdownState: () => ({})
       }
-    },
-    {
-      provide: NgpRovingFocusGroupToken,
-      useValue: {}
     }
   ],
   templateUrl: './select.component.html',
