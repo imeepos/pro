@@ -1,4 +1,4 @@
-export function formatDate(date: Date, format: string = 'YYYY-MM-DD HH:mm:ss'): string {
+export function formatDate(date: Date, format: string = 'y-MM-dd HH:mm:ss'): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -7,8 +7,10 @@ export function formatDate(date: Date, format: string = 'YYYY-MM-DD HH:mm:ss'): 
   const seconds = String(date.getSeconds()).padStart(2, '0');
 
   return format
+    .replace('y', String(year))
     .replace('YYYY', String(year))
     .replace('MM', month)
+    .replace('dd', day)
     .replace('DD', day)
     .replace('HH', hours)
     .replace('mm', minutes)

@@ -12,9 +12,11 @@ describe('Common Utils', () => {
     it('应该使用自定义格式正确格式化日期', () => {
       const date = new Date('2025-01-11T15:30:45');
 
-      expect(formatDate(date, 'YYYY-MM-DD')).toBe('2025-01-11');
+      expect(formatDate(date, 'y-MM-dd')).toBe('2025-01-11');
+      expect(formatDate(date, 'YYYY-MM-DD')).toBe('2025-01-11'); // 向后兼容
       expect(formatDate(date, 'HH:mm:ss')).toBe('15:30:45');
-      expect(formatDate(date, 'YYYY/MM/DD HH:mm')).toBe('2025/01/11 15:30');
+      expect(formatDate(date, 'y/MM/dd HH:mm')).toBe('2025/01/11 15:30');
+      expect(formatDate(date, 'YYYY/MM/DD HH:mm')).toBe('2025/01/11 15:30'); // 向后兼容
     });
 
     it('应该正确处理个位数的月份和日期', () => {
