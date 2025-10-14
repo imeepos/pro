@@ -5,6 +5,7 @@ import AMapLoader from '@amap/amap-jsapi-loader';
 import { ConfigService } from '../../../core/services/config.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { environment } from '../../../../environments/environment.prod';
 
 export interface LocationData {
   longitude?: number | null;
