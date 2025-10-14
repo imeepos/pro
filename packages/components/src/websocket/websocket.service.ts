@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, filter, distinctUntilChanged, map, combineLatest } from 'rxjs';
+import { BehaviorSubject, Observable, filter, distinctUntilChanged, map } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import {
   ConnectionState,
@@ -23,6 +23,7 @@ export class WebSocketService implements WebSocketInstance {
   private config: WebSocketConfig | null = null;
   private reconnectAttempts = 0;
   private reconnectTimer?: number;
+  private authFailure = false;
 
   private readonly connectionState$ = new BehaviorSubject<ConnectionState>(ConnectionState.Disconnected);
   private readonly eventStreams = new Map<string, EventStream>();
@@ -46,6 +47,7 @@ export class WebSocketService implements WebSocketInstance {
     }
 
     this.config = this.enrichConfig(config);
+    this.authFailure = false;
     this.establishConnection();
   }
 
@@ -127,6 +129,10 @@ export class WebSocketService implements WebSocketInstance {
 
   private handleDisconnection(reason: string): void {
     if (reason === 'io client disconnect') {
+      if (this.authFailure) {
+        return;
+      }
+
       this.updateConnectionState(ConnectionState.Disconnected);
       return;
     }
@@ -172,8 +178,9 @@ export class WebSocketService implements WebSocketInstance {
   }
 
   private attemptReconnection(): void {
-    if (!this.shouldAttemptReconnection()) return;
+    if (!this.config?.reconnection || !this.shouldAttemptReconnection()) return;
 
+    this.clearReconnectTimer();
     this.updateConnectionState(ConnectionState.Reconnecting);
     this.reconnectAttempts++;
 
@@ -185,8 +192,16 @@ export class WebSocketService implements WebSocketInstance {
   }
 
   private shouldAttemptReconnection(): boolean {
-    return this.reconnectAttempts < this.config!.reconnection!.maxAttempts &&
-           this.connectionState$.value !== ConnectionState.Disconnected;
+    if (!this.config?.reconnection) {
+      return false;
+    }
+
+    const currentState = this.connectionState$.value;
+    if (currentState === ConnectionState.Disconnected || currentState === ConnectionState.Failed || this.authFailure) {
+      return false;
+    }
+
+    return this.reconnectAttempts < this.config.reconnection.maxAttempts;
   }
 
   private getOrCreateEventStream<T = any>(event: string): Observable<T> {
@@ -254,6 +269,7 @@ export class WebSocketService implements WebSocketInstance {
   private resetState(): void {
     this.config = null;
     this.reconnectAttempts = 0;
+    this.authFailure = false;
     this.eventStreams.forEach(stream => stream.subject.complete());
     this.eventStreams.clear();
   }
@@ -261,13 +277,16 @@ export class WebSocketService implements WebSocketInstance {
   private handleAuthError(error: { message: string; code: string }): void {
     console.error('[WebSocketService] Authentication error:', error);
 
+    this.authFailure = true;
+    this.terminateConnectionOnAuthFailure();
+    this.updateConnectionState(ConnectionState.Failed);
+
     if (error.code === 'TOKEN_EXPIRED') {
-      this.updateConnectionState(ConnectionState.Failed);
       this.emitTokenExpired();
-    } else {
-      this.updateConnectionState(ConnectionState.Failed);
-      this.emitAuthError(error);
+      return;
     }
+
+    this.emitAuthError(error);
   }
 
   private emitTokenExpired(): void {
@@ -279,6 +298,24 @@ export class WebSocketService implements WebSocketInstance {
   private emitAuthError(error: { message: string; code: string }): void {
     if (this.socket) {
       this.socket.emit('auth:authentication-failed', error);
+    }
+  }
+
+  private terminateConnectionOnAuthFailure(): void {
+    this.clearReconnectTimer();
+
+    if (!this.socket) {
+      return;
+    }
+
+    if (this.socket.io?.opts) {
+      this.socket.io.opts.reconnection = false;
+    }
+
+    if (this.socket.connected) {
+      this.socket.disconnect();
+    } else {
+      this.socket.close();
     }
   }
 }
