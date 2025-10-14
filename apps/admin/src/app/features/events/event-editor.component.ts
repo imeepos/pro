@@ -19,7 +19,7 @@ import {
   TagSelectorComponent
 } from './components';
 import type { LocationData } from './components/amap-picker.component';
-import { MaterialDateTimePickerComponent } from '../../shared/components/material-date-time-picker';
+import { DateTimePickerComponent } from '../../shared/components/date-time-picker/date-time-picker.component';
 import { ImageUploadComponent } from '../../shared/components/image-upload/image-upload.component';
 import { FileUploadComponent } from '../../shared/components/file-upload/file-upload.component';
 import { VideoUploadComponent } from '../../shared/components/video-upload/video-upload.component';
@@ -34,7 +34,7 @@ import { Attachment } from '@pro/sdk';
     SelectComponent,
     AmapPickerComponent,
     TagSelectorComponent,
-    MaterialDateTimePickerComponent,
+    DateTimePickerComponent,
     ImageUploadComponent,
     FileUploadComponent,
     VideoUploadComponent
