@@ -14,6 +14,8 @@ import { environment } from '../environments/environment';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
 import { zh_CN, provideNzI18n } from 'ng-zorro-antd/i18n';
 import { provideNzConfig } from 'ng-zorro-antd/core/config';
+import { DatePipe } from '@angular/common';
+import { SafeDatePipe } from './shared/pipes/safe-date.pipe';
 import * as AllIcons from '@ant-design/icons-angular/icons';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
@@ -71,6 +73,12 @@ export const appConfig: ApplicationConfig = {
     // ng-zorro-antd 配置
     provideNzI18n(zh_CN),
     provideNzIcons(Object.values(AllIcons).filter((icon): icon is any => typeof icon === 'object')),
+
+    // 安全的日期格式配置
+    {
+      provide: DatePipe,
+      useClass: SafeDatePipe
+    },
 
     // Token存储服务的接口适配
     {
