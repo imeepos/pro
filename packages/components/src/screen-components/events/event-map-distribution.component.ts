@@ -44,7 +44,7 @@ export interface EventMapDistributionConfig {
 const EDIT_CONFIG: EventMapDistributionConfig = {
   mode: 'edit',
   title: '事件地图分布',
-  mapTheme: 'midnight',
+  mapTheme: 'minimal',
   maxEvents: 200,
   refreshInterval: 60000,
   autoFit: true,
@@ -58,7 +58,7 @@ const EDIT_CONFIG: EventMapDistributionConfig = {
 const DISPLAY_CONFIG: EventMapDistributionConfig = {
   mode: 'display',
   title: '事件地图分布',
-  mapTheme: 'midnight',
+  mapTheme: 'minimal',
   maxEvents: 120,
   refreshInterval: 0,
   autoFit: true,
@@ -77,11 +77,11 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
   template: `
     <div class="event-map-card h-full flex flex-col" [class.edit-mode]="isEditMode">
       <div class="card-header flex items-start justify-between gap-4">
-        <div class="title flex items-center gap-3 text-white/90">
+        <div class="title flex items-center gap-3 text-slate-800">
           <span class="title-icon text-2xl">🧭</span>
           <div class="flex flex-col">
             <span class="text-xl font-semibold tracking-wide">{{ config.title }}</span>
-            <small class="text-xs text-white/50" *ngIf="latestEventName">
+            <small class="text-xs text-slate-500" *ngIf="latestEventName">
               最近事件：{{ latestEventName }} · {{ latestEventTime | date:'MM-dd HH:mm' }}
             </small>
           </div>
@@ -147,14 +147,14 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
           <div class="summary-bar mt-2">
             <span class="summary-bar-inner" [style.width.%]="item.percentage"></span>
           </div>
-          <div class="summary-foot flex items-center justify-between text-xs text-white/60 mt-2">
+          <div class="summary-foot flex items-center justify-between text-xs text-slate-500 mt-2">
             <span>覆盖占比</span>
             <span>{{ item.percentage }}%</span>
           </div>
         </div>
       </div>
 
-      <div *ngIf="lastUpdated" class="card-footer mt-4 text-xs text-white/50 flex items-center justify-between">
+      <div *ngIf="lastUpdated" class="card-footer mt-4 text-xs text-slate-500 flex items-center justify-between">
         <span>最后更新 · {{ lastUpdated | date:'yyyy-MM-dd HH:mm:ss' }}</span>
         <button type="button" class="manual-refresh" (click)="manualRefresh()" [disabled]="isLoading">
           <span>手动刷新</span>
@@ -174,19 +174,19 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     }
 
     .event-map-card {
-      background: radial-gradient(circle at top left, rgba(56,189,248,0.22), transparent 45%),
-                  linear-gradient(135deg, rgba(15,23,42,0.96), rgba(12,74,110,0.85));
-      border: 1px solid rgba(148,163,184,0.18);
+      background: radial-gradient(circle at top left, rgba(59,130,246,0.1), rgba(255,255,255,0.95) 48%),
+                  linear-gradient(180deg, #f8fafc, #ffffff);
+      border: 1px solid rgba(148,163,184,0.35);
       border-radius: 24px;
       padding: 24px;
       position: relative;
       overflow: hidden;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 18px 44px rgba(15,23,42,0.35);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 20px 46px rgba(15,23,42,0.08);
     }
 
     .event-map-card.edit-mode {
-      box-shadow: 0 20px 60px rgba(30,64,175,0.35);
+      box-shadow: 0 24px 60px rgba(59,130,246,0.18);
       border-color: rgba(59,130,246,0.45);
     }
 
@@ -197,8 +197,9 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
       width: 40px;
       height: 40px;
       border-radius: 12px;
-      background: linear-gradient(135deg, rgba(34,197,94,0.35), rgba(59,130,246,0.3));
-      backdrop-filter: blur(10px);
+      background: linear-gradient(135deg, rgba(59,130,246,0.24), rgba(34,197,94,0.18));
+      color: #0f172a;
+      backdrop-filter: blur(8px);
     }
 
     .status-chip {
@@ -213,29 +214,29 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     }
 
     .chip-loading {
-      background: rgba(59,130,246,0.18);
-      color: rgba(191,219,254,0.95);
+      background: rgba(59,130,246,0.12);
+      color: rgba(30,64,175,0.85);
     }
 
     .chip-active {
-      background: rgba(34,197,94,0.22);
-      color: rgba(187,247,208,0.95);
+      background: rgba(34,197,94,0.12);
+      color: rgba(21,128,61,0.9);
     }
 
     .chip-muted {
-      background: rgba(148,163,184,0.12);
-      color: rgba(203,213,225,0.75);
+      background: rgba(148,163,184,0.16);
+      color: rgba(71,85,105,0.8);
     }
 
     .chip-error {
-      background: rgba(239,68,68,0.22);
-      color: rgba(254,226,226,0.95);
+      background: rgba(239,68,68,0.14);
+      color: rgba(185,28,28,0.88);
     }
 
     .map-stage {
       border-radius: 20px;
-      background: linear-gradient(160deg, rgba(30,64,175,0.45), rgba(15,23,42,0.85));
-      border: 1px solid rgba(59,130,246,0.18);
+      background: linear-gradient(180deg, rgba(226,232,240,0.75), rgba(255,255,255,0.95));
+      border: 1px solid rgba(148,163,184,0.25);
       overflow: hidden;
     }
 
@@ -248,22 +249,23 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     .map-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(15,23,42,0.78);
+      background: rgba(255,255,255,0.92);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
-      color: #e2e8f0;
+      color: #1f2937;
       gap: 12px;
+      box-shadow: inset 0 -1px 0 rgba(148,163,184,0.15);
     }
 
     .loading-stack .spinner {
       width: 42px;
       height: 42px;
       border-radius: 50%;
-      border: 3px solid rgba(59,130,246,0.4);
-      border-top-color: rgba(96,165,250,0.9);
+      border: 3px solid rgba(148,163,184,0.35);
+      border-top-color: rgba(59,130,246,0.75);
       animation: spin 1s linear infinite;
     }
 
@@ -280,10 +282,11 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
       gap: 12px;
       padding: 10px 14px;
       border-radius: 999px;
-      background: rgba(15,23,42,0.72);
-      color: rgba(226,232,240,0.9);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(148,163,184,0.2);
+      background: rgba(255,255,255,0.9);
+      color: #0f172a;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(148,163,184,0.28);
+      box-shadow: 0 8px 18px rgba(15,23,42,0.08);
       font-size: 12px;
     }
 
@@ -315,13 +318,13 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
       height: 22px;
       padding: 0 8px;
       border-radius: 999px;
-      background: rgba(94,234,212,0.22);
-      border: 1px solid rgba(45,212,191,0.35);
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.25);
       display: inline-flex;
       align-items: center;
       justify-content: center;
       font-weight: 600;
-      color: rgba(187,247,208,0.9);
+      color: rgba(30,64,175,0.85);
     }
 
     .empty-hint {
@@ -331,8 +334,8 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(180deg, rgba(15,23,42,0.72), rgba(30,41,59,0.6));
-      color: rgba(226,232,240,0.85);
+      background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.92));
+      color: rgba(71,85,105,0.88);
       gap: 6px;
       text-align: center;
     }
@@ -345,10 +348,10 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     .summary-item {
       padding: 16px;
       border-radius: 16px;
-      background: linear-gradient(135deg, rgba(15,118,110,0.28), rgba(13,148,136,0.18));
-      border: 1px solid rgba(13,148,136,0.32);
-      backdrop-filter: blur(14px);
-      color: rgba(226,232,240,0.92);
+      background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(34,197,94,0.08));
+      border: 1px solid rgba(148,163,184,0.28);
+      backdrop-filter: blur(10px);
+      color: #0f172a;
       min-height: 110px;
     }
 
@@ -360,13 +363,13 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     .summary-count {
       font-size: 18px;
       font-weight: 600;
-      color: rgba(45,212,191,0.95);
+      color: rgba(21,128,61,0.9);
     }
 
     .summary-bar {
       height: 6px;
       border-radius: 999px;
-      background: rgba(148,163,184,0.25);
+      background: rgba(148,163,184,0.3);
       overflow: hidden;
     }
 
@@ -374,28 +377,28 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
       display: block;
       height: 100%;
       border-radius: 999px;
-      background: linear-gradient(90deg, rgba(34,211,238,0.95), rgba(14,165,233,0.95));
+      background: linear-gradient(90deg, rgba(59,130,246,0.8), rgba(14,165,233,0.85));
       transition: width 0.4s ease;
     }
 
     .card-footer {
-      border-top: 1px solid rgba(148,163,184,0.2);
+      border-top: 1px solid rgba(148,163,184,0.28);
       padding-top: 16px;
     }
 
     .manual-refresh {
-      border: 1px solid rgba(148,163,184,0.3);
+      border: 1px solid rgba(59,130,246,0.3);
       padding: 6px 12px;
       border-radius: 999px;
-      color: rgba(226,232,240,0.8);
-      background: transparent;
+      color: rgba(30,64,175,0.9);
+      background: rgba(255,255,255,0.95);
       transition: all 0.3s ease;
     }
 
     .manual-refresh:hover:not(:disabled) {
-      border-color: rgba(59,130,246,0.55);
-      color: rgba(191,219,254,0.95);
-      box-shadow: 0 0 12px rgba(59,130,246,0.45);
+      border-color: rgba(59,130,246,0.6);
+      color: rgba(30,58,138,0.95);
+      box-shadow: 0 0 14px rgba(59,130,246,0.3);
     }
 
     .manual-refresh:disabled {
@@ -418,14 +421,14 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
       margin-top: 8px;
       padding: 6px 18px;
       border-radius: 999px;
-      border: 1px solid rgba(248,113,113,0.6);
-      background: rgba(248,113,113,0.18);
-      color: rgba(254,202,202,0.95);
+      border: 1px solid rgba(248,113,113,0.45);
+      background: rgba(248,113,113,0.12);
+      color: rgba(185,28,28,0.88);
       transition: all 0.3s ease;
     }
 
     .retry-button:hover {
-      background: rgba(248,113,113,0.28);
+      background: rgba(248,113,113,0.2);
     }
 
     @media (max-width: 1440px) {
@@ -900,7 +903,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     };
   }
 
-  private getMapStyle(theme: MapTheme = 'midnight'): string {
+  private getMapStyle(theme: MapTheme = 'minimal'): string {
     switch (theme) {
       case 'ocean':
         return 'amap://styles/blue';
@@ -909,7 +912,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
       case 'minimal':
         return 'amap://styles/whitesmoke';
       default:
-        return 'amap://styles/darkblue';
+        return 'amap://styles/whitesmoke';
     }
   }
 
