@@ -27,14 +27,42 @@ registerLocaleData(localeZhHans, 'zh-CN');
 // 创建包含完整 localize 属性的中文本地化配置
 const customZhCNLocale = {
   ...zh_CN,
+  // 添加 ng-zorro-antd 日期组件所需的 localize 属性
   localize: {
-    ...localeZhHans[0]?.localize || {},
-    // 确保日期本地化属性存在
-    era: localeZhHans[0]?.localize?.era || {},
-    year: localeZhHans[0]?.localize?.year || {},
-    month: localeZhHans[0]?.localize?.month || {},
-    weekday: localeZhHans[0]?.localize?.weekday || {},
-    dayPeriod: localeZhHans[0]?.localize?.dayPeriod || {},
+    era: ['公元', '公元前'],
+    year: {
+      0: '今年',
+      1: '明年',
+      '-1': '去年',
+      future: '{0}年后',
+      past: '{0}年前'
+    },
+    month: {
+      0: '本月',
+      1: '下个月',
+      '-1': '上个月',
+      future: '{0}个月后',
+      past: '{0}个月前'
+    },
+    weekday: {
+      0: '周日',
+      1: '周一',
+      2: '周二',
+      3: '周三',
+      4: '周四',
+      5: '周五',
+      6: '周六'
+    },
+    dayPeriod: {
+      am: '上午',
+      pm: '下午',
+      midnight: '午夜',
+      noon: '中午',
+      morning: '早晨',
+      afternoon: '下午',
+      evening: '晚上',
+      night: '夜晚'
+    },
     dateFormat: {
       medium: 'y年M月d日 AH:mm:ss',
       short: 'y/M/d AH:mm',
