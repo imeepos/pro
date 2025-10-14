@@ -1,201 +1,100 @@
-<div class="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+<nz-layout class="h-full">
   <!-- 头部 -->
-  <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ title }}</h1>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">填写事件的完整信息</p>
-      </div>
-      <div class="flex gap-3">
-        <button
-          (click)="cancel()"
-          class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
-          [disabled]="loading"
-        >
-          取消
-        </button>
-        <button
-          (click)="saveDraft()"
-          class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
-          [disabled]="loading"
-        >
-          保存草稿
-        </button>
-        <button
-          (click)="publish()"
-          class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-          [disabled]="loading"
-        >
-          {{ isEditMode ? '保存并发布' : '创建并发布' }}
-        </button>
-      </div>
-    </div>
-  </div>
+  <nz-page-header
+    [title]="title"
+    subTitle="填写事件的完整信息"
+    [extra]="extraActions">
+  </nz-page-header>
 
   <!-- 表单内容 -->
   <div class="flex-1 overflow-y-auto p-6">
     <form [formGroup]="eventForm" class="max-w-4xl mx-auto space-y-6">
       <!-- 基础信息 -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">基础信息</h2>
+      <nz-card title="基础信息" [nzBordered]="false">
+        <form [formGroup]="eventForm" nz-form>
+          <nz-form-item>
+            <nz-form-control nzErrorTip="事件名称为必填项，最多200个字符">
+              <nz-form-label>
+                事件名称 <span style="color: red">*</span>
+              </nz-form-label>
+              <nz-input
+                formControlName="eventName"
+                nzPlaceHolder="请输入事件名称"
+                [nzStatus]="eventForm.get('eventName')?.invalid && eventForm.get('eventName')?.touched ? 'error' : ''"
+                nzSize="large"
+              />
+            </nz-form-control>
+          </nz-form-item>
 
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-              事件名称 <span class="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              formControlName="eventName"
-              placeholder="请输入事件名称"
-              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-              [class.border-red-500]="eventForm.get('eventName')?.invalid && eventForm.get('eventName')?.touched"
-            />
-            <p
-              *ngIf="eventForm.get('eventName')?.invalid && eventForm.get('eventName')?.touched"
-              class="text-sm text-red-600 dark:text-red-400 mt-1"
-            >
-              事件名称为必填项
-            </p>
-          </div>
+          <nz-form-item>
+            <nz-row [nzGutter]="16">
+              <nz-col [nzSpan]="12">
+                <nz-form-control>
+                  <nz-form-label>
+                    行业类型 <span style="color: red">*</span>
+                  </nz-form-label>
+                  <nz-select
+                    [formControl]="industryTypeIdControl"
+                    nzPlaceHolder="请选择行业类型"
+                    [nzOptions]="industryTypeOptions"
+                    nzSize="large"
+                  ></nz-select>
+                </nz-form-control>
+              </nz-col>
+              <nz-col [nzSpan]="12">
+                <nz-form-control>
+                  <nz-form-label>
+                    事件类型 <span style="color: red">*</span>
+                  </nz-form-label>
+                  <nz-select
+                    [formControl]="eventTypeIdControl"
+                    nzPlaceHolder="请选择事件类型"
+                    [nzOptions]="eventTypeOptions"
+                    nzSize="large"
+                  ></nz-select>
+                </nz-form-control>
+              </nz-col>
+            </nz-row>
+          </nz-form-item>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                行业类型 <span class="text-red-500">*</span>
-              </label>
-              <app-select
-                [options]="industryTypeOptions"
-                [formControl]="industryTypeIdControl"
-                placeholder="请选择行业类型"
-              ></app-select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                事件类型 <span class="text-red-500">*</span>
-              </label>
-              <app-select
-                [options]="eventTypeOptions"
-                [formControl]="eventTypeIdControl"
-                placeholder="请选择事件类型"
-              ></app-select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">简介</label>
-            <textarea
-              formControlName="summary"
-              rows="4"
-              placeholder="请输入事件简介"
-              class="block w-full p-2.5 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            ></textarea>
-          </div>
-        </div>
-      </div>
+          <nz-form-item>
+            <nz-form-control>
+              <nz-form-label>简介</nz-form-label>
+              <nz-textarea
+                formControlName="summary"
+                [nzRows]="4"
+                nzPlaceHolder="请输入事件简介"
+                nzSize="large"
+              />
+            </nz-form-control>
+          </nz-form-item>
+        </form>
+      </nz-card>
 
       <!-- 时间地点 -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">时间地点</h2>
-
-        <div class="space-y-6">
-          <!-- 发生时间 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-              发生时间 <span class="text-red-500">*</span>
-            </label>
-            <pro-date-time-picker
-              formControlName="occurTime"
-              placeholder="请选择发生时间"
-              [required]="true"
-              [showSeconds]="true"
-              [allowClear]="true"
-              class="w-full"
-            ></pro-date-time-picker>
-          </div>
-
-          <!-- 地图选点 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-              事件位置 <span class="text-red-500">*</span>
-              <span class="text-xs text-gray-500 ml-2">（请通过地图选点或搜索来确定准确位置）</span>
-            </label>
-            <app-amap-picker
-              [longitude]="eventForm.get('longitude')?.value"
-              [latitude]="eventForm.get('latitude')?.value"
-              [city]="eventForm.get('city')?.value"
-              (locationPick)="onLocationPick($event)"
-            ></app-amap-picker>
-          </div>
-
-          <!-- 自动填充的地址信息 -->
-          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-            <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-3">📍 自动填充的地址信息</h3>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">省份</label>
-                <input
-                  type="text"
-                  formControlName="province"
-                  placeholder="通过地图选点自动填充"
-                  readonly
-                  class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">城市</label>
-                <input
-                  type="text"
-                  formControlName="city"
-                  placeholder="通过地图选点自动填充"
-                  readonly
-                  class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">区/县</label>
-                <input
-                  type="text"
-                  formControlName="district"
-                  placeholder="通过地图选点自动填充"
-                  readonly
-                  class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">街道地址</label>
-                <input
-                  type="text"
-                  formControlName="street"
-                  placeholder="通过地图选点自动填充"
-                  readonly
-                  class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            <div class="mt-4">
-              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">地点描述（可编辑）</label>
-              <input
-                type="text"
-                formControlName="locationText"
-                placeholder="例如：XX大厦A座10楼"
-                class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+      <nz-card title="时间地点" [nzBordered]="false">
+        <form [formGroup]="eventForm" nz-form>
+          <nz-form-item>
+            <nz-form-control nzErrorTip="请选择发生时间">
+              <nz-form-label>
+                发生时间 <span style="color: red">*</span>
+              </nz-form-label>
+              <nz-date-picker
+                formControlName="occurTime"
+                nzPlaceHolder="请选择发生时间"
+                nzShowTime
+                nzFormat="YYYY-MM-DD HH:mm:ss"
+                [nzSize]="'large'"
+                style="width: 100%"
               />
-              <p class="text-xs text-gray-500 mt-1">💡 您可以手动编辑地点描述来补充更详细的位置信息</p>
-            </div>
-          </div>
-        </div>
-      </div>
+            </nz-form-control>
+          </nz-form-item>
+
+        </form>
+      </nz-card>
 
       <!-- 标签设置 -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">标签设置</h2>
+      <nz-card title="标签设置" [nzBordered]="false">
         <app-tag-selector
           [selectedTagIds]="selectedTagIds"
           [allTags]="(allTags$ | async) || []"
@@ -203,11 +102,10 @@
           (tagsChange)="onTagsChange($event)"
           (tagCreate)="onTagCreate($event)"
         ></app-tag-selector>
-      </div>
+      </nz-card>
 
       <!-- 附件上传 -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">附件上传</h2>
+      <nz-card title="附件上传" [nzBordered]="false">
 
         <div class="space-y-6">
           <!-- 图片上传 -->
@@ -275,9 +173,22 @@
             <div *ngIf="!eventId" class="text-sm text-gray-500 dark:text-gray-400 py-4 px-6 bg-gray-50 dark:bg-gray-700 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
               请先保存事件草稿后再上传视频
             </div>
-          </div>
         </div>
-      </div>
+      </nz-card>
     </form>
   </div>
-</div>
+
+  <!-- 操作按钮模板 -->
+  <ng-template #extraActions>
+    <nz-space>
+      <nz-button (click)="cancel()" [nzLoading]="loading">取消</nz-button>
+      <nz-button (click)="saveDraft()" [nzLoading]="loading">保存草稿</nz-button>
+      <nz-button
+        type="primary"
+        (click)="publish()"
+        [nzLoading]="loading">
+        {{ isEditMode ? '保存并发布' : '创建并发布' }}
+      </nz-button>
+    </nz-space>
+  </ng-template>
+</nz-layout>

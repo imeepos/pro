@@ -1,17 +1,46 @@
+// ng-zorro-antd 主题变量
+@import 'ng-zorro-antd/ng-zorro-antd.min.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+// 自定义主题色彩
+:root {
+  --primary-color: #1890ff;
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+  --error-color: #f5222d;
+  --info-color: #1890ff;
+  --text-color: rgba(0, 0, 0, 0.85);
+  --text-color-secondary: rgba(0, 0, 0, 0.45);
+  --border-color-base: #d9d9d9;
+  --background-color-light: #fafafa;
+}
 
 html,
 body {
   height: 100%;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.5715;
+  color: var(--text-color);
+  background-color: #f0f2f5;
 }
 
 app-root {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+// 暗色模式支持
+.dark {
+  --text-color: rgba(255, 255, 255, 0.85);
+  --text-color-secondary: rgba(255, 255, 255, 0.45);
+  --border-color-base: #434343;
+  --background-color-light: #141414;
+  background-color: #141414;
 }

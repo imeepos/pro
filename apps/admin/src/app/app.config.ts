@@ -11,6 +11,9 @@ import { TokenStorageService } from './core/services/token-storage.service';
 import { AuthService } from './state/auth.service';
 import { SkerSDK } from '@pro/sdk';
 import { environment } from '../environments/environment';
+import { provideNzIcons } from 'ng-zorro-antd/icon';
+import { zh_CN, provideNzI18n } from 'ng-zorro-antd/i18n';
+import { provideNzConfig } from 'ng-zorro-antd/core/config';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
   return () => {
@@ -63,6 +66,13 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([tokenInterceptor, errorInterceptor])),
     provideAnimations(),
+
+    // ng-zorro-antd 配置
+    provideNzI18n(zh_CN),
+    provideNzIcons([]),
+    provideNzConfig({
+      locale: zh_CN
+    }),
 
     // Token存储服务的接口适配
     {

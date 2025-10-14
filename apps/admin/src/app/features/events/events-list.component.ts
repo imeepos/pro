@@ -8,6 +8,7 @@ import { EventsQuery } from '../../state/events.query';
 import { Event, EventQueryParams, EventStatus } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
 import { DeleteEventDialogComponent } from './components';
+import { DISPLAY_NZ_MODULES, COMMON_NZ_MODULES, NzMessageService } from '../../shared/ng-zorro-components';
 
 @Component({
   selector: 'app-events-list',
@@ -15,7 +16,9 @@ import { DeleteEventDialogComponent } from './components';
   imports: [
     CommonModule,
     FormsModule,
-    DeleteEventDialogComponent
+    DeleteEventDialogComponent,
+    ...DISPLAY_NZ_MODULES,
+    ...COMMON_NZ_MODULES
   ],
   templateUrl: './events-list.component.html',
   styleUrls: ['./events-list.component.scss']
@@ -37,13 +40,17 @@ export class EventsListComponent implements OnInit, OnDestroy {
   eventToDelete: Event | null = null;
   searchHistory: string[] = [];
 
+  @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<void>;
+  @ViewChild('suffixIcons', { static: true }) suffixIcons!: TemplateRef<void>;
+
   private destroy$ = new Subject<void>();
 
   constructor(
     private eventsService: EventsService,
     private eventsQuery: EventsQuery,
     private router: Router,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private message: NzMessageService
   ) {}
 
   ngOnInit(): void {
@@ -183,6 +190,11 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.loadEvents();
   }
 
+  onPageSizeChange(pageSize: number): void {
+    this.filterParams = { ...this.filterParams, pageSize, page: 1 };
+    this.loadEvents();
+  }
+
   getStatusText(status: EventStatus): string {
     switch (status) {
       case EventStatus.DRAFT:
@@ -193,6 +205,19 @@ export class EventsListComponent implements OnInit, OnDestroy {
         return '已归档';
       default:
         return '未知';
+    }
+  }
+
+  getStatusColor(status: EventStatus): string {
+    switch (status) {
+      case EventStatus.DRAFT:
+        return 'default';
+      case EventStatus.PUBLISHED:
+        return 'success';
+      case EventStatus.ARCHIVED:
+        return 'warning';
+      default:
+        return 'default';
     }
   }
 

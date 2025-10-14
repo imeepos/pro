@@ -12,8 +12,7 @@ import { EventTypesService } from '../../state/event-types.service';
 import { EventTypesQuery } from '../../state/event-types.query';
 import { CreateEventDto, UpdateEventDto, EventStatus, EventDetail, Tag } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
-import { SelectComponent } from '../../shared/components/select';
-import type { SelectOption } from '../../shared/components/select';
+import { FORM_NZ_MODULES, COMMON_NZ_MODULES } from '../../shared/ng-zorro-components';
 import {
   AmapPickerComponent,
   TagSelectorComponent
@@ -24,6 +23,8 @@ import { ImageUploadComponent } from '../../shared/components/image-upload/image
 import { FileUploadComponent } from '../../shared/components/file-upload/file-upload.component';
 import { VideoUploadComponent } from '../../shared/components/video-upload/video-upload.component';
 import { Attachment } from '@pro/sdk';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { TemplateRef, ViewChild } from '@angular/core';
 
 @Component({
   selector: 'app-event-editor',
@@ -31,7 +32,8 @@ import { Attachment } from '@pro/sdk';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    SelectComponent,
+    ...FORM_NZ_MODULES,
+    ...COMMON_NZ_MODULES,
     AmapPickerComponent,
     TagSelectorComponent,
     DateTimePickerComponent,
@@ -53,11 +55,13 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   existingDocuments: Attachment[] = [];
   existingVideos: Attachment[] = [];
 
-  industryTypeOptions: SelectOption[] = [];
-  eventTypeOptions: SelectOption[] = [];
+  industryTypeOptions: Array<{ value: string; label: string }> = [];
+  eventTypeOptions: Array<{ value: string; label: string }> = [];
 
   allTags$: Observable<Tag[]> = new Observable();
   popularTags$: Observable<Tag[]> = new Observable();
+
+  @ViewChild('extraActions', { static: true }) extraActions!: TemplateRef<void>;
 
   private destroy$ = new Subject<void>();
 
@@ -72,7 +76,8 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     private industryTypesQuery: IndustryTypesQuery,
     private eventTypesService: EventTypesService,
     private eventTypesQuery: EventTypesQuery,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private message: NzMessageService
   ) {
     this.eventForm = this.fb.group({
       eventName: ['', [Validators.required, Validators.maxLength(200)]],
