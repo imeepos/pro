@@ -48,7 +48,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnInit, OnDest
   @Input() minDate?: Date;
   @Input() showQuickPresets = true;
   @Input() disabled = false;
-  @Input() format = 'YYYY-MM-DD';
+  @Input() format = 'y-MM-dd';
 
   // 时间选择相关配置
   @Input() mode: DatePickerMode = 'date';
@@ -931,7 +931,7 @@ export class DatePickerComponent implements ControlValueAccessor, OnInit, OnDest
       case 'time':
         return this.showSeconds ? '请选择时间 (HH:MM:SS)' : '请选择时间 (HH:MM)';
       case 'datetime':
-        return this.showSeconds ? '请选择日期时间 (YYYY-MM-DD HH:MM:SS)' : '请选择日期时间 (YYYY-MM-DD HH:MM)';
+        return this.showSeconds ? '请选择日期时间 (y-MM-dd HH:MM:SS)' : '请选择日期时间 (y-MM-dd HH:MM)';
       default:
         return '请选择日期';
     }

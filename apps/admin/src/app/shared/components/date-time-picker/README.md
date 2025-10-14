@@ -61,7 +61,7 @@ export class ExampleComponent {
 | `showQuickPresets` | `boolean` | `true` | 是否显示快捷日期预设 |
 | `showTimePresets` | `boolean` | `true` | 是否显示快捷时间预设 |
 | `allowClear` | `boolean` | `true` | 是否允许清除选择 |
-| `dateFormat` | `string` | `'YYYY-MM-DD'` | 日期格式 |
+| `dateFormat` | `string` | `'y-MM-dd'` | 日期格式 |
 | `timeFormat` | `string` | `'HH:mm:ss'` | 时间格式 |
 
 ### 输出事件

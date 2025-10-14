@@ -51,7 +51,7 @@ export class DateTimePickerComponent implements ControlValueAccessor, OnInit, On
   @Input() allowClear = true;
 
   // 格式化
-  @Input() dateFormat = 'YYYY-MM-DD';
+  @Input() dateFormat = 'y-MM-dd';
   @Input() timeFormat = 'HH:mm:ss';
 
   // 事件输出
