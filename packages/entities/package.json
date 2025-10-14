@@ -27,11 +27,11 @@
   "license": "UNLICENSED",
   "dependencies": {
     "reflect-metadata": "^0.2.0",
-    "typeorm": "^0.3.20",
+    "typeorm": "0.3.20",
     "@pro/types": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
+    "@types/node": "^20.3.1",
     "tsup": "^8.5.0",
     "typescript": "~5.8.0"
   }
