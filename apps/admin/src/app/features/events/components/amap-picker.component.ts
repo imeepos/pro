@@ -19,26 +19,48 @@ export interface LocationData {
   template: `
     <div class="space-y-3">
       <!-- 地址搜索 -->
-      <div class="flex gap-2">
-        <div class="flex-1 relative">
-          <input
-            type="text"
-            [(ngModel)]="searchKeyword"
-            (keyup.enter)="searchLocation()"
-            placeholder="搜索地址或地点..."
-            class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+      <div class="space-y-2">
+        <div class="flex gap-2">
+          <div class="flex-1 relative">
+            <input
+              type="text"
+              [(ngModel)]="searchKeyword"
+              (keyup.enter)="searchLocation()"
+              (input)="searchError = ''"
+              placeholder="搜索地址或地点..."
+              class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <button
+            type="button"
+            (click)="searchLocation()"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            搜索
+          </button>
         </div>
-        <button
-          type="button"
-          (click)="searchLocation()"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          搜索
-        </button>
+
+        <!-- 搜索错误提示 -->
+        <div *ngIf="searchError" class="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <div class="flex-1">
+            <div class="whitespace-pre-line">{{ searchError }}</div>
+          </div>
+          <button
+            type="button"
+            (click)="searchError = ''"
+            class="text-red-500 hover:text-red-700 flex-shrink-0"
+          >
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- 地图容器 -->
@@ -144,6 +166,7 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoading = false;
   hasError = false;
   errorMessage = '';
+  searchError = '';
 
   private map: any;
   private marker: any;
@@ -355,7 +378,7 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * 根据高德API响应获取详细的错误信息
+   * 根据高德API响应获取详细的错误信息（逆地理编码）
    */
   private getGeocoderErrorMessage(data: any): string {
     if (!data) return '网络连接异常';
@@ -387,18 +410,80 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+   * 根据高德API响应获取详细的错误信息（地点搜索）
+   */
+  private getPlaceSearchErrorMessage(data: any): string {
+    if (!data) return '网络连接异常，请检查网络后重试';
+
+    const { info, message } = data;
+
+    // 高德地图地点搜索错误代码
+    switch (info) {
+      case 'INVALID_PARAMS':
+        return '搜索参数无效，请检查搜索关键词';
+      case 'USERKEY_REJECT':
+        return '地图服务配置错误（API Key被拒绝），请联系管理员';
+      case 'INVALID_USER_KEY':
+        return '地图服务配置错误（API Key无效），请联系管理员';
+      case 'INVALID_USER_SCODE':
+        return '地图服务权限不足（需开启搜索服务权限），请联系管理员';
+      case 'INSUFFICIENT_PRIVILEGES':
+        return '地图服务权限不足或搜索服务未开通，请联系管理员';
+      case 'USERKEY_PLAT_NOSUPPORT':
+        return '当前API Key不支持搜索服务，请联系管理员检查配置';
+      case 'OUT_OF_SERVICE':
+        return '搜索服务暂时不可用，请稍后重试';
+      case 'OVER_QUOTA':
+        return '搜索服务调用次数已达上限，请联系管理员检查配额';
+      case 'UNKNOWN_ERROR':
+        return `搜索服务异常: ${message || '未知错误，请稍后重试'}`;
+      case 'REQUEST_TOO_FAST':
+        return '搜索请求过于频繁，请稍后再试';
+      case 'NO_DATA':
+        return '搜索服务暂无数据，请稍后重试';
+      case 'INVALID_REQUEST':
+        return '搜索请求格式错误，请检查搜索关键词';
+      case 'TIMEOUT':
+        return '搜索请求超时，请检查网络连接后重试';
+      default:
+        if (message) {
+          return `搜索失败 (${info}): ${message}`;
+        }
+        return `搜索服务异常 (${info})，请稍后重试或联系管理员`;
+    }
+  }
+
   async searchLocation(): Promise<void> {
     if (!this.searchKeyword.trim()) {
+      this.searchError = '请输入搜索关键词';
       return;
     }
+
+    this.searchError = '';
+    console.log('开始搜索地点:', {
+      keyword: this.searchKeyword,
+      city: this.city || '全国'
+    });
 
     try {
       const result: any = await new Promise((resolve, reject) => {
         this.placeSearch.search(this.searchKeyword, (status: string, data: any) => {
-          if (status === 'complete' && data.info === 'OK' && data.poiList.pois.length > 0) {
-            resolve(data);
+          console.log('地点搜索响应:', {
+            status,
+            info: data?.info,
+            poisCount: data?.poiList?.pois?.length || 0,
+            keyword: this.searchKeyword
+          });
+
+          if (status === 'complete' && data.info === 'OK') {
+            if (data.poiList?.pois?.length > 0) {
+              resolve(data);
+            } else {
+              reject({ status, data, reason: 'NO_RESULTS' });
+            }
           } else {
-            reject(new Error('搜索失败'));
+            reject({ status, data, reason: 'API_ERROR' });
           }
         });
       });
@@ -407,6 +492,12 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
       const lng = poi.location.lng;
       const lat = poi.location.lat;
 
+      console.log('搜索成功，选中第一个结果:', {
+        name: poi.name,
+        address: poi.address,
+        location: { lng, lat }
+      });
+
       this.addMarker(lng, lat);
       this.selectedLocation = {
         longitude: lng,
@@ -414,9 +505,19 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         address: poi.name + ' ' + poi.address
       };
       this.locationPick.emit(this.selectedLocation);
-    } catch (error) {
-      console.error('搜索失败:', error);
-      alert('未找到相关地点，请重新搜索');
+    } catch (error: any) {
+      console.error('搜索失败详情:', error);
+
+      if (error.reason === 'NO_RESULTS') {
+        this.searchError = `未找到"${this.searchKeyword}"相关地点，请尝试：\n• 使用更具体的关键词\n• 检查拼写是否正确\n• 尝试搜索附近的标志性建筑`;
+      } else {
+        this.searchError = this.getPlaceSearchErrorMessage(error.data);
+      }
+
+      // 5秒后自动清除错误提示
+      setTimeout(() => {
+        this.searchError = '';
+      }, 5000);
     }
   }
 

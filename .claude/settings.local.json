@@ -44,7 +44,8 @@
       "Read(//home/ubuntu/**)",
       "Bash(pnpm run typecheck:*)",
       "Bash(/dev/null)",
-      "WebFetch(domain:lbs.amap.com)"
+      "WebFetch(domain:lbs.amap.com)",
+      "WebFetch(domain:ng.ant.design)"
     ],
     "deny": [],
     "ask": []
