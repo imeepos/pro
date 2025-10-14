@@ -2,11 +2,9 @@
 
 /* 视口容器 */
 .screen-viewport {
+  position: relative;
   width: 100vw;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
   background: radial-gradient(circle at center,
     #0f172a 0%,
@@ -17,12 +15,14 @@
 
 /* 屏幕舞台 */
 .screen-stage {
-  position: relative;
-  transform-origin: center center;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: top left;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 0.75rem;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  will-change: transform;
+  will-change: transform, left, top;
 }
 
 /* 保留必要的自定义样式和特殊效果 */

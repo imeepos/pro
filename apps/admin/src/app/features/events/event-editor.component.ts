@@ -13,18 +13,31 @@ import { EventTypesQuery } from '../../state/event-types.query';
 import { CreateEventDto, UpdateEventDto, EventStatus, EventDetail, Tag } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
 import { FORM_NZ_MODULES, COMMON_NZ_MODULES } from '../../shared/ng-zorro-components';
-import {
-  AmapPickerComponent,
-  TagSelectorComponent
-} from './components';
-import type { LocationData } from './components/amap-picker.component';
-import { DateTimePickerComponent } from '../../shared/components/date-time-picker/date-time-picker.component';
+import { TagSelectorComponent } from './components';
+import { MapLocationPickerComponent } from '../../shared/components/map-location-picker/map-location-picker.component';
+import type { MapPoint } from '../../shared/components/map-location-picker/map-location-picker.component';
 import { ImageUploadComponent } from '../../shared/components/image-upload/image-upload.component';
 import { FileUploadComponent } from '../../shared/components/file-upload/file-upload.component';
 import { VideoUploadComponent } from '../../shared/components/video-upload/video-upload.component';
 import { Attachment } from '@pro/sdk';
-import { NzMessageService } from 'ng-zorro-antd/message';
 import { TemplateRef, ViewChild } from '@angular/core';
+
+interface EventFormValue {
+  eventName: string;
+  eventTypeId: string | null;
+  industryTypeId: string | null;
+  summary: string;
+  occurTime: Date | string | null;
+  province: string;
+  city: string;
+  district: string;
+  street: string;
+  locationText: string;
+  longitude: number | string | null;
+  latitude: number | string | null;
+  location: MapPoint | null;
+  status: EventStatus;
+}
 
 @Component({
   selector: 'app-event-editor',
@@ -35,6 +48,7 @@ import { TemplateRef, ViewChild } from '@angular/core';
     ...FORM_NZ_MODULES,
     ...COMMON_NZ_MODULES,
     TagSelectorComponent,
+    MapLocationPickerComponent,
     ImageUploadComponent,
     FileUploadComponent,
     VideoUploadComponent
@@ -74,8 +88,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     private industryTypesQuery: IndustryTypesQuery,
     private eventTypesService: EventTypesService,
     private eventTypesQuery: EventTypesQuery,
-    private toastService: ToastService,
-    private message: NzMessageService
+    private toastService: ToastService
   ) {
     this.eventForm = this.fb.group({
       eventName: ['', [Validators.required, Validators.maxLength(200)]],
@@ -90,6 +103,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
       locationText: [''],
       longitude: [null],
       latitude: [null],
+      location: [null],
       status: [EventStatus.DRAFT]
     });
   }
@@ -172,6 +186,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
           locationText: event.locationText,
           longitude: event.longitude,
           latitude: event.latitude,
+          location: this.buildMapPoint(event),
           status: event.status
         });
 
@@ -193,26 +208,57 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  onLocationPick(location: LocationData): void {
-    // 自动填充所有地址相关字段
-    this.eventForm.patchValue({
-      longitude: location.longitude,
-      latitude: location.latitude,
-      province: location.province,
-      city: location.city,
-      district: location.district,
-      street: location.street,
-      locationText: location.locationText
-    });
+  private buildMapPoint(event: EventDetail): MapPoint | null {
+    const hasCoordinates = event.longitude !== null
+      && event.longitude !== undefined
+      && event.latitude !== null
+      && event.latitude !== undefined;
 
-    console.log('地址信息已自动填充:', {
-      province: location.province,
-      city: location.city,
-      district: location.district,
-      street: location.street,
-      locationText: location.locationText,
-      longitude: location.longitude,
-      latitude: location.latitude
+    if (!hasCoordinates) {
+      return null;
+    }
+
+    return {
+      longitude: Number(event.longitude),
+      latitude: Number(event.latitude),
+      province: event.province || undefined,
+      city: event.city || undefined,
+      district: event.district || undefined,
+      street: event.street || undefined,
+      locationText: event.locationText || undefined
+    };
+  }
+
+  onLocationPick(point: MapPoint | null): void {
+    if (!point) {
+      this.eventForm.patchValue({
+        longitude: null,
+        latitude: null,
+        province: '',
+        city: '',
+        district: '',
+        street: '',
+        locationText: ''
+      });
+      return;
+    }
+
+    const {
+      province,
+      city,
+      district,
+      street,
+      locationText
+    } = this.eventForm.value as EventFormValue;
+
+    this.eventForm.patchValue({
+      longitude: point.longitude,
+      latitude: point.latitude,
+      province: point.province ?? province,
+      city: point.city ?? city,
+      district: point.district ?? district,
+      street: point.street ?? street,
+      locationText: point.locationText ?? locationText
     });
   }
 
@@ -307,14 +353,37 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   }
 
   private save(): void {
-    const formValue = this.eventForm.value;
+    const {
+      location: _location,
+      occurTime,
+      longitude,
+      latitude,
+      eventTypeId,
+      industryTypeId,
+      ...rest
+    } = this.eventForm.value as EventFormValue;
 
-    // 转换日期格式
+    if (!eventTypeId || !industryTypeId) {
+      this.toastService.error('请选择事件类型和行业类型');
+      return;
+    }
+
+    if (!occurTime) {
+      this.toastService.error('请选择发生时间');
+      return;
+    }
+
+    const normalizedOccurTime = occurTime instanceof Date
+      ? occurTime.toISOString()
+      : occurTime;
+
     const processedValue = {
-      ...formValue,
-      occurTime: formValue.occurTime instanceof Date
-        ? formValue.occurTime.toISOString()
-        : formValue.occurTime
+      ...rest,
+      eventTypeId,
+      industryTypeId,
+      occurTime: normalizedOccurTime,
+      longitude: this.normalizeCoordinate(longitude),
+      latitude: this.normalizeCoordinate(latitude)
     };
 
     this.loading = true;
@@ -357,6 +426,15 @@ export class EventEditorComponent implements OnInit, OnDestroy {
 
   cancel(): void {
     this.router.navigate(['/events']);
+  }
+
+  private normalizeCoordinate(value: unknown): number | undefined {
+    if (value === null || value === undefined || value === '') {
+      return undefined;
+    }
+
+    const numeric = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(numeric) ? numeric : undefined;
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

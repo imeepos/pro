@@ -18,7 +18,9 @@ import { environment } from '../../../environments/environment';
       <div class="screen-stage"
            [style.width.px]="screenConfig?.layout?.width"
            [style.height.px]="screenConfig?.layout?.height"
-           [style.transform]="getScaleTransform()">
+           [style.transform]="getScaleTransform()"
+           [style.left.px]="scaleOffsetX"
+           [style.top.px]="scaleOffsetY">
         @if (loading) {
           <div class="status-container">
             <div class="loading-indicator"></div>
@@ -32,64 +34,64 @@ import { environment } from '../../../environments/environment';
           <div class="screen-canvas" [style.background]="screenConfig.layout.background">
             <div class="components-stage" #componentsContainer></div>
           </div>
-
-          <!-- 控制面板系统 -->
-          <div class="control-dock" [class.control-dock--hidden]="isFullscreen">
-            <div class="control-ensemble">
-              <button
-                *ngIf="availableScreens.length > 1"
-                class="control-trigger"
-                (click)="toggleAutoPlay()"
-                [title]="isAutoPlay ? '停止轮播' : '开始轮播'"
-                [attr.aria-label]="isAutoPlay ? '停止轮播' : '开始轮播'">
-                {{ isAutoPlay ? '⏸️' : '▶️' }}
-              </button>
-              <button
-                *ngIf="availableScreens.length > 1"
-                class="control-trigger"
-                (click)="previousScreen()"
-                title="上一页"
-                aria-label="上一页">
-                ⬅️
-              </button>
-              <button
-                *ngIf="availableScreens.length > 1"
-                class="control-trigger"
-                (click)="nextScreen()"
-                title="下一页"
-                aria-label="下一页">
-                ➡️
-              </button>
-              <select
-                *ngIf="availableScreens.length > 1"
-                class="screen-selector"
-                [value]="currentScreenIndex"
-                (change)="switchToScreen($event)"
-                aria-label="选择屏幕">
-                <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
-                  {{ screen.name }}
-                </option>
-              </select>
-              <div
-                *ngIf="availableScreens.length > 1"
-                class="screen-indicator"
-                role="status"
-                [attr.aria-label]="'当前页面 ' + (currentScreenIndex + 1) + ' / ' + availableScreens.length">
-                {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
-              </div>
-            </div>
-          </div>
-
-          <!-- 全屏控制 -->
-          <button
-            class="fullscreen-trigger"
-            (click)="toggleFullscreen()"
-            title="全屏切换"
-            [attr.aria-label]="isFullscreen ? '退出全屏' : '全屏显示'">
-            {{ isFullscreen ? '退出全屏' : '全屏显示' }}
-          </button>
         }
       </div>
+
+      @if (!loading && !error && screenConfig) {
+        <div class="control-dock" [class.control-dock--hidden]="isFullscreen">
+          <div class="control-ensemble">
+            <button
+              *ngIf="availableScreens.length > 1"
+              class="control-trigger"
+              (click)="toggleAutoPlay()"
+              [title]="isAutoPlay ? '停止轮播' : '开始轮播'"
+              [attr.aria-label]="isAutoPlay ? '停止轮播' : '开始轮播'">
+              {{ isAutoPlay ? '⏸️' : '▶️' }}
+            </button>
+            <button
+              *ngIf="availableScreens.length > 1"
+              class="control-trigger"
+              (click)="previousScreen()"
+              title="上一页"
+              aria-label="上一页">
+              ⬅️
+            </button>
+            <button
+              *ngIf="availableScreens.length > 1"
+              class="control-trigger"
+              (click)="nextScreen()"
+              title="下一页"
+              aria-label="下一页">
+              ➡️
+            </button>
+            <select
+              *ngIf="availableScreens.length > 1"
+              class="screen-selector"
+              [value]="currentScreenIndex"
+              (change)="switchToScreen($event)"
+              aria-label="选择屏幕">
+              <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
+                {{ screen.name }}
+              </option>
+            </select>
+            <div
+              *ngIf="availableScreens.length > 1"
+              class="screen-indicator"
+              role="status"
+              [attr.aria-label]="'当前页面 ' + (currentScreenIndex + 1) + ' / ' + availableScreens.length">
+              {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
+            </div>
+          </div>
+        </div>
+
+        <button
+          class="fullscreen-trigger"
+          (click)="toggleFullscreen()"
+          title="全屏切换"
+          [attr.aria-label]="isFullscreen ? '退出全屏' : '全屏显示'">
+          {{ isFullscreen ? '退出全屏' : '全屏显示' }}
+        </button>
+      }
     </div>
   `,
   styles: [`
@@ -237,11 +239,9 @@ import { environment } from '../../../environments/environment';
 
     /* ===== 核心布局组件 ===== */
     .screen-viewport {
+      position: relative;
       width: 100vw;
       height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       overflow: hidden;
       background: radial-gradient(circle at center,
         var(--pro-slate-900) 0%,
@@ -251,12 +251,14 @@ import { environment } from '../../../environments/environment';
     }
 
     .screen-stage {
-      position: relative;
-      transform-origin: center center;
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform-origin: top left;
       transition: transform var(--pro-transition-base);
       border-radius: var(--pro-radius-lg);
       box-shadow: var(--pro-shadow-2xl);
-      will-change: transform;
+      will-change: transform, left, top;
     }
 
     /* ===== 状态显示组件 ===== */
@@ -907,8 +909,8 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   }
 
   getScaleTransform(): string {
-    // 使用 transform-origin 为中心点，结合偏移量实现精确居中
-    return `translate(${this.scaleOffsetX}px, ${this.scaleOffsetY}px) scale(${this.scale})`;
+    // 缩放交给 transform，位置由绝对定位控制，避免额外的平移计算
+    return `scale(${this.scale})`;
   }
 
   private async createComponentOptimized(componentConfig: ScreenComponent): Promise<ComponentRef<any> | null> {

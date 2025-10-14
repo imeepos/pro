@@ -8,7 +8,6 @@ import {
   Input,
   NgZone,
   OnDestroy,
-  OnInit,
   Output,
   ViewChild
 } from '@angular/core';
@@ -22,7 +21,11 @@ import { environment } from '../../../../environments/environment';
 export interface MapPoint {
   longitude: number;
   latitude: number;
-  address?: string;
+  province?: string;
+  city?: string;
+  district?: string;
+  street?: string;
+  locationText?: string;
 }
 
 @Component({
@@ -39,7 +42,7 @@ export interface MapPoint {
   templateUrl: './map-location-picker.component.html',
   styleUrls: ['./map-location-picker.component.scss']
 })
-export class MapLocationPickerComponent implements ControlValueAccessor, OnInit, AfterViewInit, OnDestroy {
+export class MapLocationPickerComponent implements ControlValueAccessor, AfterViewInit, OnDestroy {
   @Input() height = '320px';
   @Input() zoom = 12;
 
@@ -64,8 +67,6 @@ export class MapLocationPickerComponent implements ControlValueAccessor, OnInit,
     private readonly configService: ConfigService,
     private readonly ngZone: NgZone
   ) {}
-
-  ngOnInit(): void {}
 
   ngAfterViewInit(): void {
     this.bootstrapMap();
@@ -95,7 +96,7 @@ export class MapLocationPickerComponent implements ControlValueAccessor, OnInit,
   writeValue(value: MapPoint | null): void {
     this.selectedPoint = value;
     if (value && this.map) {
-      this.placeMarker([value.longitude, value.latitude], value.address);
+      this.placeMarker([value.longitude, value.latitude], value.locationText);
       this.map.setZoomAndCenter(this.zoom, [value.longitude, value.latitude]);
     } else if (!value && this.marker) {
       this.marker.setMap(null);
@@ -115,6 +116,8 @@ export class MapLocationPickerComponent implements ControlValueAccessor, OnInit,
   }
 
   clearSelection(): void {
+    this.touched();
+
     if (this.marker) {
       this.marker.setMap(null);
       this.marker = undefined;
@@ -174,7 +177,10 @@ export class MapLocationPickerComponent implements ControlValueAccessor, OnInit,
       this.map.on('click', this.mapClickHandler);
 
       if (this.selectedPoint) {
-        this.placeMarker([this.selectedPoint.longitude, this.selectedPoint.latitude], this.selectedPoint.address);
+        this.placeMarker(
+          [this.selectedPoint.longitude, this.selectedPoint.latitude],
+          this.selectedPoint.locationText
+        );
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '地图加载失败';
@@ -198,27 +204,54 @@ export class MapLocationPickerComponent implements ControlValueAccessor, OnInit,
   }
 
   private async handleSelection(lngLat: any): Promise<void> {
-    const rawPoint: MapPoint = {
+    const basePoint: MapPoint = {
       longitude: lngLat.getLng(),
       latitude: lngLat.getLat()
     };
 
+    let enrichedPoint: Partial<MapPoint> = {};
+
     if (this.geocoder) {
       try {
-        const address = await this.reverseGeocode(lngLat);
-        if (address) {
-          rawPoint.address = address;
-        }
+        enrichedPoint = await this.reverseGeocode(lngLat);
       } catch (error) {
         console.warn('逆地理编码失败', error);
       }
     }
 
-    this.selectedPoint = rawPoint;
-    this.placeMarker([rawPoint.longitude, rawPoint.latitude], rawPoint.address);
+    const resolvedPoint: MapPoint = {
+      ...basePoint,
+      ...enrichedPoint,
+      locationText: enrichedPoint.locationText ?? enrichedPoint.street ?? enrichedPoint.city ?? enrichedPoint.province
+    };
 
-    this.change(rawPoint);
-    this.pointChange.emit(rawPoint);
+    this.selectedPoint = resolvedPoint;
+    this.placeMarker(
+      [resolvedPoint.longitude, resolvedPoint.latitude],
+      resolvedPoint.locationText
+    );
+
+    this.change(resolvedPoint);
+    this.pointChange.emit(resolvedPoint);
+  }
+
+  formatPoint(point: MapPoint | null): string {
+    if (!point) {
+      return '';
+    }
+
+    if (point.locationText && point.locationText.trim().length > 0) {
+      return point.locationText;
+    }
+
+    const segments = [
+      point.province,
+      point.city,
+      point.district,
+      point.street
+    ].filter((segment): segment is string => !!segment && segment.trim().length > 0);
+
+    return segments.join(' · ');
   }
 
   private placeMarker(position: [number, number], address?: string): void {
@@ -241,19 +274,52 @@ export class MapLocationPickerComponent implements ControlValueAccessor, OnInit,
     }
   }
 
-  private reverseGeocode(lngLat: any): Promise<string | undefined> {
+  private reverseGeocode(lngLat: any): Promise<Partial<MapPoint>> {
     if (!this.geocoder) {
-      return Promise.resolve(undefined);
+      return Promise.resolve({});
     }
 
     return new Promise((resolve) => {
-      this.geocoder!.getAddress(lngLat, (status: string, result: { regeocode?: { formattedAddress?: string } }) => {
-        if (status === 'complete' && result.regeocode?.formattedAddress) {
-          resolve(result.regeocode.formattedAddress);
-        } else {
-          resolve(undefined);
+      this.geocoder!.getAddress(
+        lngLat,
+        (
+          status: string,
+          result: {
+            regeocode?: {
+              formattedAddress?: string;
+              addressComponent?: {
+                province?: string;
+                city?: string | string[];
+                district?: string;
+                township?: string;
+                streetNumber?: { street?: string; number?: string };
+              };
+            };
+          }
+        ) => {
+          if (status !== 'complete' || !result.regeocode) {
+            resolve({});
+            return;
+          }
+
+          const { formattedAddress, addressComponent } = result.regeocode;
+          const cityComponent = addressComponent?.city;
+          const city = Array.isArray(cityComponent) ? cityComponent[0] : cityComponent;
+          const streetParts = [
+            addressComponent?.township,
+            addressComponent?.streetNumber?.street,
+            addressComponent?.streetNumber?.number
+          ].filter(Boolean);
+
+          resolve({
+            province: addressComponent?.province,
+            city: city || addressComponent?.province,
+            district: addressComponent?.district,
+            street: streetParts.length ? streetParts.join(' ') : undefined,
+            locationText: formattedAddress
+          });
         }
-      });
+      );
     });
   }
 }

@@ -96,6 +96,120 @@
             </nz-form-control>
           </nz-form-item>
 
+          <nz-form-item>
+            <nz-form-label [nzSpan]="24">
+              事件地点
+            </nz-form-label>
+            <nz-form-control [nzSpan]="24">
+              <pro-map-location-picker
+                formControlName="location"
+                [height]="'360px'"
+                (pointChange)="onLocationPick($event)"
+              ></pro-map-location-picker>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label [nzSpan]="24">
+                  省份 <span style="color: red">*</span>
+                </nz-form-label>
+                <nz-form-control [nzSpan]="24" nzErrorTip="请输入省份">
+                  <input
+                    nz-input
+                    formControlName="province"
+                    placeholder="省份"
+                  />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label [nzSpan]="24">
+                  城市 <span style="color: red">*</span>
+                </nz-form-label>
+                <nz-form-control [nzSpan]="24" nzErrorTip="请输入城市">
+                  <input
+                    nz-input
+                    formControlName="city"
+                    placeholder="城市"
+                  />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label [nzSpan]="24">区县</nz-form-label>
+                <nz-form-control [nzSpan]="24">
+                  <input
+                    nz-input
+                    formControlName="district"
+                    placeholder="区县"
+                  />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label [nzSpan]="24">街道</nz-form-label>
+                <nz-form-control [nzSpan]="24">
+                  <input
+                    nz-input
+                    formControlName="street"
+                    placeholder="街道"
+                  />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="24">地点描述</nz-form-label>
+            <nz-form-control [nzSpan]="24">
+              <textarea
+                nz-input
+                formControlName="locationText"
+                [rows]="2"
+                placeholder="补充地点描述，例如门牌号、楼层等"
+              ></textarea>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label [nzSpan]="24">经度</nz-form-label>
+                <nz-form-control [nzSpan]="24">
+                  <input
+                    nz-input
+                    type="number"
+                    formControlName="longitude"
+                    placeholder="经度"
+                    step="0.000001"
+                  />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label [nzSpan]="24">纬度</nz-form-label>
+                <nz-form-control [nzSpan]="24">
+                  <input
+                    nz-input
+                    type="number"
+                    formControlName="latitude"
+                    placeholder="纬度"
+                    step="0.000001"
+                  />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+
         </form>
       </nz-card>
 

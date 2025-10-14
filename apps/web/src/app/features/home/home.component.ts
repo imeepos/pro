@@ -697,7 +697,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getScaleTransform(): string {
-    // 使用 transform-origin 为中心点，结合偏移量实现精确居中
-    return `translate(${this.scaleOffsetX}px, ${this.scaleOffsetY}px) scale(${this.scale})`;
+    // 仅负责缩放，实际定位交由绝对定位与偏移量完成
+    return `scale(${this.scale})`;
   }
 }

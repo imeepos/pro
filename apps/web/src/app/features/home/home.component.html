@@ -17,7 +17,9 @@
     <div class="screen-stage"
          [style.width.px]="screenConfig?.layout?.width"
          [style.height.px]="screenConfig?.layout?.height"
-         [style.transform]="getScaleTransform()">
+         [style.transform]="getScaleTransform()"
+         [style.left.px]="scaleOffsetX"
+         [style.top.px]="scaleOffsetY">
       @if (loading) {
         <div class="loading-container">
           <div class="loading-spinner"></div>
@@ -31,53 +33,55 @@
         <div [style.background]="screenConfig.layout.background" class="screen-canvas">
           <div #componentsContainer class="components-container"></div>
         </div>
-
-        <!-- 控制面板 -->
-        <div class="control-panel" [class.hidden]="isFullscreen">
-          <div class="control-group">
-            <button
-              *ngIf="availableScreens.length > 1"
-              class="control-button"
-              (click)="toggleAutoPlay()"
-              [title]="isAutoPlay ? '停止轮播' : '开始轮播'">
-              {{ isAutoPlay ? '⏸️' : '▶️' }}
-            </button>
-            <button
-              *ngIf="availableScreens.length > 1"
-              class="control-button"
-              (click)="previousScreen()"
-              title="上一页">
-              ⬅️
-            </button>
-            <button
-              *ngIf="availableScreens.length > 1"
-              class="control-button"
-              (click)="nextScreen()"
-              title="下一页">
-              ➡️
-            </button>
-            <select
-              *ngIf="availableScreens.length > 1"
-              class="screen-selector"
-              [value]="currentScreenIndex"
-              (change)="switchToScreen($event)">
-              <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
-                {{ screen.name }}
-              </option>
-            </select>
-            <div *ngIf="availableScreens.length > 1" class="screen-indicator">
-              {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
-            </div>
-          </div>
-        </div>
-
-        <button
-          class="fullscreen-button"
-          (click)="toggleFullscreen()"
-          title="全屏切换">
-          {{ isFullscreen ? '退出全屏' : '全屏显示' }}
-        </button>
       }
     </div>
+
+    @if (!loading && !error && screenConfig) {
+      <!-- 控制面板 -->
+      <div class="control-panel" [class.hidden]="isFullscreen">
+        <div class="control-group">
+          <button
+            *ngIf="availableScreens.length > 1"
+            class="control-button"
+            (click)="toggleAutoPlay()"
+            [title]="isAutoPlay ? '停止轮播' : '开始轮播'">
+            {{ isAutoPlay ? '⏸️' : '▶️' }}
+          </button>
+          <button
+            *ngIf="availableScreens.length > 1"
+            class="control-button"
+            (click)="previousScreen()"
+            title="上一页">
+            ⬅️
+          </button>
+          <button
+            *ngIf="availableScreens.length > 1"
+            class="control-button"
+            (click)="nextScreen()"
+            title="下一页">
+            ➡️
+          </button>
+          <select
+            *ngIf="availableScreens.length > 1"
+            class="screen-selector"
+            [value]="currentScreenIndex"
+            (change)="switchToScreen($event)">
+            <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
+              {{ screen.name }}
+            </option>
+          </select>
+          <div *ngIf="availableScreens.length > 1" class="screen-indicator">
+            {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
+          </div>
+        </div>
+      </div>
+
+      <button
+        class="fullscreen-button"
+        (click)="toggleFullscreen()"
+        title="全屏切换">
+        {{ isFullscreen ? '退出全屏' : '全屏显示' }}
+      </button>
+    }
   </main>
 </div>

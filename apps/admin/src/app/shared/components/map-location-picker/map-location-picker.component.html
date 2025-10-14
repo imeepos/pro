@@ -29,9 +29,9 @@
       <span>纬度</span>
       <strong>{{ selectedPoint.latitude | number: '1.6-6' }}</strong>
     </div>
-    <div class="address" *ngIf="selectedPoint.address">
-      {{ selectedPoint.address }}
-    </div>
+    <ng-container *ngIf="formatPoint(selectedPoint) as summary">
+      <div class="address">{{ summary }}</div>
+    </ng-container>
     <button type="button" class="clear" (click)="clearSelection()">重新选择</button>
   </div>
 </div>
