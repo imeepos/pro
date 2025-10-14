@@ -1,6 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { HttpService } from '@nestjs/axios';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
 import { Subject, Observable } from 'rxjs';
 import { JdAccountEntity } from '@pro/entities';
@@ -57,12 +56,16 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
   // 二维码检查接口
   private readonly JD_QR_CHECK_URL = 'https://qr.m.jd.com/check';
 
+  // 用户信息接口
+  private readonly JD_USER_INFO_URL = 'https://passport.jd.com/user/petName/getUserInfoForMiniJd.action';
+
   // 页面加载配置
   private readonly PAGE_LOAD_TIMEOUT = 60000; // 60秒超时
   private readonly MAX_RETRY_ATTEMPTS = 2; // 最大重试次数
 
   constructor(
     private readonly jdAccountService: JdAccountService,
+    private readonly httpService: HttpService,
   ) {}
 
   /**
@@ -462,7 +465,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
             const cookies = await context.cookies();
 
             // 提取用户信息
-            const userInfo = await this.extractUserInfo(page);
+            const userInfo = await this.extractUserInfo(page, cookies);
 
             // 保存到数据库
             const account = await this.saveAccount(userId, cookies, userInfo);
@@ -506,8 +509,14 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
   /**
    * 从页面提取京东用户信息
    */
-  private async extractUserInfo(page: Page): Promise<JdUserInfo> {
+  private async extractUserInfo(page: Page, cookies: Cookie[]): Promise<JdUserInfo> {
     this.logger.debug('正在提取京东用户信息...');
+
+    const apiUserInfo = await this.requestUserInfoByApi(cookies);
+    if (apiUserInfo) {
+      this.logger.log(`通过接口获取京东用户信息成功: ${apiUserInfo.uid}`);
+      return apiUserInfo;
+    }
 
     // 等待页面完全加载
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {
@@ -573,6 +582,95 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
       nickname: userInfo.nickname || `京东用户_${userInfo.uid}`,
       avatar: userInfo.avatar || '',
     };
+  }
+
+  /**
+   * 通过京东接口获取用户信息
+   */
+  private async requestUserInfoByApi(cookies: Cookie[]): Promise<JdUserInfo | null> {
+    const cookieHeader = this.composeCookieHeader(cookies);
+    if (!cookieHeader) {
+      this.logger.warn('Cookie 为空，无法请求京东用户信息接口');
+      return null;
+    }
+
+    const callbackName = 'jsonpUserinfo';
+    const url = `${this.JD_USER_INFO_URL}?callback=${callbackName}&_=${Date.now()}`;
+
+    try {
+      const response = await this.httpService.axiosRef.get<string>(url, {
+        headers: {
+          'Accept': '*/*',
+          'Accept-Language': 'zh-CN,zh;q=0.9',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Referer': 'https://hk.jd.com/',
+          'Sec-Fetch-Dest': 'script',
+          'Sec-Fetch-Mode': 'no-cors',
+          'Sec-Fetch-Site': 'same-site',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Cookie': cookieHeader,
+        },
+        timeout: 10000,
+      });
+
+      const payload = this.parseJsonp(response.data, callbackName);
+      if (!payload) {
+        this.logger.warn('京东用户信息接口返回格式异常');
+        return null;
+      }
+
+      const pin = payload?.userScoreVO?.pin || payload?.realName || payload?.nickName;
+      return {
+        uid: pin || `jd_${Date.now()}`,
+        nickname: payload?.nickName || pin || '京东用户',
+        avatar: this.normalizeAvatarUrl(payload?.imgUrl),
+      };
+    } catch (error) {
+      this.logger.warn(`京东用户信息接口请求失败: ${error?.message || error}`);
+      return null;
+    }
+  }
+
+  private composeCookieHeader(cookies: Cookie[]): string {
+    return cookies
+      .filter(cookie => cookie?.name && typeof cookie.value !== 'undefined')
+      .map(cookie => `${cookie.name}=${cookie.value}`)
+      .join('; ');
+  }
+
+  private parseJsonp(payload: string, callbackName: string): any | null {
+    if (!payload || !callbackName) {
+      return null;
+    }
+
+    const prefix = `${callbackName}(`;
+    const startIndex = payload.indexOf(prefix);
+    const endIndex = payload.lastIndexOf(')');
+
+    if (startIndex !== 0 || endIndex === -1) {
+      return null;
+    }
+
+    try {
+      const jsonText = payload.slice(prefix.length, endIndex);
+      return JSON.parse(jsonText);
+    } catch (error) {
+      this.logger.warn(`解析京东用户信息 JSONP 失败: ${error?.message || error}`);
+      return null;
+    }
+  }
+
+  private normalizeAvatarUrl(url?: string): string {
+    if (!url) {
+      return '';
+    }
+
+    if (url.startsWith('//')) {
+      return `https:${url}`;
+    }
+
+    return url;
   }
 
   /**

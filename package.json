@@ -35,7 +35,8 @@
   "dependencies": {
     "nestjs-pino": "^4.4.1",
     "passport-headerapikey": "^1.2.2",
-    "pino-http": "^11.0.0",
+    "pino": "^9.13.1",
+    "pino-http": "^10.5.0",
     "pino-pretty": "^13.1.2"
   }
 }
