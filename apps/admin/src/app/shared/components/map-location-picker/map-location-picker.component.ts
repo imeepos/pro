@@ -25,6 +25,11 @@ interface SearchResult {
   location: { lng: number; lat: number };
 }
 
+type PlaceSearchOutcome =
+  | { type: 'success'; pois: any[] }
+  | { type: 'empty'; result: any }
+  | { type: 'error'; result: any };
+
 export interface MapPoint {
   longitude: number;
   latitude: number;
@@ -370,7 +375,7 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
     });
   }
 
-  searchLocation(): void {
+  async searchLocation(): Promise<void> {
     if (!this.placeSearch) {
       this.searchError = '搜索服务尚未准备就绪';
       return;
@@ -389,27 +394,54 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
     this.activeResultId = null;
     this.searchResults = [];
 
-    this.placeSearch.search(keyword, (status: string, result: { poiList?: { pois?: any[] } }) => {
+    const outcome = await this.performPlaceSearch(keyword);
+
+    if (outcome.type === 'success') {
+      const results = outcome.pois
+        .map((poi: any) => this.toSearchResult(poi))
+        .filter((poi: SearchResult | null): poi is SearchResult => poi !== null);
+
       this.ngZone.run(() => {
         this.searching = false;
 
-        if (status !== 'complete' || !result.poiList?.pois?.length) {
+        if (!results.length) {
           this.searchResults = [];
           this.activeResultId = null;
           this.searchError = '未找到匹配的地点，请尝试其他关键词';
           return;
         }
 
-        this.searchResults = result.poiList.pois
-          .map((poi: any) => this.toSearchResult(poi))
-          .filter((poi: SearchResult | null): poi is SearchResult => poi !== null);
-
+        this.searchResults = results;
         this.searchError = '';
 
-        if (this.searchResults.length) {
-          this.selectSearchResult(this.searchResults[0]);
+        const [firstResult] = this.searchResults;
+        if (firstResult) {
+          this.selectSearchResult(firstResult);
         }
       });
+
+      return;
+    }
+
+    const fallbackResult = await this.performGeocodeSearch(keyword);
+
+    this.ngZone.run(() => {
+      this.searching = false;
+
+      if (fallbackResult) {
+        this.searchResults = [fallbackResult];
+        this.searchError = '';
+        this.selectSearchResult(fallbackResult);
+        return;
+      }
+
+      this.searchResults = [];
+      this.activeResultId = null;
+
+      const baseMessage = '未找到匹配的地点，请尝试其他关键词';
+      this.searchError = outcome.type === 'error'
+        ? `${baseMessage}\n${this.describePlaceSearchError(outcome.result)}`
+        : baseMessage;
     });
   }
 
@@ -430,6 +462,99 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
     this.searchResults = [];
     this.searchError = '';
     this.activeResultId = null;
+  }
+
+  private performPlaceSearch(keyword: string): Promise<PlaceSearchOutcome> {
+    return new Promise((resolve) => {
+      this.ngZone.runOutsideAngular(() => {
+        this.placeSearch!.search(keyword, (status: string, result: { poiList?: { pois?: any[] }; info?: string }) => {
+          if (status === 'complete' && result.poiList?.pois?.length) {
+            resolve({ type: 'success', pois: result.poiList.pois });
+            return;
+          }
+
+          if (status === 'complete') {
+            resolve({ type: 'empty', result });
+            return;
+          }
+
+          resolve({ type: 'error', result });
+        });
+      });
+    });
+  }
+
+  private performGeocodeSearch(keyword: string): Promise<SearchResult | null> {
+    if (!this.geocoder) {
+      return Promise.resolve(null);
+    }
+
+    return new Promise((resolve) => {
+      this.ngZone.runOutsideAngular(() => {
+        this.geocoder!.getLocation(keyword, (status: string, result: { geocodes?: any[] }) => {
+          if (status !== 'complete' || !result.geocodes?.length) {
+            resolve(null);
+            return;
+          }
+
+          const [geocode] = result.geocodes;
+          const syntheticPoi = {
+            id: geocode.id || geocode.adcode || `${keyword}-${Date.now()}`,
+            name: geocode.formattedAddress || keyword,
+            address: geocode.formattedAddress || [
+              geocode.province,
+              Array.isArray(geocode.city) ? geocode.city[0] : geocode.city,
+              geocode.district,
+              geocode.township
+            ].filter(Boolean).join(' '),
+            location: geocode.location
+          };
+
+          resolve(this.toSearchResult(syntheticPoi));
+        });
+      });
+    });
+  }
+
+  private describePlaceSearchError(result: { info?: string; message?: string }): string {
+    const info = result?.info;
+    const message = result?.message;
+
+    switch (info) {
+      case 'INVALID_PARAMS':
+        return '搜索参数无效，请检查关键词格式。';
+      case 'USERKEY_REJECT':
+        return '地图服务配置错误：API Key 被拒绝。';
+      case 'INVALID_USER_KEY':
+        return '地图服务配置错误：API Key 无效。';
+      case 'INVALID_USER_SCODE':
+        return '地图服务权限不足：缺少安全密钥或权限未开通。';
+      case 'INSUFFICIENT_PRIVILEGES':
+        return '地图服务权限不足或搜索服务未开通。';
+      case 'USERKEY_PLAT_NOSUPPORT':
+        return '当前 API Key 不支持地点搜索服务。';
+      case 'USERKEY_PLAT_NOMATCH':
+        return 'API Key 平台类型与当前使用场景不匹配。';
+      case 'OUT_OF_SERVICE':
+        return '搜索服务暂时不可用，请稍后再试。';
+      case 'OVER_QUOTA':
+        return '搜索服务调用次数已达上限。';
+      case 'UNKNOWN_ERROR':
+        return `搜索服务异常：${message || '未知错误'}`;
+      case 'REQUEST_TOO_FAST':
+        return '搜索请求过于频繁，请稍后再试。';
+      case 'NO_DATA':
+        return '搜索服务暂无数据返回。';
+      case 'INVALID_REQUEST':
+        return '搜索请求格式不正确。';
+      case 'TIMEOUT':
+        return '搜索请求超时，请检查网络连接。';
+      default:
+        if (info) {
+          return `搜索服务返回异常 (${info})${message ? `：${message}` : ''}`;
+        }
+        return '搜索服务暂时不可用，请稍后重试。';
+    }
   }
 
   private toSearchResult(poi: any): SearchResult | null {
