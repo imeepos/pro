@@ -234,6 +234,14 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
 
       console.log('开始加载高德地图JS API...');
 
+      // 配置安全密钥（如果环境中有配置）
+      if (environment.amapSecurityCode) {
+        (window as any)._AMapSecurityConfig = {
+          securityJsCode: environment.amapSecurityCode,
+        };
+        console.log('已配置高德地图安全密钥');
+      }
+
       // 加载高德地图
       this.AMap = await AMapLoader.load({
         key: amapKey,
@@ -397,6 +405,8 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         return 'API Key权限不足或服务未开通';
       case 'USERKEY_PLAT_NOSUPPORT':
         return 'API Key平台不支持当前服务';
+      case 'USERKEY_PLAT_NOMATCH':
+        return 'API Key平台不匹配，请检查高德地图控制台是否配置为"Web端"平台';
       case 'OUT_OF_SERVICE':
         return '服务暂停，请稍后重试';
       case 'OVER_QUOTA':
@@ -432,6 +442,8 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         return '地图服务权限不足或搜索服务未开通，请联系管理员';
       case 'USERKEY_PLAT_NOSUPPORT':
         return '当前API Key不支持搜索服务，请联系管理员检查配置';
+      case 'USERKEY_PLAT_NOMATCH':
+        return 'API Key平台不匹配，请检查高德地图控制台是否配置为"Web端"平台';
       case 'OUT_OF_SERVICE':
         return '搜索服务暂时不可用，请稍后重试';
       case 'OVER_QUOTA':

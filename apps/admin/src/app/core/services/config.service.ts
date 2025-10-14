@@ -22,10 +22,11 @@ export class ConfigService {
   );
 
   constructor() {
-    // 如果环境变量中有有效的API Key，则使用它作为初始值
+    // 优先使用环境变量中的API Key
     const envApiKey = environment.amapApiKey || '';
     if (envApiKey && envApiKey !== 'YOUR_AMAP_KEY') {
       this.amapApiKeySubject.next(envApiKey);
+      console.log('使用环境变量中的API Key:', `${envApiKey.substring(0, 8)}...`);
     }
   }
 
