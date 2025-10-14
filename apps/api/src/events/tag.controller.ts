@@ -26,11 +26,14 @@ export class TagController {
 
   @Get()
   findAll(
-    @Query('page', ParseIntPipe) page = 1,
-    @Query('pageSize', ParseIntPipe) pageSize = 20,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
     @Query('keyword') keyword?: string,
   ) {
-    return this.tagService.findAll(page, pageSize, keyword);
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const pageSizeNum = pageSize ? parseInt(pageSize, 10) : 20;
+
+    return this.tagService.findAll(pageNum, pageSizeNum, keyword);
   }
 
   @Get('popular')

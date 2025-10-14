@@ -26,6 +26,8 @@
     "@pro/components": "workspace:*",
     "@pro/sdk": "workspace:*",
     "@pro/types": "workspace:*",
+    "flowbite": "^3.1.2",
+    "flowbite-angular": "^20.1.0",
     "jwt-decode": "^4.0.0",
     "rxjs": "~7.8.0",
     "socket.io-client": "^4.8.1",

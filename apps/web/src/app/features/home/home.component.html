@@ -1,51 +1,83 @@
-<div class="relative w-screen h-screen overflow-hidden bg-gradient-to-br from-primary to-primary-dark">
-  <div class="absolute inset-0 overflow-hidden">
-    <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[length:50px_50px] animate-[gridMove_20s_linear_infinite]"></div>
-    <div class="absolute w-[400px] h-[400px] bg-primary/60 rounded-full blur-[80px] opacity-60 -top-[100px] -right-[100px] animate-[float_8s_ease-in-out_infinite]"></div>
-    <div class="absolute w-[350px] h-[350px] bg-primary-dark/60 rounded-full blur-[80px] opacity-60 -bottom-[100px] -left-[100px] animate-[float_8s_ease-in-out_infinite]"></div>
-  </div>
-
-  <div class="relative z-10 w-full h-full p-10">
-    <div class="flex justify-between items-center mb-10">
-      <h1 class="text-4xl font-bold text-white m-0 drop-shadow-[0_2px_10px_rgba(0,0,0,0.2)]">数据大屏</h1>
-      <button class="px-6 py-3 text-sm font-semibold text-primary bg-white border-none rounded-lg cursor-pointer transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,0,0,0.25)]" (click)="logout()">退出登录</button>
-    </div>
-
-    <div class="max-w-[600px] p-10 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)]" *ngIf="currentUser$ | async as user">
-      <h2 class="text-3xl font-bold text-slate-800 m-0 mb-5">欢迎回来</h2>
-      <p class="text-base text-slate-500 my-2">用户ID: {{ user.id }}</p>
-      <p class="text-base text-slate-500 my-2 pt-5 mt-5 border-t border-slate-200">这是大屏幕应用主页，您已成功登录。</p>
-
-      <!-- 功能导航 -->
-      <div class="grid grid-cols-1 gap-4 mt-6">
-        <a routerLink="/screens"
-           class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-100/80 to-blue-200/80 border border-blue-300/50 rounded-xl hover:from-blue-200/80 hover:to-blue-300/80 transition-all duration-300 cursor-pointer group">
-          <div class="flex items-center gap-3">
-            <span class="text-2xl">📺</span>
-            <div>
-              <h3 class="text-lg font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">大屏页面管理</h3>
-              <p class="text-sm text-slate-600">查看和管理已发布的大屏展示页面</p>
-            </div>
-          </div>
-          <span class="text-slate-400 group-hover:text-blue-600 transition-colors">
-            →
-          </span>
-        </a>
-
-        <a routerLink="/api-keys"
-           class="flex items-center justify-between p-4 bg-gradient-to-r from-primary/10 to-primary-dark/10 border border-primary/30 rounded-xl hover:from-primary/20 hover:to-primary-dark/20 transition-all duration-300 cursor-pointer group">
-          <div class="flex items-center gap-3">
-            <span class="text-2xl">🔑</span>
-            <div>
-              <h3 class="text-lg font-semibold text-slate-800 group-hover:text-primary transition-colors">API Key 管理</h3>
-              <p class="text-sm text-slate-600">管理您的 API 访问密钥和使用权限</p>
-            </div>
-          </div>
-          <span class="text-slate-400 group-hover:text-primary transition-colors">
-            →
-          </span>
-        </a>
+<div class="w-screen h-screen flex flex-col bg-black overflow-hidden">
+  <!-- 标题栏 -->
+  <header *ngIf="currentUser$ | async as user" class="bg-black/80 backdrop-blur-lg border-b border-white/10 p-4 lg:px-8 z-[1000]">
+    <div class="flex justify-between items-center w-full">
+      <h1 class="text-white text-xl lg:text-2xl font-semibold m-0">数据大屏</h1>
+      <div class="flex items-center gap-4">
+        <span class="text-white/80 text-sm">{{ user.username || user.id }}</span>
+        <button (click)="logout()" class="px-4 py-2 bg-white/10 text-white border border-white/20 rounded-lg cursor-pointer text-sm transition-all duration-200 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-0">
+          退出登录
+        </button>
       </div>
     </div>
-  </div>
+  </header>
+
+  <!-- 大屏展示区域 -->
+  <main class="screen-viewport" #screenWrapper>
+    <div class="screen-stage"
+         [style.width.px]="screenConfig?.layout?.width"
+         [style.height.px]="screenConfig?.layout?.height"
+         [style.transform]="getScaleTransform()">
+      @if (loading) {
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+          <p class="text-white">加载中...</p>
+        </div>
+      } @else if (error) {
+        <div class="error-container">
+          <p class="error-message">{{ error }}</p>
+        </div>
+      } @else if (screenConfig) {
+        <div [style.background]="screenConfig.layout.background" class="screen-canvas">
+          <div #componentsContainer class="components-container"></div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="control-panel" [class.hidden]="isFullscreen">
+          <div class="control-group">
+            <button
+              *ngIf="availableScreens.length > 1"
+              class="control-button"
+              (click)="toggleAutoPlay()"
+              [title]="isAutoPlay ? '停止轮播' : '开始轮播'">
+              {{ isAutoPlay ? '⏸️' : '▶️' }}
+            </button>
+            <button
+              *ngIf="availableScreens.length > 1"
+              class="control-button"
+              (click)="previousScreen()"
+              title="上一页">
+              ⬅️
+            </button>
+            <button
+              *ngIf="availableScreens.length > 1"
+              class="control-button"
+              (click)="nextScreen()"
+              title="下一页">
+              ➡️
+            </button>
+            <select
+              *ngIf="availableScreens.length > 1"
+              class="screen-selector"
+              [value]="currentScreenIndex"
+              (change)="switchToScreen($event)">
+              <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
+                {{ screen.name }}
+              </option>
+            </select>
+            <div *ngIf="availableScreens.length > 1" class="screen-indicator">
+              {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
+            </div>
+          </div>
+        </div>
+
+        <button
+          class="fullscreen-button"
+          (click)="toggleFullscreen()"
+          title="全屏切换">
+          {{ isFullscreen ? '退出全屏' : '全屏显示' }}
+        </button>
+      }
+    </div>
+  </main>
 </div>

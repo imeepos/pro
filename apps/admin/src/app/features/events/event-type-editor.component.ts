@@ -85,6 +85,7 @@ export class EventTypeEditorComponent implements OnInit, OnDestroy {
     });
   }
 
+  
   onSubmit(): void {
     if (this.eventTypeForm.invalid) {
       Object.keys(this.eventTypeForm.controls).forEach(key => {

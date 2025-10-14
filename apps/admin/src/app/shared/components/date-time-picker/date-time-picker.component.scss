@@ -176,7 +176,8 @@
   top: 100%;
   left: 0;
   z-index: 1000;
-  min-width: 640px;
+  min-width: 380px;
+  max-width: 420px;
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
@@ -186,6 +187,7 @@
   backdrop-filter: blur(8px);
   animation: slideDown 0.2s ease-out;
   display: flex;
+  flex-direction: column;
 
   // 暗色模式
   .dark & {
@@ -211,13 +213,13 @@
 .date-selection-section {
   flex: 1;
   padding: 16px;
-  border-right: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
   display: flex;
   flex-direction: column;
 
   // 暗色模式
   .dark & {
-    border-right-color: #374151;
+    border-bottom-color: #374151;
   }
 }
 
@@ -491,8 +493,10 @@
 
 // 时间选择区域
 .time-selection-section {
-  flex: 1;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .time-presets {
@@ -526,7 +530,7 @@
 
 .time-presets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
@@ -945,21 +949,10 @@
     left: 50%;
     transform: translate(-50%, -50%);
     width: 90vw;
-    max-width: 640px;
+    max-width: 420px;
     max-height: 80vh;
     overflow-y: auto;
     margin-top: 0;
-    flex-direction: column;
-  }
-
-  .date-selection-section {
-    border-right: none;
-    border-bottom: 1px solid #f3f4f6;
-
-    // 暗色模式
-    .dark & {
-      border-bottom-color: #374151;
-    }
   }
 
   .time-presets-grid {

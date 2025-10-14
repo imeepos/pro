@@ -1,11 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError, finalize } from 'rxjs';
+import { Observable, tap, catchError, throwError, finalize, of, map } from 'rxjs';
 import { AuthStore } from './auth.store';
 import { AuthQuery } from './auth.query';
 import { SkerSDK } from '@pro/sdk';
 import { TokenStorageService } from '../core/services/token-storage.service';
-import { LoginDto, RegisterDto, AuthResponse } from '@pro/types';
+import { LoginDto, RegisterDto, AuthResponse, User, UserProfile } from '@pro/types';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -61,12 +61,74 @@ export class AuthService {
     });
   }
 
+  restoreAuthSession(): Observable<boolean> {
+    const token = this.tokenStorage.getToken();
+
+    if (!token) {
+      return of(false);
+    }
+
+    if (this.isTokenExpired(token)) {
+      this.clearExpiredTokens();
+      return of(false);
+    }
+
+    this.setLoading(true);
+    this.setError(null);
+
+    return this.sdk.auth.getProfile().pipe(
+      tap(user => {
+        this.store.update({
+          user: user,
+          isAuthenticated: true,
+          error: null,
+          loading: false
+        });
+      }),
+      catchError(error => {
+        console.warn('[Auth] 认证状态恢复失败:', error);
+        this.clearExpiredTokens();
+        this.store.update({
+          user: null,
+          isAuthenticated: false,
+          loading: false,
+          error: null
+        });
+        return of(false);
+      }),
+      finalize(() => this.setLoading(false)),
+      map(() => true)
+    );
+  }
+
+  private clearExpiredTokens(): void {
+    this.tokenStorage.clearTokens();
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      return payload.exp < currentTime;
+    } catch {
+      return true;
+    }
+  }
+
+  private convertUserToProfile(user: User): UserProfile {
+    return {
+      userId: user.id
+    };
+  }
+
   private handleAuthSuccess(response: AuthResponse): void {
     this.tokenStorage.setToken(response.accessToken);
     this.tokenStorage.setRefreshToken(response.refreshToken);
 
+    const userProfile = this.convertUserToProfile(response.user);
+
     this.store.update({
-      user: response.user,
+      user: userProfile,
       isAuthenticated: true,
       error: null
     });

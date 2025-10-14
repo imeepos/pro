@@ -8,8 +8,10 @@ import {
   Request,
   ParseIntPipe,
   Sse,
+  MessageEvent,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { JdAccountService } from './jd-account.service';
 import { JdAuthService, JdLoginEvent } from './jd-auth.service';
 import { JdHealthCheckService } from './jd-health-check.service';
@@ -44,9 +46,15 @@ export class JdController {
   @Get('login/start')
   @UseGuards(JwtSseAuthGuard)
   @Sse()
-  async startLogin(@Request() req): Promise<Observable<JdLoginEvent>> {
+  async startLogin(@Request() req): Promise<Observable<MessageEvent>> {
     const userId = req.user.userId;
-    return this.jdAuthService.startLogin(userId);
+    const events$ = await this.jdAuthService.startLogin(userId);
+
+    return events$.pipe(
+      map((event: JdLoginEvent) => ({
+        data: event,
+      } as MessageEvent))
+    );
   }
 
   /**

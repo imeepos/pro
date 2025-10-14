@@ -29,6 +29,22 @@ export class ApiKeyService {
   ) {}
 
   /**
+   * 根据API Key类型获取对应的权限数组
+   */
+  private getPermissionsByType(type: ApiKeyType): string[] {
+    switch (type) {
+      case ApiKeyType.READ_ONLY:
+        return ['read:events', 'read:users', 'read:config'];
+      case ApiKeyType.READ_WRITE:
+        return ['read:events', 'write:events', 'read:users', 'read:config'];
+      case ApiKeyType.ADMIN:
+        return ['read:events', 'write:events', 'delete:events', 'read:users', 'write:users', 'read:config', 'write:config', 'admin:all'];
+      default:
+        return ['read:events', 'read:users', 'read:config'];
+    }
+  }
+
+  /**
    * 为用户创建新的API Key
    */
   async createApiKey(userId: string, createDto: CreateApiKeyDto, createdIp?: string): Promise<ApiKeyEntity> {
@@ -47,13 +63,18 @@ export class ApiKeyService {
     // 生成新的API Key
     const key = ApiKeyEntity.generateKey();
 
+    // 确定权限：如果用户未设置权限或权限为空，则根据类型自动设置
+    const permissions = (!createDto.permissions || createDto.permissions.length === 0)
+      ? this.getPermissionsByType(createDto.type)
+      : createDto.permissions;
+
     const apiKey = this.apiKeyRepo.create({
       key,
       userId,
       name: createDto.name,
       description: createDto.description || null,
       type: createDto.type,
-      permissions: createDto.permissions || [],
+      permissions,
       expiresAt: createDto.expiresAt ? new Date(createDto.expiresAt) : null,
       createdIp,
     });
@@ -145,7 +166,22 @@ export class ApiKeyService {
       throw new NotFoundException('API Key 不存在');
     }
 
-    await this.apiKeyRepo.update(keyId, updateDto);
+    // 准备更新数据
+    const updateData: Partial<ApiKeyEntity> = {
+      ...updateDto,
+      // 处理日期类型转换
+      expiresAt: updateDto.expiresAt ? new Date(updateDto.expiresAt) : undefined,
+    };
+
+    // 权限自动设置逻辑：如果更新了类型且权限为空或未定义，则根据新类型自动设置权限
+    if (updateDto.type && (!updateDto.permissions || updateDto.permissions.length === 0)) {
+      updateData.permissions = this.getPermissionsByType(updateDto.type);
+    } else if (updateDto.type && updateDto.permissions && updateDto.permissions.length > 0) {
+      // 如果用户同时提供了类型和权限，保留用户设置的权限
+      updateData.permissions = updateDto.permissions;
+    }
+
+    await this.apiKeyRepo.update(keyId, updateData);
 
     const updatedApiKey = await this.apiKeyRepo.findOne({ where: { id: keyId } });
     updatedApiKey.key = `${updatedApiKey.key.substring(0, 7)}...${updatedApiKey.key.substring(updatedApiKey.key.length - 4)}`;

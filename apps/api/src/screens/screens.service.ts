@@ -57,6 +57,30 @@ export class ScreensService {
     };
   }
 
+  async findPublished(page = 1, limit = 10, userId?: string) {
+    const query = this.screenPageRepository.createQueryBuilder('screen');
+
+    query.where('screen.status = :status', { status: 'published' });
+
+    if (userId) {
+      query.andWhere('screen.createdBy = :userId', { userId });
+    }
+
+    const [items, total] = await query
+      .orderBy('screen.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   async findOne(id: string) {
     const screen = await this.screenPageRepository.findOne({
       where: { id },

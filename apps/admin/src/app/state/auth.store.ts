@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { Store, StoreConfig } from '@datorama/akita';
-import { User } from '@pro/types';
+import { UserProfile } from '@pro/types';
 
 export interface AuthState {
-  user: User | null;
+  user: UserProfile | null;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;

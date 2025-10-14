@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { ScreensService } from '../../state/screens.service';
 import { ScreensQuery } from '../../state/screens.query';
 import { ScreenPage, CreateScreenDto } from '@pro/sdk';
@@ -338,7 +339,7 @@ export class ScreensListComponent implements OnInit, OnDestroy {
 
   // 在大屏上预览
   previewOnScreen(screenId: string): void {
-    const webUrl = `${window.location.protocol}//${window.location.hostname}:4200/screen/${screenId}`;
+    const webUrl = `${environment.webUrl}/screen/${screenId}`;
     window.open(webUrl, '_blank');
     this.toastService.info('已在新窗口打开大屏预览');
   }

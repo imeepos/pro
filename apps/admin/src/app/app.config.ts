@@ -2,12 +2,17 @@ import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { MatNativeDateModule } from '@angular/material/core';
+import { DateFnsAdapter } from '@angular/material-date-fns-adapter';
+import { MAT_DATE_LOCALE } from '@angular/material/core';
+import { zhCN } from 'date-fns/locale';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig, createNotificationWebSocketConfig } from '@pro/components';
 import { TestSimpleComponent } from './features/screens/components/test-simple.component';
 import { TokenStorageService } from './core/services/token-storage.service';
+import { AuthService } from './state/auth.service';
 import { SkerSDK } from '@pro/sdk';
 import { environment } from '../environments/environment';
 
@@ -50,12 +55,29 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
   };
 }
 
+function initializeAuth(authService: AuthService) {
+  return () => {
+    return authService.restoreAuthSession().toPromise();
+  };
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     // Angular 核心 providers
     provideRouter(routes),
     provideHttpClient(withInterceptors([tokenInterceptor, errorInterceptor])),
     provideAnimations(),
+
+    // Angular Material 日期配置
+    {
+      provide: MAT_DATE_LOCALE,
+      useValue: 'zh-CN'
+    },
+    {
+      provide: DateFnsAdapter,
+      useClass: DateFnsAdapter,
+      deps: [MAT_DATE_LOCALE]
+    },
 
     // Token存储服务的接口适配
     {
@@ -78,6 +100,14 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER,
       useFactory: initializeComponentRegistry,
       deps: [ComponentRegistryService],
+      multi: true
+    },
+
+    // 认证状态初始化
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeAuth,
+      deps: [AuthService],
       multi: true
     },
 

@@ -26,18 +26,28 @@
     <div class="flex items-center space-x-2">
       <div *ngIf="status.includes('已扫码')"
            class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-      <div *ngIf="!status.includes('已扫码') && !status.includes('过期') && !status.includes('错误')"
+      <div *ngIf="!status.includes('已扫码') && !status.includes('过期') && !status.includes('失败') && !status.includes('错误')"
            class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-      <div *ngIf="status.includes('过期') || status.includes('错误')"
+      <div *ngIf="status.includes('过期') || status.includes('失败') || status.includes('错误')"
            class="w-2 h-2 bg-red-500 rounded-full"></div>
       <p class="text-sm font-medium"
          [ngClass]="{
            'text-green-600 dark:text-green-500': status.includes('已扫码'),
-           'text-blue-600 dark:text-blue-500': !status.includes('已扫码') && !status.includes('过期') && !status.includes('错误'),
-           'text-red-600 dark:text-red-500': status.includes('过期') || status.includes('错误')
+           'text-blue-600 dark:text-blue-500': !status.includes('已扫码') && !status.includes('过期') && !status.includes('失败') && !status.includes('错误'),
+           'text-red-600 dark:text-red-500': status.includes('过期') || status.includes('失败') || status.includes('错误')
          }">
         {{ status }}
       </p>
+    </div>
+
+    <!-- 重试次数显示 -->
+    <div *ngIf="currentAttempt > 0" class="flex items-center space-x-1 mt-2">
+      <svg class="w-4 h-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      </svg>
+      <span class="text-xs text-yellow-600 dark:text-yellow-400">
+        已尝试 {{ currentAttempt }} 次
+      </span>
     </div>
 
     <!-- 二维码说明 -->
@@ -56,11 +66,21 @@
       开始京东登录
     </button>
 
+    <!-- 错误状态下的手动重试按钮 -->
     <button
-      *ngIf="qrcodeUrl && !isLoading && (status.includes('过期') || status.includes('错误'))"
+      *ngIf="qrcodeUrl && !isLoading && (status.includes('过期') || status.includes('失败') || status.includes('错误')) && canRetry"
+      (click)="manualRetry()"
+      [disabled]="!canRetry || currentAttempt >= maxRetries"
+      class="text-white bg-orange-600 hover:bg-orange-700 focus:ring-4 focus:outline-none focus:ring-orange-300 font-medium rounded-lg text-sm w-full px-5 py-2.5 text-center dark:bg-orange-500 dark:hover:bg-orange-600 dark:focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed">
+      {{ getRetryButtonText() }}
+    </button>
+
+    <!-- 重新开始按钮 -->
+    <button
+      *ngIf="qrcodeUrl && !isLoading && (status.includes('过期') || status.includes('失败') || status.includes('错误'))"
       (click)="resetAndStartNew()"
-      class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-      重新获取二维码
+      class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm w-full px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">
+      重新开始
     </button>
 
     <button
@@ -69,6 +89,17 @@
       class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm w-full px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">
       继续添加账号
     </button>
+  </div>
+
+  <!-- 错误详细描述 -->
+  <div *ngIf="!isLoading && (status.includes('失败') || status.includes('错误')) && canRetry"
+       class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+    <div class="flex items-start space-x-2">
+      <svg class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <p class="text-xs text-red-700 dark:text-red-400">{{ getErrorStatusDescription() }}</p>
+    </div>
   </div>
 
   <!-- 加载状态指示器 -->

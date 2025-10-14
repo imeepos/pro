@@ -9,8 +9,8 @@ export interface User {
   username: string;
   email: string;
   status: UserStatus;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string | Date;
+  updatedAt: string | Date;
 }
 
 export interface UserProfile {
@@ -59,6 +59,7 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
   message?: string;
+  timestamp?: string;
 }
 
 export interface ValidationResult {

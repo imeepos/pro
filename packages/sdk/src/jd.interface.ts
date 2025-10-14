@@ -55,6 +55,15 @@ export interface JdSuccessEventData {
 }
 
 /**
+ * 错误事件数据
+ */
+export interface JdErrorEventData {
+  message: string;
+  attempt: number;
+  canRetry: boolean;
+}
+
+/**
  * SSE 事件处理器
  */
 export type JdLoginEventHandler = (event: JdLoginEvent) => void;

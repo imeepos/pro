@@ -16,9 +16,6 @@ export class CreateEventTypeDto {
   @MaxLength(100)
   eventName: string;
 
-  @IsString()
-  industryId: string;
-
   @IsOptional()
   @IsString()
   description?: string;
@@ -43,10 +40,6 @@ export class UpdateEventTypeDto {
   @IsString()
   @MaxLength(100)
   eventName?: string;
-
-  @IsOptional()
-  @IsString()
-  industryId?: string;
 
   @IsOptional()
   @IsString()

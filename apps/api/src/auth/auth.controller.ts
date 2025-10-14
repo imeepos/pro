@@ -12,7 +12,7 @@ import {
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { AuthResponse, User } from '@pro/types';
+import { AuthResponse, User, ApiResponse } from '@pro/types';
 
 @Controller('auth')
 export class AuthController {
@@ -48,7 +48,12 @@ export class AuthController {
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req): Promise<User> {
-    return this.authService.getProfile(req.user.userId);
+  async getProfile(@Request() req): Promise<ApiResponse<User>> {
+    const user = await this.authService.getProfile(req.user.userId);
+    return {
+      success: true,
+      data: user,
+      timestamp: new Date().toISOString(),
+    };
   }
 }

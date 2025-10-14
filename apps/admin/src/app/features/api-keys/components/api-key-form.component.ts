@@ -87,6 +87,12 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
     if (!type) return;
     const permissionsControl = this.apiKeyForm.get('permissions');
 
+    // 避免在表单初始化期间触发权限更新
+    if (this.apiKeyForm.pristine && !permissionsControl?.dirty) {
+      console.log('🔍 [API Key Form] 跳过权限更新，表单尚未被用户修改');
+      return;
+    }
+
     switch (type) {
       case ApiKeyType.READ_ONLY:
         permissionsControl?.setValue(['read:events', 'read:users', 'read:config']);
@@ -104,47 +110,178 @@ export class ApiKeyFormComponent implements OnInit, OnDestroy {
         permissionsControl?.enable();
         break;
     }
+
+    console.log('🔍 [API Key Form] 权限已根据类型更新:', { type, permissions: permissionsControl?.value });
   }
 
   // 填充表单数据
   private patchForm(apiKey: ApiKey): void {
-    this.apiKeyForm.patchValue({
-      name: apiKey.name,
+    console.log('🔍 [API Key Form] 填充表单数据，API Key:', apiKey);
+
+    // 确保权限数组有默认值
+    const permissions = apiKey.permissions || [];
+
+    const formData = {
+      name: apiKey.name || '',
       description: apiKey.description || '',
-      type: apiKey.type,
+      type: apiKey.type || ApiKeyType.READ_ONLY,
       expiresAt: apiKey.expiresAt ? new Date(apiKey.expiresAt).toISOString().slice(0, 16) : null,
-      permissions: apiKey.permissions || []
-    });
+      permissions: permissions
+    };
+
+    console.log('🔍 [API Key Form] 准备填充的表单数据:', formData);
+
+    this.apiKeyForm.patchValue(formData);
+
+    // 避免立即触发权限更新，防止意外的表单值变化
+    // 权限的设置会由用户交互或表单的 valueChanges 监听器处理
+    console.log('🔍 [API Key Form] 表单填充完成，当前值:', this.apiKeyForm.value);
   }
 
   // 表单提交
   onSubmit(): void {
+    console.log('🔍 [API Key Form] 表单提交开始');
+    console.log('🔍 [API Key Form] 编辑模式:', this.isEditMode);
+    console.log('🔍 [API Key Form] 表单有效性:', this.apiKeyForm.valid);
+    console.log('🔍 [API Key Form] 表单原始值:', this.apiKeyForm.value);
+    console.log('🔍 [API Key Form] 原始API Key数据:', this.apiKey);
+    console.log('🔍 [API Key Form] 当前加载状态:', this.loading);
+
+    // 防止重复提交
+    if (this.loading) {
+      console.warn('⚠️ [API Key Form] 表单正在提交中，忽略重复提交');
+      return;
+    }
+
     if (this.apiKeyForm.invalid) {
+      console.warn('⚠️ [API Key Form] 表单验证失败，标记为已触摸');
       this.markFormGroupTouched(this.apiKeyForm);
       return;
     }
 
     const formValue = this.apiKeyForm.value;
+    console.log('🔍 [API Key Form] 处理后的表单值:', formValue);
+
+    // 清理表单数据，移除意外的字段
+    const cleanedFormValue = this.cleanFormData(formValue);
+    console.log('🧹 [API Key Form] 清理后的表单值:', cleanedFormValue);
+
+    // 确保类型字段正确映射
+    let typeValue = cleanedFormValue.type;
+    if (typeof typeValue === 'string') {
+      // 如果是字符串形式，确保转换为正确的枚举值
+      if (typeValue === 'admin') {
+        typeValue = ApiKeyType.ADMIN;
+      } else if (typeValue === 'read_write') {
+        typeValue = ApiKeyType.READ_WRITE;
+      } else if (typeValue === 'read_only') {
+        typeValue = ApiKeyType.READ_ONLY;
+      }
+    }
+
+    console.log('🔄 [API Key Form] 类型转换结果:', {
+      original: cleanedFormValue.type,
+      converted: typeValue,
+      convertedType: typeof typeValue
+    });
+
+    // 处理过期时间：明确区分永久过期（null）和未设置（undefined）
+    let expiresAt: string | null | undefined;
+    if (cleanedFormValue.expiresAt === null || cleanedFormValue.expiresAt === '') {
+      // 用户选择永久过期或清空字段
+      expiresAt = null;
+      console.log('🔍 [API Key Form] 设置永久过期时间');
+    } else if (cleanedFormValue.expiresAt) {
+      // 用户设置了具体的过期时间
+      expiresAt = cleanedFormValue.expiresAt;
+      console.log('🔍 [API Key Form] 设置具体过期时间:', expiresAt);
+    } else {
+      // 未设置过期时间（编辑时可能保持原值）
+      expiresAt = undefined;
+      console.log('🔍 [API Key Form] 过期时间未设置');
+    }
 
     if (this.isEditMode && this.apiKey) {
-      const updateData: UpdateApiKeyDto = {
-        name: formValue.name,
-        description: formValue.description || undefined,
-        type: formValue.type,
-        expiresAt: formValue.expiresAt || undefined,
-        permissions: formValue.permissions
-      };
+      const updateData: UpdateApiKeyDto = this.createUpdateData(cleanedFormValue, typeValue, expiresAt);
+      console.log('✅ [API Key Form] 准备发送更新数据:', {
+        id: this.apiKey.id,
+        currentType: this.apiKey.type,
+        newType: updateData.type,
+        updateData
+      });
       this.submit.emit(updateData);
     } else {
-      const createData: CreateApiKeyDto = {
-        name: formValue.name,
-        description: formValue.description || undefined,
-        type: formValue.type,
-        expiresAt: formValue.expiresAt || undefined,
-        permissions: formValue.permissions
-      };
+      const createData: CreateApiKeyDto = this.createCreateData(cleanedFormValue, typeValue, expiresAt);
+      console.log('✅ [API Key Form] 发送创建数据:', createData);
       this.submit.emit(createData);
     }
+  }
+
+  // 清理表单数据，移除意外添加的字段
+  private cleanFormData(formValue: any): any {
+    const allowedFields = ['name', 'description', 'type', 'expiresAt', 'permissions'];
+    const cleaned: any = {};
+
+    for (const field of allowedFields) {
+      if (formValue.hasOwnProperty(field)) {
+        cleaned[field] = formValue[field];
+      }
+    }
+
+    // 移除所有可能的意外字段，如 isTrusted 等
+    Object.keys(formValue).forEach(key => {
+      if (!allowedFields.includes(key)) {
+        console.warn('⚠️ [API Key Form] 移除意外字段:', key, formValue[key]);
+      }
+    });
+
+    return cleaned;
+  }
+
+  // 根据类型获取对应的权限数组
+  private getPermissionsByType(type: ApiKeyType): string[] {
+    switch (type) {
+      case ApiKeyType.READ_ONLY:
+        return ['read:events', 'read:users', 'read:config'];
+      case ApiKeyType.READ_WRITE:
+        return ['read:events', 'write:events', 'read:users', 'read:config'];
+      case ApiKeyType.ADMIN:
+        return ['read:events', 'write:events', 'delete:events', 'read:users', 'write:users', 'read:config', 'write:config', 'admin:all'];
+      default:
+        return [];
+    }
+  }
+
+  // 创建更新数据对象
+  private createUpdateData(formValue: any, typeValue: ApiKeyType, expiresAt: string | null | undefined): UpdateApiKeyDto {
+    // 如果权限为空或未定义，根据类型自动设置对应的权限
+    const permissions = formValue.permissions && formValue.permissions.length > 0
+      ? formValue.permissions
+      : this.getPermissionsByType(typeValue);
+
+    return {
+      name: formValue.name?.trim() || '',
+      description: formValue.description?.trim() || undefined,
+      type: typeValue,
+      expiresAt: expiresAt,
+      permissions: permissions
+    };
+  }
+
+  // 创建数据对象
+  private createCreateData(formValue: any, typeValue: ApiKeyType, expiresAt: string | null | undefined): CreateApiKeyDto {
+    // 如果权限为空或未定义，根据类型自动设置对应的权限
+    const permissions = formValue.permissions && formValue.permissions.length > 0
+      ? formValue.permissions
+      : this.getPermissionsByType(typeValue);
+
+    return {
+      name: formValue.name?.trim() || '',
+      description: formValue.description?.trim() || undefined,
+      type: typeValue,
+      expiresAt: expiresAt,
+      permissions: permissions
+    };
   }
 
   // 取消操作

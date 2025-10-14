@@ -2,24 +2,24 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, Observable } from 'rxjs';
 import { EventsService } from '../../state/events.service';
 import { TagsService } from '../../state/tags.service';
+import { TagsQuery } from '../../state/tags.query';
 import { IndustryTypesService } from '../../state/industry-types.service';
 import { IndustryTypesQuery } from '../../state/industry-types.query';
 import { EventTypesService } from '../../state/event-types.service';
 import { EventTypesQuery } from '../../state/event-types.query';
-import { CreateEventDto, UpdateEventDto, EventStatus, EventDetail } from '@pro/sdk';
+import { CreateEventDto, UpdateEventDto, EventStatus, EventDetail, Tag } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
 import { SelectComponent } from '../../shared/components/select';
 import type { SelectOption } from '../../shared/components/select';
 import {
-  AddressCascaderComponent,
   AmapPickerComponent,
   TagSelectorComponent
 } from './components';
 import type { LocationData } from './components/amap-picker.component';
-import { DateTimePickerComponent } from '../../shared/components/date-time-picker';
+import { MaterialDateTimePickerComponent } from '../../shared/components/material-date-time-picker';
 import { ImageUploadComponent } from '../../shared/components/image-upload/image-upload.component';
 import { FileUploadComponent } from '../../shared/components/file-upload/file-upload.component';
 import { VideoUploadComponent } from '../../shared/components/video-upload/video-upload.component';
@@ -32,10 +32,9 @@ import { Attachment } from '@pro/sdk';
     CommonModule,
     ReactiveFormsModule,
     SelectComponent,
-    AddressCascaderComponent,
     AmapPickerComponent,
     TagSelectorComponent,
-    DateTimePickerComponent,
+    MaterialDateTimePickerComponent,
     ImageUploadComponent,
     FileUploadComponent,
     VideoUploadComponent
@@ -57,6 +56,9 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   industryTypeOptions: SelectOption[] = [];
   eventTypeOptions: SelectOption[] = [];
 
+  allTags$: Observable<Tag[]> = new Observable();
+  popularTags$: Observable<Tag[]> = new Observable();
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -65,6 +67,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     private router: Router,
     private eventsService: EventsService,
     private tagsService: TagsService,
+    private tagsQuery: TagsQuery,
     private industryTypesService: IndustryTypesService,
     private industryTypesQuery: IndustryTypesQuery,
     private eventTypesService: EventTypesService,
@@ -91,6 +94,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadIndustryTypes();
     this.loadEventTypes();
+    this.loadTags();
 
     this.route.params.pipe(
       takeUntil(this.destroy$)
@@ -119,7 +123,7 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     ).subscribe(types => {
       this.industryTypeOptions = types.map(type => ({
         value: String(type.id),
-        label: type.industryName
+        label: type.industryCode
       }));
     });
   }
@@ -135,6 +139,15 @@ export class EventEditorComponent implements OnInit, OnDestroy {
         label: type.eventName
       }));
     });
+  }
+
+  loadTags(): void {
+    this.tagsService.loadTags().subscribe();
+    this.allTags$ = this.tagsQuery.tags$;
+    this.popularTags$ = this.tagsQuery.tags$.pipe(
+      // 取前50个作为热门标签，实际应用中可以根据usageCount排序
+      takeUntil(this.destroy$)
+    );
   }
 
   loadEvent(): void {
@@ -177,29 +190,47 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  onAddressChange(address: { province: string; city: string; district?: string }): void {
-    this.eventForm.patchValue({
-      province: address.province,
-      city: address.city,
-      district: address.district
-    });
-  }
-
   onLocationPick(location: LocationData): void {
+    // 自动填充所有地址相关字段
     this.eventForm.patchValue({
+      longitude: location.longitude,
+      latitude: location.latitude,
+      province: location.province,
+      city: location.city,
+      district: location.district,
+      street: location.street,
+      locationText: location.locationText
+    });
+
+    console.log('地址信息已自动填充:', {
+      province: location.province,
+      city: location.city,
+      district: location.district,
+      street: location.street,
+      locationText: location.locationText,
       longitude: location.longitude,
       latitude: location.latitude
     });
-
-    if (location.address) {
-      this.eventForm.patchValue({
-        locationText: location.address
-      });
-    }
   }
 
   onTagsChange(tagIds: string[]): void {
     this.selectedTagIds = tagIds;
+  }
+
+  onTagCreate(tagData: { name: string; color: string }): void {
+    this.tagsService.createTag({
+      tagName: tagData.name,
+      tagColor: tagData.color
+    }).subscribe({
+      next: (newTag: Tag) => {
+        this.toastService.success('标签创建成功');
+        // 自动选中新创建的标签
+        this.selectedTagIds = [...this.selectedTagIds, newTag.id];
+      },
+      error: (error) => {
+        this.toastService.error(`创建标签失败: ${error.message}`);
+      }
+    });
   }
 
   categorizeAttachments(attachments: Attachment[]): void {

@@ -38,7 +38,15 @@
       "Bash(ng lint)",
       "Bash(ng serve:*)",
       "Bash(curl:*)",
-      "WebFetch(domain:angular.dev)"
+      "WebFetch(domain:angular.dev)",
+      "WebFetch(domain:docs.nestjs.com)",
+      "Bash(pnpm run build:*)",
+      "Read(//home/ubuntu/**)",
+      "Bash(pnpm run typecheck:*)",
+      "Bash(/dev/null)",
+      "WebFetch(domain:lbs.amap.com)",
+      "WebFetch(domain:ng.ant.design)",
+      "WebFetch(domain:flowbite-angular.com)"
     ],
     "deny": [],
     "ask": []

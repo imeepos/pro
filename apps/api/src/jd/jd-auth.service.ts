@@ -57,6 +57,10 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
   // 二维码检查接口
   private readonly JD_QR_CHECK_URL = 'https://qr.m.jd.com/check';
 
+  // 页面加载配置
+  private readonly PAGE_LOAD_TIMEOUT = 60000; // 60秒超时
+  private readonly MAX_RETRY_ATTEMPTS = 2; // 最大重试次数
+
   constructor(
     private readonly jdAccountService: JdAccountService,
   ) {}
@@ -145,29 +149,121 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
 
     // 异步启动页面导航（在 SSE 连接建立后执行）
     setImmediate(async () => {
-      try {
-        // 导航到京东登录页面
-        await page.goto(this.JD_LOGIN_URL, { waitUntil: 'networkidle' });
-        this.logger.log(`已打开京东登录页面: ${sessionId}`);
-
-        // 等待页面完全加载
-        await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {
-          this.logger.warn(`等待页面加载超时: ${sessionId}`);
-        });
-
-        this.logger.log(`京东登录页面加载完成: ${sessionId}`);
-      } catch (error) {
-        this.logger.error(`打开京东登录页面失败: ${sessionId}`, error);
-        subject.next({
-          type: 'error',
-          data: { message: '打开登录页面失败' },
-        });
-        subject.complete();
-        await this.cleanupSession(sessionId);
-      }
+      await this.navigateToLoginPageWithRetry(page, subject, sessionId);
     });
 
     return subject.asObservable();
+  }
+
+  /**
+   * 带重试机制的页面导航方法
+   * 优雅地处理网络超时、连接失败等不同错误类型
+   */
+  private async navigateToLoginPageWithRetry(
+    page: Page,
+    subject: Subject<JdLoginEvent>,
+    sessionId: string,
+    attempt: number = 1,
+  ): Promise<void> {
+    try {
+      this.logger.log(`正在导航到京东登录页面 (尝试 ${attempt}/${this.MAX_RETRY_ATTEMPTS}): ${sessionId}`);
+
+      // 使用 domcontentloaded 策略，更快且更稳定
+      await page.goto(this.JD_LOGIN_URL, {
+        waitUntil: 'domcontentloaded',
+        timeout: this.PAGE_LOAD_TIMEOUT,
+      });
+
+      this.logger.log(`京东登录页面导航成功: ${sessionId}`);
+
+      // 额外等待确保关键资源加载完成
+      await page.waitForTimeout(2000).catch(() => {
+        this.logger.debug(`页面等待超时，继续执行: ${sessionId}`);
+      });
+
+      this.logger.log(`京东登录页面准备完成: ${sessionId}`);
+
+    } catch (error) {
+      const errorMessage = this.extractPageLoadErrorMessage(error);
+      this.logger.error(`页面导航失败 (尝试 ${attempt}/${this.MAX_RETRY_ATTEMPTS}): ${sessionId}`, error);
+
+      // 判断是否应该重试
+      if (attempt < this.MAX_RETRY_ATTEMPTS && this.shouldRetryPageLoad(error)) {
+        this.logger.log(`准备重试页面导航: ${sessionId}`);
+
+        // 等待一段时间后重试
+        await page.waitForTimeout(3000);
+
+        return this.navigateToLoginPageWithRetry(page, subject, sessionId, attempt + 1);
+      }
+
+      // 所有重试都失败了，发送错误事件
+      this.logger.error(`页面导航最终失败: ${sessionId}`, error);
+      subject.next({
+        type: 'error',
+        data: {
+          message: errorMessage,
+          attempt: attempt,
+          canRetry: this.shouldRetryPageLoad(error),
+        },
+      });
+      subject.complete();
+      await this.cleanupSession(sessionId);
+    }
+  }
+
+  /**
+   * 提取页面加载错误的具体信息
+   */
+  private extractPageLoadErrorMessage(error: any): string {
+    if (error.name === 'TimeoutError') {
+      return '页面加载超时，网络连接可能较慢，请检查网络状况后重试';
+    }
+
+    if (error.message?.includes('net::ERR_NAME_NOT_RESOLVED')) {
+      return '无法解析域名，请检查网络连接';
+    }
+
+    if (error.message?.includes('net::ERR_CONNECTION_REFUSED')) {
+      return '连接被拒绝，服务器可能暂时不可用';
+    }
+
+    if (error.message?.includes('net::ERR_INTERNET_DISCONNECTED')) {
+      return '网络连接已断开，请检查网络设置';
+    }
+
+    if (error.message?.includes('Navigation aborted')) {
+      return '页面导航被中断，请重试';
+    }
+
+    return `页面加载失败: ${error.message || '未知错误'}`;
+  }
+
+  /**
+   * 判断是否应该重试页面加载
+   */
+  private shouldRetryPageLoad(error: any): boolean {
+    // 网络相关错误通常可以通过重试解决
+    if (error.name === 'TimeoutError') {
+      return true;
+    }
+
+    // 连接相关错误
+    if (error.message?.includes('net::ERR_CONNECTION') ||
+        error.message?.includes('net::ERR_TIMED_OUT')) {
+      return true;
+    }
+
+    // 服务器错误
+    if (error.message?.includes('500') ||
+        error.message?.includes('502') ||
+        error.message?.includes('503') ||
+        error.message?.includes('504')) {
+      return true;
+    }
+
+    // 其他错误不建议重试
+    return false;
   }
 
   /**
@@ -328,11 +424,19 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
                 await this.cleanupSession(sessionId);
                 break;
 
+              case 206:
+                this.logger.log(`登录确认成功,正在跳转: ${sessionId}`);
+                subject.next({
+                  type: 'scanned',
+                  data: { message: '登录确认成功，正在跳转...' }
+                });
+                break;
+
               default:
-                this.logger.warn(`未知状态码: ${statusData.code}, session: ${sessionId}`);
+                this.logger.warn(`未知状态码: ${statusData.code}, 响应数据: ${JSON.stringify(statusData)}, session: ${sessionId}`);
                 subject.next({
                   type: 'error',
-                  data: { message: statusData.msg || '未知错误' }
+                  data: { message: statusData.msg || `登录流程异常(状态码:${statusData.code})` }
                 });
                 break;
             }

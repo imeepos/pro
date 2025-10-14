@@ -21,16 +21,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/screen/screen-display.component').then(m => m.ScreenDisplayComponent)
   },
   {
-    path: 'screens',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/screen/screen-list.component').then(m => m.ScreenListComponent)
-  },
-  {
-    path: 'api-keys',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/api-key-management/api-key-management.component').then(m => m.ApiKeyManagementComponent)
-  },
-  {
     path: '**',
     redirectTo: ''
   }

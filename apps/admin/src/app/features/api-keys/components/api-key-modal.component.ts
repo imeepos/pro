@@ -90,18 +90,67 @@ export class ApiKeyModalComponent implements OnInit, OnDestroy {
 
   // 表单提交处理
   onFormSubmit(data: CreateApiKeyDto | UpdateApiKeyDto): void {
+    console.log('🔍 [API Key Modal] 表单提交处理开始');
+    console.log('🔍 [API Key Modal] 当前模式:', this.mode);
+    console.log('🔍 [API Key Modal] 接收到的数据:', data);
+    console.log('🔍 [API Key Modal] 当前API Key:', this.apiKey);
+
+    // 防止重复提交
+    if (this.loading) {
+      console.warn('⚠️ [API Key Modal] 模态框正在加载中，忽略重复提交');
+      return;
+    }
+
+    // 验证数据有效性
+    if (!this.validateSubmissionData(data)) {
+      console.error('❌ [API Key Modal] 提交数据验证失败');
+      return;
+    }
+
     this.clearError();
 
     switch (this.mode) {
       case 'create':
+        console.log('✅ [API Key Modal] 处理创建模式');
         this.handleCreate(data as CreateApiKeyDto);
         break;
       case 'edit':
+        console.log('✅ [API Key Modal] 处理编辑模式');
         this.handleEdit(data as UpdateApiKeyDto);
         break;
       default:
+        console.warn('⚠️ [API Key Modal] 未知模式:', this.mode);
         break;
     }
+  }
+
+  // 验证提交数据
+  private validateSubmissionData(data: CreateApiKeyDto | UpdateApiKeyDto): boolean {
+    if (!data) {
+      this.error = '提交数据为空';
+      return false;
+    }
+
+    // 验证必填字段
+    if (!data.name || data.name.trim() === '') {
+      this.error = 'API Key 名称不能为空';
+      return false;
+    }
+
+    // 验证类型
+    if (!data.type) {
+      this.error = 'API Key 类型不能为空';
+      return false;
+    }
+
+    // 验证权限
+    if (!data.permissions || !Array.isArray(data.permissions)) {
+      this.error = '权限配置无效';
+      return false;
+    }
+
+    console.log('✅ [API Key Modal] 数据验证通过:', data);
+    return true;
   }
 
   // 处理创建
@@ -124,16 +173,51 @@ export class ApiKeyModalComponent implements OnInit, OnDestroy {
   private handleEdit(data: UpdateApiKeyDto): void {
     if (!this.apiKey) return;
 
-    this.apiKeyService.updateApiKey(this.apiKey.id, data)
+    console.log('🔍 [API Key Modal] 开始处理编辑操作:', {
+      apiKeyId: this.apiKey.id,
+      currentType: this.apiKey.type,
+      updateData: data
+    });
+
+    // 再次验证数据，确保没有意外字段
+    const cleanData = this.cleanUpdateData(data);
+    console.log('🧹 [API Key Modal] 清理后的更新数据:', cleanData);
+
+    this.apiKeyService.updateApiKey(this.apiKey.id, cleanData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (apiKey) => {
+          console.log('✅ [API Key Modal] API Key 更新成功，准备发送事件:', apiKey);
+          // 立即发送更新事件，不使用延迟
           this.updated.emit(apiKey);
+          console.log('📤 [API Key Modal] 已发送更新事件');
         },
         error: (error) => {
-          console.error('更新 API Key 失败:', error);
+          console.error('❌ [API Key Modal] 更新 API Key 失败:', error);
+          this.error = '更新失败：' + (error?.error?.message || error?.message || '未知错误');
         }
       });
+  }
+
+  // 清理更新数据，移除不允许的字段
+  private cleanUpdateData(data: UpdateApiKeyDto): UpdateApiKeyDto {
+    const allowedFields: (keyof UpdateApiKeyDto)[] = ['name', 'description', 'type', 'expiresAt', 'permissions'];
+    const cleaned: Record<string, any> = {};
+
+    for (const field of allowedFields) {
+      if (field in data && data[field] !== undefined) {
+        cleaned[field] = data[field];
+      }
+    }
+
+    // 检查并警告意外字段
+    (Object.keys(data) as Array<keyof UpdateApiKeyDto>).forEach(key => {
+      if (!allowedFields.includes(key)) {
+        console.warn('⚠️ [API Key Modal] 移除不允许更新的字段:', key, data[key]);
+      }
+    });
+
+    return cleaned as UpdateApiKeyDto;
   }
 
   // 处理删除

@@ -35,7 +35,7 @@ export interface CreateApiKeyDto {
   name: string;
   description?: string;
   type: ApiKeyType;
-  expiresAt?: string;
+  expiresAt?: string | null;
   permissions?: string[];
 }
 
@@ -44,7 +44,7 @@ export interface UpdateApiKeyDto {
   description?: string;
   type?: ApiKeyType;
   status?: ApiKeyStatus;
-  expiresAt?: string;
+  expiresAt?: string | null;
   permissions?: string[];
 }
 
