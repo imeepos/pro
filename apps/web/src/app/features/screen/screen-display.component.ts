@@ -38,11 +38,11 @@ import { environment } from '../../../environments/environment';
       </div>
 
       @if (!loading && !error && screenConfig) {
-        <div class="control-dock" [class.control-dock--hidden]="isFullscreen">
-          <div class="control-ensemble">
+        <div class="screen-toolbar" [class.screen-toolbar--hidden]="isFullscreen">
+          <div class="toolbar-ensemble">
             <button
               *ngIf="availableScreens.length > 1"
-              class="control-trigger"
+              class="toolbar-trigger"
               (click)="toggleAutoPlay()"
               [title]="isAutoPlay ? '停止轮播' : '开始轮播'"
               [attr.aria-label]="isAutoPlay ? '停止轮播' : '开始轮播'">
@@ -50,7 +50,7 @@ import { environment } from '../../../environments/environment';
             </button>
             <button
               *ngIf="availableScreens.length > 1"
-              class="control-trigger"
+              class="toolbar-trigger"
               (click)="previousScreen()"
               title="上一页"
               aria-label="上一页">
@@ -58,7 +58,7 @@ import { environment } from '../../../environments/environment';
             </button>
             <button
               *ngIf="availableScreens.length > 1"
-              class="control-trigger"
+              class="toolbar-trigger"
               (click)="nextScreen()"
               title="下一页"
               aria-label="下一页">
@@ -66,17 +66,17 @@ import { environment } from '../../../environments/environment';
             </button>
             <select
               *ngIf="availableScreens.length > 1"
-              class="screen-selector"
+              class="toolbar-selector"
               [value]="currentScreenIndex"
               (change)="switchToScreen($event)"
-              aria-label="选择屏幕">
+              aria-label="选择页面">
               <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
                 {{ screen.name }}
               </option>
             </select>
             <div
               *ngIf="availableScreens.length > 1"
-              class="screen-indicator"
+              class="toolbar-indicator"
               role="status"
               [attr.aria-label]="'当前页面 ' + (currentScreenIndex + 1) + ' / ' + availableScreens.length">
               {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
@@ -351,10 +351,10 @@ import { environment } from '../../../environments/environment';
       pointer-events: auto;
     }
 
-    /* ===== 控制面板系统 ===== */
-    .control-dock {
+    /* ===== 顶部工具栏 ===== */
+    .screen-toolbar {
       position: fixed;
-      bottom: var(--pro-space-8);
+      top: var(--pro-space-6);
       left: 50%;
       transform: translateX(-50%);
       z-index: var(--pro-z-toast);
@@ -362,26 +362,29 @@ import { environment } from '../../../environments/environment';
       backdrop-filter: blur(16px) saturate(180%);
       border: 1px solid rgba(255, 255, 255, var(--pro-opacity-glass-light));
       border-radius: var(--pro-radius-2xl);
-      padding: var(--pro-space-3);
+      padding: var(--pro-space-3) var(--pro-space-4);
       box-shadow: var(--pro-shadow-2xl),
                   0 0 0 1px rgba(255, 255, 255, calc(var(--pro-opacity-glass-light) * 0.5));
       transition: all var(--pro-transition-base);
       contain: layout style paint;
+      display: flex;
+      align-items: center;
+      gap: var(--pro-space-4);
     }
 
-    .control-dock--hidden {
+    .screen-toolbar--hidden {
       opacity: 0;
-      transform: translateX(-50%) translateY(10px);
+      transform: translateX(-50%) translateY(-10px);
       pointer-events: none;
     }
 
-    .control-ensemble {
+    .toolbar-ensemble {
       display: flex;
       align-items: center;
       gap: var(--pro-space-3);
     }
 
-    .control-trigger {
+    .toolbar-trigger {
       background: linear-gradient(135deg,
         rgba(255, 255, 255, var(--pro-opacity-glass-medium)) 0%,
         rgba(255, 255, 255, var(--pro-opacity-glass-light)) 100%
@@ -400,7 +403,7 @@ import { environment } from '../../../environments/environment';
       overflow: hidden;
     }
 
-    .control-trigger::before {
+    .toolbar-trigger::before {
       content: '';
       position: absolute;
       top: 0;
@@ -415,11 +418,11 @@ import { environment } from '../../../environments/environment';
       transition: left var(--pro-transition-slow);
     }
 
-    .control-trigger:hover::before {
+    .toolbar-trigger:hover::before {
       left: 100%;
     }
 
-    .control-trigger:hover {
+    .toolbar-trigger:hover {
       background: linear-gradient(135deg,
         rgba(255, 255, 255, calc(var(--pro-opacity-glass-medium) * 1.5)) 0%,
         rgba(255, 255, 255, calc(var(--pro-opacity-glass-light) * 2)) 100%
@@ -429,11 +432,11 @@ import { environment } from '../../../environments/environment';
       box-shadow: var(--pro-shadow-md);
     }
 
-    .control-trigger:active {
+    .toolbar-trigger:active {
       transform: translateY(0);
     }
 
-    .screen-selector {
+    .toolbar-selector {
       background: linear-gradient(135deg,
         rgba(255, 255, 255, var(--pro-opacity-glass-medium)) 0%,
         rgba(255, 255, 255, var(--pro-opacity-glass-light)) 100%
@@ -450,7 +453,7 @@ import { environment } from '../../../environments/environment';
       backdrop-filter: blur(4px);
     }
 
-    .screen-selector:hover {
+    .toolbar-selector:hover {
       border-color: rgba(255, 255, 255, calc(var(--pro-opacity-glass-heavy) * 1.6));
       background: linear-gradient(135deg,
         rgba(255, 255, 255, calc(var(--pro-opacity-glass-medium) * 1.5)) 0%,
@@ -458,13 +461,13 @@ import { environment } from '../../../environments/environment';
       );
     }
 
-    .screen-selector option {
+    .toolbar-selector option {
       background: var(--pro-slate-800);
       color: rgba(255, 255, 255, 0.9);
       padding: var(--pro-space-2);
     }
 
-    .screen-indicator {
+    .toolbar-indicator {
       color: rgba(255, 255, 255, 0.7);
       font-size: var(--pro-font-size-xs);
       font-weight: var(--pro-font-weight-semibold);
@@ -540,8 +543,8 @@ import { environment } from '../../../environments/environment';
       padding: var(--pro-space-3) var(--pro-space-6);
     }
 
-    :host ::ng-deep :fullscreen .control-dock {
-      bottom: var(--pro-space-4);
+    :host ::ng-deep :fullscreen .screen-toolbar {
+      top: var(--pro-space-4);
     }
 
     /* ===== 动画系统 ===== */
@@ -595,17 +598,17 @@ import { environment } from '../../../environments/environment';
 
     /* ===== 响应式设计系统 ===== */
     @media (max-width: 768px) {
-      .control-dock {
-        bottom: var(--pro-space-4);
-        padding: var(--pro-space-2);
+      .screen-toolbar {
+        top: var(--pro-space-4);
+        padding: var(--pro-space-2) var(--pro-space-3);
         border-radius: var(--pro-radius-xl);
       }
 
-      .control-ensemble {
+      .toolbar-ensemble {
         gap: var(--pro-space-2);
       }
 
-      .control-trigger {
+      .toolbar-trigger {
         padding: var(--pro-space-2) var(--pro-space-3);
         font-size: var(--pro-font-size-xs);
       }
@@ -617,20 +620,20 @@ import { environment } from '../../../environments/environment';
         font-size: var(--pro-font-size-sm);
       }
 
-      .screen-indicator {
+      .toolbar-indicator {
         font-size: 0.625rem;
         padding: 0 var(--pro-space-2);
       }
     }
 
     @media (max-width: 480px) {
-      .control-ensemble {
+      .toolbar-ensemble {
         flex-wrap: wrap;
         justify-content: center;
         max-width: 280px;
       }
 
-      .screen-selector {
+      .toolbar-selector {
         min-width: 140px;
         font-size: var(--pro-font-size-xs);
       }
@@ -645,8 +648,8 @@ import { environment } from '../../../environments/environment';
         --pro-opacity-glass-heavy: 0.2;
       }
 
-      .control-trigger,
-      .screen-selector,
+      .toolbar-trigger,
+      .toolbar-selector,
       .fullscreen-trigger {
         border-width: 2px;
       }
@@ -665,7 +668,7 @@ import { environment } from '../../../environments/environment';
 
     /* ===== 打印样式 ===== */
     @media print {
-      .control-dock,
+      .screen-toolbar,
       .fullscreen-trigger {
         display: none !important;
       }
@@ -868,27 +871,17 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
       const wrapperAspectRatio = wrapperWidth / wrapperHeight;
 
-      // 添加容错边距，确保组件不会紧贴边缘
-      const margin = this.isFullscreen ? 20 : 40;
-      const availableWidth = wrapperWidth - margin;
-      const availableHeight = wrapperHeight - margin;
+      const availableWidth = wrapperWidth;
+      const availableHeight = wrapperHeight;
 
-      // 计算宽高比例，取较小值以保证完整显示
       const scaleX = availableWidth / designWidth;
       const scaleY = availableHeight / designHeight;
 
-      // 根据屏幕比例差异选择合适的缩放策略
-      let finalScale: number;
-      if (Math.abs(designAspectRatio - wrapperAspectRatio) < 0.1) {
-        // 比例相近，使用最大可能的缩放
-        finalScale = Math.min(scaleX, scaleY);
-      } else {
-        // 比例差异较大，优先保证内容完整显示
-        finalScale = Math.min(scaleX, scaleY) * 0.95; // 留5%边距
-      }
+      const shouldScaleByHeight = wrapperAspectRatio < designAspectRatio;
+      const coverScale = shouldScaleByHeight ? scaleY : scaleX;
+      const safeScale = Number.isFinite(coverScale) && coverScale > 0 ? coverScale : 1;
 
-      // 使用更精确的缩放计算，限制最小和最大缩放比例
-      this.scale = Math.max(0.1, Math.min(3, finalScale));
+      this.scale = Math.max(0.1, Math.min(3, safeScale));
 
       // 计算居中偏移量
       const scaledWidth = designWidth * this.scale;

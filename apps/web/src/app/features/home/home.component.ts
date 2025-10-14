@@ -656,27 +656,17 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
       const wrapperAspectRatio = wrapperWidth / wrapperHeight;
 
-      // 添加容错边距，确保组件不会紧贴边缘
-      const margin = this.isFullscreen ? 20 : 40;
-      const availableWidth = wrapperWidth - margin;
-      const availableHeight = wrapperHeight - margin;
+      const availableWidth = wrapperWidth;
+      const availableHeight = wrapperHeight;
 
-      // 计算宽高比例，取较小值以保证完整显示
       const scaleX = availableWidth / designWidth;
       const scaleY = availableHeight / designHeight;
 
-      // 根据屏幕比例差异选择合适的缩放策略
-      let finalScale: number;
-      if (Math.abs(designAspectRatio - wrapperAspectRatio) < 0.1) {
-        // 比例相近，使用最大可能的缩放
-        finalScale = Math.min(scaleX, scaleY);
-      } else {
-        // 比例差异较大，优先保证内容完整显示
-        finalScale = Math.min(scaleX, scaleY) * 0.95; // 留5%边距
-      }
+      const shouldScaleByHeight = wrapperAspectRatio < designAspectRatio;
+      const coverScale = shouldScaleByHeight ? scaleY : scaleX;
+      const safeScale = Number.isFinite(coverScale) && coverScale > 0 ? coverScale : 1;
 
-      // 使用更精确的缩放计算，限制最小和最大缩放比例
-      this.scale = Math.max(0.1, Math.min(3, finalScale));
+      this.scale = Math.max(0.1, Math.min(3, safeScale));
 
       // 计算居中偏移量
       const scaledWidth = designWidth * this.scale;
