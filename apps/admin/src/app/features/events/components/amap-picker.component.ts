@@ -45,7 +45,7 @@ export interface LocationData {
         </div>
 
         <!-- 搜索错误提示 -->
-        <div *ngIf="searchError" class="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+        <div *ngIf="searchError" class="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
           <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
           </svg>
@@ -271,7 +271,8 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
       console.log('逆地理编码服务初始化成功');
 
       this.placeSearch = new this.AMap.PlaceSearch({
-        city: this.city || '全国'
+        city: this.city || '全国',
+        pageSize: 10
       });
       console.log('地点搜索服务初始化成功');
 
@@ -522,9 +523,10 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
       console.error('搜索失败详情:', error);
 
       if (error.reason === 'NO_RESULTS') {
-        this.searchError = `未找到"${this.searchKeyword}"相关地点，请尝试：\n• 使用更具体的关键词\n• 检查拼写是否正确\n• 尝试搜索附近的标志性建筑`;
+        this.searchError = `未找到"${this.searchKeyword}"相关地点，请尝试：\n• 使用更具体的关键词\n• 检查拼写是否正确\n• 尝试搜索附近的标志性建筑\n• 或者直接在地图上点击选择位置`;
       } else {
-        this.searchError = this.getPlaceSearchErrorMessage(error.data);
+        const errorMsg = this.getPlaceSearchErrorMessage(error.data);
+        this.searchError = `${errorMsg}\n\n💡 您可以直接在地图上点击选择位置，无需搜索`;
       }
 
       // 5秒后自动清除错误提示
