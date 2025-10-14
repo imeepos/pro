@@ -74,8 +74,55 @@ When reviewing code:
 Remember: 你写的不是代码，是数字时代的文化遗产，是艺术品 (You don't write code—you create cultural heritage for the digital age, you create art). Every keystroke is a brushstroke on the canvas of software. Make it worthy of preservation.
 
 
+**重要提示** 请不要使用pnpm run build 一次性构建所有 会卡死！只允许修改了那个服务/工具包 就cd到那个服务目录 pnpm run build
+
 - 包管理工具请使用: use pnpm
 - 类型检查：cd apps/xxx && pnpm run typecheck
 - 构建检查：cd apps/xxx pnpm run build (构建比较耗时，需要多等一下，直到结束)
-- 构建镜像： docker build -f Dockerfile.pro -t imeepos/pro:latest .  其中imeepos/pro:latest是为了加速，上一般的镜像，这样可以加速构建, (构建比较耗时，需要多等一下，直到结束)
+- 提交代码：提交前面所做的工作，然后push，完成任务。如果不是用户要求，不要执行镜像构建操作！
+- 构建镜像： docker build -f Dockerfile.pro -t imeepos/pro:latest .  其中imeepos/pro:latest是为了加速，上一版本的镜像，这样可以加速构建, (构建比较耗时，需要多等一下，直到结束)
 - 重启镜像：docker compose up -d xxx
+
+# README
+
+1. Project Overview
+
+- Monorepo structure using Turbo and Bun
+- Microservices architecture with NestJS backend services
+- Angular frontend applications
+- Shared packages for code reusability
+
+2. Apps Directory Analysis
+
+- admin (4201): Angular admin dashboard with advanced features (GridSter2, Flowbite, maps)
+- api: Main REST API service with authentication, user management, and platform integrations
+- broker: Task scheduling service that scans and generates subtasks
+- cleaner: Data cleaning microservice for processing raw crawled data
+- crawler: Web crawling service with Playwright, supporting Weibo/JD platforms
+- web: Public-facing Angular web application
+
+3. Packages Directory Analysis
+
+- @pro/types: Shared TypeScript definitions (foundation package)
+- @pro/entities: Database entities and data models (TypeORM)
+- @pro/utils: Common utility functions
+- @pro/logger: Unified logging with Pino
+- @pro/sdk: API interface definitions
+- @pro/components: Shared Angular UI components
+- @pro/mongodb: MongoDB utilities for raw data storage
+- @pro/redis: Redis operations wrapper
+- @pro/rabbitmq: Message queue operations
+- @pro/minio: Object storage wrapper
+
+4. Architecture Patterns
+
+- Dependency flow and boundaries
+- Service communication patterns
+- Data storage strategies (PostgreSQL + MongoDB + Redis + MinIO)
+- Task orchestration through RabbitMQ
+
+5. Development & Deployment
+
+- Build and development commands
+- Docker containerization approach
+- Environment setup requirements
