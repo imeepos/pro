@@ -57,20 +57,46 @@ export interface LocationData {
 
         <!-- 错误状态 -->
         <div *ngIf="hasError && !isLoading" class="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-          <div class="flex flex-col items-center gap-4 p-6 text-center">
+          <div class="flex flex-col items-center gap-4 p-6 text-center max-w-sm">
             <svg class="w-12 h-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
             <div>
-              <h3 class="text-sm font-medium text-gray-900 mb-1">地图加载失败</h3>
-              <p class="text-xs text-gray-600 mb-3">{{ errorMessage }}</p>
-              <button
-                type="button"
-                (click)="retryInitMap()"
-                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                重试
-              </button>
+              <h3 class="text-sm font-medium text-gray-900 mb-1">地图服务异常</h3>
+              <p class="text-xs text-gray-600 mb-3 leading-relaxed">{{ errorMessage }}</p>
+
+              <!-- 错误类型提示 -->
+              <div class="mb-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                <ng-container *ngIf="errorMessage.includes('API Key')">
+                  💡 需要管理员配置高德地图API Key
+                </ng-container>
+                <ng-container *ngIf="errorMessage.includes('网络')">
+                  💡 请检查网络连接
+                </ng-container>
+                <ng-container *ngIf="errorMessage.includes('配额')">
+                  💡 API调用次数已达上限
+                </ng-container>
+                <ng-container *ngIf="!errorMessage.includes('API Key') && !errorMessage.includes('网络') && !errorMessage.includes('配额')">
+                  💡 可能是临时服务问题
+                </ng-container>
+              </div>
+
+              <div class="flex gap-2 justify-center">
+                <button
+                  type="button"
+                  (click)="retryInitMap()"
+                  class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  重试
+                </button>
+                <button
+                  type="button"
+                  (click)="clearCacheAndRetry()"
+                  class="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  清除缓存重试
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -158,21 +184,32 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
     this.errorMessage = '';
 
     try {
+      console.log('开始初始化地图...');
+
       // 使用异步方式获取API Key
       const amapKey = await new Promise<string>((resolve, reject) => {
+        console.log('正在获取高德地图API Key...');
+
         this.configService.getAmapApiKeyObservable()
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (key) => {
+              console.log('获取到API Key:', key ? `${key.substring(0, 8)}...` : 'null');
+
               if (key && key !== 'YOUR_AMAP_KEY') {
                 resolve(key);
               } else {
-                reject(new Error('高德地图API Key未配置或无效'));
+                reject(new Error('高德地图API Key未配置或无效，请联系管理员配置有效的API Key'));
               }
             },
-            error: (error) => reject(error)
+            error: (error) => {
+              console.error('获取API Key失败:', error);
+              reject(new Error(`获取API Key失败: ${error.message}`));
+            }
           });
       });
+
+      console.log('开始加载高德地图JS API...');
 
       // 加载高德地图
       this.AMap = await AMapLoader.load({
@@ -181,9 +218,13 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         plugins: ['AMap.Geocoder', 'AMap.PlaceSearch', 'AMap.AutoComplete']
       });
 
+      console.log('高德地图JS API加载成功');
+
       const center = this.longitude && this.latitude
         ? [this.longitude, this.latitude]
         : [116.397428, 39.90923]; // 默认北京
+
+      console.log('创建地图实例，中心点:', center);
 
       this.map = new this.AMap.Map(this.mapId, {
         zoom: 13,
@@ -191,21 +232,30 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         viewMode: '3D'
       });
 
+      console.log('地图实例创建成功');
+
+      // 初始化地理编码服务
       this.geocoder = new this.AMap.Geocoder();
+      console.log('逆地理编码服务初始化成功');
+
       this.placeSearch = new this.AMap.PlaceSearch({
         city: this.city || '全国'
       });
+      console.log('地点搜索服务初始化成功');
 
       if (this.longitude && this.latitude) {
+        console.log('添加初始标记点:', { longitude: this.longitude, latitude: this.latitude });
         this.addMarker(this.longitude, this.latitude);
         await this.getAddress(this.longitude, this.latitude);
       }
 
       this.map.on('click', (e: any) => {
+        console.log('地图点击事件:', e.lnglat);
         this.onMapClick(e.lnglat.lng, e.lnglat.lat);
       });
 
       this.mapInitialized = true;
+      console.log('地图初始化完成');
     } catch (error) {
       console.error('地图初始化失败:', error);
       this.hasError = true;
@@ -240,31 +290,100 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async getAddress(lng: number, lat: number): Promise<void> {
-    try {
-      const result: any = await new Promise((resolve, reject) => {
+    const maxRetries = 3;
+    let retryCount = 0;
+
+    const attemptGeocoding = (): Promise<any> => {
+      return new Promise((resolve, reject) => {
         this.geocoder.getAddress([lng, lat], (status: string, data: any) => {
+          console.log('逆地理编码响应:', { status, info: data?.info, lng, lat });
+
           if (status === 'complete' && data.info === 'OK') {
             resolve(data);
           } else {
-            reject(new Error('逆地理编码失败'));
+            const errorDetails = {
+              status,
+              info: data?.info,
+              message: data?.message,
+              lng,
+              lat,
+              retryCount
+            };
+            console.error('逆地理编码失败详情:', errorDetails);
+            reject(new Error(this.getGeocoderErrorMessage(data)));
           }
         });
       });
+    };
 
-      this.selectedLocation = {
-        longitude: lng,
-        latitude: lat,
-        address: result.regeocode.formattedAddress
-      };
+    while (retryCount < maxRetries) {
+      try {
+        const result = await attemptGeocoding();
 
-      this.locationPick.emit(this.selectedLocation);
-    } catch (error) {
-      console.error('获取地址失败:', error);
-      this.selectedLocation = {
-        longitude: lng,
-        latitude: lat
-      };
-      this.locationPick.emit(this.selectedLocation);
+        this.selectedLocation = {
+          longitude: lng,
+          latitude: lat,
+          address: result.regeocode.formattedAddress
+        };
+
+        console.log('逆地理编码成功:', this.selectedLocation);
+        this.locationPick.emit(this.selectedLocation);
+        return;
+      } catch (error) {
+        retryCount++;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`第${retryCount}次逆地理编码失败:`, errorMessage);
+
+        if (retryCount < maxRetries) {
+          // 指数退避重试
+          const delay = Math.pow(2, retryCount) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          console.error('逆地理编码最终失败，使用坐标位置:', { lng, lat, error: errorMessage });
+
+          // 降级处理：即使没有地址信息，也提供坐标
+          this.selectedLocation = {
+            longitude: lng,
+            latitude: lat,
+            address: `坐标位置: ${lng.toFixed(6)}, ${lat.toFixed(6)}`
+          };
+
+          this.locationPick.emit(this.selectedLocation);
+        }
+      }
+    }
+  }
+
+  /**
+   * 根据高德API响应获取详细的错误信息
+   */
+  private getGeocoderErrorMessage(data: any): string {
+    if (!data) return '网络连接异常';
+
+    const { info, message } = data;
+
+    // 高德地图常见错误代码
+    switch (info) {
+      case 'INVALID_PARAMS':
+        return '参数无效，请检查坐标格式';
+      case 'USERKEY_REJECT':
+        return 'API Key无效或被拒绝，请检查配置';
+      case 'INVALID_USER_SCODE':
+        return 'API Key权限不足，请开启Web服务权限';
+      case 'INSUFFICIENT_PRIVILEGES':
+        return 'API Key权限不足或服务未开通';
+      case 'USERKEY_PLAT_NOSUPPORT':
+        return 'API Key平台不支持当前服务';
+      case 'OUT_OF_SERVICE':
+        return '服务暂停，请稍后重试';
+      case 'OVER_QUOTA':
+        return 'API调用配额已用完，请检查账户余额';
+      case 'UNKNOWN_ERROR':
+        return message || '服务器内部错误';
+      case 'REQUEST_TOO_FAST':
+        return '请求频率过高，请降低调用频率';
+      default:
+        return `逆地理编码失败 (${info}): ${message || '未知错误'}`;
     }
   }
 
@@ -305,6 +424,32 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
    * 重试初始化地图
    */
   async retryInitMap(): Promise<void> {
+    console.log('用户点击重试，重新初始化地图...');
+    await this.performRetry();
+  }
+
+  /**
+   * 清除缓存并重试
+   */
+  async clearCacheAndRetry(): Promise<void> {
+    console.log('用户点击清除缓存重试...');
+
+    // 清除配置服务的缓存
+    this.configService.clearCache();
+
+    // 清除地图加载器的缓存
+    if (typeof window !== 'undefined' && (window as any).AMapLoader) {
+      console.log('清除高德地图加载器缓存...');
+      // 高德地图加载器缓存清理（如果可用）
+    }
+
+    await this.performRetry();
+  }
+
+  /**
+   * 执行重试逻辑
+   */
+  private async performRetry(): Promise<void> {
     if (this.map) {
       this.map.destroy();
       this.map = null;
@@ -318,6 +463,7 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
       await this.initMap();
     } catch (error) {
       console.error('重试初始化地图失败:', error);
+      // 不再设置hasError，让initMap方法处理
     }
   }
 

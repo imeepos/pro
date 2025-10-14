@@ -43,7 +43,8 @@
       "Bash(pnpm run build:*)",
       "Read(//home/ubuntu/**)",
       "Bash(pnpm run typecheck:*)",
-      "Bash(/dev/null)"
+      "Bash(/dev/null)",
+      "WebFetch(domain:lbs.amap.com)"
     ],
     "deny": [],
     "ask": []

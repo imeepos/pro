@@ -82,8 +82,22 @@ export class ConfigService {
    * 异步获取高德地图API Key
    */
   private fetchAmapApiKeyAsync(): Observable<string> {
+    console.log('开始异步获取高德地图API Key...');
+
     return from(this.sdk.config.getAmapApiKey()).pipe(
       map(apiKey => {
+        console.log('从后端获取到API Key:', apiKey ? `${apiKey.substring(0, 8)}...` : 'null');
+
+        // 验证API Key的有效性
+        if (!apiKey || apiKey === 'YOUR_AMAP_KEY' || apiKey.length < 10) {
+          console.warn('后端返回的API Key无效:', {
+            hasKey: !!apiKey,
+            length: apiKey?.length || 0,
+            isPlaceholder: apiKey === 'YOUR_AMAP_KEY'
+          });
+          throw new Error('后端返回的API Key无效');
+        }
+
         // 缓存结果 (1小时有效期)
         const expiresAt = Date.now() + (60 * 60 * 1000);
         this.amapApiKeyCache = {
@@ -92,20 +106,34 @@ export class ConfigService {
           isExpired: () => Date.now() > expiresAt
         };
 
+        console.log('API Key验证通过，已缓存');
         this.amapApiKeySubject.next(apiKey);
         return apiKey;
       }),
       catchError(error => {
-        console.error('获取高德地图API Key失败:', error);
+        console.error('获取高德地图API Key失败:', {
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
 
-        // 降级策略：如果环境变量中有值，即使不理想也使用
+        // 降级策略：如果环境变量中有值，检查是否可用
         const envApiKey = environment.amapApiKey || '';
-        if (envApiKey) {
+        if (envApiKey && envApiKey !== 'YOUR_AMAP_KEY' && envApiKey.length >= 10) {
+          console.warn('使用环境变量中的API Key作为降级方案:', `${envApiKey.substring(0, 8)}...`);
           this.amapApiKeySubject.next(envApiKey);
           return of(envApiKey);
+        } else if (envApiKey) {
+          console.warn('环境变量中的API Key也无效:', {
+            hasKey: !!envApiKey,
+            length: envApiKey?.length || 0,
+            isPlaceholder: envApiKey === 'YOUR_AMAP_KEY'
+          });
+        } else {
+          console.warn('环境变量中未找到API Key配置');
         }
 
         // 返回空字符串，让调用方处理
+        console.error('所有API Key获取方式都失败，返回空值');
         return of('');
       }),
       shareReplay(1)

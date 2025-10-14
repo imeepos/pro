@@ -14,7 +14,8 @@ import {
   DropdownItem,
   provideFlowbiteDropdownConfig,
   provideFlowbiteDropdownContentConfig,
-  provideFlowbiteDropdownItemConfig
+  provideFlowbiteDropdownItemConfig,
+  FlowbiteDropdownStateToken
 } from 'flowbite-angular/dropdown';
 
 export interface SelectOption {
@@ -49,7 +50,11 @@ export interface SelectOption {
       color: 'default'
     }),
     provideFlowbiteDropdownContentConfig({}),
-    provideFlowbiteDropdownItemConfig({})
+    provideFlowbiteDropdownItemConfig({}),
+    {
+      provide: FlowbiteDropdownStateToken,
+      useValue: {}
+    }
   ],
   templateUrl: './select.component.html',
   styleUrl: './select.component.scss'
