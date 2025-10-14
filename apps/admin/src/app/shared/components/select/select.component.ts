@@ -1,67 +1,45 @@
-import { Component, forwardRef, input, model, output, effect, signal } from '@angular/core';
+import { Component, forwardRef, input, model, output, effect, signal, ElementRef, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import {
-  FormField,
-  FormControl,
-  provideFlowbiteFormFieldConfig,
-  provideFlowbiteFormControlConfig,
-  FlowbiteFormFieldSizes,
-  FlowbiteFormFieldColors
-} from 'flowbite-angular/form';
-import {
-  DropdownContent,
-  DropdownItem,
-  provideFlowbiteDropdownConfig,
-  provideFlowbiteDropdownContentConfig,
-  provideFlowbiteDropdownItemConfig,
-  provideFlowbiteDropdownState,
-  FlowbiteDropdownStateToken
-} from 'flowbite-angular/dropdown';
-import { NgpRovingFocusGroupToken } from 'ng-primitives/roving-focus';
+import { trigger, transition, style, animate } from '@angular/animations';
 export interface SelectOption {
   value: string | number;
   label: string;
   disabled?: boolean;
 }
 
+type SelectSize = 'sm' | 'md' | 'lg';
+type SelectColor = 'default' | 'primary' | 'success' | 'warning' | 'error';
+
 @Component({
   selector: 'app-select',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormField,
-    FormControl,
-    DropdownContent,
-    DropdownItem
-  ],
+  imports: [CommonModule],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => SelectComponent),
       multi: true
-    },
-    provideFlowbiteFormFieldConfig({
-      size: 'md',
-      color: 'default',
-      mode: 'normal'
-    }),
-    provideFlowbiteFormControlConfig({}),
-    provideFlowbiteDropdownConfig({
-      color: 'default'
-    }),
-    provideFlowbiteDropdownContentConfig({}),
-    provideFlowbiteDropdownItemConfig({}),
-    provideFlowbiteDropdownState(),
-    {
-      provide: NgpRovingFocusGroupToken,
-      useValue: null
     }
   ],
   templateUrl: './select.component.html',
-  styleUrl: './select.component.scss'
+  styleUrl: './select.component.scss',
+  animations: [
+    trigger('fadeInOut', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(-8px)' }),
+        animate('150ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ]),
+      transition(':leave', [
+        style({ opacity: 1, transform: 'translateY(0)' }),
+        animate('150ms ease-in', style({ opacity: 0, transform: 'translateY(-8px)' }))
+      ])
+    ])
+  ]
 })
 export class SelectComponent implements ControlValueAccessor {
+  @ViewChild('searchInput', { static: false }) searchInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('selectContainer', { static: true }) selectContainerRef!: ElementRef;
 
   // Inputs
   options = input<SelectOption[]>([]);
@@ -70,11 +48,8 @@ export class SelectComponent implements ControlValueAccessor {
   clearable = input<boolean>(false);
   searchable = input<boolean>(false);
   loading = input<boolean>(false);
-
-  // Flowbite theme inputs
-  size = input<keyof FlowbiteFormFieldSizes>('md');
-  color = input<keyof FlowbiteFormFieldColors>('default');
-  customTheme = input<any>({});
+  size = input<SelectSize>('md');
+  color = input<SelectColor>('default');
 
   // Model for two-way binding
   value = model<string | number | null>(null);
@@ -93,27 +68,18 @@ export class SelectComponent implements ControlValueAccessor {
 
   constructor() {
     effect(() => {
-      // Update highlighted index when search term changes
       this.highlightedIndex.set(-1);
     });
-
-    // Add click outside listener using document click handling
-    document.addEventListener('click', this.handleClickOutside.bind(this));
   }
 
-  ngOnDestroy() {
-    document.removeEventListener('click', this.handleClickOutside.bind(this));
-  }
-
-  private handleClickOutside = (event: MouseEvent): void => {
-    const target = event.target as Element;
-    const dropdownContainer = target.closest('[flowbiteDropdown]');
-
-    // Close dropdown if clicking outside
-    if (!dropdownContainer && this.isOpen()) {
-      this.closeDropdown();
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.selectContainerRef.nativeElement.contains(event.target)) {
+      if (this.isOpen()) {
+        this.closeDropdown();
+      }
     }
-  };
+  }
 
   // Enhanced value getter with better null handling
   get selectedOption(): SelectOption | null {
@@ -191,6 +157,27 @@ export class SelectComponent implements ControlValueAccessor {
     this.searchTerm.set(term);
   }
 
+  handleSearchKeydown(event: KeyboardEvent): void {
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.highlightNext();
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.highlightPrevious();
+        break;
+      case 'Enter':
+        event.preventDefault();
+        this.selectHighlighted();
+        break;
+      case 'Escape':
+        event.preventDefault();
+        this.closeDropdown();
+        break;
+    }
+  }
+
   highlightNext(): void {
     const filtered = this.filteredOptions;
     const current = this.highlightedIndex();
@@ -215,12 +202,33 @@ export class SelectComponent implements ControlValueAccessor {
   }
 
   private focusSearch(): void {
-    if (this.searchable()) {
+    if (this.searchable() && this.searchInputRef) {
       setTimeout(() => {
-        const searchInput = document.querySelector('.search-input') as HTMLInputElement;
-        searchInput?.focus();
+        this.searchInputRef?.nativeElement?.focus();
       });
     }
+  }
+
+  // Size classes utility
+  getSizeClasses(): string {
+    const sizeMap = {
+      sm: 'text-xs px-2 py-1.5 min-h-[32px]',
+      md: 'text-sm px-3 py-2 min-h-[40px]',
+      lg: 'text-base px-4 py-3 min-h-[48px]'
+    };
+    return sizeMap[this.size()];
+  }
+
+  // Color classes utility
+  getColorClasses(): string {
+    const colorMap = {
+      default: 'border-gray-300 focus:border-blue-500 focus:ring-blue-200',
+      primary: 'border-blue-300 focus:border-blue-600 focus:ring-blue-300',
+      success: 'border-green-300 focus:border-green-600 focus:ring-green-300',
+      warning: 'border-yellow-300 focus:border-yellow-600 focus:ring-yellow-300',
+      error: 'border-red-300 focus:border-red-600 focus:ring-red-300'
+    };
+    return colorMap[this.color()];
   }
 
   // Enhanced keyboard navigation with better accessibility

@@ -1,20 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { SelectComponent, SelectOption } from './select.component';
-import {
-  FormField,
-  FormControl,
-  provideFlowbiteFormFieldConfig,
-  provideFlowbiteFormControlConfig,
-} from 'flowbite-angular/form';
-import {
-  Dropdown,
-  DropdownContent,
-  DropdownItem,
-  provideFlowbiteDropdownConfig,
-  provideFlowbiteDropdownContentConfig,
-  provideFlowbiteDropdownItemConfig
-} from 'flowbite-angular/dropdown';
 
 describe('SelectComponent', () => {
   let component: SelectComponent;
@@ -32,24 +19,7 @@ describe('SelectComponent', () => {
         SelectComponent,
         FormsModule,
         ReactiveFormsModule,
-        FormField,
-        FormControl,
-        Dropdown,
-        DropdownContent,
-        DropdownItem
-      ],
-      providers: [
-        provideFlowbiteFormFieldConfig({
-          size: 'md',
-          color: 'default',
-          mode: 'normal'
-        }),
-        provideFlowbiteFormControlConfig({}),
-        provideFlowbiteDropdownConfig({
-          color: 'default'
-        }),
-        provideFlowbiteDropdownContentConfig({}),
-        provideFlowbiteDropdownItemConfig({})
+        BrowserAnimationsModule
       ]
     }).compileComponents();
 
@@ -168,6 +138,50 @@ describe('SelectComponent', () => {
     expect(component.isOpen()).toBe(true);
 
     component.closeDropdown();
+    expect(component.isOpen()).toBe(false);
+  });
+
+  it('should apply correct size classes', () => {
+    expect(component.getSizeClasses()).toContain('text-sm px-3 py-2 min-h-[40px]');
+
+    component.size = 'sm' as any;
+    expect(component.getSizeClasses()).toContain('text-xs px-2 py-1.5 min-h-[32px]');
+
+    component.size = 'lg' as any;
+    expect(component.getSizeClasses()).toContain('text-base px-4 py-3 min-h-[48px]');
+  });
+
+  it('should apply correct color classes', () => {
+    expect(component.getColorClasses()).toContain('border-gray-300 focus:border-blue-500 focus:ring-blue-200');
+
+    component.color = 'primary' as any;
+    expect(component.getColorClasses()).toContain('border-blue-300 focus:border-blue-600 focus:ring-blue-300');
+
+    component.color = 'success' as any;
+    expect(component.getColorClasses()).toContain('border-green-300 focus:border-green-600 focus:ring-green-300');
+  });
+
+  it('should handle search keydown events', () => {
+    component.searchable = true as any;
+    component.isOpen.set(true);
+    fixture.detectChanges();
+
+    const mockEvent = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+    spyOn(mockEvent, 'preventDefault');
+
+    component.handleSearchKeydown(mockEvent);
+    expect(mockEvent.preventDefault).toHaveBeenCalled();
+  });
+
+  it('should handle document click outside', () => {
+    component.isOpen.set(true);
+    fixture.detectChanges();
+
+    // Create a mock event that simulates clicking outside the component
+    const mockEvent = {
+      target: document.createElement('div')
+    } as any;
+    component.onDocumentClick(mockEvent);
     expect(component.isOpen()).toBe(false);
   });
 });
