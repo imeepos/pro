@@ -105,12 +105,14 @@
             <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
               发生时间 <span class="text-red-500">*</span>
             </label>
-            <pro-date-time-picker
+            <pro-material-date-time-picker
               formControlName="occurTime"
               placeholder="请选择发生时间"
               [required]="true"
+              [showTime]="true"
+              [allowClear]="true"
               class="w-full"
-            ></pro-date-time-picker>
+            ></pro-material-date-time-picker>
           </div>
 
           <!-- 地图选点 -->

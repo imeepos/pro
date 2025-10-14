@@ -2,6 +2,10 @@ import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { MatNativeDateModule } from '@angular/material/core';
+import { DateFnsAdapter } from '@angular/material-date-fns-adapter';
+import { MAT_DATE_LOCALE } from '@angular/material/core';
+import { zhCN } from 'date-fns/locale';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
@@ -63,6 +67,17 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([tokenInterceptor, errorInterceptor])),
     provideAnimations(),
+
+    // Angular Material 日期配置
+    {
+      provide: MAT_DATE_LOCALE,
+      useValue: 'zh-CN'
+    },
+    {
+      provide: DateFnsAdapter,
+      useClass: DateFnsAdapter,
+      deps: [MAT_DATE_LOCALE]
+    },
 
     // Token存储服务的接口适配
     {
