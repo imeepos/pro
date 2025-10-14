@@ -319,11 +319,27 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     const token = this.tokenStorage.getToken();
     console.log('[HomeComponent] 获取认证令牌', { hasToken: !!token, tokenLength: token?.length });
 
-    const wsConfig = createScreensWebSocketConfig(environment.wsUrl, token ?? undefined);
+    const wsConfig = createScreensWebSocketConfig(environment.wsUrl, token ?? undefined, {
+      autoRefresh: true,
+      onTokenExpired: async () => {
+        console.log('[HomeComponent] JWT Token 已过期，跳转到登录页');
+        this.handleTokenExpired();
+        throw new Error('Token expired - redirecting to login');
+      }
+    });
     console.log('[HomeComponent] 创建WebSocket配置', { wsUrl: environment.wsUrl, namespace: environment.wsNamespace });
 
     this.wsManager.connectToNamespace(wsConfig);
     console.log('[HomeComponent] WebSocket连接请求已发送');
+  }
+
+  private handleTokenExpired(): void {
+    // 清除本地存储的认证信息
+    this.tokenStorage.clearToken();
+    this.authStateService.logout();
+
+    // 跳转到登录页
+    this.router.navigate(['/auth/login']);
   }
 
   private async loadScreensAndSetDefault(): Promise<void> {

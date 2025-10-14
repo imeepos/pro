@@ -1,5 +1,6 @@
 import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { WebSocketManager, createNotificationWebSocketConfig } from '@pro/components';
 import { Subscription } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
@@ -23,7 +24,10 @@ export class NotificationComponent implements OnInit, OnDestroy {
   notifications: Notification[] = [];
   private subscription?: Subscription;
 
-  constructor(private wsManager: WebSocketManager) {}
+  constructor(
+    private wsManager: WebSocketManager,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.subscribeToNotifications();
@@ -93,10 +97,24 @@ export class NotificationComponent implements OnInit, OnDestroy {
         .subscribe((data: any) => {
           this.handleNotification(data);
         });
+
+      // 监听认证失败事件
+      ws.on('auth:token-expired')
+        .subscribe(() => {
+          console.log('[NotificationComponent] Token 过期，跳转登录页');
+          this.handleTokenExpired();
+        });
     } else {
       this.subscription = notificationWs.on('notification')
         .subscribe((data: any) => {
           this.handleNotification(data);
+        });
+
+      // 监听认证失败事件
+      notificationWs.on('auth:token-expired')
+        .subscribe(() => {
+          console.log('[NotificationComponent] Token 过期，跳转登录页');
+          this.handleTokenExpired();
         });
     }
   }
@@ -115,6 +133,15 @@ export class NotificationComponent implements OnInit, OnDestroy {
     if (this.notifications.length > 50) {
       this.notifications = this.notifications.slice(0, 50);
     }
+  }
+
+  private handleTokenExpired(): void {
+    // 清除本地存储的认证信息
+    localStorage.removeItem(environment.tokenKey);
+    localStorage.removeItem(environment.refreshTokenKey);
+
+    // 跳转到登录页
+    this.router.navigate(['/auth/login']);
   }
 
   @HostListener('document:click', ['$event'])

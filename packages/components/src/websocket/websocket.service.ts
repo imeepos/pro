@@ -139,6 +139,12 @@ export class WebSocketService implements WebSocketInstance {
       return;
     }
 
+    if (error.message.includes('jwt expired')) {
+      this.updateConnectionState(ConnectionState.Failed);
+      this.emitTokenExpired();
+      return;
+    }
+
     if (this.shouldAttemptReconnection()) {
       this.attemptReconnection();
     } else {
@@ -249,5 +255,11 @@ export class WebSocketService implements WebSocketInstance {
     this.reconnectAttempts = 0;
     this.eventStreams.forEach(stream => stream.subject.complete());
     this.eventStreams.clear();
+  }
+
+  private emitTokenExpired(): void {
+    if (this.socket) {
+      this.socket.emit('auth:token-expired');
+    }
   }
 }
