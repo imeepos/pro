@@ -14,6 +14,7 @@ import { environment } from '../environments/environment';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
 import { zh_CN, provideNzI18n } from 'ng-zorro-antd/i18n';
 import { provideNzConfig } from 'ng-zorro-antd/core/config';
+import { NZ_DATE_LOCALE, en_US } from 'ng-zorro-antd/i18n';
 import { DatePipe } from '@angular/common';
 import { SafeDatePipe } from './shared/pipes/safe-date.pipe';
 import * as AllIcons from '@ant-design/icons-angular/icons';
@@ -80,7 +81,12 @@ export const appConfig: ApplicationConfig = {
       useClass: SafeDatePipe
     },
 
-    
+    // ng-zorro-antd 日期本地化配置
+    {
+      provide: NZ_DATE_LOCALE,
+      useValue: zh_CN
+    },
+
     // Token存储服务的接口适配
     {
       provide: 'ITokenStorage',

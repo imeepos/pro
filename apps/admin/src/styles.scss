@@ -18,6 +18,41 @@
   --background-color-light: #fafafa;
 }
 
+// ng-zorro-antd 日期选择器样式优化
+.ant-picker {
+  width: 100%;
+}
+
+.ant-picker-large {
+  font-size: 16px;
+  padding: 8px 11px;
+}
+
+// 自定义日期选择器弹窗样式
+.custom-date-picker {
+  .ant-picker-panel {
+    border: 1px solid var(--border-color-base);
+    box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .ant-picker-header {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 8px 12px;
+  }
+
+  .ant-picker-cell-in-view.ant-picker-cell-today .ant-picker-cell-inner {
+    border-color: var(--primary-color);
+    background-color: #e6f7ff;
+  }
+
+  .ant-picker-cell-selected .ant-picker-cell-inner {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+}
+
 html,
 body {
   height: 100%;
