@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import AMapLoader from '@amap/amap-jsapi-loader';
@@ -192,7 +192,11 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @Output() locationPick = new EventEmitter<LocationData>();
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
+  ) {}
 
   mapId = `amap-picker-${Math.random().toString(36).substr(2, 9)}`;
   searchKeyword = '';
@@ -237,9 +241,13 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async initMap(): Promise<void> {
-    this.isLoading = true;
-    this.hasError = false;
-    this.errorMessage = '';
+    // 在变更检测之外设置加载状态
+    this.ngZone.runOutsideAngular(() => {
+      this.isLoading = true;
+      this.hasError = false;
+      this.errorMessage = '';
+      this.cdr.detectChanges();
+    });
 
     try {
       console.log('开始初始化地图...');
@@ -316,19 +324,34 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         await this.getAddress(this.longitude, this.latitude);
       }
 
-      this.map.on('click', (e: any) => {
-        console.log('地图点击事件:', e.lnglat);
-        this.onMapClick(e.lnglat.lng, e.lnglat.lat);
+      // 地图事件监听器放在 NgZone 之外
+      this.ngZone.runOutsideAngular(() => {
+        this.map.on('click', (e: any) => {
+          console.log('地图点击事件:', e.lnglat);
+          this.ngZone.run(() => {
+            this.onMapClick(e.lnglat.lng, e.lnglat.lat);
+          });
+        });
       });
 
-      this.mapInitialized = true;
+      // 在 NgZone 内更新组件状态
+      this.ngZone.run(() => {
+        this.mapInitialized = true;
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      });
+
       console.log('地图初始化完成');
     } catch (error) {
       console.error('地图初始化失败:', error);
-      this.hasError = true;
-      this.errorMessage = this.getErrorMessage(error);
-    } finally {
-      this.isLoading = false;
+
+      // 在 NgZone 内更新错误状态
+      this.ngZone.run(() => {
+        this.hasError = true;
+        this.errorMessage = this.getErrorMessage(error);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      });
     }
   }
 
@@ -347,9 +370,14 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         draggable: true
       });
 
-      this.marker.on('dragend', (e: any) => {
-        const position = e.target.getPosition();
-        this.onMapClick(position.lng, position.lat);
+      // 拖拽事件监听器放在 NgZone 之外
+      this.ngZone.runOutsideAngular(() => {
+        this.marker.on('dragend', (e: any) => {
+          const position = e.target.getPosition();
+          this.ngZone.run(() => {
+            this.onMapClick(position.lng, position.lat);
+          });
+        });
       });
     }
 
@@ -362,23 +390,26 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const attemptGeocoding = (): Promise<any> => {
       return new Promise((resolve, reject) => {
-        this.geocoder.getAddress([lng, lat], (status: string, data: any) => {
-          console.log('逆地理编码响应:', { status, info: data?.info, lng, lat });
+        // 逆地理编码调用放在 NgZone 之外
+        this.ngZone.runOutsideAngular(() => {
+          this.geocoder.getAddress([lng, lat], (status: string, data: any) => {
+            console.log('逆地理编码响应:', { status, info: data?.info, lng, lat });
 
-          if (status === 'complete' && data.info === 'OK') {
-            resolve(data);
-          } else {
-            const errorDetails = {
-              status,
-              info: data?.info,
-              message: data?.message,
-              lng,
-              lat,
-              retryCount
-            };
-            console.error('逆地理编码失败详情:', errorDetails);
-            reject(new Error(this.getGeocoderErrorMessage(data)));
-          }
+            if (status === 'complete' && data.info === 'OK') {
+              resolve(data);
+            } else {
+              const errorDetails = {
+                status,
+                info: data?.info,
+                message: data?.message,
+                lng,
+                lat,
+                retryCount
+              };
+              console.error('逆地理编码失败详情:', errorDetails);
+              reject(new Error(this.getGeocoderErrorMessage(data)));
+            }
+          });
         });
       });
     };
@@ -390,15 +421,19 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         // 解析详细地址信息
         const addressInfo = this.parseAddressInfo(result.regeocode);
 
-        this.selectedLocation = {
-          longitude: lng,
-          latitude: lat,
-          address: result.regeocode.formattedAddress,
-          ...addressInfo
-        };
+        // 在 NgZone 内更新组件状态
+        this.ngZone.run(() => {
+          this.selectedLocation = {
+            longitude: lng,
+            latitude: lat,
+            address: result.regeocode.formattedAddress,
+            ...addressInfo
+          };
 
-        console.log('逆地理编码成功:', this.selectedLocation);
-        this.locationPick.emit(this.selectedLocation);
+          console.log('逆地理编码成功:', this.selectedLocation);
+          this.locationPick.emit(this.selectedLocation);
+          this.cdr.detectChanges();
+        });
         return;
       } catch (error) {
         retryCount++;
@@ -413,13 +448,16 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
           console.error('逆地理编码最终失败，使用坐标位置:', { lng, lat, error: errorMessage });
 
           // 降级处理：即使没有地址信息，也提供坐标
-          this.selectedLocation = {
-            longitude: lng,
-            latitude: lat,
-            address: `坐标位置: ${lng.toFixed(6)}, ${lat.toFixed(6)}`
-          };
+          this.ngZone.run(() => {
+            this.selectedLocation = {
+              longitude: lng,
+              latitude: lat,
+              address: `坐标位置: ${lng.toFixed(6)}, ${lat.toFixed(6)}`
+            };
 
-          this.locationPick.emit(this.selectedLocation);
+            this.locationPick.emit(this.selectedLocation);
+            this.cdr.detectChanges();
+          });
         }
       }
     }
@@ -565,11 +603,18 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   async searchLocation(): Promise<void> {
     if (!this.searchKeyword.trim()) {
-      this.searchError = '请输入搜索关键词';
+      this.ngZone.run(() => {
+        this.searchError = '请输入搜索关键词';
+        this.cdr.detectChanges();
+      });
       return;
     }
 
-    this.searchError = '';
+    this.ngZone.run(() => {
+      this.searchError = '';
+      this.cdr.detectChanges();
+    });
+
     console.log('开始搜索地点:', {
       keyword: this.searchKeyword,
       city: this.city || '全国'
@@ -577,23 +622,26 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
 
     try {
       const result: any = await new Promise((resolve, reject) => {
-        this.placeSearch.search(this.searchKeyword, (status: string, data: any) => {
-          console.log('地点搜索响应:', {
-            status,
-            info: data?.info,
-            poisCount: data?.poiList?.pois?.length || 0,
-            keyword: this.searchKeyword
-          });
+        // 地点搜索调用放在 NgZone 之外
+        this.ngZone.runOutsideAngular(() => {
+          this.placeSearch.search(this.searchKeyword, (status: string, data: any) => {
+            console.log('地点搜索响应:', {
+              status,
+              info: data?.info,
+              poisCount: data?.poiList?.pois?.length || 0,
+              keyword: this.searchKeyword
+            });
 
-          if (status === 'complete' && data.info === 'OK') {
-            if (data.poiList?.pois?.length > 0) {
-              resolve(data);
+            if (status === 'complete' && data.info === 'OK') {
+              if (data.poiList?.pois?.length > 0) {
+                resolve(data);
+              } else {
+                reject({ status, data, reason: 'NO_RESULTS' });
+              }
             } else {
-              reject({ status, data, reason: 'NO_RESULTS' });
+              reject({ status, data, reason: 'API_ERROR' });
             }
-          } else {
-            reject({ status, data, reason: 'API_ERROR' });
-          }
+          });
         });
       });
 
@@ -615,27 +663,40 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
       // 解析地址信息
       const addressInfo = this.parsePoiAddressInfo(poi);
 
-      this.selectedLocation = {
-        longitude: lng,
-        latitude: lat,
-        address: poi.name + ' ' + poi.address,
-        ...addressInfo
-      };
-      this.locationPick.emit(this.selectedLocation);
+      // 在 NgZone 内更新组件状态
+      this.ngZone.run(() => {
+        this.selectedLocation = {
+          longitude: lng,
+          latitude: lat,
+          address: poi.name + ' ' + poi.address,
+          ...addressInfo
+        };
+        this.locationPick.emit(this.selectedLocation);
+        this.cdr.detectChanges();
+      });
     } catch (error: any) {
       console.error('搜索失败详情:', error);
 
-      if (error.reason === 'NO_RESULTS') {
-        this.searchError = `未找到"${this.searchKeyword}"相关地点，请尝试：\n• 使用更具体的关键词\n• 检查拼写是否正确\n• 尝试搜索附近的标志性建筑\n• 或者直接在地图上点击选择位置`;
-      } else {
-        const errorMsg = this.getPlaceSearchErrorMessage(error.data);
-        this.searchError = `${errorMsg}\n\n💡 您可以直接在地图上点击选择位置，无需搜索`;
-      }
+      // 在 NgZone 内更新错误状态
+      this.ngZone.run(() => {
+        if (error.reason === 'NO_RESULTS') {
+          this.searchError = `未找到"${this.searchKeyword}"相关地点，请尝试：\n• 使用更具体的关键词\n• 检查拼写是否正确\n• 尝试搜索附近的标志性建筑\n• 或者直接在地图上点击选择位置`;
+        } else {
+          const errorMsg = this.getPlaceSearchErrorMessage(error.data);
+          this.searchError = `${errorMsg}\n\n💡 您可以直接在地图上点击选择位置，无需搜索`;
+        }
+        this.cdr.detectChanges();
+      });
 
       // 5秒后自动清除错误提示
-      setTimeout(() => {
-        this.searchError = '';
-      }, 5000);
+      this.ngZone.runOutsideAngular(() => {
+        setTimeout(() => {
+          this.ngZone.run(() => {
+            this.searchError = '';
+            this.cdr.detectChanges();
+          });
+        }, 5000);
+      });
     }
   }
 
@@ -705,9 +766,13 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
       this.map = null;
     }
 
-    this.mapInitialized = false;
-    this.hasError = false;
-    this.errorMessage = '';
+    // 在 NgZone 内重置状态
+    this.ngZone.run(() => {
+      this.mapInitialized = false;
+      this.hasError = false;
+      this.errorMessage = '';
+      this.cdr.detectChanges();
+    });
 
     try {
       await this.initMap();
