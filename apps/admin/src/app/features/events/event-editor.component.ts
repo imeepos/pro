@@ -34,9 +34,7 @@ import { TemplateRef, ViewChild } from '@angular/core';
     ReactiveFormsModule,
     ...FORM_NZ_MODULES,
     ...COMMON_NZ_MODULES,
-    AmapPickerComponent,
     TagSelectorComponent,
-    DateTimePickerComponent,
     ImageUploadComponent,
     FileUploadComponent,
     VideoUploadComponent

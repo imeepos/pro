@@ -76,6 +76,7 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
+import { NzSpaceModule } from 'ng-zorro-antd/space';
 
 // 重新导出组件
 export {
@@ -128,7 +129,8 @@ export {
   NzTabsModule,
   NzTypographyModule,
   NzIconModule,
-  NzBadgeModule
+  NzBadgeModule,
+  NzSpaceModule
 };
 
 // 常用组件组合导出
@@ -149,7 +151,9 @@ export const COMMON_NZ_MODULES = [
   NzFormModule,
   NzModalModule,
   NzSpinModule,
-  NzIconModule
+  NzIconModule,
+  NzSpaceModule,
+  NzPageHeaderModule
 ];
 
 // 表单相关组件
@@ -164,7 +168,9 @@ export const FORM_NZ_MODULES = [
   NzSwitchModule,
   NzButtonModule,
   NzDatePickerModule,
-  NzUploadModule
+  NzUploadModule,
+  NzLayoutModule,
+  NzGridModule
 ];
 
 // 数据展示相关组件

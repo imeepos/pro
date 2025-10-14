@@ -1,8 +1,10 @@
 <nz-card>
   <nz-page-header
-    title="事件管理"
-    subTitle="管理和查看所有事件信息"
-    [extra]="headerActions">
+    [nzTitle]="'事件管理'"
+    [nzSubtitle]="'管理和查看所有事件信息'">
+    <nz-page-header-extra>
+      <ng-container *ngTemplateOutlet="headerActions"></ng-container>
+    </nz-page-header-extra>
   </nz-page-header>
 
   <!-- 搜索区域 -->
@@ -37,7 +39,7 @@
       <nz-space class="ml-2">
         <nz-tag *ngFor="let term of searchHistory.slice(0, 3)"
                 (click)="onSearch(term)"
-                nzMode="cursor">
+                class="cursor-pointer">
           {{ term }}
         </nz-tag>
       </nz-space>

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,7 +8,8 @@ import { EventsQuery } from '../../state/events.query';
 import { Event, EventQueryParams, EventStatus } from '@pro/sdk';
 import { ToastService } from '../../shared/services/toast.service';
 import { DeleteEventDialogComponent } from './components';
-import { DISPLAY_NZ_MODULES, COMMON_NZ_MODULES, NzMessageService } from '../../shared/ng-zorro-components';
+import { DISPLAY_NZ_MODULES, COMMON_NZ_MODULES } from '../../shared/ng-zorro-components';
+import { NzMessageService } from 'ng-zorro-antd/message';
 
 @Component({
   selector: 'app-events-list',

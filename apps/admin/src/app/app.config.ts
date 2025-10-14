@@ -70,9 +70,6 @@ export const appConfig: ApplicationConfig = {
     // ng-zorro-antd 配置
     provideNzI18n(zh_CN),
     provideNzIcons([]),
-    provideNzConfig({
-      locale: zh_CN
-    }),
 
     // Token存储服务的接口适配
     {
