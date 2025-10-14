@@ -23,7 +23,7 @@ import { AuthModule } from '../auth/auth.module';
       WeiboAccountEntity,
       WeiboSearchTaskEntity,
     ]),
-    ScheduleModule.forRoot(),
+    // ScheduleModule.forRoot(), // 已移至全局模块
     forwardRef(() => ScreensModule),
     AuthModule,
   ],
