@@ -59,6 +59,7 @@ export interface EventFilterParams extends Omit<EventQueryParams, 'page' | 'page
               <select
                 [(ngModel)]="filterParams.industryTypeId"
                 (ngModelChange)="onIndustryChange()"
+                name="industryType"
                 class="modern-select"
               >
                 <option [value]="undefined">全部行业</option>
@@ -78,6 +79,7 @@ export interface EventFilterParams extends Omit<EventQueryParams, 'page' | 'page
               </label>
               <select
                 [(ngModel)]="filterParams.eventTypeId"
+                name="eventType"
                 class="modern-select"
               >
                 <option [value]="undefined">全部类型</option>
@@ -123,6 +125,7 @@ export interface EventFilterParams extends Omit<EventQueryParams, 'page' | 'page
               <input
                 type="date"
                 [(ngModel)]="filterParams.startTime"
+                name="startTime"
                 class="date-input"
                 placeholder="开始日期"
               />
@@ -130,6 +133,7 @@ export interface EventFilterParams extends Omit<EventQueryParams, 'page' | 'page
               <input
                 type="date"
                 [(ngModel)]="filterParams.endTime"
+                name="endTime"
                 class="date-input"
                 placeholder="结束日期"
               />

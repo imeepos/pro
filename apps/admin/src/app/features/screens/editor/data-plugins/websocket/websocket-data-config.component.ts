@@ -17,6 +17,7 @@ import { DataSourceType } from '../../models/data-source.enum';
           type="text"
           [(ngModel)]="url"
           (ngModelChange)="onConfigChange()"
+          name="websocketUrl"
           class="form-control"
           placeholder="ws://localhost:8080/ws"
         />
@@ -29,6 +30,7 @@ import { DataSourceType } from '../../models/data-source.enum';
           type="text"
           [(ngModel)]="protocolsText"
           (ngModelChange)="onProtocolsChange()"
+          name="protocolsText"
           class="form-control"
           placeholder="protocol1, protocol2"
         />
@@ -41,6 +43,7 @@ import { DataSourceType } from '../../models/data-source.enum';
           type="number"
           [(ngModel)]="reconnectInterval"
           (ngModelChange)="onConfigChange()"
+          name="reconnectInterval"
           min="1000"
           step="1000"
           class="form-control"
@@ -53,6 +56,7 @@ import { DataSourceType } from '../../models/data-source.enum';
           type="number"
           [(ngModel)]="maxReconnectAttempts"
           (ngModelChange)="onConfigChange()"
+          name="maxReconnectAttempts"
           min="0"
           max="100"
           class="form-control"

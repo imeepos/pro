@@ -50,6 +50,7 @@ import { CanvasService } from '../../canvas/services/canvas.service';
               <input
                 type="checkbox"
                 [(ngModel)]="event.enabled"
+                [name]="'event_enabled_' + i"
                 (change)="updateComponent()"
                 class="w-3 h-3 text-blue-600 rounded"
               />
@@ -73,6 +74,7 @@ import { CanvasService } from '../../canvas/services/canvas.service';
             <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">触发条件</label>
             <select
               [(ngModel)]="event.type"
+              [name]="'event_type_' + i"
               (change)="updateComponent()"
               class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             >
@@ -90,6 +92,7 @@ import { CanvasService } from '../../canvas/services/canvas.service';
             <input
               type="text"
               [(ngModel)]="event.description"
+              [name]="'event_description_' + i"
               (change)="updateComponent()"
               placeholder="事件描述（可选）"
               class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -112,6 +115,7 @@ import { CanvasService } from '../../canvas/services/canvas.service';
               <div class="flex items-center justify-between">
                 <select
                   [(ngModel)]="action.type"
+                  [name]="'action_type_' + i + '_' + j"
                   (change)="updateComponent()"
                   class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 >
@@ -137,6 +141,7 @@ import { CanvasService } from '../../canvas/services/canvas.service';
                 <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">目标组件</label>
                 <select
                   [(ngModel)]="action.targetComponentId"
+                  [name]="'action_target_' + i + '_' + j"
                   (change)="updateComponent()"
                   class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 >
@@ -151,6 +156,7 @@ import { CanvasService } from '../../canvas/services/canvas.service';
                 <input
                   type="text"
                   [(ngModel)]="action.params!['url']"
+                  [name]="'action_url_' + i + '_' + j"
                   (change)="updateComponent()"
                   placeholder="输入URL或路由路径"
                   class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -171,6 +177,7 @@ import { CanvasService } from '../../canvas/services/canvas.service';
                 <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">自定义脚本</label>
                 <textarea
                   [(ngModel)]="action.script"
+                  [name]="'action_script_' + i + '_' + j"
                   (change)="updateComponent()"
                   placeholder="输入JavaScript代码"
                   rows="4"
@@ -184,6 +191,7 @@ import { CanvasService } from '../../canvas/services/canvas.service';
                 <input
                   type="text"
                   [(ngModel)]="action.condition"
+                  [name]="'action_condition_' + i + '_' + j"
                   (change)="updateComponent()"
                   placeholder="例如: event.sourceComponentId === 'btn1'"
                   class="w-full px-2 py-1 text-xs font-mono border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"

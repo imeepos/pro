@@ -46,6 +46,7 @@ const CHINA_REGIONS: { [key: string]: { [key: string]: string[] } } = {
           </label>
           <select
             [(ngModel)]="selectedProvince"
+            name="selectedProvince"
             (ngModelChange)="onProvinceChange()"
             [disabled]="disabled"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -63,6 +64,7 @@ const CHINA_REGIONS: { [key: string]: { [key: string]: string[] } } = {
           </label>
           <select
             [(ngModel)]="selectedCity"
+            name="selectedCity"
             (ngModelChange)="onCityChange()"
             [disabled]="disabled || !selectedProvince"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -80,6 +82,7 @@ const CHINA_REGIONS: { [key: string]: { [key: string]: string[] } } = {
           </label>
           <select
             [(ngModel)]="selectedDistrict"
+            name="selectedDistrict"
             (ngModelChange)="onDistrictChange()"
             [disabled]="disabled || !selectedCity"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"

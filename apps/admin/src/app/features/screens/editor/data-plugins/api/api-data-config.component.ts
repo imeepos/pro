@@ -22,6 +22,7 @@ interface HeaderItem {
           type="text"
           [(ngModel)]="url"
           (ngModelChange)="onConfigChange()"
+          name="requestUrl"
           class="form-control"
           placeholder="https://api.example.com/data"
         />
@@ -32,6 +33,7 @@ interface HeaderItem {
         <select
           [(ngModel)]="method"
           (ngModelChange)="onConfigChange()"
+          name="requestMethod"
           class="form-control"
         >
           <option value="GET">GET</option>
@@ -51,6 +53,7 @@ interface HeaderItem {
                 type="text"
                 [(ngModel)]="header.key"
                 (ngModelChange)="onConfigChange()"
+                name="headerKey-{{$index}}"
                 placeholder="Key"
                 class="header-key"
               />
@@ -58,6 +61,7 @@ interface HeaderItem {
                 type="text"
                 [(ngModel)]="header.value"
                 (ngModelChange)="onConfigChange()"
+                name="headerValue-{{$index}}"
                 placeholder="Value"
                 class="header-value"
               />
@@ -86,6 +90,7 @@ interface HeaderItem {
           <textarea
             [(ngModel)]="bodyJson"
             (ngModelChange)="onBodyChange()"
+            name="requestBody"
             rows="6"
             class="form-control"
             placeholder='{"key": "value"}'
@@ -102,6 +107,7 @@ interface HeaderItem {
             type="checkbox"
             [(ngModel)]="enableInterval"
             (ngModelChange)="onConfigChange()"
+            name="enableInterval"
           />
           定时刷新
         </label>
@@ -111,6 +117,7 @@ interface HeaderItem {
               type="number"
               [(ngModel)]="interval"
               (ngModelChange)="onConfigChange()"
+              name="refreshInterval"
               min="1000"
               step="1000"
               class="form-control"

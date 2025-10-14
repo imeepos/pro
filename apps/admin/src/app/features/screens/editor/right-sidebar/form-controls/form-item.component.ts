@@ -45,6 +45,7 @@ import { ValidationService } from '../../services/validation.service';
         [(ngModel)]="currentValue"
         (ngModelChange)="onInputChange($event)"
         (blur)="onInputBlur()"
+        [name]="getFormControlName()"
         [placeholder]="metadata.placeholder || ''"
         [disabled]="!!metadata.disabled"
         [class]="getInputClasses()"
@@ -56,6 +57,7 @@ import { ValidationService } from '../../services/validation.service';
         [(ngModel)]="currentValue"
         (ngModelChange)="onInputChange($event)"
         (blur)="onInputBlur()"
+        [name]="getFormControlName()"
         [placeholder]="metadata.placeholder || ''"
         [disabled]="!!metadata.disabled"
         type="number"
@@ -71,6 +73,7 @@ import { ValidationService } from '../../services/validation.service';
         [(ngModel)]="currentValue"
         (ngModelChange)="onInputChange($event)"
         (blur)="onInputBlur()"
+        [name]="getFormControlName()"
         [placeholder]="metadata.placeholder || ''"
         [disabled]="!!metadata.disabled"
         rows="3"
@@ -83,6 +86,7 @@ import { ValidationService } from '../../services/validation.service';
         [(ngModel)]="currentValue"
         (ngModelChange)="onSelectChange($event)"
         (blur)="onInputBlur()"
+        [name]="getFormControlName()"
         [disabled]="!!metadata.disabled"
         [class]="getInputClasses()"
       >
@@ -97,6 +101,7 @@ import { ValidationService } from '../../services/validation.service';
           type="checkbox"
           [(ngModel)]="currentValue"
           (ngModelChange)="onSwitchChange($event)"
+          [name]="getFormControlName()"
           [disabled]="!!metadata.disabled"
           class="sr-only peer"
         />
@@ -112,6 +117,7 @@ import { ValidationService } from '../../services/validation.service';
           [(ngModel)]="currentValue"
           (ngModelChange)="onInputChange($event)"
           (blur)="onInputBlur()"
+          [name]="getFormControlName() + '_color'"
           [disabled]="!!metadata.disabled"
           class="w-12 h-10 border border-gray-300 dark:border-gray-600 rounded cursor-pointer disabled:opacity-50"
           [class]="getInputClasses(false)"
@@ -121,6 +127,7 @@ import { ValidationService } from '../../services/validation.service';
           [(ngModel)]="currentValue"
           (ngModelChange)="onInputChange($event)"
           (blur)="onInputBlur()"
+          [name]="getFormControlName() + '_text'"
           [disabled]="!!metadata.disabled"
           [placeholder]="'#000000'"
           [class]="getInputClasses(true)"
@@ -134,6 +141,7 @@ import { ValidationService } from '../../services/validation.service';
           [(ngModel)]="currentValue"
           (ngModelChange)="onInputChange($event)"
           (blur)="onInputBlur()"
+          [name]="getFormControlName()"
           [min]="metadata.min || 0"
           [max]="metadata.max || 100"
           [step]="metadata.step || 1"
@@ -397,5 +405,10 @@ export class FormItemComponent implements OnInit, OnChanges {
 
   public isValid(): boolean {
     return this.validationResult.isValid;
+  }
+
+  getFormControlName(): string {
+    const keys = Array.isArray(this.metadata.key) ? this.metadata.key : [this.metadata.key];
+    return keys.join('_') + '_' + (this.metadata.type || 'control');
   }
 }

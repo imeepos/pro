@@ -16,6 +16,7 @@ import { Tag } from '@pro/sdk';
             type="text"
             [(ngModel)]="searchKeyword"
             (input)="onSearch()"
+            name="searchKeyword"
             placeholder="搜索标签..."
             class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
@@ -117,6 +118,7 @@ import { Tag } from '@pro/sdk';
               <input
                 type="text"
                 [(ngModel)]="newTag.name"
+                name="newTagName"
                 placeholder="请输入标签名称"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 maxlength="20"

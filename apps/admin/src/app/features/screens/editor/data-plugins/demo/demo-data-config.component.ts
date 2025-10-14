@@ -16,6 +16,7 @@ import { DataSourceType } from '../../models/data-source.enum';
         <textarea
           [(ngModel)]="jsonData"
           (ngModelChange)="onDataChange()"
+          name="jsonData"
           rows="10"
           class="form-control"
           placeholder='{"key": "value"}'

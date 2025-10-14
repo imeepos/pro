@@ -20,6 +20,7 @@ import { DataSlot, DataPlugin } from '../models/data-source.model';
           <label>数据源类型</label>
           <select
             [(ngModel)]="selectedDataType"
+            name="selectedDataType"
             (ngModelChange)="onDataTypeChange()"
             class="form-control"
           >
