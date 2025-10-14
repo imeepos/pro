@@ -4,7 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig } from '@pro/components';
+import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, EventMapDistributionComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig } from '@pro/components';
 import { SkerSDK } from '@pro/sdk';
 import { TokenStorageService } from './core/services/token-storage.service';
 import { HttpClientService } from './core/services/http-client.service';
@@ -34,6 +34,18 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
 
             console.log('[APP_INITIALIZER] weibo-logged-in-users-card 组件注册成功');
 
+            registry.register(
+              {
+                type: 'event-map-distribution',
+                name: '事件地图分布',
+                icon: 'compass',
+                category: 'events'
+              },
+              EventMapDistributionComponent
+            );
+
+            console.log('[APP_INITIALIZER] event-map-distribution 组件注册成功');
+
             // 验证注册是否成功
             const registeredComponent = registry.get('weibo-logged-in-users-card');
             if (!registeredComponent) {
@@ -46,6 +58,13 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
               componentType: typeof registeredComponent,
               hasComponentDef: !!(registeredComponent as any).ɵcmp
             });
+
+            const eventMapComponent = registry.get('event-map-distribution');
+            if (!eventMapComponent) {
+              console.error('[APP_INITIALIZER] event-map-distribution 注册验证失败');
+              reject(new Error('event-map-distribution 组件注册验证失败'));
+              return;
+            }
 
             console.log('[APP_INITIALIZER] 所有组件注册完成');
             resolve();

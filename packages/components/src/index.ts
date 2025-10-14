@@ -8,6 +8,7 @@ export type { ComponentMetadata } from './screen-components/base/component-metad
 export { ComponentRegistryService } from './screen-components/base/component-registry.service';
 export { ComponentInitializerService } from './screen-components/component-initializer.service';
 export * from './screen-components/weibo/index';
+export * from './screen-components/events/index';
 
 // Component Validation
 export { ComponentConsistencyService } from './validation/component-consistency.service';

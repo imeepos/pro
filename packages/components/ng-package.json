@@ -9,6 +9,7 @@
     "socket.io-client",
     "tailwindcss",
     "autoprefixer",
-    "postcss"
+    "postcss",
+    "@amap/amap-jsapi-loader"
   ]
 }

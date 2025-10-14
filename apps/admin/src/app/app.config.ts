@@ -5,7 +5,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig, createNotificationWebSocketConfig } from '@pro/components';
+import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, EventMapDistributionComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig, createNotificationWebSocketConfig } from '@pro/components';
 import { TestSimpleComponent } from './features/screens/components/test-simple.component';
 import { TokenStorageService } from './core/services/token-storage.service';
 import { AuthService } from './state/auth.service';
@@ -31,6 +31,15 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
             category: 'weibo'
           },
           component: WeiboLoggedInUsersCardComponent
+        },
+        {
+          definition: {
+            type: 'event-map-distribution',
+            name: '事件地图分布',
+            icon: 'compass',
+            category: 'events'
+          },
+          component: EventMapDistributionComponent
         },
         {
           definition: {

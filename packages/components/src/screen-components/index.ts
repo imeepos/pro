@@ -7,3 +7,6 @@ export { ComponentRegistryService } from './base/component-registry.service';
 
 // Weibo Components
 export * from './weibo/index';
+
+// Event Components
+export * from './events/index';

@@ -1,4 +1,34 @@
 <div class="map-location-picker">
+  <div class="search-panel">
+    <div class="search-input">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (keyup.enter)="searchLocation()"
+        placeholder="搜索地点、地标或地址..."
+        [disabled]="isLoading || !!errorMessage"
+      />
+      <button type="button" (click)="searchLocation()" [disabled]="searching || isLoading || !!errorMessage">
+        {{ searching ? '搜索中...' : '搜索' }}
+      </button>
+      <button type="button" class="ghost" *ngIf="searchTerm" (click)="clearSearch()">清除</button>
+    </div>
+    <div class="search-feedback">
+      <span class="hint" *ngIf="!errorMessage">按回车或点击搜索开始检索</span>
+      <span class="error" *ngIf="searchError">{{ searchError }}</span>
+    </div>
+    <ul class="search-results" *ngIf="searchResults.length">
+      <li
+        *ngFor="let result of searchResults"
+        (click)="selectSearchResult(result)"
+        [class.active]="result.id === activeResultId"
+      >
+        <div class="result-name">{{ result.name }}</div>
+        <div class="result-address">{{ result.address || '暂无详细地址' }}</div>
+      </li>
+    </ul>
+  </div>
+
   <div class="status-panel" *ngIf="isLoading">
     <div class="spinner"></div>
     <span>地图正在苏醒，请稍候...</span>

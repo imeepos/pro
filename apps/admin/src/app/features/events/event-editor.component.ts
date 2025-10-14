@@ -437,6 +437,33 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     return Number.isFinite(numeric) ? numeric : undefined;
   }
 
+  hasLocation(): boolean {
+    const longitude = this.eventForm.get('longitude')?.value;
+    const latitude = this.eventForm.get('latitude')?.value;
+    return longitude !== null && longitude !== undefined && longitude !== ''
+      && latitude !== null && latitude !== undefined && latitude !== '';
+  }
+
+  locationFieldValue(field: 'province' | 'city' | 'district' | 'street' | 'locationText'): string {
+    const value = this.eventForm.get(field)?.value;
+    if (!value) {
+      return '—';
+    }
+
+    const trimmed = String(value).trim();
+    return trimmed.length > 0 ? trimmed : '—';
+  }
+
+  coordinateValue(field: 'longitude' | 'latitude'): string {
+    const value = this.eventForm.get(field)?.value;
+    if (value === null || value === undefined || value === '') {
+      return '—';
+    }
+
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric.toFixed(6) : '—';
+  }
+
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);

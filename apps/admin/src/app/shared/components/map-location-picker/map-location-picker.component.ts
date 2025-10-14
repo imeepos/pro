@@ -11,12 +11,19 @@ import {
   Output,
   ViewChild
 } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR, FormsModule } from '@angular/forms';
 import AMapLoader from '@amap/amap-jsapi-loader';
 import { firstValueFrom, of, Subject } from 'rxjs';
 import { catchError, map, take, takeUntil } from 'rxjs/operators';
 import { ConfigService } from '../../../core/services/config.service';
 import { environment } from '../../../../environments/environment';
+
+interface SearchResult {
+  id: string;
+  name: string;
+  address: string;
+  location: { lng: number; lat: number };
+}
 
 export interface MapPoint {
   longitude: number;
@@ -31,7 +38,7 @@ export interface MapPoint {
 @Component({
   selector: 'pro-map-location-picker',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -53,12 +60,18 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
   isLoading = false;
   errorMessage = '';
   selectedPoint: MapPoint | null = null;
+  searchTerm = '';
+  searchError = '';
+  searching = false;
+  searchResults: SearchResult[] = [];
+  activeResultId: string | null = null;
 
   private readonly destroy$ = new Subject<void>();
   private map: any;
   private marker: any;
   private amapNamespace: any;
   private geocoder: any;
+  private placeSearch: any;
   private change: (value: MapPoint | null) => void = () => {};
   private touched: () => void = () => {};
   private mapClickHandler?: (event: any) => void;
@@ -126,6 +139,9 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
     this.selectedPoint = null;
     this.change(null);
     this.pointChange.emit(null);
+    this.searchResults = [];
+    this.activeResultId = null;
+    this.searchError = '';
   }
 
   private async bootstrapMap(): Promise<void> {
@@ -154,7 +170,7 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
       this.amapNamespace = await AMapLoader.load({
         key,
         version: '2.0',
-        plugins: ['AMap.Geocoder']
+        plugins: ['AMap.Geocoder', 'AMap.PlaceSearch', 'AMap.AutoComplete']
       });
 
       this.map = new this.amapNamespace.Map(this.mapHostRef.nativeElement, {
@@ -166,10 +182,16 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
       });
 
       this.geocoder = new this.amapNamespace.Geocoder();
+      this.placeSearch = new this.amapNamespace.PlaceSearch({
+        pageSize: 6,
+        extensions: 'all',
+        citylimit: false
+      });
 
       this.mapClickHandler = (event: { lnglat: any }) => {
         this.ngZone.run(() => {
           this.touched();
+          this.activeResultId = null;
           this.handleSelection(event.lnglat);
         });
       };
@@ -181,6 +203,7 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
           [this.selectedPoint.longitude, this.selectedPoint.latitude],
           this.selectedPoint.locationText
         );
+        this.map.setZoomAndCenter(this.zoom, [this.selectedPoint.longitude, this.selectedPoint.latitude]);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '地图加载失败';
@@ -204,25 +227,43 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
   }
 
   private async handleSelection(lngLat: any): Promise<void> {
+    let resolvedLngLat = lngLat;
+    if (this.amapNamespace && !(lngLat instanceof this.amapNamespace.LngLat)) {
+      resolvedLngLat = new this.amapNamespace.LngLat(lngLat.getLng(), lngLat.getLat());
+    }
+
     const basePoint: MapPoint = {
-      longitude: lngLat.getLng(),
-      latitude: lngLat.getLat()
+      longitude: resolvedLngLat.getLng(),
+      latitude: resolvedLngLat.getLat()
     };
 
     let enrichedPoint: Partial<MapPoint> = {};
 
     if (this.geocoder) {
       try {
-        enrichedPoint = await this.reverseGeocode(lngLat);
+        enrichedPoint = await this.reverseGeocode(resolvedLngLat);
       } catch (error) {
         console.warn('逆地理编码失败', error);
       }
     }
 
+    const locationSegments = [
+      enrichedPoint.province,
+      enrichedPoint.city,
+      enrichedPoint.district,
+      enrichedPoint.street
+    ].filter((segment): segment is string => !!segment && segment.trim().length > 0);
+
+    const summary = enrichedPoint.locationText && enrichedPoint.locationText.trim().length > 0
+      ? enrichedPoint.locationText.trim()
+      : locationSegments.join(' ');
+
+    const fallbackSummary = summary || `${basePoint.longitude.toFixed(6)}, ${basePoint.latitude.toFixed(6)}`;
+
     const resolvedPoint: MapPoint = {
       ...basePoint,
       ...enrichedPoint,
-      locationText: enrichedPoint.locationText ?? enrichedPoint.street ?? enrichedPoint.city ?? enrichedPoint.province
+      locationText: fallbackSummary
     };
 
     this.selectedPoint = resolvedPoint;
@@ -230,6 +271,12 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
       [resolvedPoint.longitude, resolvedPoint.latitude],
       resolvedPoint.locationText
     );
+
+    if (this.map) {
+      const currentZoom = typeof this.map.getZoom === 'function' ? this.map.getZoom() : this.zoom;
+      const targetZoom = Math.max(currentZoom, this.zoom);
+      this.map.setZoomAndCenter(targetZoom, [resolvedPoint.longitude, resolvedPoint.latitude]);
+    }
 
     this.change(resolvedPoint);
     this.pointChange.emit(resolvedPoint);
@@ -321,5 +368,103 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
         }
       );
     });
+  }
+
+  searchLocation(): void {
+    if (!this.placeSearch) {
+      this.searchError = '搜索服务尚未准备就绪';
+      return;
+    }
+
+    const keyword = this.searchTerm.trim();
+    if (!keyword) {
+      this.searchResults = [];
+      this.searchError = '';
+      this.activeResultId = null;
+      return;
+    }
+
+    this.searching = true;
+    this.searchError = '';
+    this.activeResultId = null;
+    this.searchResults = [];
+
+    this.placeSearch.search(keyword, (status: string, result: { poiList?: { pois?: any[] } }) => {
+      this.ngZone.run(() => {
+        this.searching = false;
+
+        if (status !== 'complete' || !result.poiList?.pois?.length) {
+          this.searchResults = [];
+          this.activeResultId = null;
+          this.searchError = '未找到匹配的地点，请尝试其他关键词';
+          return;
+        }
+
+        this.searchResults = result.poiList.pois
+          .map((poi: any) => this.toSearchResult(poi))
+          .filter((poi: SearchResult | null): poi is SearchResult => poi !== null);
+
+        this.searchError = '';
+
+        if (this.searchResults.length) {
+          this.selectSearchResult(this.searchResults[0]);
+        }
+      });
+    });
+  }
+
+  selectSearchResult(result: SearchResult): void {
+    this.activeResultId = result.id;
+
+    if (!this.map || !this.amapNamespace) {
+      return;
+    }
+
+    const lngLat = new this.amapNamespace.LngLat(result.location.lng, result.location.lat);
+    this.map.setZoomAndCenter(Math.max(this.map.getZoom(), this.zoom), lngLat);
+    this.handleSelection(lngLat);
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+    this.searchResults = [];
+    this.searchError = '';
+    this.activeResultId = null;
+  }
+
+  private toSearchResult(poi: any): SearchResult | null {
+    if (!poi) {
+      return null;
+    }
+
+    const rawLocation = poi.location;
+
+    let lng: number | null = null;
+    let lat: number | null = null;
+
+    if (rawLocation) {
+      if (typeof rawLocation === 'string') {
+        const [lngStr, latStr] = rawLocation.split(',');
+        lng = Number(lngStr);
+        lat = Number(latStr);
+      } else if (typeof rawLocation.lng === 'number' && typeof rawLocation.lat === 'number') {
+        lng = rawLocation.lng;
+        lat = rawLocation.lat;
+      } else if (rawLocation.getLng && rawLocation.getLat) {
+        lng = rawLocation.getLng();
+        lat = rawLocation.getLat();
+      }
+    }
+
+    if (lng === null || lat === null || Number.isNaN(lng) || Number.isNaN(lat)) {
+      return null;
+    }
+
+    return {
+      id: poi.id || `${lng},${lat}`,
+      name: poi.name || '未知地点',
+      address: poi.address || poi.adname || '',
+      location: { lng, lat }
+    };
   }
 }
