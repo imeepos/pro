@@ -17,7 +17,36 @@ import { provideNzConfig } from 'ng-zorro-antd/core/config';
 import { NZ_DATE_LOCALE, en_US } from 'ng-zorro-antd/i18n';
 import { DatePipe } from '@angular/common';
 import { SafeDatePipe } from './shared/pipes/safe-date.pipe';
+import { registerLocaleData } from '@angular/common';
+import localeZhHans from '@angular/common/locales/zh-Hans';
 import * as AllIcons from '@ant-design/icons-angular/icons';
+
+// 确保中文本地化数据已注册
+registerLocaleData(localeZhHans, 'zh-CN');
+
+// 创建包含完整 localize 属性的中文本地化配置
+const customZhCNLocale = {
+  ...zh_CN,
+  localize: {
+    ...localeZhHans[0]?.localize || {},
+    // 确保日期本地化属性存在
+    era: localeZhHans[0]?.localize?.era || {},
+    year: localeZhHans[0]?.localize?.year || {},
+    month: localeZhHans[0]?.localize?.month || {},
+    weekday: localeZhHans[0]?.localize?.weekday || {},
+    dayPeriod: localeZhHans[0]?.localize?.dayPeriod || {},
+    dateFormat: {
+      medium: 'y年M月d日 AH:mm:ss',
+      short: 'y/M/d AH:mm',
+      fullDate: 'y年M月d日EEEE',
+      longDate: 'y年M月d日',
+      mediumDate: 'y年M月d日',
+      shortDate: 'y/M/d',
+      mediumTime: 'AH:mm:ss',
+      shortTime: 'AH:mm'
+    }
+  }
+};
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
   return () => {
@@ -81,10 +110,10 @@ export const appConfig: ApplicationConfig = {
       useClass: SafeDatePipe
     },
 
-    // ng-zorro-antd 日期本地化配置
+    // ng-zorro-antd 日期本地化配置 - 使用包含完整 localize 属性的自定义本地化对象
     {
       provide: NZ_DATE_LOCALE,
-      useValue: zh_CN
+      useValue: customZhCNLocale
     },
 
     // Token存储服务的接口适配
