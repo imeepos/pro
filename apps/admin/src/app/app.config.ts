@@ -72,6 +72,36 @@ const customZhCNLocale = {
       shortDate: 'y/M/d',
       mediumTime: 'AH:mm:ss',
       shortTime: 'AH:mm'
+    },
+    // 添加 formatLong 属性，包含长格式日期时间配置
+    formatLong: {
+      date: {
+        format: 'y年M月d日',
+        display: {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric'
+        }
+      },
+      time: {
+        format: 'AH:mm:ss',
+        display: {
+          hour: 'numeric',
+          minute: 'numeric',
+          second: 'numeric'
+        }
+      },
+      dateTime: {
+        format: 'y年M月d日 AH:mm:ss',
+        display: {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: 'numeric',
+          second: 'numeric'
+        }
+      }
     }
   }
 };
