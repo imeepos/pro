@@ -52,12 +52,12 @@ export interface SelectOption {
     provideFlowbiteDropdownItemConfig({}),
     {
       provide: FlowbiteDropdownStateToken,
-      useValue: {
+      useFactory: () => ({
         isOpen: false,
         setIsOpen: () => {},
         toggle: () => {},
         dropdownState: () => ({})
-      }
+      })
     }
   ],
   templateUrl: './select.component.html',

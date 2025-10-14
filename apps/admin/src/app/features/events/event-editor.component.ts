@@ -15,7 +15,6 @@ import { ToastService } from '../../shared/services/toast.service';
 import { SelectComponent } from '../../shared/components/select';
 import type { SelectOption } from '../../shared/components/select';
 import {
-  AddressCascaderComponent,
   AmapPickerComponent,
   TagSelectorComponent
 } from './components';
@@ -33,7 +32,6 @@ import { Attachment } from '@pro/sdk';
     CommonModule,
     ReactiveFormsModule,
     SelectComponent,
-    AddressCascaderComponent,
     AmapPickerComponent,
     TagSelectorComponent,
     DateTimePickerComponent,
@@ -192,25 +190,27 @@ export class EventEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  onAddressChange(address: { province: string; city: string; district?: string }): void {
-    this.eventForm.patchValue({
-      province: address.province,
-      city: address.city,
-      district: address.district
-    });
-  }
-
   onLocationPick(location: LocationData): void {
+    // 自动填充所有地址相关字段
     this.eventForm.patchValue({
+      longitude: location.longitude,
+      latitude: location.latitude,
+      province: location.province,
+      city: location.city,
+      district: location.district,
+      street: location.street,
+      locationText: location.locationText
+    });
+
+    console.log('地址信息已自动填充:', {
+      province: location.province,
+      city: location.city,
+      district: location.district,
+      street: location.street,
+      locationText: location.locationText,
       longitude: location.longitude,
       latitude: location.latitude
     });
-
-    if (location.address) {
-      this.eventForm.patchValue({
-        locationText: location.address
-      });
-    }
   }
 
   onTagsChange(tagIds: string[]): void {

@@ -11,6 +11,12 @@ export interface LocationData {
   longitude?: number | null;
   latitude?: number | null;
   address?: string | null;
+  // 详细地址信息
+  province?: string;
+  city?: string;
+  district?: string;
+  street?: string;
+  locationText?: string;
 }
 
 @Component({
@@ -126,19 +132,47 @@ export interface LocationData {
       </div>
 
       <!-- 坐标信息 -->
-      <div *ngIf="selectedLocation" class="text-sm text-gray-600 space-y-1">
-        <div class="flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span>经度: {{ (selectedLocation.longitude && selectedLocation.longitude.toFixed(6)) || '0.000000' }}, 纬度: {{ (selectedLocation.latitude && selectedLocation.latitude.toFixed(6)) || '0.000000' }}</span>
-        </div>
-        <div *ngIf="selectedLocation.address" class="flex items-start gap-2">
-          <svg class="w-4 h-4 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          <span>地址: {{ selectedLocation.address || '未知地址' }}</span>
+      <div *ngIf="selectedLocation" class="text-sm text-gray-600 space-y-2">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <h4 class="font-medium text-blue-900 mb-2">📍 已选择位置</h4>
+
+          <!-- 坐标 -->
+          <div class="flex items-center gap-2 text-blue-700">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>坐标: {{ (selectedLocation.longitude && selectedLocation.longitude.toFixed(6)) || '0.000000' }}, {{ (selectedLocation.latitude && selectedLocation.latitude.toFixed(6)) || '0.000000' }}</span>
+          </div>
+
+          <!-- 完整地址 -->
+          <div *ngIf="selectedLocation.address" class="flex items-start gap-2 text-blue-700 mt-1">
+            <svg class="w-4 h-4 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span>{{ selectedLocation.address }}</span>
+          </div>
+
+          <!-- 详细地址信息 -->
+          <div *ngIf="selectedLocation.province || selectedLocation.city || selectedLocation.district" class="mt-2 pt-2 border-t border-blue-200">
+            <div class="text-xs text-blue-600 space-y-1">
+              <div *ngIf="selectedLocation.province">
+                <span class="font-medium">省份:</span> {{ selectedLocation.province }}
+              </div>
+              <div *ngIf="selectedLocation.city">
+                <span class="font-medium">城市:</span> {{ selectedLocation.city }}
+              </div>
+              <div *ngIf="selectedLocation.district">
+                <span class="font-medium">区县:</span> {{ selectedLocation.district }}
+              </div>
+              <div *ngIf="selectedLocation.street">
+                <span class="font-medium">街道:</span> {{ selectedLocation.street }}
+              </div>
+              <div *ngIf="selectedLocation.locationText">
+                <span class="font-medium">地点:</span> {{ selectedLocation.locationText }}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -353,10 +387,14 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
       try {
         const result = await attemptGeocoding();
 
+        // 解析详细地址信息
+        const addressInfo = this.parseAddressInfo(result.regeocode);
+
         this.selectedLocation = {
           longitude: lng,
           latitude: lat,
-          address: result.regeocode.formattedAddress
+          address: result.regeocode.formattedAddress,
+          ...addressInfo
         };
 
         console.log('逆地理编码成功:', this.selectedLocation);
@@ -385,6 +423,63 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       }
     }
+  }
+
+  /**
+   * 解析地址信息，提取省市区街道等详细信息
+   */
+  private parseAddressInfo(regeocode: any): Partial<LocationData> {
+    const addressComponent = regeocode.addressComponent;
+    const formattedAddress = regeocode.formattedAddress;
+
+    if (!addressComponent) {
+      return {};
+    }
+
+    // 提取各级行政区划信息
+    let province = addressComponent.province;
+    let city = addressComponent.city;
+    let district = addressComponent.district;
+    let township = addressComponent.township;
+    let street = addressComponent.streetNumber?.street || addressComponent.street;
+    let streetNumber = addressComponent.streetNumber?.number;
+
+    // 处理直辖市情况
+    if (province && city && province === city) {
+      // 北京、上海、天津、重庆等直辖市
+      city = undefined; // 避免重复显示
+    }
+
+    // 构建详细街道地址
+    let streetDetail = '';
+    if (township && township !== district) {
+      streetDetail += township;
+    }
+    if (street) {
+      if (streetDetail) streetDetail += street;
+      else streetDetail = street;
+    }
+    if (streetNumber) {
+      streetDetail += streetNumber;
+    }
+
+    // 构建地点描述（去除行政区划后的具体位置）
+    let locationText = formattedAddress;
+    if (province) locationText = locationText.replace(province, '').trim();
+    if (city) locationText = locationText.replace(city, '').trim();
+    if (district) locationText = locationText.replace(district, '').trim();
+    if (streetDetail) locationText = locationText.replace(streetDetail, '').trim();
+
+    // 清理多余的空格和标点符号
+    locationText = locationText.replace(/^[，,\.]+/, '').trim();
+
+    return {
+      province: province || undefined,
+      city: city || undefined,
+      district: district || undefined,
+      street: streetDetail || undefined,
+      locationText: locationText || undefined
+    };
   }
 
   /**
@@ -509,14 +604,22 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
       console.log('搜索成功，选中第一个结果:', {
         name: poi.name,
         address: poi.address,
-        location: { lng, lat }
+        location: { lng, lat },
+        adname: poi.adname,
+        cityname: poi.cityname,
+        pname: poi.pname
       });
 
       this.addMarker(lng, lat);
+
+      // 解析地址信息
+      const addressInfo = this.parsePoiAddressInfo(poi);
+
       this.selectedLocation = {
         longitude: lng,
         latitude: lat,
-        address: poi.name + ' ' + poi.address
+        address: poi.name + ' ' + poi.address,
+        ...addressInfo
       };
       this.locationPick.emit(this.selectedLocation);
     } catch (error: any) {
@@ -534,6 +637,37 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         this.searchError = '';
       }, 5000);
     }
+  }
+
+  /**
+   * 解析POI地址信息
+   */
+  private parsePoiAddressInfo(poi: any): Partial<LocationData> {
+    let province = poi.pname;
+    let city = poi.cityname;
+    let district = poi.adname;
+    let street = poi.address;
+    let locationText = poi.name;
+
+    // 处理直辖市情况
+    if (province && city && province === city) {
+      city = undefined; // 避免重复显示
+    }
+
+    // 清理地址中的行政区划信息，避免重复
+    if (street) {
+      if (province) street = street.replace(province, '').trim();
+      if (city) street = street.replace(city, '').trim();
+      if (district) street = street.replace(district, '').trim();
+    }
+
+    return {
+      province: province || undefined,
+      city: city || undefined,
+      district: district || undefined,
+      street: street || undefined,
+      locationText: locationText || undefined
+    };
   }
 
   /**
