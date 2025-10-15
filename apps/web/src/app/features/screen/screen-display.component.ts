@@ -15,6 +15,12 @@ import { environment } from '../../../environments/environment';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="screen-viewport" #screenWrapper>
+      <div class="ambient-backdrop">
+        <span class="ambient-orb ambient-orb--primary"></span>
+        <span class="ambient-orb ambient-orb--secondary"></span>
+        <span class="ambient-orb ambient-orb--tertiary"></span>
+      </div>
+
       <div class="screen-stage"
            [style.width.px]="screenConfig?.layout?.width"
            [style.height.px]="screenConfig?.layout?.height"
@@ -38,60 +44,67 @@ import { environment } from '../../../environments/environment';
       </div>
 
       @if (!loading && !error && screenConfig) {
-        <div class="screen-toolbar" [class.screen-toolbar--hidden]="isFullscreen">
-          <div class="toolbar-ensemble">
-            <button
-              *ngIf="availableScreens.length > 1"
-              class="toolbar-trigger"
-              (click)="toggleAutoPlay()"
-              [title]="isAutoPlay ? '停止轮播' : '开始轮播'"
-              [attr.aria-label]="isAutoPlay ? '停止轮播' : '开始轮播'">
-              {{ isAutoPlay ? '⏸️' : '▶️' }}
-            </button>
-            <button
-              *ngIf="availableScreens.length > 1"
-              class="toolbar-trigger"
-              (click)="previousScreen()"
-              title="上一页"
-              aria-label="上一页">
-              ⬅️
-            </button>
-            <button
-              *ngIf="availableScreens.length > 1"
-              class="toolbar-trigger"
-              (click)="nextScreen()"
-              title="下一页"
-              aria-label="下一页">
-              ➡️
-            </button>
-            <select
-              *ngIf="availableScreens.length > 1"
-              class="toolbar-selector"
-              [value]="currentScreenIndex"
-              (change)="switchToScreen($event)"
-              aria-label="选择页面">
-              <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
-                {{ screen.name }}
-              </option>
-            </select>
-            <div
-              *ngIf="availableScreens.length > 1"
-              class="toolbar-indicator"
-              role="status"
-              [attr.aria-label]="'当前页面 ' + (currentScreenIndex + 1) + ' / ' + availableScreens.length">
-              {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
-            </div>
+        <header class="screen-header" [class.screen-header--compact]="isFullscreen">
+          <div class="screen-header__meta">
+            <h1 class="screen-title">{{ screenConfig?.name || '未命名大屏' }}</h1>
+            @if (screenConfig?.description) {
+              <p class="screen-subtitle">{{ screenConfig?.description }}</p>
+            }
           </div>
-        </div>
 
-        <button
-          class="fullscreen-trigger"
-          (click)="toggleFullscreen()"
-          title="全屏切换"
-          [attr.aria-label]="isFullscreen ? '退出全屏' : '全屏显示'">
-          {{ isFullscreen ? '退出全屏' : '全屏显示' }}
-        </button>
+          <div class="screen-header__actions">
+            @if (hasMultipleScreens) {
+              <div class="screen-toolbar">
+                <button
+                  class="toolbar-trigger"
+                  (click)="toggleAutoPlay()"
+                  [title]="isAutoPlay ? '停止轮播' : '开始轮播'"
+                  [attr.aria-label]="isAutoPlay ? '停止轮播' : '开始轮播'">
+                  {{ isAutoPlay ? '⏸️' : '▶️' }}
+                </button>
+                <button
+                  class="toolbar-trigger"
+                  (click)="previousScreen()"
+                  title="上一页"
+                  aria-label="上一页">
+                  ⬅️
+                </button>
+                <button
+                  class="toolbar-trigger"
+                  (click)="nextScreen()"
+                  title="下一页"
+                  aria-label="下一页">
+                  ➡️
+                </button>
+                <select
+                  class="toolbar-selector"
+                  [value]="currentScreenIndex"
+                  (change)="switchToScreen($event)"
+                  aria-label="选择页面">
+                  <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
+                    {{ screen.name }}
+                  </option>
+                </select>
+                <div
+                  class="toolbar-indicator"
+                  role="status"
+                  [attr.aria-label]="'当前页面 ' + (currentScreenIndex + 1) + ' / ' + availableScreens.length">
+                  {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
+                </div>
+              </div>
+            }
+
+            <button
+              class="screen-action screen-action--primary"
+              (click)="toggleFullscreen()"
+              title="全屏切换"
+              [attr.aria-label]="isFullscreen ? '退出全屏' : '全屏显示'">
+              {{ isFullscreen ? '退出全屏' : '全屏显示' }}
+            </button>
+          </div>
+        </header>
       }
+
     </div>
   `,
   styles: [`
@@ -248,6 +261,47 @@ import { environment } from '../../../environments/environment';
         rgba(15, 23, 42, 0.95) 50%,
         rgba(0, 0, 0, 1) 100%
       );
+      color: var(--pro-slate-100);
+    }
+
+    .ambient-backdrop {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .ambient-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.65;
+      transform: translate3d(-50%, -50%, 0);
+    }
+
+    .ambient-orb--primary {
+      top: 18%;
+      right: 6%;
+      width: 420px;
+      height: 420px;
+      background: rgba(59, 130, 246, 0.25);
+    }
+
+    .ambient-orb--secondary {
+      bottom: -12%;
+      left: 10%;
+      width: 520px;
+      height: 520px;
+      background: rgba(168, 85, 247, 0.22);
+    }
+
+    .ambient-orb--tertiary {
+      top: 52%;
+      left: 55%;
+      width: 360px;
+      height: 360px;
+      background: rgba(34, 197, 94, 0.16);
     }
 
     .screen-stage {
@@ -259,6 +313,118 @@ import { environment } from '../../../environments/environment';
       border-radius: var(--pro-radius-lg);
       box-shadow: var(--pro-shadow-2xl);
       will-change: transform, left, top;
+      z-index: 1;
+    }
+
+    .screen-header {
+      position: absolute;
+      top: var(--pro-space-6);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(92vw, 1280px);
+      padding: var(--pro-space-4) var(--pro-space-6);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--pro-space-6);
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(255, 255, 255, var(--pro-opacity-glass-light));
+      border-radius: var(--pro-radius-2xl);
+      backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: var(--pro-shadow-2xl);
+      color: rgba(255, 255, 255, 0.92);
+      z-index: 2;
+      transition: opacity var(--pro-transition-base),
+                  transform var(--pro-transition-base);
+      pointer-events: none;
+    }
+
+    .screen-header--compact {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -12px);
+    }
+
+    .screen-header__meta {
+      flex: 1;
+      min-width: 0;
+      pointer-events: auto;
+    }
+
+    .screen-title {
+      margin: 0;
+      font-size: var(--pro-font-size-xl);
+      font-weight: var(--pro-font-weight-semibold);
+      letter-spacing: 0.02em;
+    }
+
+    .screen-subtitle {
+      margin: var(--pro-space-2) 0 0;
+      font-size: var(--pro-font-size-sm);
+      color: rgba(255, 255, 255, 0.68);
+      line-height: 1.5;
+    }
+
+    .screen-header__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--pro-space-4);
+      pointer-events: auto;
+    }
+
+    .screen-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--pro-space-2) var(--pro-space-5);
+      border-radius: var(--pro-radius-2xl);
+      border: 1px solid rgba(255, 255, 255, var(--pro-opacity-glass-light));
+      font-size: var(--pro-font-size-sm);
+      font-weight: var(--pro-font-weight-semibold);
+      color: rgba(255, 255, 255, 0.9);
+      background: linear-gradient(135deg,
+        rgba(255, 255, 255, calc(var(--pro-opacity-glass-medium) * 1.2)) 0%,
+        rgba(255, 255, 255, var(--pro-opacity-glass-light)) 100%
+      );
+      cursor: pointer;
+      transition: all var(--pro-transition-fast);
+      backdrop-filter: blur(8px);
+      min-width: 120px;
+      white-space: nowrap;
+      pointer-events: auto;
+    }
+
+    .screen-action:hover {
+      border-color: rgba(255, 255, 255, calc(var(--pro-opacity-glass-heavy) * 1.4));
+      box-shadow: var(--pro-shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .screen-action:active {
+      transform: translateY(0);
+    }
+
+    .screen-action:focus-visible {
+      outline: 2px solid rgba(59, 130, 246, 0.5);
+      outline-offset: 2px;
+    }
+
+    .screen-action--primary {
+      background: linear-gradient(135deg,
+        var(--pro-primary-500) 0%,
+        var(--pro-primary-600) 100%
+      );
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: white;
+      box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3),
+                  0 4px 6px -2px rgba(0, 0, 0, 0.15);
+    }
+
+    .screen-action--primary:hover {
+      background: linear-gradient(135deg,
+        var(--pro-primary-600) 0%,
+        var(--pro-primary-700) 100%
+      );
     }
 
     /* ===== 状态显示组件 ===== */
@@ -353,35 +519,17 @@ import { environment } from '../../../environments/environment';
 
     /* ===== 顶部工具栏 ===== */
     .screen-toolbar {
-      position: fixed;
-      top: var(--pro-space-6);
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: var(--pro-z-toast);
-      background: rgba(15, 23, 42, var(--pro-opacity-backdrop));
-      backdrop-filter: blur(16px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, var(--pro-opacity-glass-light));
-      border-radius: var(--pro-radius-2xl);
-      padding: var(--pro-space-3) var(--pro-space-4);
-      box-shadow: var(--pro-shadow-2xl),
-                  0 0 0 1px rgba(255, 255, 255, calc(var(--pro-opacity-glass-light) * 0.5));
-      transition: all var(--pro-transition-base);
-      contain: layout style paint;
-      display: flex;
-      align-items: center;
-      gap: var(--pro-space-4);
-    }
-
-    .screen-toolbar--hidden {
-      opacity: 0;
-      transform: translateX(-50%) translateY(-10px);
-      pointer-events: none;
-    }
-
-    .toolbar-ensemble {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: var(--pro-space-3);
+      background: rgba(15, 23, 42, 0.65);
+      border-radius: var(--pro-radius-2xl);
+      padding: var(--pro-space-2) var(--pro-space-3);
+      border: 1px solid rgba(255, 255, 255, var(--pro-opacity-glass-heavy));
+      backdrop-filter: blur(12px);
+      box-shadow: var(--pro-shadow-md);
+      contain: layout style paint;
+      pointer-events: auto;
     }
 
     .toolbar-trigger {
@@ -477,76 +625,6 @@ import { environment } from '../../../environments/environment';
       text-transform: uppercase;
     }
 
-    /* ===== 全屏控制 ===== */
-    .fullscreen-trigger {
-      position: fixed;
-      bottom: var(--pro-space-8);
-      right: var(--pro-space-8);
-      padding: var(--pro-space-3) var(--pro-space-7);
-      background: linear-gradient(135deg,
-        var(--pro-primary-500) 0%,
-        var(--pro-primary-600) 100%
-      );
-      color: white;
-      border: 1px solid rgba(255, 255, 255, var(--pro-opacity-glass-light));
-      border-radius: var(--pro-radius-xl);
-      cursor: pointer;
-      font-size: var(--pro-font-size-base);
-      font-weight: var(--pro-font-weight-semibold);
-      letter-spacing: 0.025em;
-      box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3),
-                  0 4px 6px -2px rgba(0, 0, 0, 0.1);
-      transition: all var(--pro-transition-base);
-      z-index: var(--pro-z-toast);
-      backdrop-filter: blur(4px);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .fullscreen-trigger::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg,
-        transparent,
-        rgba(255, 255, 255, 0.1),
-        transparent
-      );
-      transition: left var(--pro-transition-slow);
-    }
-
-    .fullscreen-trigger:hover::before {
-      left: 100%;
-    }
-
-    .fullscreen-trigger:hover {
-      background: linear-gradient(135deg,
-        var(--pro-primary-600) 0%,
-        var(--pro-primary-700) 100%
-      );
-      transform: translateY(-2px);
-      box-shadow: var(--pro-shadow-xl),
-                  0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-
-    .fullscreen-trigger:active {
-      transform: translateY(0);
-    }
-
-    /* 全屏状态下的样式调整 */
-    :host ::ng-deep :fullscreen .fullscreen-trigger {
-      bottom: var(--pro-space-4);
-      right: var(--pro-space-4);
-      padding: var(--pro-space-3) var(--pro-space-6);
-    }
-
-    :host ::ng-deep :fullscreen .screen-toolbar {
-      top: var(--pro-space-4);
-    }
-
     /* ===== 动画系统 ===== */
     @keyframes fadeIn {
       from {
@@ -598,14 +676,25 @@ import { environment } from '../../../environments/environment';
 
     /* ===== 响应式设计系统 ===== */
     @media (max-width: 768px) {
-      .screen-toolbar {
-        top: var(--pro-space-4);
-        padding: var(--pro-space-2) var(--pro-space-3);
-        border-radius: var(--pro-radius-xl);
+      .screen-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--pro-space-3);
+        padding: var(--pro-space-3) var(--pro-space-4);
       }
 
-      .toolbar-ensemble {
-        gap: var(--pro-space-2);
+      .screen-header__actions {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: var(--pro-space-3);
+      }
+
+      .screen-toolbar {
+        width: 100%;
+        justify-content: center;
+        padding: var(--pro-space-2) var(--pro-space-3);
+        border-radius: var(--pro-radius-xl);
       }
 
       .toolbar-trigger {
@@ -613,29 +702,30 @@ import { environment } from '../../../environments/environment';
         font-size: var(--pro-font-size-xs);
       }
 
-      .fullscreen-trigger {
-        bottom: var(--pro-space-4);
-        right: var(--pro-space-4);
-        padding: var(--pro-space-2) var(--pro-space-5);
-        font-size: var(--pro-font-size-sm);
-      }
-
       .toolbar-indicator {
         font-size: 0.625rem;
         padding: 0 var(--pro-space-2);
       }
+
+      .screen-action {
+        width: 100%;
+        justify-content: center;
+      }
     }
 
     @media (max-width: 480px) {
-      .toolbar-ensemble {
-        flex-wrap: wrap;
-        justify-content: center;
-        max-width: 280px;
+      .screen-header {
+        top: var(--pro-space-4);
+        width: min(94vw, 480px);
       }
 
       .toolbar-selector {
         min-width: 140px;
         font-size: var(--pro-font-size-xs);
+      }
+
+      .screen-toolbar {
+        flex-wrap: wrap;
       }
     }
 
@@ -650,7 +740,7 @@ import { environment } from '../../../environments/environment';
 
       .toolbar-trigger,
       .toolbar-selector,
-      .fullscreen-trigger {
+      .screen-action {
         border-width: 2px;
       }
     }
@@ -668,8 +758,7 @@ import { environment } from '../../../environments/environment';
 
     /* ===== 打印样式 ===== */
     @media print {
-      .screen-toolbar,
-      .fullscreen-trigger {
+      .screen-toolbar {
         display: none !important;
       }
 
@@ -699,6 +788,10 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   currentScreenIndex = 0;
   isAutoPlay = false;
   autoPlayInterval = 30000; // 30秒切换一次
+
+  get hasMultipleScreens(): boolean {
+    return this.availableScreens.length > 1;
+  }
 
   private destroy$ = new Subject<void>();
   private screenId: string | null = null;
