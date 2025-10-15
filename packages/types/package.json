@@ -31,7 +31,7 @@
   "devDependencies": {
     "@pro/eslint-config": "workspace:*",
     "@pro/prettier-config": "workspace:*",
-    "tsup": "8.5.0",
+    "tsup": "^8.5.0",
     "typescript": "~5.8.0"
   }
 }
