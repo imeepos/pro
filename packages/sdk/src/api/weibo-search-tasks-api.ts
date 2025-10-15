@@ -6,6 +6,7 @@ import {
   CreateWeiboSearchTaskDto,
   UpdateWeiboSearchTaskDto,
   WeiboSearchTaskFilters,
+  WeiboSearchTaskStatus,
 } from '@pro/types';
 import { TaskStats } from '../types/weibo-search-tasks.types.js';
 
@@ -83,7 +84,7 @@ export class WeiboSearchTasksApi {
       this.client
         .query<{ weiboSearchTasks: WeiboSearchTaskConnection }>(query, { filter })
         .then(res => ({
-          tasks: res.weiboSearchTasks.nodes.map(node => this.adaptTask(node)),
+          data: res.weiboSearchTasks.nodes.map(node => this.adaptTask(node)),
           total: res.weiboSearchTasks.pageInfo.total,
           page: res.weiboSearchTasks.pageInfo.page,
           limit: res.weiboSearchTasks.pageInfo.pageSize,
@@ -276,13 +277,16 @@ export class WeiboSearchTasksApi {
       id: node.id,
       keyword: node.keyword,
       enabled: node.enabled,
-      status: node.status,
+      status: this.parseTaskStatus(node.status),
       startDate: this.normalizeDate(node.startDate) ?? new Date(),
+      crawlInterval: '1h',
       nextRunAt: this.normalizeDate(node.nextRunAt),
       latestCrawlTime: this.normalizeDate(node.latestCrawlTime),
       currentCrawlTime: this.normalizeDate(node.currentCrawlTime),
       progress: node.progress,
       totalSegments: node.totalSegments,
+      noDataCount: 0,
+      noDataThreshold: 3,
       retryCount: node.retryCount,
       maxRetries: node.maxRetries,
       errorMessage: node.errorMessage,
@@ -298,6 +302,17 @@ export class WeiboSearchTasksApi {
     if (value instanceof Date) return value;
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+
+  private parseTaskStatus(status: string): WeiboSearchTaskStatus {
+    const statusMap: Record<string, WeiboSearchTaskStatus> = {
+      'pending': WeiboSearchTaskStatus.PENDING,
+      'running': WeiboSearchTaskStatus.RUNNING,
+      'paused': WeiboSearchTaskStatus.PAUSED,
+      'failed': WeiboSearchTaskStatus.FAILED,
+      'timeout': WeiboSearchTaskStatus.TIMEOUT,
+    };
+    return statusMap[status] ?? WeiboSearchTaskStatus.PENDING;
   }
 
   private buildFilterInput(filters?: WeiboSearchTaskFilters): Record<string, unknown> | undefined {

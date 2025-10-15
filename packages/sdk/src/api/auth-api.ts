@@ -1,16 +1,16 @@
 import { Observable, from } from 'rxjs';
 import { GraphQLClient } from '../client/graphql-client.js';
 import { IAuthService } from '../auth.interface.js';
-import { LoginDto, RegisterDto, AuthResponse, UserProfile } from '@pro/types';
+import { LoginDto, RegisterDto, AuthResponse, User } from '@pro/types';
 
 interface AuthPayload {
   accessToken: string;
   refreshToken: string;
-  user: UserProfile;
+  user: User;
 }
 
 interface MeResponse {
-  me: UserProfile;
+  me: User;
 }
 
 interface RegisterResponse {
@@ -134,7 +134,7 @@ export class AuthApi implements IAuthService {
     );
   }
 
-  getProfile(): Observable<UserProfile> {
+  getProfile(): Observable<User> {
     const query = `
       query Me {
         me {

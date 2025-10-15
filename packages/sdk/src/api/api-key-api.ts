@@ -232,7 +232,7 @@ export class ApiKeyApi {
   }
 
   bulkAction(action: ApiKeyBulkAction): Observable<void> {
-    const tasks = action.keyIds.map(keyId => {
+    const tasks = action.keyIds.map((keyId: number) => {
       switch (action.action) {
         case 'activate': {
           const mutation = `mutation { enableApiKey(id: ${keyId}) }`;

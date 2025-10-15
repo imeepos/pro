@@ -2,14 +2,22 @@ export * from './http-client.interface.js';
 export * from './auth.interface.js';
 export * from './user.interface.js';
 export * from './config.interface.js';
-export * from './weibo.interface.js';
-export * from './weibo-auth.sdk.js';
 export * from './jd.interface.js';
 export * from './jd-auth.sdk.js';
 export * from './media-type.interface.js';
 export * from './media-type.sdk.js';
 
 export * from '@pro/types';
+
+export {
+  type WeiboLoginEventType,
+  type WeiboLoginEvent,
+  type QrcodeEventData,
+  type SuccessEventData,
+  type WeiboLoginEventHandler,
+  type WeiboAuthSDK,
+} from './weibo.interface.js';
+export * from './weibo-auth.sdk.js';
 
 // 事件管理系统类型导出
 export * from './types/common.types.js';

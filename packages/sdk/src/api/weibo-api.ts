@@ -5,6 +5,7 @@ import {
   WeiboAccountFilters,
   WeiboAccountListResponse,
   WeiboAccountStats,
+  WeiboAccountStatus,
   WeiboLoginSession,
 } from '@pro/types';
 
@@ -156,8 +157,12 @@ export class WeiboApi {
         .query<{ weiboAccountStats: WeiboAccountStatsResponse }>(query)
         .then(res => ({
           total: res.weiboAccountStats.total,
-          todayNew: res.weiboAccountStats.todayNew,
-          online: res.weiboAccountStats.online,
+          active: res.weiboAccountStats.online,
+          inactive: 0,
+          suspended: 0,
+          expired: 0,
+          healthy: res.weiboAccountStats.online,
+          unhealthy: res.weiboAccountStats.total - res.weiboAccountStats.online,
         }))
     );
   }
@@ -197,11 +202,14 @@ export class WeiboApi {
   private adaptWeiboAccount(node: WeiboAccountNode): WeiboAccount {
     return {
       id: node.id,
+      userId: 0,
+      username: node.uid,
       nickname: node.nickname,
-      avatar: node.avatar,
       uid: node.uid,
-      status: node.status,
-      hasCookies: node.hasCookies,
+      status: this.parseAccountStatus(node.status),
+      cookies: node.hasCookies ? 'present' : undefined,
+      isHealthy: node.status === 'active',
+      errorCount: 0,
       createdAt: this.normalizeDate(node.createdAt) ?? new Date(),
       updatedAt: this.normalizeDate(node.updatedAt) ?? new Date(),
       lastCheckAt: this.normalizeDate(node.lastCheckAt),
@@ -210,12 +218,14 @@ export class WeiboApi {
 
   private adaptLoginSession(data: WeiboLoginSessionResponse): WeiboLoginSession {
     return {
-      sessionId: data.sessionId,
+      id: 0,
+      accountId: 0,
+      sessionToken: data.sessionId,
       qrCodeUrl: data.qrCodeUrl,
-      status: data.status,
+      status: this.parseLoginStatus(data.status),
       expiresAt: this.normalizeDate(data.expiresAt) ?? new Date(),
-      userId: data.userId,
       createdAt: this.normalizeDate(data.createdAt) ?? new Date(),
+      updatedAt: this.normalizeDate(data.createdAt) ?? new Date(),
     };
   }
 
@@ -226,11 +236,31 @@ export class WeiboApi {
     return Number.isNaN(parsed.getTime()) ? undefined : parsed;
   }
 
+  private parseAccountStatus(status: string): WeiboAccountStatus {
+    const statusMap: Record<string, WeiboAccountStatus> = {
+      'active': WeiboAccountStatus.ACTIVE,
+      'inactive': WeiboAccountStatus.INACTIVE,
+      'suspended': WeiboAccountStatus.SUSPENDED,
+      'expired': WeiboAccountStatus.EXPIRED,
+    };
+    return statusMap[status] ?? WeiboAccountStatus.INACTIVE;
+  }
+
+  private parseLoginStatus(status: string): WeiboLoginSession['status'] {
+    const validStatuses = ['pending', 'scanned', 'confirmed', 'expired', 'failed'] as const;
+    return validStatuses.includes(status as any) ? (status as any) : 'pending';
+  }
+
   private buildFilterInput(filters: WeiboAccountFilters): Record<string, unknown> {
     const input: Record<string, unknown> = {};
-    if (filters.keyword) input['keyword'] = filters.keyword;
+    if (filters.search) input['search'] = filters.search;
+    if (filters.status) input['status'] = filters.status;
+    if (filters.userId) input['userId'] = filters.userId;
+    if (filters.isHealthy !== undefined) input['isHealthy'] = filters.isHealthy;
     if (filters.page) input['page'] = filters.page;
-    if (filters.pageSize) input['pageSize'] = filters.pageSize;
+    if (filters.limit) input['limit'] = filters.limit;
+    if (filters.sortBy) input['sortBy'] = filters.sortBy;
+    if (filters.sortOrder) input['sortOrder'] = filters.sortOrder;
     return Object.keys(input).length > 0 ? input : {};
   }
 }
