@@ -33,17 +33,17 @@
   "dependencies": {
     "@nestjs/common": "11.0.13",
     "@nestjs/core": "11.0.13",
-    "@nestjs/microservices": "^11.1.6",
+    "@nestjs/microservices": "^11.0.0",
     "@nestjs/mongoose": "^11.0.3",
     "@nestjs/platform-express": "11.0.13",
-    "@nestjs/platform-socket.io": "^11.0.13",
-    "@nestjs/websockets": "^11.0.13",
+    "@nestjs/platform-socket.io": "^11.0.0",
+    "@nestjs/websockets": "^11.0.0",
     "@pro/types": "workspace:*",
     "mongoose": "^8.0.0"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
-    "@nestjs/testing": "^11.0.13",
+    "@nestjs/testing": "^11.0.0",
     "@pro/eslint-config": "workspace:*",
     "@pro/prettier-config": "workspace:*",
     "@types/jest": "^29.5.2",

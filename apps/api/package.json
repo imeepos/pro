@@ -31,14 +31,14 @@
     "@nestjs/config": "4.0.2",
     "@nestjs/core": "11.0.13",
     "@nestjs/jwt": "11.0.0",
-    "@nestjs/microservices": "^11.1.6",
+    "@nestjs/microservices": "^11.0.0",
     "@nestjs/passport": "11.0.5",
     "@nestjs/platform-express": "11.0.13",
-    "@nestjs/platform-socket.io": "^11.1.6",
+    "@nestjs/platform-socket.io": "^11.0.0",
     "@nestjs/schedule": "^6.0.0",
     "@nestjs/swagger": "11.0.5",
     "@nestjs/typeorm": "11.0.0",
-    "@nestjs/websockets": "^11.1.6",
+    "@nestjs/websockets": "^11.0.0",
     "@pro/entities": "workspace:*",
     "@pro/logger": "workspace:*",
     "@pro/minio": "workspace:*",
@@ -69,7 +69,7 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
-    "@nestjs/testing": "^11.1.6",
+    "@nestjs/testing": "^11.0.0",
     "@pro/eslint-config": "workspace:*",
     "@pro/prettier-config": "workspace:*",
     "@types/express": "^5.0.0",
@@ -92,7 +92,7 @@
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.8.2"
+    "typescript": "~5.8.0"
   },
   "jest": {
     "moduleFileExtensions": [
