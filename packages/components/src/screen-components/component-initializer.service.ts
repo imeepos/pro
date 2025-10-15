@@ -3,6 +3,7 @@ import { ComponentRegistryService } from './base/component-registry.service';
 import { ComponentMetadata } from './base/component-metadata.interface';
 import { WeiboLoggedInUsersCardComponent } from './weibo/weibo-logged-in-users-card.component';
 import { EventMapDistributionComponent } from './events/event-map-distribution.component';
+import { WordCloudStatisticsComponent } from './charts/word-cloud-statistics.component';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +18,7 @@ export class ComponentInitializerService {
   initializeComponents(): void {
     this.registerWeiboComponents();
     this.registerEventComponents();
+    this.registerChartComponents();
     // 在这里添加其他组件类别的注册
   }
 
@@ -250,6 +252,116 @@ export class ComponentInitializerService {
   }
 
   /**
+   * 注册图表组件
+   */
+  private registerChartComponents(): void {
+    const wordCloudMetadata: ComponentMetadata = {
+      type: 'word-cloud-statistics',
+      name: '关键词词云',
+      category: '可视化图表',
+      icon: '☁️',
+      description: '以可视化云图呈现高频关键词，支持动态刷新、色彩映射与焦点词高亮展示',
+      configSchema: {
+        mode: {
+          type: 'select',
+          label: '显示模式',
+          options: [
+            { value: 'edit', label: '编辑模式' },
+            { value: 'display', label: '展示模式' }
+          ],
+          default: 'display'
+        },
+        title: {
+          type: 'text',
+          label: '标题',
+          default: '关键词词云'
+        },
+        maxWords: {
+          type: 'number',
+          label: '最大词条数量',
+          min: 10,
+          max: 200,
+          default: 60
+        },
+        minFontSize: {
+          type: 'number',
+          label: '最小字号',
+          min: 8,
+          max: 60,
+          default: 18
+        },
+        maxFontSize: {
+          type: 'number',
+          label: '最大字号',
+          min: 24,
+          max: 120,
+          default: 54
+        },
+        palette: {
+          type: 'color-list',
+          label: '色板',
+          default: ['#2563eb', '#7c3aed', '#ea580c', '#059669', '#f59e0b', '#0ea5e9']
+        },
+        background: {
+          type: 'select',
+          label: '背景主题',
+          options: [
+            { value: 'transparent', label: '通透玻璃' },
+            { value: 'light', label: '明亮极简' },
+            { value: 'dark', label: '深色夜景' }
+          ],
+          default: 'transparent'
+        },
+        rotate: {
+          type: 'boolean',
+          label: '启用旋转',
+          default: true
+        },
+        refreshInterval: {
+          type: 'number',
+          label: '自动刷新间隔(毫秒)',
+          min: 0,
+          step: 1000,
+          default: 45000
+        },
+        highlightThreshold: {
+          type: 'number',
+          label: '焦点词阈值',
+          min: 0,
+          default: 72
+        },
+        showMetaPanel: {
+          type: 'boolean',
+          label: '显示元信息面板',
+          default: true
+        },
+        randomizeOnRefresh: {
+          type: 'boolean',
+          label: '刷新时重新排布',
+          default: true
+        }
+      },
+      defaultConfig: {
+        mode: 'display',
+        title: '关键词词云',
+        maxWords: 60,
+        minFontSize: 18,
+        maxFontSize: 54,
+        palette: ['#2563eb', '#7c3aed', '#ea580c', '#059669', '#f59e0b', '#0ea5e9'],
+        background: 'transparent',
+        rotate: true,
+        rotationAngles: [-25, -12, 0, 12, 25],
+        refreshInterval: 45000,
+        highlightThreshold: 72,
+        showMetaPanel: true,
+        randomizeOnRefresh: true
+      }
+    };
+
+    this.componentRegistry.register(wordCloudMetadata, WordCloudStatisticsComponent);
+  }
+
+  /**
    * 获取所有已注册组件的统计信息
    */
   getRegistrationStats(): {
@@ -291,7 +403,8 @@ export class ComponentInitializerService {
   } {
     const expectedComponents = [
       'weibo-logged-in-users-card',
-      'event-map-distribution'
+      'event-map-distribution',
+      'word-cloud-statistics'
     ];
 
     const registeredComponents: string[] = [];

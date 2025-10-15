@@ -9,6 +9,7 @@ export { ComponentRegistryService } from './screen-components/base/component-reg
 export { ComponentInitializerService } from './screen-components/component-initializer.service';
 export * from './screen-components/weibo/index';
 export * from './screen-components/events/index';
+export * from './screen-components/charts/index';
 
 // Component Validation
 export { ComponentConsistencyService } from './validation/component-consistency.service';

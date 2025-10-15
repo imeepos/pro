@@ -10,3 +10,6 @@ export * from './weibo/index';
 
 // Event Components
 export * from './events/index';
+
+// Chart Components
+export * from './charts/index';
