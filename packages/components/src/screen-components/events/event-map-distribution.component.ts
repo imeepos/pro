@@ -76,31 +76,12 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
   encapsulation: ViewEncapsulation.None,
   template: `
     <div class="event-map-card h-full flex flex-col" [class.edit-mode]="isEditMode">
-      <div class="card-header flex items-start justify-between gap-4">
-        <div class="title flex items-center gap-3 text-slate-800">
-          <span class="title-icon text-2xl">🧭</span>
-          <div class="flex flex-col">
-            <span class="text-xl font-semibold tracking-wide">{{ config.title }}</span>
-            <small class="text-xs text-slate-500" *ngIf="latestEventName">
-              最近事件：{{ latestEventName }} · {{ latestEventTime | date:'MM-dd HH:mm' }}
-            </small>
-          </div>
-        </div>
-
-        <div class="status-tags flex items-center gap-2 flex-wrap justify-end">
-          <span *ngIf="isLoading" class="status-chip chip-loading">数据加载中</span>
-          <span *ngIf="!isLoading && !dataError && totalEvents > 0" class="status-chip chip-active">
-            {{ totalEvents }} 个事件 · {{ provinceSpread }} 个区域
-          </span>
-          <span *ngIf="!isLoading && totalEvents === 0 && !mapError" class="status-chip chip-muted">
-            暂无带有位置的事件
-          </span>
-          <span *ngIf="dataError" class="status-chip chip-error">{{ dataError }}</span>
-        </div>
-      </div>
-
-      <div class="map-stage relative flex-1 mt-4">
-        <div #mapCanvas class="map-canvas" aria-label="事件地图分布"></div>
+      <div class="map-stage relative flex-1">
+        <div
+          #mapCanvas
+          class="map-canvas"
+          [attr.aria-label]="config.title || '事件地图分布'"
+        ></div>
 
         <div *ngIf="!mapReady && !mapError" class="map-overlay">
           <div class="loading-stack">
@@ -188,49 +169,6 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     .event-map-card.edit-mode {
       box-shadow: 0 24px 60px rgba(59,130,246,0.18);
       border-color: rgba(59,130,246,0.45);
-    }
-
-    .card-header .title-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, rgba(59,130,246,0.24), rgba(34,197,94,0.18));
-      color: #0f172a;
-      backdrop-filter: blur(8px);
-    }
-
-    .status-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border-radius: 999px;
-      font-size: 12px;
-      padding: 4px 12px;
-      letter-spacing: 0.4px;
-      font-weight: 500;
-    }
-
-    .chip-loading {
-      background: rgba(59,130,246,0.12);
-      color: rgba(30,64,175,0.85);
-    }
-
-    .chip-active {
-      background: rgba(34,197,94,0.12);
-      color: rgba(21,128,61,0.9);
-    }
-
-    .chip-muted {
-      background: rgba(148,163,184,0.16);
-      color: rgba(71,85,105,0.8);
-    }
-
-    .chip-error {
-      background: rgba(239,68,68,0.14);
-      color: rgba(185,28,28,0.88);
     }
 
     .map-stage {
@@ -452,10 +390,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
   @ViewChild('mapCanvas', { static: true }) mapCanvasRef?: ElementRef<HTMLDivElement>;
 
   totalEvents = 0;
-  provinceSpread = 0;
   provinceSummary: ProvinceSummaryEntry[] = [];
-  latestEventName = '';
-  latestEventTime?: string;
   lastUpdated: Date | null = null;
   mapReady = false;
   hasPlottableEvents = false;
@@ -619,11 +554,8 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
 
       this.events = items;
       this.totalEvents = items.length;
-      this.provinceSpread = this.calculateProvinceSpread(items);
       this.provinceSummary = this.buildProvinceSummary(items);
       const latest = this.findLatestEvent(items);
-      this.latestEventName = latest?.eventName || '';
-      this.latestEventTime = latest?.occurTime;
       this.lastUpdated = new Date();
       this.hasPlottableEvents = items.length > 0;
 
@@ -827,18 +759,6 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     interval(this.config.refreshInterval)
       .pipe(takeUntil(this.refreshReset$), takeUntil(this.destroy$))
       .subscribe(() => this.loadEvents());
-  }
-
-  private calculateProvinceSpread(events: Event[]): number {
-    const regions = new Set<string>();
-    events.forEach(event => {
-      if (event.province) {
-        regions.add(event.province);
-      } else if (event.city) {
-        regions.add(event.city);
-      }
-    });
-    return regions.size;
   }
 
   private buildProvinceSummary(events: Event[]): ProvinceSummaryEntry[] {
