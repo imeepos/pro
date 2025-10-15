@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { ComponentRegistryService } from './base/component-registry.service';
 import { ComponentMetadata } from './base/component-metadata.interface';
 import { WeiboLoggedInUsersCardComponent } from './weibo/weibo-logged-in-users-card.component';
-import { EventMapDistributionComponent } from './events/event-map-distribution.component';
+import { EventMapDistributionComponent, HotEventsRankingComponent } from './events/index';
 import { WordCloudStatisticsComponent } from './charts/word-cloud-statistics.component';
 
 @Injectable({
@@ -130,6 +130,7 @@ export class ComponentInitializerService {
    * 注册事件可视化组件
    */
   private registerEventComponents(): void {
+    // 注册事件地图分布组件
     const eventMapMetadata: ComponentMetadata = {
       type: 'event-map-distribution',
       name: '事件地图分布',
@@ -249,6 +250,116 @@ export class ComponentInitializerService {
     };
 
     this.componentRegistry.register(eventMapMetadata, EventMapDistributionComponent);
+
+    // 注册热门事件排行榜组件
+    const hotEventsRankingMetadata: ComponentMetadata = {
+      type: 'hot-events-ranking',
+      name: '热门事件排行榜',
+      category: '事件分析',
+      icon: '🏆',
+      description: '展示热门事件的排行榜，支持热度趋势、地域信息和自动刷新',
+      configSchema: {
+        mode: {
+          type: 'select',
+          label: '显示模式',
+          options: [
+            { value: 'edit', label: '编辑模式' },
+            { value: 'display', label: '展示模式' }
+          ],
+          default: 'display'
+        },
+        title: {
+          type: 'text',
+          label: '标题',
+          default: '热门事件排行榜',
+          placeholder: '如：今日热点事件排行'
+        },
+        maxItems: {
+          type: 'number',
+          label: '最大显示数量',
+          min: 3,
+          max: 20,
+          default: 8
+        },
+        refreshInterval: {
+          type: 'number',
+          label: '刷新间隔(毫秒)',
+          min: 0,
+          step: 1000,
+          default: 60000
+        },
+        highlightTopN: {
+          type: 'number',
+          label: '高亮前N名',
+          min: 1,
+          max: 10,
+          default: 3
+        },
+        showSummary: {
+          type: 'boolean',
+          label: '显示事件摘要',
+          default: true
+        },
+        showTrend: {
+          type: 'boolean',
+          label: '显示热度趋势',
+          default: true
+        },
+        showLocation: {
+          type: 'boolean',
+          label: '显示地域信息',
+          default: true
+        },
+        allowManualRefresh: {
+          type: 'boolean',
+          label: '允许手动刷新',
+          default: true
+        },
+        eventStatus: {
+          type: 'select',
+          label: '事件状态',
+          options: [
+            { value: 'all', label: '全部事件' },
+            { value: 'published', label: '仅已发布' }
+          ],
+          default: 'published'
+        },
+        industryTypeId: {
+          type: 'text',
+          label: '行业类型ID',
+          placeholder: '按行业类型过滤'
+        },
+        eventTypeId: {
+          type: 'text',
+          label: '事件类型ID',
+          placeholder: '按事件类型过滤'
+        },
+        province: {
+          type: 'text',
+          label: '省份筛选',
+          placeholder: '示例：北京市'
+        },
+        staticEntries: {
+          type: 'array',
+          label: '静态事件列表',
+          placeholder: 'JSON格式的静态事件数据'
+        }
+      },
+      defaultConfig: {
+        mode: 'display',
+        title: '热门事件排行榜',
+        maxItems: 6,
+        refreshInterval: 0,
+        highlightTopN: 3,
+        showSummary: false,
+        showTrend: true,
+        showLocation: true,
+        allowManualRefresh: false,
+        eventStatus: 'published'
+      }
+    };
+
+    this.componentRegistry.register(hotEventsRankingMetadata, HotEventsRankingComponent);
   }
 
   /**
@@ -404,6 +515,7 @@ export class ComponentInitializerService {
     const expectedComponents = [
       'weibo-logged-in-users-card',
       'event-map-distribution',
+      'hot-events-ranking',
       'word-cloud-statistics'
     ];
 
