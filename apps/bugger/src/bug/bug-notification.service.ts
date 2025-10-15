@@ -20,7 +20,7 @@ export class BugNotificationService {
       bugId: bug.id,
       title: '新Bug报告',
       message: `Bug "${bug.title}" 已被创建`,
-      recipients: [bug.reporterId, bug.assigneeId].filter(Boolean),
+      recipients: [bug.reporterId, bug.assigneeId].filter(Boolean) as string[],
     });
   }
 
@@ -37,7 +37,7 @@ export class BugNotificationService {
       bugId: bug.id,
       title: 'Bug状态更新',
       message: `Bug "${bug.title}" 状态从 ${oldStatus} 变更为 ${newStatus}`,
-      recipients: [bug.reporterId, bug.assigneeId].filter(Boolean),
+      recipients: [bug.reporterId, bug.assigneeId].filter(Boolean) as string[],
     });
   }
 

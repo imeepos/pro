@@ -727,6 +727,12 @@ importers:
 
   apps/bugger:
     dependencies:
+      '@apollo/server':
+        specifier: ^5.0.0
+        version: 5.0.0(graphql@16.11.0)
+      '@nestjs/apollo':
+        specifier: ^13.2.1
+        version: 13.2.1(@apollo/server@5.0.0(graphql@16.11.0))(@nestjs/common@11.0.13(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.13)(@nestjs/graphql@13.2.0(@nestjs/common@11.0.13(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.13)(class-transformer@0.5.1)(class-validator@0.14.2)(graphql@16.11.0)(reflect-metadata@0.2.2))(graphql@16.11.0)
       '@nestjs/common':
         specifier: 11.0.13
         version: 11.0.13(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1)
@@ -736,12 +742,12 @@ importers:
       '@nestjs/core':
         specifier: 11.0.13
         version: 11.0.13(@nestjs/common@11.0.13(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/microservices@11.1.6)(@nestjs/platform-express@11.0.13)(@nestjs/websockets@11.1.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      '@nestjs/graphql':
+        specifier: ^13.2.0
+        version: 13.2.0(@nestjs/common@11.0.13(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.13)(class-transformer@0.5.1)(class-validator@0.14.2)(graphql@16.11.0)(reflect-metadata@0.2.2)
       '@nestjs/platform-express':
         specifier: 11.0.13
         version: 11.0.13(@nestjs/common@11.0.13(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.13)
-      '@nestjs/swagger':
-        specifier: 11.0.5
-        version: 11.0.5(@nestjs/common@11.0.13(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.13)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)
       '@nestjs/typeorm':
         specifier: 11.0.0
         version: 11.0.0(@nestjs/common@11.0.13(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.13)(reflect-metadata@0.2.2)(rxjs@7.8.1)(typeorm@0.3.27(ioredis@5.8.1)(mongodb@6.20.0(socks@2.8.7))(pg@8.13.1)(reflect-metadata@0.2.2)(ts-node@10.9.2(@swc/core@1.13.5)(@types/node@20.19.21)(typescript@5.8.3)))
@@ -772,6 +778,15 @@ importers:
       class-validator:
         specifier: ^0.14.2
         version: 0.14.2
+      dataloader:
+        specifier: ^2.2.3
+        version: 2.2.3
+      graphql:
+        specifier: ^16.11.0
+        version: 16.11.0
+      graphql-type-json:
+        specifier: ^0.3.2
+        version: 0.3.2(graphql@16.11.0)
       multer:
         specifier: ^1.4.5-lts.2
         version: 1.4.5-lts.2

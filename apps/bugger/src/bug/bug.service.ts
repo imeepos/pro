@@ -26,7 +26,7 @@ export class BugService {
     private readonly notificationService: BugNotificationService,
   ) {}
 
-  async create(createBugDto: CreateBugDto): Promise<Bug> {
+  async create(createBugDto: CreateBugDto | any): Promise<Bug> {
     this.logger.log(`创建Bug: ${createBugDto.title}`);
 
     const bugEntity = this.bugRepository.create({
@@ -36,14 +36,15 @@ export class BugService {
       reporterId: 'system',
     });
 
-    const savedBug = await this.bugRepository.save(bugEntity);
+    const savedBugResult = await this.bugRepository.save(bugEntity);
+    const savedBug = Array.isArray(savedBugResult) ? savedBugResult[0] : savedBugResult;
 
     await this.notificationService.notifyBugCreated(savedBug);
 
     return this.mapEntityToDto(savedBug);
   }
 
-  async findAll(filters: BugFilters): Promise<{ bugs: Bug[]; total: number }> {
+  async findAll(filters: BugFilters | any): Promise<{ bugs: Bug[]; total: number }> {
     this.logger.log(`查询Bug列表: ${JSON.stringify(filters)}`);
 
     const {
@@ -100,7 +101,7 @@ export class BugService {
     return this.mapEntityToDto(bug);
   }
 
-  async update(id: string, updateBugDto: UpdateBugDto): Promise<Bug> {
+  async update(id: string, updateBugDto: UpdateBugDto | any): Promise<Bug> {
     this.logger.log(`更新Bug: ${id}`);
 
     // 验证 UUID 格式
@@ -122,6 +123,10 @@ export class BugService {
       where: { id },
       relations: ['reporter', 'assignee'],
     });
+
+    if (!updatedBug) {
+      throw new NotFoundException('Bug不存在');
+    }
 
     if (updateBugDto.status && updateBugDto.status !== oldStatus) {
       await this.commentService.create(id, {

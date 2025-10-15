@@ -17,7 +17,7 @@ export class BugCommentService {
     private readonly userRepository: Repository<UserEntity>,
   ) {}
 
-  async create(bugId: string, createCommentDto: CreateBugCommentDto): Promise<BugComment> {
+  async create(bugId: string, createCommentDto: CreateBugCommentDto | any): Promise<BugComment> {
     this.logger.log(`为Bug ${bugId} 创建评论`);
 
     const bug = await this.bugRepository.findOne({ where: { id: bugId } });
