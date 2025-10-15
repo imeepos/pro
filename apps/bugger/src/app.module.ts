@@ -23,11 +23,11 @@ import { GraphqlExceptionFilter } from './common/filters/graphql-exception.filte
       serviceName: '@pro/bugger',
     })),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
+      driver: ApolloDriver,
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const isProduction = configService.get<string>('NODE_ENV') === 'production';
         return {
-          driver: ApolloDriver,
           autoSchemaFile: join(process.cwd(), 'apps', 'bugger', 'schema.graphql'),
           sortSchema: true,
           path: '/graphql',

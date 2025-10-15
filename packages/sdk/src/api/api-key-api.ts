@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
 import {
   ApiKey,
   ApiKeyActivityFilters,
@@ -16,37 +16,36 @@ import {
   CreateApiKeyDto,
   UpdateApiKeyDto,
 } from '@pro/types';
-import { HttpClient } from '../client/http-client.js';
-import { fromPromise } from '../utils/observable-adapter.js';
+import { GraphQLClient } from '../client/graphql-client.js';
 
 interface ApiKeyRecord {
   id: number;
   key: string;
   name: string;
   description?: string;
-  type?: string;
+  type: string;
   permissions?: string[];
-  userId?: string;
   isActive: boolean;
   lastUsedAt?: string | Date | null;
   usageCount: number;
   expiresAt?: string | Date | null;
   createdIp?: string | null;
-  updatedIp?: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
   isExpired: boolean;
   isValid: boolean;
 }
 
-interface ApiKeyListPayload {
-  items: ApiKeyRecord[];
+interface PageInfo {
   total: number;
+  pageSize: number;
   page: number;
-  limit: number;
   totalPages: number;
-  hasNext?: boolean;
-  hasPrev?: boolean;
+}
+
+interface ApiKeyConnection {
+  nodes: ApiKeyRecord[];
+  pageInfo: PageInfo;
 }
 
 interface ApiKeyStatsPayload {
@@ -73,19 +72,17 @@ interface ApiKeySummaryStatsPayload {
 }
 
 export class ApiKeyApi {
-  private readonly http: HttpClient;
-  private readonly baseUrl = '/api/api-keys';
+  private readonly client: GraphQLClient;
 
   constructor(baseUrl?: string, tokenKey?: string) {
     if (!baseUrl) {
       throw new Error(`ApiKeyApi missing base url!`);
     }
-    const resolvedBaseUrl = baseUrl;
-    this.http = new HttpClient(resolvedBaseUrl, tokenKey);
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
   findAll(filters?: ApiKeyFilters): Observable<ApiKeyListResponse> {
-    return fromPromise(this.fetchList(filters));
+    return from(this.fetchList(filters));
   }
 
   findMyKeys(filters?: ApiKeyFilters): Observable<ApiKeyListResponse> {
@@ -93,36 +90,82 @@ export class ApiKeyApi {
   }
 
   findOne(id: number): Observable<ApiKey> {
-    return fromPromise(this.fetchOne(id));
+    return from(this.fetchOne(id));
   }
 
   create(dto: CreateApiKeyDto): Observable<ApiKey> {
-    return fromPromise(
-      this.http.post<ApiKeyRecord>(this.baseUrl, dto).then((record) => adaptApiKey(record)),
+    const mutation = `
+      mutation CreateApiKey($input: CreateApiKeyDto!) {
+        createApiKey(input: $input) {
+          id key name description type permissions
+          isActive lastUsedAt usageCount expiresAt createdIp
+          createdAt updatedAt isExpired isValid
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<{ createApiKey: ApiKeyRecord }>(mutation, { input: dto })
+        .then(res => adaptApiKey(res.createApiKey))
     );
   }
 
   update(id: number, updates: UpdateApiKeyDto): Observable<ApiKey> {
-    return fromPromise(
-      this.http
-        .put<ApiKeyRecord>(`${this.baseUrl}/${id}`, updates)
-        .then((record) => adaptApiKey(record)),
+    const mutation = `
+      mutation UpdateApiKey($id: Int!, $input: UpdateApiKeyDto!) {
+        updateApiKey(id: $id, input: $input) {
+          id key name description type permissions
+          isActive lastUsedAt usageCount expiresAt createdIp
+          createdAt updatedAt isExpired isValid
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<{ updateApiKey: ApiKeyRecord }>(mutation, { id, input: updates })
+        .then(res => adaptApiKey(res.updateApiKey))
     );
   }
 
   delete(id: number): Observable<void> {
-    return fromPromise(this.http.delete<void>(`${this.baseUrl}/${id}`));
+    const mutation = `
+      mutation RemoveApiKey($id: Int!) {
+        removeApiKey(id: $id)
+      }
+    `;
+
+    return from(
+      this.client.mutate<{ removeApiKey: boolean }>(mutation, { id }).then(() => undefined)
+    );
   }
 
   activate(id: number): Observable<ApiKey> {
-    return fromPromise(
-      this.http.put<void>(`${this.baseUrl}/${id}/enable`, {}).then(() => this.fetchOne(id)),
+    const mutation = `
+      mutation EnableApiKey($id: Int!) {
+        enableApiKey(id: $id)
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<{ enableApiKey: boolean }>(mutation, { id })
+        .then(() => this.fetchOne(id))
     );
   }
 
   deactivate(id: number): Observable<ApiKey> {
-    return fromPromise(
-      this.http.put<void>(`${this.baseUrl}/${id}/disable`, {}).then(() => this.fetchOne(id)),
+    const mutation = `
+      mutation DisableApiKey($id: Int!) {
+        disableApiKey(id: $id)
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<{ disableApiKey: boolean }>(mutation, { id })
+        .then(() => this.fetchOne(id))
     );
   }
 
@@ -131,75 +174,103 @@ export class ApiKeyApi {
   }
 
   regenerate(id: number): Observable<ApiKeyRegenerationResponse> {
-    return fromPromise(
-      this.http.post<string>(`${this.baseUrl}/${id}/regenerate`, {}).then((newKey) =>
-        this.fetchOne(id).then((apiKey) => ({
-          oldKeyId: id,
-          newApiKey: { ...apiKey, key: newKey },
-          message: '新的 API Key 已生成，请立即保存。',
-        })),
-      ),
+    const mutation = `
+      mutation RegenerateApiKey($id: Int!) {
+        regenerateApiKey(id: $id) {
+          key
+          warning
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<{ regenerateApiKey: { key: string; warning: string } }>(mutation, { id })
+        .then(res =>
+          this.fetchOne(id).then(apiKey => ({
+            oldKeyId: id,
+            newApiKey: { ...apiKey, key: res.regenerateApiKey.key },
+            message: res.regenerateApiKey.warning,
+          }))
+        )
     );
   }
 
   getUsageStats(id: number): Observable<ApiKeyUsageStats> {
-    return fromPromise(
-      this.http.get<ApiKeyStatsPayload>(`${this.baseUrl}/${id}/stats`).then((stats) => ({
-        id: stats.id,
-        totalRequests: stats.usageCount,
-        requestsThisMonth: stats.usageCount,
-        requestsToday: 0,
-        lastUsedAt: normalizeDate(stats.lastUsedAt),
-        averageRequestsPerDay: stats.averageDailyUsage,
-        peakUsageDay: undefined,
-        endpointsUsed: [],
-      })),
+    const query = `
+      query GetApiKeyStats($id: Int!) {
+        apiKeyStats(id: $id) {
+          id name usageCount lastUsedAt createdAt
+          daysSinceCreation averageDailyUsage
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .query<{ apiKeyStats: ApiKeyStatsPayload }>(query, { id })
+        .then(res => ({
+          id: res.apiKeyStats.id,
+          totalRequests: res.apiKeyStats.usageCount,
+          requestsThisMonth: res.apiKeyStats.usageCount,
+          requestsToday: 0,
+          lastUsedAt: normalizeDate(res.apiKeyStats.lastUsedAt),
+          averageRequestsPerDay: res.apiKeyStats.averageDailyUsage,
+          peakUsageDay: undefined,
+          endpointsUsed: [],
+        }))
     );
   }
 
   validate(_request: ApiKeyValidationRequest): Observable<ApiKeyValidationResponse> {
-    return fromPromise(
+    return from(
       Promise.resolve({
         valid: false,
         error: 'API Key 验证功能暂未开放',
-      }),
+      })
     );
   }
 
   bulkAction(action: ApiKeyBulkAction): Observable<void> {
-    const tasks = action.keyIds.map((keyId) => {
+    const tasks = action.keyIds.map(keyId => {
       switch (action.action) {
-        case 'activate':
-          return this.http.put<void>(`${this.baseUrl}/${keyId}/enable`, {});
-        case 'deactivate':
-          return this.http.put<void>(`${this.baseUrl}/${keyId}/disable`, {});
-        case 'revoke':
-          return this.http.delete<void>(`${this.baseUrl}/${keyId}`);
+        case 'activate': {
+          const mutation = `mutation { enableApiKey(id: ${keyId}) }`;
+          return this.client.mutate(mutation);
+        }
+        case 'deactivate': {
+          const mutation = `mutation { disableApiKey(id: ${keyId}) }`;
+          return this.client.mutate(mutation);
+        }
+        case 'revoke': {
+          const mutation = `mutation { removeApiKey(id: ${keyId}) }`;
+          return this.client.mutate(mutation);
+        }
         case 'extend':
           if (!action.expiresAt) {
             return Promise.resolve();
           }
-          return this.http.put<void>(`${this.baseUrl}/${keyId}`, { expiresAt: action.expiresAt });
+          return this.update(keyId, { expiresAt: action.expiresAt }).toPromise();
         default:
           return Promise.resolve();
       }
     });
 
-    return fromPromise(Promise.all(tasks).then(() => undefined));
+    return from(Promise.all(tasks).then(() => undefined));
   }
 
   getActivityLogs(filters?: ApiKeyActivityFilters): Observable<ApiKeyActivityListResponse> {
     const page = filters?.page ?? 1;
     const limit = filters?.limit ?? 10;
 
-    return fromPromise(
+    return from(
       Promise.resolve({
         data: [],
         total: 0,
         page,
         limit,
         totalPages: 0,
-      }),
+      })
     );
   }
 
@@ -211,7 +282,7 @@ export class ApiKeyApi {
   }
 
   getStats(): Observable<ApiKeyStats> {
-    return fromPromise(this.fetchSummaryStats());
+    return from(this.fetchSummaryStats());
   }
 
   extendExpiry(id: number, expiresAt: string): Observable<ApiKey> {
@@ -219,49 +290,83 @@ export class ApiKeyApi {
   }
 
   private async fetchList(filters?: ApiKeyFilters): Promise<ApiKeyListResponse> {
-    const payload = await this.http.get<ApiKeyListPayload>(
-      this.baseUrl,
-      this.buildQueryParams(filters),
-    );
+    const query = `
+      query GetApiKeys($filter: ApiKeyQueryDto) {
+        apiKeys(filter: $filter) {
+          nodes {
+            id key name description type permissions
+            isActive lastUsedAt usageCount expiresAt createdIp
+            createdAt updatedAt isExpired isValid
+          }
+          pageInfo {
+            total page pageSize totalPages
+          }
+        }
+      }
+    `;
+
+    const filter = this.buildFilterInput(filters);
+    const response = await this.client.query<{ apiKeys: ApiKeyConnection }>(query, { filter });
 
     return {
-      data: payload.items.map((item) => adaptApiKey(item)),
-      total: payload.total,
-      page: payload.page,
-      limit: payload.limit,
-      totalPages: payload.totalPages,
-      hasNext: payload.hasNext ?? payload.page < payload.totalPages,
-      hasPrev: payload.hasPrev ?? payload.page > 1,
+      data: response.apiKeys.nodes.map(node => adaptApiKey(node)),
+      total: response.apiKeys.pageInfo.total,
+      page: response.apiKeys.pageInfo.page,
+      limit: response.apiKeys.pageInfo.pageSize,
+      totalPages: response.apiKeys.pageInfo.totalPages,
+      hasNext: response.apiKeys.pageInfo.page < response.apiKeys.pageInfo.totalPages,
+      hasPrev: response.apiKeys.pageInfo.page > 1,
     };
   }
 
   private async fetchOne(id: number): Promise<ApiKey> {
-    const record = await this.http.get<ApiKeyRecord>(`${this.baseUrl}/${id}`);
-    return adaptApiKey(record);
+    const query = `
+      query GetApiKey($id: Int!) {
+        apiKey(id: $id) {
+          id key name description type permissions
+          isActive lastUsedAt usageCount expiresAt createdIp
+          createdAt updatedAt isExpired isValid
+        }
+      }
+    `;
+
+    const response = await this.client.query<{ apiKey: ApiKeyRecord }>(query, { id });
+    return adaptApiKey(response.apiKey);
   }
 
   private async fetchSummaryStats(): Promise<ApiKeyStats> {
-    const payload = await this.http.get<ApiKeySummaryStatsPayload>(`${this.baseUrl}/summary/stats`);
-    return adaptSummaryStats(payload);
+    const query = `
+      query GetApiKeySummary {
+        apiKeySummary {
+          total active inactive expired neverUsed expiringSoon
+          totalUsage averageDailyUsage
+          mostUsed { id name usageCount lastUsedAt createdAt daysSinceCreation averageDailyUsage }
+          recentlyUsed { id name usageCount lastUsedAt createdAt daysSinceCreation averageDailyUsage }
+        }
+      }
+    `;
+
+    const response = await this.client.query<{ apiKeySummary: ApiKeySummaryStatsPayload }>(query);
+    return adaptSummaryStats(response.apiKeySummary);
   }
 
-  private buildQueryParams(filters?: ApiKeyFilters): Record<string, unknown> {
+  private buildFilterInput(filters?: ApiKeyFilters): Record<string, unknown> | undefined {
     if (!filters) {
-      return {};
+      return undefined;
     }
 
-    const params: Record<string, unknown> = {};
+    const input: Record<string, unknown> = {};
 
-    if (filters.search) params['search'] = filters.search;
-    if (filters.status) params['status'] = filters.status;
-    if (filters.startDate) params['startDate'] = filters.startDate;
-    if (filters.endDate) params['endDate'] = filters.endDate;
-    if (filters.page) params['page'] = filters.page;
-    if (filters.limit) params['limit'] = filters.limit;
-    if (filters.sortBy) params['sortBy'] = filters.sortBy;
-    if (filters.sortOrder) params['sortOrder'] = filters.sortOrder;
+    if (filters.search) input['search'] = filters.search;
+    if (filters.status) input['status'] = filters.status;
+    if (filters.startDate) input['startDate'] = filters.startDate;
+    if (filters.endDate) input['endDate'] = filters.endDate;
+    if (filters.page) input['page'] = filters.page;
+    if (filters.limit) input['limit'] = filters.limit;
+    if (filters.sortBy) input['sortBy'] = filters.sortBy;
+    if (filters.sortOrder) input['sortOrder'] = filters.sortOrder;
 
-    return params;
+    return Object.keys(input).length > 0 ? input : undefined;
   }
 }
 
@@ -287,10 +392,11 @@ function deriveStatus(isActive: boolean, isExpired: boolean): ApiKeyStatus {
 }
 
 function adaptApiKey(record: ApiKeyRecord): ApiKey {
-  // 映射类型字符串到枚举值
   let type: ApiKeyType = ApiKeyType.READ_ONLY;
+
   if (record.type) {
-    switch (record.type.toLowerCase()) {
+    const typeStr = typeof record.type === 'string' ? record.type.toLowerCase() : String(record.type).toLowerCase();
+    switch (typeStr) {
       case 'admin':
         type = ApiKeyType.ADMIN;
         break;
@@ -309,7 +415,7 @@ function adaptApiKey(record: ApiKeyRecord): ApiKey {
     key: record.key,
     name: record.name,
     description: record.description,
-    type: type,
+    type,
     status: deriveStatus(record.isActive, record.isExpired),
     isActive: record.isActive,
     lastUsedAt: normalizeDate(record.lastUsedAt),
@@ -320,7 +426,7 @@ function adaptApiKey(record: ApiKeyRecord): ApiKey {
     updatedAt: normalizeDate(record.updatedAt) ?? new Date(),
     isExpired: record.isExpired,
     isValid: record.isValid,
-    userId: record.userId ? parseInt(record.userId, 10) : 0,
+    userId: 0,
     permissions: record.permissions || [],
   };
 }

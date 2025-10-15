@@ -1,165 +1,212 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, of, throwError, timeout } from 'rxjs';
-import { catchError, map, first } from 'rxjs/operators';
-import { Bug, CreateBugDto, UpdateBugDto, BugFilters, BugComment, CreateBugCommentDto, ApiResponse, BugError, BugErrorType, BugOperationResult } from '@pro/types';
+import { Apollo } from 'apollo-angular';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { Bug, CreateBugDto, UpdateBugDto, BugFilters, BugComment, CreateBugCommentDto, BugError, BugOperationResult } from '@pro/types';
+import {
+  GET_BUGS,
+  GET_BUG,
+  GET_BUG_STATISTICS,
+  CREATE_BUG,
+  UPDATE_BUG,
+  REMOVE_BUG,
+  UPDATE_BUG_STATUS,
+  ASSIGN_BUG,
+  GET_BUG_COMMENTS,
+  ADD_BUG_COMMENT,
+} from '../graphql/operations';
 
 @Injectable({
   providedIn: 'root'
 })
 export class BugService {
-  private readonly apiUrl = 'http://localhost:3005/api/bugs';
-  private readonly requestTimeout = 30000; // 30 seconds
-
-  constructor(private http: HttpClient) {}
+  constructor(private apollo: Apollo) {}
 
   getBugs(filters?: BugFilters): Observable<BugOperationResult<{ bugs: Bug[]; total: number }>> {
-    const params = filters ? this.buildQueryParams(filters) : {};
-    return this.http.get<ApiResponse<{ bugs: Bug[]; total: number }>>(this.apiUrl, { params }).pipe(
-      timeout(this.requestTimeout),
-      map(response => ({
-        success: true,
-        data: response.data || { bugs: [], total: 0 }
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    return this.apollo
+      .query<{ bugs: { bugs: Bug[]; total: number } }>({
+        query: GET_BUGS,
+        variables: { filters: this.buildFiltersInput(filters) },
+      })
+      .pipe(
+        map(response => ({
+          success: true,
+          data: response.data?.bugs || { bugs: [], total: 0 }
+        })),
+        catchError(error => this.handleError(error))
+      );
   }
 
   getBug(id: string): Observable<BugOperationResult<Bug>> {
-    return this.http.get<ApiResponse<Bug>>(`${this.apiUrl}/${id}`).pipe(
-      timeout(this.requestTimeout),
-      map(response => ({
-        success: true,
-        data: response.data!
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    return this.apollo
+      .query<{ bug: Bug }>({
+        query: GET_BUG,
+        variables: { id },
+      })
+      .pipe(
+        map(response => ({
+          success: true,
+          data: response.data?.bug!
+        })),
+        catchError(error => this.handleError(error))
+      );
   }
 
   createBug(bug: CreateBugDto): Observable<BugOperationResult<Bug>> {
-    return this.http.post<ApiResponse<Bug>>(this.apiUrl, bug).pipe(
-      timeout(this.requestTimeout),
-      map(response => ({
-        success: true,
-        data: response.data!
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    return this.apollo
+      .mutate<{ createBug: Bug }>({
+        mutation: CREATE_BUG,
+        variables: { input: bug },
+        refetchQueries: ['GetBugs', 'GetBugStatistics'],
+      })
+      .pipe(
+        map(response => ({
+          success: true,
+          data: response.data?.createBug!
+        })),
+        catchError(error => this.handleError(error))
+      );
   }
 
   updateBug(id: string, updates: UpdateBugDto): Observable<BugOperationResult<Bug>> {
-    return this.http.put<ApiResponse<Bug>>(`${this.apiUrl}/${id}`, updates).pipe(
-      timeout(this.requestTimeout),
-      map(response => ({
-        success: true,
-        data: response.data!
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    return this.apollo
+      .mutate<{ updateBug: Bug }>({
+        mutation: UPDATE_BUG,
+        variables: { id, input: updates },
+        refetchQueries: ['GetBug', 'GetBugs'],
+      })
+      .pipe(
+        map(response => ({
+          success: true,
+          data: response.data?.updateBug!
+        })),
+        catchError(error => this.handleError(error))
+      );
   }
 
   deleteBug(id: string): Observable<BugOperationResult<void>> {
-    return this.http.delete<ApiResponse<null>>(`${this.apiUrl}/${id}`).pipe(
-      timeout(this.requestTimeout),
-      map(response => ({
-        success: response.success
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    return this.apollo
+      .mutate<{ removeBug: boolean }>({
+        mutation: REMOVE_BUG,
+        variables: { id },
+        refetchQueries: ['GetBugs', 'GetBugStatistics'],
+      })
+      .pipe(
+        map(response => ({
+          success: response.data?.removeBug || false
+        })),
+        catchError(error => this.handleError(error))
+      );
   }
 
   updateBugStatus(id: string, status: string, comment?: string): Observable<BugOperationResult<Bug>> {
-    return this.http.put<ApiResponse<Bug>>(`${this.apiUrl}/${id}/status`, { status, comment }).pipe(
-      timeout(this.requestTimeout),
-      map(response => ({
-        success: true,
-        data: response.data!
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    return this.apollo
+      .mutate<{ updateBugStatus: Bug }>({
+        mutation: UPDATE_BUG_STATUS,
+        variables: { id, input: { status, comment } },
+        refetchQueries: ['GetBug', 'GetBugs', 'GetBugStatistics'],
+      })
+      .pipe(
+        map(response => ({
+          success: true,
+          data: response.data?.updateBugStatus!
+        })),
+        catchError(error => this.handleError(error))
+      );
   }
 
   assignBug(id: string, assigneeId: string): Observable<BugOperationResult<Bug>> {
-    return this.http.put<ApiResponse<Bug>>(`${this.apiUrl}/${id}/assign`, { assigneeId }).pipe(
-      timeout(this.requestTimeout),
-      map(response => ({
-        success: true,
-        data: response.data!
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    return this.apollo
+      .mutate<{ assignBug: Bug }>({
+        mutation: ASSIGN_BUG,
+        variables: { id, input: { assigneeId } },
+        refetchQueries: ['GetBug', 'GetBugs'],
+      })
+      .pipe(
+        map(response => ({
+          success: true,
+          data: response.data?.assignBug!
+        })),
+        catchError(error => this.handleError(error))
+      );
   }
 
   getComments(bugId: string): Observable<BugOperationResult<BugComment[]>> {
-    return this.http.get<ApiResponse<BugComment[]>>(`${this.apiUrl}/${bugId}/comments`).pipe(
-      timeout(this.requestTimeout),
-      map(response => ({
-        success: true,
-        data: response.data || []
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    return this.apollo
+      .query<{ bugComments: BugComment[] }>({
+        query: GET_BUG_COMMENTS,
+        variables: { bugId },
+      })
+      .pipe(
+        map(response => ({
+          success: true,
+          data: response.data?.bugComments || []
+        })),
+        catchError(error => this.handleError(error))
+      );
   }
 
   addComment(bugId: string, comment: CreateBugCommentDto): Observable<BugOperationResult<BugComment>> {
-    return this.http.post<ApiResponse<BugComment>>(`${this.apiUrl}/${bugId}/comments`, comment).pipe(
-      timeout(this.requestTimeout),
-      map(response => ({
-        success: true,
-        data: response.data!
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    return this.apollo
+      .mutate<{ addBugComment: BugComment }>({
+        mutation: ADD_BUG_COMMENT,
+        variables: { bugId, input: comment },
+        refetchQueries: ['GetBug'],
+      })
+      .pipe(
+        map(response => ({
+          success: true,
+          data: response.data?.addBugComment!
+        })),
+        catchError(error => this.handleError(error))
+      );
   }
 
   uploadAttachment(bugId: string, file: File): Observable<BugOperationResult<any>> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${bugId}/attachments`, formData).pipe(
-      timeout(this.requestTimeout * 2), // Longer timeout for file uploads
-      map(response => ({
-        success: true,
-        data: response.data
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    // 附件上传暂时保留 HTTP 实现，因为 GraphQL 文件上传需要特殊处理
+    console.warn('Attachment upload not yet implemented with GraphQL');
+    return of({
+      success: false,
+      error: BugError.create('Attachment upload not yet implemented', 'NOT_IMPLEMENTED')
+    });
   }
 
   getStatistics(): Observable<BugOperationResult<any>> {
-    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/statistics`).pipe(
-      timeout(this.requestTimeout),
-      map(response => ({
-        success: true,
-        data: response.data
-      })),
-      catchError(error => this.handleRequestError(error))
-    );
+    return this.apollo
+      .query<{ bugStatistics: any }>({
+        query: GET_BUG_STATISTICS,
+      })
+      .pipe(
+        map(response => ({
+          success: true,
+          data: response.data?.bugStatistics
+        })),
+        catchError(error => this.handleError(error))
+      );
   }
 
-  private handleRequestError(error: any): Observable<BugOperationResult<never>> {
-    const bugError = error instanceof BugError ? error : BugError.fromHttpError(error);
-
+  private handleError(error: any): Observable<BugOperationResult<never>> {
+    const bugError = BugError.fromGraphQLError(error);
     return of({
       success: false,
       error: bugError
     });
   }
 
-  private buildQueryParams(filters: BugFilters): any {
-    const params: any = {};
+  private buildFiltersInput(filters?: BugFilters): any {
+    if (!filters) return null;
 
-    if (filters.page) params.page = filters.page;
-    if (filters.limit) params.limit = filters.limit;
-    if (filters.status && filters.status.length > 0) params.status = filters.status.join(',');
-    if (filters.priority && filters.priority.length > 0) params.priority = filters.priority.join(',');
-    if (filters.category && filters.category.length > 0) params.category = filters.category.join(',');
-    if (filters.reporterId) params.reporterId = filters.reporterId;
-    if (filters.assigneeId) params.assigneeId = filters.assigneeId;
-    if (filters.search) params.search = filters.search;
-    if (filters.sortBy) params.sortBy = filters.sortBy;
-    if (filters.sortOrder) params.sortOrder = filters.sortOrder;
-
-    return params;
+    return {
+      page: filters.page,
+      limit: filters.limit,
+      status: filters.status,
+      priority: filters.priority,
+      category: filters.category,
+      reporterId: filters.reporterId,
+      assigneeId: filters.assigneeId,
+      search: filters.search,
+      sortBy: filters.sortBy,
+      sortOrder: filters.sortOrder,
+    };
   }
 }

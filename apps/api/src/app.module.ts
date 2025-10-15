@@ -17,6 +17,7 @@ import { MediaTypeModule } from './media-type/media-type.module';
 import { ConfigModule } from './config/config.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { LoadersModule } from './loaders.module';
 import { createDatabaseConfig } from './config';
 import { AugmentedRequest, GraphqlContext } from './common/utils/context.utils';
 import { UserLoader } from './user/user.loader';
@@ -36,6 +37,8 @@ import { TagLoader } from './events/tag.loader';
       serviceName: '@pro/api',
     })),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      imports: [LoadersModule],
       inject: [ConfigService, UserLoader, ApiKeyLoader, EventTypeLoader, IndustryTypeLoader, TagLoader],
       useFactory: (
         configService: ConfigService,
@@ -44,10 +47,9 @@ import { TagLoader } from './events/tag.loader';
         eventTypeLoader: EventTypeLoader,
         industryTypeLoader: IndustryTypeLoader,
         tagLoader: TagLoader,
-      ) => {
+      ): ApolloDriverConfig => {
         const isProduction = configService.get<string>('NODE_ENV') === 'production';
         return {
-          driver: ApolloDriver,
           autoSchemaFile: join(process.cwd(), 'apps', 'api', 'schema.graphql'),
           sortSchema: true,
           path: '/graphql',

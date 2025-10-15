@@ -1,55 +1,155 @@
 import { Observable, from } from 'rxjs';
-import { HttpClient } from '../client/http-client.js';
+import { GraphQLClient } from '../client/graphql-client.js';
 import { IAuthService } from '../auth.interface.js';
 import { LoginDto, RegisterDto, AuthResponse, UserProfile } from '@pro/types';
 
-/**
- * 认证 API 接口封装
- * 将 AuthApiService 功能迁移到 SDK 中
- */
+interface AuthPayload {
+  accessToken: string;
+  refreshToken: string;
+  user: UserProfile;
+}
+
+interface MeResponse {
+  me: UserProfile;
+}
+
+interface RegisterResponse {
+  register: AuthPayload;
+}
+
+interface LoginResponse {
+  login: AuthPayload;
+}
+
+interface RefreshResponse {
+  refreshToken: AuthPayload;
+}
+
+interface LogoutResponse {
+  logout: boolean;
+}
+
 export class AuthApi implements IAuthService {
-  private http: HttpClient;
+  private client: GraphQLClient;
 
   constructor(baseUrl?: string, tokenKey?: string) {
-    if(!baseUrl){
-      throw new Error(`AuthApi missing base url!`)
+    if (!baseUrl) {
+      throw new Error(`AuthApi missing base url!`);
     }
-    const apiBaseUrl = baseUrl;
-    this.http = new HttpClient(apiBaseUrl, tokenKey);
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
-  /**
-   * 用户登录
-   */
   login(dto: LoginDto): Observable<AuthResponse> {
-    return from(this.http.post<AuthResponse>('/api/auth/login', dto));
+    const mutation = `
+      mutation Login($input: LoginDto!) {
+        login(input: $input) {
+          accessToken
+          refreshToken
+          user {
+            id
+            username
+            email
+            status
+            createdAt
+            updatedAt
+          }
+        }
+      }
+    `;
+
+    return from(
+      this.client.mutate<LoginResponse>(mutation, { input: dto }).then((response) => ({
+        accessToken: response.login.accessToken,
+        refreshToken: response.login.refreshToken,
+        user: response.login.user,
+      }))
+    );
   }
 
-  /**
-   * 用户注册
-   */
   register(dto: RegisterDto): Observable<AuthResponse> {
-    return from(this.http.post<AuthResponse>('/api/auth/register', dto));
+    const mutation = `
+      mutation Register($input: RegisterDto!) {
+        register(input: $input) {
+          accessToken
+          refreshToken
+          user {
+            id
+            username
+            email
+            status
+            createdAt
+            updatedAt
+          }
+        }
+      }
+    `;
+
+    return from(
+      this.client.mutate<RegisterResponse>(mutation, { input: dto }).then((response) => ({
+        accessToken: response.register.accessToken,
+        refreshToken: response.register.refreshToken,
+        user: response.register.user,
+      }))
+    );
   }
 
-  /**
-   * 用户登出
-   */
   logout(): Observable<void> {
-    return from(this.http.post<void>('/api/auth/logout', {}));
+    const mutation = `
+      mutation Logout {
+        logout
+      }
+    `;
+
+    return from(
+      this.client.mutate<LogoutResponse>(mutation).then(() => undefined)
+    );
   }
 
-  /**
-   * 刷新访问令牌
-   */
   refreshToken(refreshToken: string): Observable<AuthResponse> {
-    return from(this.http.post<AuthResponse>('/api/auth/refresh', { refreshToken }));
+    const mutation = `
+      mutation RefreshToken($input: RefreshTokenDto!) {
+        refreshToken(input: $input) {
+          accessToken
+          refreshToken
+          user {
+            id
+            username
+            email
+            status
+            createdAt
+            updatedAt
+          }
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<RefreshResponse>(mutation, { input: { refreshToken } })
+        .then((response) => ({
+          accessToken: response.refreshToken.accessToken,
+          refreshToken: response.refreshToken.refreshToken,
+          user: response.refreshToken.user,
+        }))
+    );
   }
 
-  /**
-   * 获取用户个人资料
-   */
   getProfile(): Observable<UserProfile> {
-    return from(this.http.get<UserProfile>('/api/auth/profile'));
+    const query = `
+      query Me {
+        me {
+          id
+          username
+          email
+          status
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    return from(
+      this.client.query<MeResponse>(query).then((response) => response.me)
+    );
   }
 }

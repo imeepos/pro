@@ -328,6 +328,91 @@ export class BugError extends Error {
     this.timestamp = new Date();
   }
 
+  static create(message: string, type: string = 'UNKNOWN_ERROR'): BugError {
+    const bugType = type as BugErrorType;
+    return new BugError(bugType, message, type);
+  }
+
+  static fromGraphQLError(error: any): BugError {
+    if (!error) {
+      return new BugError(BugErrorType.UNKNOWN_ERROR, '未知错误');
+    }
+
+    if (error.networkError) {
+      return new BugError(
+        BugErrorType.NETWORK_ERROR,
+        '网络连接失败，请检查网络连接后重试',
+        'NETWORK_FAILURE',
+        { originalError: error.networkError.message }
+      );
+    }
+
+    if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+      const graphQLError = error.graphQLErrors[0];
+      const extensions = graphQLError.extensions || {};
+      const code = extensions.code || graphQLError.extensions?.['exception']?.['code'];
+
+      if (code === 'UNAUTHENTICATED' || extensions.status === 401) {
+        return new BugError(
+          BugErrorType.AUTHENTICATION_ERROR,
+          graphQLError.message || '登录已过期，请重新登录',
+          'AUTH_EXPIRED',
+          { extensions }
+        );
+      }
+
+      if (code === 'FORBIDDEN' || extensions.status === 403) {
+        return new BugError(
+          BugErrorType.AUTHORIZATION_ERROR,
+          graphQLError.message || '权限不足，无法执行此操作',
+          'PERMISSION_DENIED',
+          { extensions }
+        );
+      }
+
+      if (code === 'NOT_FOUND' || extensions.status === 404) {
+        return new BugError(
+          BugErrorType.NOT_FOUND,
+          graphQLError.message || '请求的资源不存在',
+          'RESOURCE_NOT_FOUND',
+          { extensions }
+        );
+      }
+
+      if (code === 'BAD_USER_INPUT' || extensions.status === 422) {
+        return new BugError(
+          BugErrorType.VALIDATION_ERROR,
+          graphQLError.message || '输入数据验证失败，请检查输入信息',
+          'VALIDATION_FAILED',
+          { validationErrors: extensions.validationErrors || {}, extensions }
+        );
+      }
+
+      if (code === 'INTERNAL_SERVER_ERROR' || (extensions.status && extensions.status >= 500)) {
+        return new BugError(
+          BugErrorType.SERVER_ERROR,
+          graphQLError.message || '服务器内部错误，请稍后重试',
+          'SERVER_ERROR',
+          { extensions }
+        );
+      }
+
+      return new BugError(
+        BugErrorType.UNKNOWN_ERROR,
+        graphQLError.message || '未知错误',
+        code as string,
+        { extensions }
+      );
+    }
+
+    return new BugError(
+      BugErrorType.UNKNOWN_ERROR,
+      error.message || '未知错误',
+      'UNKNOWN',
+      { originalError: error }
+    );
+  }
+
   static fromHttpError(error: any): BugError {
     if (!error) {
       return new BugError(BugErrorType.UNKNOWN_ERROR, '未知错误');
