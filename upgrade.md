@@ -89,33 +89,39 @@
 - ✅ GraphQL 附件上传采用「预签名 URL + 确认」双阶段流程，支持去重复用、严格权限校验及凭证过期治理，保留与现有 MinIO 存储策略的兼容性。
 - ✅ MediaType 模块迁移为 GraphQL：提供分页 Connection、详情查询与 CRUD Mutations，沿用状态枚举与排序逻辑，复用统一分页工具。
 - ✅ Weibo 账户与搜索任务迁移至 GraphQL，覆盖列表/详情/统计/状态切换等操作，并保留内部 token 校验与批量调度能力。
-- ✅ 京东账号管理模块完成 GraphQL 化：提供账号列表分页、健康检查、批量巡检与统计查询，同时保留扫码登录 SSE 入口以支撑现有前端流程。
+- ✅ 京东账号管理模块完成 GraphQL 化：提供账号列表分页、健康检查、批量巡检与统计查询。
 - ✅ 配置中心暴露 GraphQL 查询与缓存治理：可按枚举类型获取配置值、清理缓存并查询缓存占用，逻辑复用现有服务层。
 - ✅ 京东扫码登录支持 GraphQL 会话创建与状态查询，允许前端通过轮询获取二维码与状态事件，为后续 Subscription 改造铺垫。
 - ✅ 微博扫码登录同样提供 GraphQL 会话管理能力，支持轮询二维码与状态事件，逐步摆脱单一 REST SSE 依赖。
+- ✅ 京东/微博 REST SSE 登录端点完全下线，标准化为 GraphQL Mutation + Subscription 流程。
 - ✅ WebSocket Subscriptions 已启用，京东/微博扫码登录可通过 `jdLoginEvents`/`weiboLoginEvents` 实时获取事件流，默认回放当前会话的最新事件。
+- ✅ 健康检查暴露 GraphQL 查询（`health`），补齐监控面向 GraphQL 客户端的入口。
+- ✅ 为 GraphQL Auth 能力补充 e2e 测试，覆盖注册/登录/刷新/注销的主要流程。
+- ✅ dashboard、screens、media-type、auth、api-key、user、config、weibo-search-task 等模块已清理 REST 控制器，GraphQL 成为唯一入口。
+- ✅ 健康检查 REST 探针下线，启动流程移除全局 REST 前缀，仅保留 GraphQL `health` 查询作为存活检测；历史 `/api/*` 路径统一返回 410 并提示迁移。
+- ✅ 新增 GraphQL 迁移指引文档（`docs/graphql-migration.md`），集中说明登录、健康与附件等核心流程。
 - ⏭️ Next focus: plan REST shutdown sequencing and align client migrations with the stabilized GraphQL contract.
 
 ### REST 模块盘点
-- 已存在等价 GraphQL 能力的 REST 控制器：`screens`, `events`, `tags`, `event-types`, `industry-types`, `dashboard`, `auth/api-key`, `auth/auth`, `user`.
-- 仍需迁移的 REST 入口：`weibo` 登录 SSE（GraphQL 轮询已可用）、`jd` 登录 SSE（GraphQL 轮询已可用）、部分健康检查/系统配置探针接口。
-- 附件上传等场景已具备 GraphQL 替代方案，后续需安排 REST 端的灰度下线。
+- 已存在等价 GraphQL 能力的 REST 控制器：无（REST 控制器已全部移除）。
+- 仍需迁移的 REST 入口：无，但需通知历史客户端改用 GraphQL 查询或订阅。
+- 附件上传、事件类型 / 行业类型 / 事件主体、dashboard、screens、media-type、auth、api-key、user、config、weibo-search-tasks、健康探针等模块的 REST 控制器已移除，全部以 GraphQL 提供服务。
 
 ### REST 下线分阶段策略
 1. **准备期**
    - 为所有 GraphQL 解析器补充契约测试，确保与 REST 行为一致；在日志中标记 REST 调用来源，便于统计仍在使用的客户端。
-   - 对 REST 控制器输出 `Deprecation` 响应头，并在 `upgrade.md`/内部公告中披露下线时间线。
+  - 对 REST 控制器输出 `Deprecation` 响应头，并在 `upgrade.md`/内部公告中披露下线时间线。（SSE 登录接口已完成移除）
 2. **迁移期**
-   - 先迁移只读接口（如 `dashboard`, `tags`）的客户端到 GraphQL，再逐步切换写操作模块（`events`, `screens`, `api-key`）。
-   - 为上传/长耗时场景设计 GraphQL 替代方案（如 S3 直传签名）并提供迁移指南。
+  - 针对仍在使用的 REST 探针设计替代方案，并同步客户端更新；GraphQL 附件/事件方案可作为迁移参考，持续更新客户端使用指南。
    - 在 CI/CD 中阻止新的 REST 入口合入，强制新功能基于 GraphQL。
 3. **收敛期**
    - 对迁移完成的模块启用 feature flag：默认返回 410/redirect 指向 GraphQL，必要时允许灰度恢复。
    - 观察错误率、性能指标 1-2 周，确认无回退需求后移除对应 REST 控制器。
-   - 用同样方式最终下线剩余模块（`weibo`, `jd`）并关闭 REST 网关配置。
+  - 用同样方式最终下线剩余模块（健康探针等）并关闭 REST 网关配置。
 
 ### 后续 TODO
-- [ ] 协调前端切换至 `jdLoginEvents`/`weiboLoginEvents` 订阅通道，评估 REST SSE 的灰度下线时间线。
+- [ ] 协调前端完成对 `jdLoginEvents`/`weiboLoginEvents` 订阅通道的接入，并补齐相关文档。
+- [ ] 制定健康探针的迁移计划，明确替换的 GraphQL 接口与时间表。
 - [ ] 编写 GraphQL 合约测试（`supertest-graphql`）覆盖关键路径，支撑 REST 下线验证。
 
 ## GraphQL 附件上传方案

@@ -1,7 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
-import { ScreensController } from './screens.controller';
 import { ScreensService } from './screens.service';
 import { ScreensGateway } from './screens.gateway';
 import { ScreensStatsScheduler } from './screens-stats.scheduler';
@@ -16,7 +15,7 @@ import { ScreensResolver } from './screens.resolver';
     JwtModule.registerAsync(createJwtConfig()),
     forwardRef(() => WeiboModule),
   ],
-  controllers: [ScreensController],
+  controllers: [],
   providers: [ScreensService, ScreensGateway, ScreensStatsScheduler, ScreensResolver],
   exports: [ScreensService, ScreensGateway],
 })

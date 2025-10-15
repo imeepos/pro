@@ -85,7 +85,6 @@ export const createDatabaseConfig = (configService: ConfigService): DataSourceOp
       entities,
       synchronize: true,
       logging: nodeEnv === 'development',
-      autoLoadEntities: true,
     };
   }
 
@@ -99,6 +98,5 @@ export const createDatabaseConfig = (configService: ConfigService): DataSourceOp
     entities,
     synchronize: true,
     logging: nodeEnv === 'development',
-    autoLoadEntities: true,
   };
 };

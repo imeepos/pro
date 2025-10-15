@@ -6,9 +6,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'path';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { HealthController } from './health.controller';
+import { HealthResolver } from './health.resolver';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { WeiboModule } from './weibo/weibo.module';
@@ -96,7 +94,7 @@ import { TagLoader } from './events/tag.loader';
     DashboardModule,
     NotificationsModule,
   ],
-  controllers: [AppController, HealthController],
-  providers: [AppService],
+  controllers: [],
+  providers: [HealthResolver],
 })
 export class AppModule {}

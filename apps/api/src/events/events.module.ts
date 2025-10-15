@@ -25,12 +25,6 @@ import { TagLoader } from './tag.loader';
 import { AttachmentResolver } from './attachment.resolver';
 import { AttachmentUploadTokenEntity } from './entities/attachment-upload-token.entity';
 
-import { IndustryTypeController } from './industry-type.controller';
-import { EventTypeController } from './event-type.controller';
-import { EventController } from './event.controller';
-import { TagController } from './tag.controller';
-import { AttachmentController } from './attachment.controller';
-
 import { createJwtConfig } from '../config';
 
 @Module({
@@ -47,13 +41,7 @@ import { createJwtConfig } from '../config';
     ConfigModule,
     JwtModule.registerAsync(createJwtConfig()),
   ],
-  controllers: [
-    IndustryTypeController,
-    EventTypeController,
-    EventController,
-    TagController,
-    AttachmentController,
-  ],
+  controllers: [],
   providers: [
     IndustryTypeService,
     EventTypeService,

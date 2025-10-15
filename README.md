@@ -59,18 +59,50 @@
   - 实时数据展示 (Socket.IO)
   - 本地数据存储 (Dexie)
 
-#### 🌐 `api` (主API服务)
-**核心API网关**
-- **技术栈**: NestJS, TypeORM, PostgreSQL
-- **功能**: 用户认证、数据API、实时通信
-- **模块**:
-  - 认证授权 (JWT, Passport)
-  - 用户管理
-  - 微博数据API
-  - 京东数据API
-  - 媒体类型管理
-  - 实时事件推送
-  - 仪表板数据聚合
+#### 🌐 `api` (GraphQL 核心服务)
+**统一 GraphQL 网关**
+- **技术栈**: NestJS, Apollo GraphQL, TypeORM, PostgreSQL
+- **接口模式**: 所有对外能力通过单一 `/graphql` 端点暴露，支持 Query / Mutation / Subscription
+- **领域模块**:
+  - 认证授权：注册、登录、刷新、注销、当前用户
+  - 用户 & API Key 管理
+  - 微博 / 京东账号与登录会话（含实时订阅）
+  - 媒体类型、仪表板、屏幕编排等数据管理
+  - 事件与附件（预签名直传 + 确认）
+  - 通知推送与实时数据广播
+- **兼容性提示**: 历史 `/api/*` REST 路径已下线并返回 `410 Gone`，请改用 GraphQL。详见 [`docs/graphql-migration.md`](docs/graphql-migration.md)。
+
+> 本地开发可使用 `pnpm --filter @pro/api run dev` 启动服务，然后在 http://localhost:3000/graphql 访问 GraphQL Playground。
+
+常用 GraphQL 指南：
+
+- 健康检查
+  ```graphql
+  query Health {
+    health { status timestamp }
+  }
+  ```
+- 用户注册 / 登录
+  ```graphql
+  mutation Register($input: RegisterDto!) {
+    register(input: $input) { accessToken refreshToken user { id username } }
+  }
+
+  mutation Login($input: LoginDto!) {
+    login(input: $input) { accessToken refreshToken }
+  }
+  ```
+- 微博登录订阅（需配合 Mutation `startWeiboLogin`）
+  ```graphql
+  subscription WeiboLoginEvents($sessionId: String!) {
+    weiboLoginEvents(sessionId: $sessionId) {
+      type
+      data
+    }
+  }
+  ```
+
+更多 REST → GraphQL 对照、附件上传流程等内容请参考 [`docs/graphql-migration.md`](docs/graphql-migration.md)。
 
 #### ⚡ `broker` (任务调度中心)
 **智能任务分发器**
@@ -185,7 +217,7 @@
 4. 原始数据存储到 MongoDB
 5. Cleaner 处理原始数据
 6. 清洗后数据存储到 PostgreSQL
-7. API 提供数据访问接口
+7. GraphQL 服务提供数据访问接口
 8. Frontend 展示处理结果
 ```
 
@@ -219,7 +251,7 @@ docker compose up -d postgres mongodb redis rabbitmq minio
 pnpm run dev
 
 # 或者单独启动特定服务
-cd apps/api && pnpm run dev    # API 服务
+cd apps/api && pnpm run dev    # GraphQL 服务（访问 http://localhost:3000/graphql）
 cd apps/admin && pnpm run dev  # 管理后台
 cd apps/web && pnpm run dev    # 前端应用
 
@@ -243,9 +275,14 @@ pnpm run lint
 ### 单独服务开发
 
 ```bash
-# API服务开发
+# GraphQL 服务开发
 cd apps/api
 pnpm run dev
+
+# 健康检查（GraphQL）
+curl -s -X POST http://localhost:3000/graphql \\
+  -H 'Content-Type: application/json' \\
+  -d '{"query":"{ health { status timestamp } }"}'
 
 # 爬虫服务开发
 cd apps/crawler
