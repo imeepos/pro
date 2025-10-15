@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './components/header/header.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
+import { NotificationContainerComponent } from './components/notifications/notification-container.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, HeaderComponent, SidebarComponent],
+  imports: [CommonModule, RouterOutlet, HeaderComponent, SidebarComponent, NotificationContainerComponent],
   template: `
     <div class="min-h-screen bg-gray-50">
       <!-- 顶部导航 -->
@@ -22,6 +23,9 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
           <router-outlet></router-outlet>
         </main>
       </div>
+
+      <!-- 通知容器 -->
+      <app-notification-container></app-notification-container>
     </div>
   `,
   styles: []

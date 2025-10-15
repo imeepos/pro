@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { BugService } from '../../services/bug.service';
-import { CreateBugDto, BugEnvironment } from '@pro/types';
+import { NotificationService } from '../../services/notification.service';
+import { CreateBugDto, BugEnvironment, BugError, BugErrorType } from '@pro/types';
 
 // 定义枚举
 enum BugPriority {
@@ -242,7 +243,8 @@ export class CreateBugComponent {
 
   constructor(
     private bugService: BugService,
-    private router: Router
+    private router: Router,
+    private notificationService: NotificationService
   ) {}
 
   onSubmit(): void {
@@ -252,26 +254,29 @@ export class CreateBugComponent {
 
     this.isSubmitting = true;
 
-    // 清理空的环境信息
     const cleanedBug: CreateBugDto = {
       ...this.bug,
       environment: this.cleanEnvironment(this.bug.environment || {})
     };
 
     this.bugService.createBug(cleanedBug).subscribe({
-      next: (createdBug) => {
-        if (createdBug) {
-          alert('Bug提交成功！');
-          this.router.navigate(['/bugs', createdBug.id]);
-        } else {
-          alert('Bug提交失败，请重试');
-        }
+      next: (result) => {
         this.isSubmitting = false;
+
+        if (result.success && result.data) {
+          this.notificationService.showSuccess(
+            'Bug提交成功',
+            `Bug "${result.data.title}" 已成功创建，ID: ${result.data.id}`
+          );
+          this.router.navigate(['/bugs', result.data.id]);
+        } else {
+          this.handleSubmissionError(result.error);
+        }
       },
       error: (error) => {
-        console.error('创建Bug失败:', error);
-        alert('Bug提交失败：' + (error.message || '未知错误'));
         this.isSubmitting = false;
+        const bugError = BugError.fromHttpError(error);
+        this.handleSubmissionError(bugError);
       }
     });
   }
@@ -282,22 +287,32 @@ export class CreateBugComponent {
 
   private validateForm(): boolean {
     if (!this.bug.title.trim()) {
-      alert('请输入Bug标题');
+      this.notificationService.showError('验证失败', 'Bug标题不能为空');
+      return false;
+    }
+
+    if (this.bug.title.length > 200) {
+      this.notificationService.showError('验证失败', 'Bug标题不能超过200个字符');
       return false;
     }
 
     if (!this.bug.description.trim()) {
-      alert('请输入详细描述');
+      this.notificationService.showError('验证失败', '详细描述不能为空');
+      return false;
+    }
+
+    if (this.bug.description.length > 5000) {
+      this.notificationService.showError('验证失败', '详细描述不能超过5000个字符');
       return false;
     }
 
     if (!this.bug.priority) {
-      alert('请选择优先级');
+      this.notificationService.showError('验证失败', '请选择优先级');
       return false;
     }
 
     if (!this.bug.category) {
-      alert('请选择分类');
+      this.notificationService.showError('验证失败', '请选择分类');
       return false;
     }
 
@@ -313,5 +328,23 @@ export class CreateBugComponent {
       }
     });
     return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+  }
+
+  private handleSubmissionError(error?: BugError): void {
+    if (!error) {
+      this.notificationService.showError(
+        '提交失败',
+        'Bug提交失败，请检查网络连接后重试'
+      );
+      return;
+    }
+
+    this.notificationService.showBugError(error);
+
+    if (error.type === BugErrorType.AUTHENTICATION_ERROR) {
+      setTimeout(() => {
+        this.router.navigate(['/auth/login']);
+      }, 2000);
+    }
   }
 }

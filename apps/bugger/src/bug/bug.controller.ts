@@ -12,6 +12,8 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  ParseUUIDPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -35,6 +37,7 @@ import {
 import { BugService } from './bug.service';
 import { BugCommentService } from './bug-comment.service';
 import { BugAttachmentService } from './bug-attachment.service';
+import { UuidValidationPipe } from '../common/pipes/uuid-validation.pipe';
 
 @ApiTags('Bug管理')
 @Controller('bugs')
@@ -79,10 +82,38 @@ export class BugController {
     };
   }
 
+  @Get('statistics')
+  @ApiOperation({ summary: '获取Bug统计信息' })
+  async getStatistics(): Promise<ApiResponseDto<any>> {
+    this.logger.log('获取Bug统计信息');
+    const statistics = await this.bugService.getStatistics();
+    return {
+      success: true,
+      data: statistics,
+      message: '统计信息获取成功',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('statistics/summary')
+  @ApiOperation({ summary: '获取Bug统计摘要信息' })
+  async getStatisticsSummary(): Promise<ApiResponseDto<any>> {
+    this.logger.log('获取Bug统计摘要信息');
+    const statistics = await this.bugService.getStatistics();
+    return {
+      success: true,
+      data: statistics,
+      message: '统计摘要信息获取成功',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: '获取Bug详情' })
   @ApiParam({ name: 'id', description: 'Bug ID' })
-  async getBug(@Param('id') id: string): Promise<ApiResponseDto<Bug>> {
+  async getBug(
+    @Param('id', new UuidValidationPipe()) id: string
+  ): Promise<ApiResponseDto<Bug>> {
     this.logger.log(`获取Bug详情: ${id}`);
     const bug = await this.bugService.findOne(id);
     if (!bug) {
@@ -100,7 +131,7 @@ export class BugController {
   @ApiOperation({ summary: '更新Bug' })
   @ApiParam({ name: 'id', description: 'Bug ID' })
   async updateBug(
-    @Param('id') id: string,
+    @Param('id', new UuidValidationPipe()) id: string,
     @Body() updateBugDto: UpdateBugDto,
   ): Promise<ApiResponseDto<Bug>> {
     this.logger.log(`更新Bug: ${id}`);
@@ -116,7 +147,9 @@ export class BugController {
   @Delete(':id')
   @ApiOperation({ summary: '删除Bug' })
   @ApiParam({ name: 'id', description: 'Bug ID' })
-  async deleteBug(@Param('id') id: string): Promise<ApiResponseDto<null>> {
+  async deleteBug(
+    @Param('id', new UuidValidationPipe()) id: string
+  ): Promise<ApiResponseDto<null>> {
     this.logger.log(`删除Bug: ${id}`);
     await this.bugService.remove(id);
     return {
@@ -131,7 +164,7 @@ export class BugController {
   @ApiOperation({ summary: '添加评论' })
   @ApiParam({ name: 'id', description: 'Bug ID' })
   async addComment(
-    @Param('id') bugId: string,
+    @Param('id', new UuidValidationPipe()) bugId: string,
     @Body() createCommentDto: CreateBugCommentDto,
   ): Promise<ApiResponseDto<BugComment>> {
     this.logger.log(`为Bug ${bugId} 添加评论`);
@@ -147,7 +180,9 @@ export class BugController {
   @Get(':id/comments')
   @ApiOperation({ summary: '获取评论列表' })
   @ApiParam({ name: 'id', description: 'Bug ID' })
-  async getComments(@Param('id') bugId: string): Promise<ApiResponseDto<BugComment[]>> {
+  async getComments(
+    @Param('id', new UuidValidationPipe()) bugId: string
+  ): Promise<ApiResponseDto<BugComment[]>> {
     this.logger.log(`获取Bug ${bugId} 的评论`);
     const comments = await this.commentService.findByBugId(bugId);
     return {
@@ -175,7 +210,7 @@ export class BugController {
   })
   @UseInterceptors(FileInterceptor('file'))
   async uploadAttachment(
-    @Param('id') bugId: string,
+    @Param('id', new UuidValidationPipe()) bugId: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ApiResponseDto<any>> {
     if (!file) {
@@ -196,7 +231,7 @@ export class BugController {
   @ApiOperation({ summary: '更新Bug状态' })
   @ApiParam({ name: 'id', description: 'Bug ID' })
   async updateStatus(
-    @Param('id') id: string,
+    @Param('id', new UuidValidationPipe()) id: string,
     @Body() body: { status: string; comment?: string },
   ): Promise<ApiResponseDto<Bug>> {
     this.logger.log(`更新Bug ${id} 状态为: ${body.status}`);
@@ -213,7 +248,7 @@ export class BugController {
   @ApiOperation({ summary: '分配Bug' })
   @ApiParam({ name: 'id', description: 'Bug ID' })
   async assignBug(
-    @Param('id') id: string,
+    @Param('id', new UuidValidationPipe()) id: string,
     @Body() body: { assigneeId: string },
   ): Promise<ApiResponseDto<Bug>> {
     this.logger.log(`分配Bug ${id} 给用户: ${body.assigneeId}`);

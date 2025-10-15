@@ -260,11 +260,15 @@ export class BugDetailComponent implements OnInit {
       return;
     }
 
-    this.bugService.getBug(id).subscribe(bug => {
-      this.bug = bug;
+    this.bugService.getBug(id).subscribe(result => {
       this.loading = false;
-      if (bug?.assigneeId) {
-        this.assigneeId = bug.assigneeId;
+      if (result.success && result.data) {
+        this.bug = result.data;
+        if (this.bug.assigneeId) {
+          this.assigneeId = this.bug.assigneeId;
+        }
+      } else {
+        this.bug = null;
       }
     });
   }
@@ -282,8 +286,8 @@ export class BugDetailComponent implements OnInit {
 
   deleteBug(): void {
     if (this.bug && confirm('确定要删除这个Bug吗？此操作不可恢复。')) {
-      this.bugService.deleteBug(this.bug.id).subscribe(success => {
-        if (success) {
+      this.bugService.deleteBug(this.bug.id).subscribe(result => {
+        if (result.success) {
           alert('Bug删除成功');
           this.router.navigate(['/bugs']);
         } else {
@@ -297,9 +301,9 @@ export class BugDetailComponent implements OnInit {
     if (!this.selectedStatus || !this.bug) return;
 
     const comment = prompt('请输入状态变更说明（可选）:');
-    this.bugService.updateBugStatus(this.bug.id, this.selectedStatus, comment || undefined).subscribe(updatedBug => {
-      if (updatedBug) {
-        this.bug = updatedBug;
+    this.bugService.updateBugStatus(this.bug.id, this.selectedStatus, comment || undefined).subscribe(result => {
+      if (result.success && result.data) {
+        this.bug = result.data;
         this.selectedStatus = '';
         alert('状态更新成功');
       } else {
@@ -311,9 +315,9 @@ export class BugDetailComponent implements OnInit {
   assignBug(): void {
     if (!this.assigneeId.trim() || !this.bug) return;
 
-    this.bugService.assignBug(this.bug.id, this.assigneeId.trim()).subscribe(updatedBug => {
-      if (updatedBug) {
-        this.bug = updatedBug;
+    this.bugService.assignBug(this.bug.id, this.assigneeId.trim()).subscribe(result => {
+      if (result.success && result.data) {
+        this.bug = result.data;
         alert('Bug分配成功');
       } else {
         alert('Bug分配失败');
@@ -329,9 +333,9 @@ export class BugDetailComponent implements OnInit {
       content: this.newComment.trim()
     };
 
-    this.bugService.addComment(this.bug.id, commentData).subscribe(comment => {
-      if (comment) {
-        this.bug!.comments = [...(this.bug!.comments || []), comment];
+    this.bugService.addComment(this.bug.id, commentData).subscribe(result => {
+      if (result.success && result.data) {
+        this.bug!.comments = [...(this.bug!.comments || []), result.data];
         this.newComment = '';
       } else {
         alert('评论添加失败');
