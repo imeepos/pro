@@ -160,14 +160,22 @@ export class DashboardComponent implements OnInit {
   }
 
   loadStatistics(): void {
-    this.bugService.getStatistics().subscribe(data => {
-      this.statistics = data;
+    this.bugService.getStatistics().subscribe(result => {
+      if (result.success && result.data) {
+        this.statistics = result.data;
+      } else {
+        this.statistics = {};
+      }
     });
   }
 
   loadRecentBugs(): void {
-    this.bugService.getBugs({ page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' }).subscribe(data => {
-      this.recentBugs = data.bugs;
+    this.bugService.getBugs({ page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' }).subscribe(result => {
+      if (result.success && result.data) {
+        this.recentBugs = result.data.bugs;
+      } else {
+        this.recentBugs = [];
+      }
     });
   }
 

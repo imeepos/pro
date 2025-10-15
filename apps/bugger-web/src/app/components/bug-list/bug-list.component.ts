@@ -207,10 +207,16 @@ export class BugListComponent implements OnInit {
 
   loadBugs(): void {
     this.loading = true;
-    this.bugService.getBugs(this.filters).subscribe(data => {
-      this.bugs = data.bugs;
-      this.total = data.total;
-      this.totalPages = Math.ceil(this.total / this.pageSize);
+    this.bugService.getBugs(this.filters).subscribe(result => {
+      if (result.success && result.data) {
+        this.bugs = result.data.bugs;
+        this.total = result.data.total;
+        this.totalPages = Math.ceil(this.total / this.pageSize);
+      } else {
+        this.bugs = [];
+        this.total = 0;
+        this.totalPages = 0;
+      }
       this.loading = false;
     });
   }

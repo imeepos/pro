@@ -300,3 +300,157 @@ export interface BugBulkAction {
     tagIds?: string[];
   };
 }
+
+export enum BugErrorType {
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
+  AUTHORIZATION_ERROR = 'AUTHORIZATION_ERROR',
+  NOT_FOUND = 'NOT_FOUND',
+  CONFLICT = 'CONFLICT',
+  SERVER_ERROR = 'SERVER_ERROR',
+  TIMEOUT_ERROR = 'TIMEOUT_ERROR',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR'
+}
+
+export class BugError extends Error {
+  readonly type: BugErrorType;
+  readonly code?: string;
+  readonly details?: Record<string, any>;
+  readonly timestamp: Date;
+
+  constructor(type: BugErrorType, message: string, code?: string, details?: Record<string, any>) {
+    super(message);
+    this.name = 'BugError';
+    this.type = type;
+    this.code = code;
+    this.details = details;
+    this.timestamp = new Date();
+  }
+
+  static fromHttpError(error: any): BugError {
+    if (!error) {
+      return new BugError(BugErrorType.UNKNOWN_ERROR, '未知错误');
+    }
+
+    if (error.status === 0) {
+      return new BugError(
+        BugErrorType.NETWORK_ERROR,
+        '网络连接失败，请检查网络连接后重试',
+        'NETWORK_FAILURE',
+        { originalError: error.message }
+      );
+    }
+
+    if (error.status === 401) {
+      return new BugError(
+        BugErrorType.AUTHENTICATION_ERROR,
+        '登录已过期，请重新登录',
+        'AUTH_EXPIRED',
+        { status: error.status }
+      );
+    }
+
+    if (error.status === 403) {
+      return new BugError(
+        BugErrorType.AUTHORIZATION_ERROR,
+        '权限不足，无法执行此操作',
+        'PERMISSION_DENIED',
+        { status: error.status }
+      );
+    }
+
+    if (error.status === 404) {
+      return new BugError(
+        BugErrorType.NOT_FOUND,
+        '请求的资源不存在',
+        'RESOURCE_NOT_FOUND',
+        { status: error.status }
+      );
+    }
+
+    if (error.status === 409) {
+      return new BugError(
+        BugErrorType.CONFLICT,
+        '数据冲突，请刷新页面后重试',
+        'DATA_CONFLICT',
+        { status: error.status }
+      );
+    }
+
+    if (error.status === 422) {
+      const validationErrors = error.error?.details || {};
+      return new BugError(
+        BugErrorType.VALIDATION_ERROR,
+        '输入数据验证失败，请检查输入信息',
+        'VALIDATION_FAILED',
+        { validationErrors, status: error.status }
+      );
+    }
+
+    if (error.status >= 500) {
+      return new BugError(
+        BugErrorType.SERVER_ERROR,
+        '服务器内部错误，请稍后重试',
+        'SERVER_ERROR',
+        { status: error.status, statusText: error.statusText }
+      );
+    }
+
+    if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
+      return new BugError(
+        BugErrorType.TIMEOUT_ERROR,
+        '请求超时，请稍后重试',
+        'REQUEST_TIMEOUT',
+        { timeout: error.timeout }
+      );
+    }
+
+    return new BugError(
+      BugErrorType.UNKNOWN_ERROR,
+      error.error?.message || error.message || '未知错误',
+      'UNKNOWN',
+      { status: error.status, originalError: error.message }
+    );
+  }
+
+  getUserFriendlyMessage(): string {
+    switch (this.type) {
+      case BugErrorType.NETWORK_ERROR:
+        return '网络连接异常，请检查网络设置';
+      case BugErrorType.VALIDATION_ERROR:
+        return this.extractValidationMessage();
+      case BugErrorType.AUTHENTICATION_ERROR:
+        return '登录状态已过期，请重新登录';
+      case BugErrorType.AUTHORIZATION_ERROR:
+        return '您没有权限执行此操作';
+      case BugErrorType.NOT_FOUND:
+        return '请求的内容不存在';
+      case BugErrorType.CONFLICT:
+        return '数据已更新，请刷新页面后重试';
+      case BugErrorType.SERVER_ERROR:
+        return '服务暂时不可用，请稍后重试';
+      case BugErrorType.TIMEOUT_ERROR:
+        return '请求超时，请检查网络后重试';
+      default:
+        return this.message;
+    }
+  }
+
+  private extractValidationMessage(): string {
+    if (this.details?.['validationErrors']) {
+      const errors = this.details['validationErrors'];
+      const firstError = Object.values(errors)[0] as string[];
+      if (firstError && firstError.length > 0) {
+        return firstError[0];
+      }
+    }
+    return '输入信息有误，请检查后重试';
+  }
+}
+
+export interface BugOperationResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: BugError;
+}

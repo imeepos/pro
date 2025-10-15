@@ -13,6 +13,7 @@ import {
 import { BugEntity } from '@pro/entities';
 import { BugCommentService } from './bug-comment.service';
 import { BugNotificationService } from './bug-notification.service';
+import { UuidValidator } from '../common/utils/uuid.validator';
 
 @Injectable()
 export class BugService {
@@ -84,6 +85,9 @@ export class BugService {
   async findOne(id: string): Promise<Bug> {
     this.logger.log(`获取Bug详情: ${id}`);
 
+    // 验证 UUID 格式
+    UuidValidator.validateWithIntelligence(id, 'Bug ID');
+
     const bug = await this.bugRepository.findOne({
       where: { id },
       relations: ['reporter', 'assignee', 'comments', 'attachments'],
@@ -98,6 +102,9 @@ export class BugService {
 
   async update(id: string, updateBugDto: UpdateBugDto): Promise<Bug> {
     this.logger.log(`更新Bug: ${id}`);
+
+    // 验证 UUID 格式
+    UuidValidator.validateWithIntelligence(id, 'Bug ID');
 
     const bug = await this.bugRepository.findOne({ where: { id } });
     if (!bug) {
@@ -130,6 +137,9 @@ export class BugService {
   async remove(id: string): Promise<void> {
     this.logger.log(`删除Bug: ${id}`);
 
+    // 验证 UUID 格式
+    UuidValidator.validateWithIntelligence(id, 'Bug ID');
+
     const bug = await this.bugRepository.findOne({ where: { id } });
     if (!bug) {
       throw new NotFoundException('Bug不存在');
@@ -140,6 +150,9 @@ export class BugService {
 
   async updateStatus(id: string, status: string, comment?: string): Promise<Bug> {
     this.logger.log(`更新Bug ${id} 状态为: ${status}`);
+
+    // 验证 UUID 格式
+    UuidValidator.validateWithIntelligence(id, 'Bug ID');
 
     const bug = await this.update(id, { status: status as BugStatus });
 
@@ -154,6 +167,9 @@ export class BugService {
 
   async assign(id: string, assigneeId: string): Promise<Bug> {
     this.logger.log(`分配Bug ${id} 给用户: ${assigneeId}`);
+
+    // 验证 UUID 格式
+    UuidValidator.validateWithIntelligence(id, 'Bug ID');
 
     const bug = await this.update(id, { assigneeId });
 

@@ -82,6 +82,32 @@ export class BugController {
     };
   }
 
+  @Get('statistics')
+  @ApiOperation({ summary: '获取Bug统计信息' })
+  async getStatistics(): Promise<ApiResponseDto<any>> {
+    this.logger.log('获取Bug统计信息');
+    const statistics = await this.bugService.getStatistics();
+    return {
+      success: true,
+      data: statistics,
+      message: '统计信息获取成功',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('statistics/summary')
+  @ApiOperation({ summary: '获取Bug统计摘要信息' })
+  async getStatisticsSummary(): Promise<ApiResponseDto<any>> {
+    this.logger.log('获取Bug统计摘要信息');
+    const statistics = await this.bugService.getStatistics();
+    return {
+      success: true,
+      data: statistics,
+      message: '统计摘要信息获取成功',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: '获取Bug详情' })
   @ApiParam({ name: 'id', description: 'Bug ID' })
@@ -231,19 +257,6 @@ export class BugController {
       success: true,
       data: bug,
       message: '分配成功',
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Get('statistics/summary')
-  @ApiOperation({ summary: '获取Bug统计信息' })
-  async getStatistics(): Promise<ApiResponseDto<any>> {
-    this.logger.log('获取Bug统计信息');
-    const statistics = await this.bugService.getStatistics();
-    return {
-      success: true,
-      data: statistics,
-      message: '统计信息获取成功',
       timestamp: new Date().toISOString(),
     };
   }
