@@ -17,6 +17,7 @@ out/
 
 # TypeScript compilation artifacts
 *.d.ts
+!vite-env.d.ts
 *.d.ts.map
 *.js
 *.js.map
