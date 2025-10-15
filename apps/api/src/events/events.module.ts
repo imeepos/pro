@@ -15,12 +15,15 @@ import { EventTypeService } from './event-type.service';
 import { EventService } from './event.service';
 import { TagService } from './tag.service';
 import { AttachmentService } from './attachment.service';
-
-import { IndustryTypeController } from './industry-type.controller';
-import { EventTypeController } from './event-type.controller';
-import { EventController } from './event.controller';
-import { TagController } from './tag.controller';
-import { AttachmentController } from './attachment.controller';
+import { TagResolver } from './tag.resolver';
+import { EventTypeResolver } from './event-type.resolver';
+import { IndustryTypeResolver } from './industry-type.resolver';
+import { EventResolver } from './event.resolver';
+import { EventTypeLoader } from './event-type.loader';
+import { IndustryTypeLoader } from './industry-type.loader';
+import { TagLoader } from './tag.loader';
+import { AttachmentResolver } from './attachment.resolver';
+import { AttachmentUploadTokenEntity } from './entities/attachment-upload-token.entity';
 
 import { createJwtConfig } from '../config';
 
@@ -33,23 +36,26 @@ import { createJwtConfig } from '../config';
       TagEntity,
       EventTagEntity,
       EventAttachmentEntity,
+      AttachmentUploadTokenEntity,
     ]),
     ConfigModule,
     JwtModule.registerAsync(createJwtConfig()),
   ],
-  controllers: [
-    IndustryTypeController,
-    EventTypeController,
-    EventController,
-    TagController,
-    AttachmentController,
-  ],
+  controllers: [],
   providers: [
     IndustryTypeService,
     EventTypeService,
     EventService,
     TagService,
     AttachmentService,
+    TagResolver,
+    EventTypeResolver,
+    IndustryTypeResolver,
+    EventResolver,
+    AttachmentResolver,
+    EventTypeLoader,
+    IndustryTypeLoader,
+    TagLoader,
   ],
   exports: [
     IndustryTypeService,
@@ -57,6 +63,9 @@ import { createJwtConfig } from '../config';
     EventService,
     TagService,
     AttachmentService,
+    EventTypeLoader,
+    IndustryTypeLoader,
+    TagLoader,
   ],
 })
 export class EventsModule {}

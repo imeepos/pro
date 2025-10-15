@@ -1,14 +1,17 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
-import {
-  JdAccountEntity,
-  JdAccountStatus,
-} from '@pro/entities';
+import { JdAccountEntity, JdAccountStatus } from '@pro/entities';
+
+export type JdAccountSummary = {
+  id: number;
+  jdUid: string;
+  jdNickname?: string;
+  jdAvatar?: string;
+  status: JdAccountStatus;
+  lastCheckAt?: Date;
+  createdAt: Date;
+};
 
 /**
  * 京东账号管理服务
@@ -26,10 +29,7 @@ export class JdAccountService {
    * 不返回敏感信息（如 cookies）
    */
   async getAccounts(userId: string) {
-    const accounts = await this.jdAccountRepo.find({
-      where: { userId },
-      order: { createdAt: 'DESC' },
-    });
+    const accounts = await this.listAccountSummaries(userId);
 
     return {
       accounts: accounts.map((account) => ({
@@ -42,6 +42,26 @@ export class JdAccountService {
         createdAt: account.createdAt,
       })),
     };
+  }
+
+  /**
+   * 按创建时间倒序返回京东账号概要列表
+   */
+  async listAccountSummaries(userId: string): Promise<JdAccountSummary[]> {
+    const accounts = await this.jdAccountRepo.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
+
+    return accounts.map((account) => ({
+      id: account.id,
+      jdUid: account.jdUid,
+      jdNickname: account.jdNickname ?? undefined,
+      jdAvatar: account.jdAvatar ?? undefined,
+      status: account.status,
+      lastCheckAt: account.lastCheckAt ?? undefined,
+      createdAt: account.createdAt,
+    }));
   }
 
   /**

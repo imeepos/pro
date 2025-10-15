@@ -3,25 +3,41 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EventAttachmentEntity, FileType } from '@pro/entities';
+import { EventAttachmentEntity, EventEntity, FileType } from '@pro/entities';
 import { MinIOClient } from '@pro/minio';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { UpdateAttachmentSortDto } from './dto/attachment.dto';
+import { AttachmentUploadTokenEntity } from './entities/attachment-upload-token.entity';
+
+export interface AttachmentUploadIntentResult {
+  token: string;
+  uploadUrl?: string;
+  objectKey: string;
+  bucketName: string;
+  expiresAt: Date;
+  requiresUpload: boolean;
+}
 
 @Injectable()
 export class AttachmentService {
   private readonly logger = new Logger(AttachmentService.name);
+  private readonly uploadUrlExpirySeconds = 10 * 60;
   private minioClient: MinIOClient;
   private bucketName: string;
 
   constructor(
     @InjectRepository(EventAttachmentEntity)
     private readonly attachmentRepository: Repository<EventAttachmentEntity>,
+    @InjectRepository(AttachmentUploadTokenEntity)
+    private readonly uploadTokenRepository: Repository<AttachmentUploadTokenEntity>,
+    @InjectRepository(EventEntity)
+    private readonly eventRepository: Repository<EventEntity>,
     private readonly configService: ConfigService,
   ) {
     const minioPort = this.configService.get<string>('MINIO_API_PORT') || '9000';
@@ -50,7 +66,7 @@ export class AttachmentService {
     return crypto.createHash('md5').update(buffer).digest('hex');
   }
 
-  private getFileType(mimeType: string): FileType {
+  private resolveFileType(mimeType: string): FileType {
     if (mimeType.startsWith('image/')) {
       return FileType.IMAGE;
     } else if (mimeType.startsWith('video/')) {
@@ -90,23 +106,23 @@ export class AttachmentService {
     return typesConfig[fileType].split(',').map(type => type.trim());
   }
 
-  private validateFile(file: Express.Multer.File): void {
-    const fileType = this.getFileType(file.mimetype);
+  private validateFileMetadata(fileName: string, mimeType: string, size: number): FileType {
+    const fileType = this.resolveFileType(mimeType);
     const maxSize = this.getMaxFileSize(fileType);
     const allowedTypes = this.getAllowedMimeTypes(fileType);
 
-    if (file.size > maxSize) {
+    if (size > maxSize) {
       const sizeMB = (maxSize / 1024 / 1024).toFixed(0);
-      this.logger.warn(`文件验证失败: 文件大小超限 - ${file.originalname} (${file.size} bytes > ${maxSize} bytes)`);
+      this.logger.warn(`文件验证失败: 文件大小超限 - ${fileName} (${size} bytes > ${maxSize} bytes)`);
       throw new BadRequestException(`文件大小不能超过 ${sizeMB}MB`);
     }
 
-    if (!allowedTypes.includes(file.mimetype)) {
-      this.logger.warn(`文件验证失败: 不支持的文件类型 - ${file.originalname} (${file.mimetype})`);
-      throw new BadRequestException(`不支持的文件类型: ${file.mimetype}`);
+    if (!allowedTypes.includes(mimeType)) {
+      this.logger.warn(`文件验证失败: 不支持的文件类型 - ${fileName} (${mimeType})`);
+      throw new BadRequestException(`不支持的文件类型: ${mimeType}`);
     }
 
-    const ext = path.extname(file.originalname).toLowerCase();
+    const ext = path.extname(fileName).toLowerCase();
     const mimeTypeExtMap: Record<string, string[]> = {
       'image/jpeg': ['.jpg', '.jpeg'],
       'image/png': ['.png'],
@@ -120,11 +136,204 @@ export class AttachmentService {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     };
 
-    const expectedExts = mimeTypeExtMap[file.mimetype] || [];
+    const expectedExts = mimeTypeExtMap[mimeType] || [];
     if (expectedExts.length > 0 && !expectedExts.includes(ext)) {
-      this.logger.warn(`文件验证失败: 文件扩展名与类型不匹配 - ${file.originalname} (ext: ${ext}, mime: ${file.mimetype})`);
+      this.logger.warn(`文件验证失败: 文件扩展名与类型不匹配 - ${fileName} (ext: ${ext}, mime: ${mimeType})`);
       throw new BadRequestException('文件扩展名与类型不匹配');
     }
+
+    return fileType;
+  }
+
+  private buildObjectName(fileMd5: string, fileName: string): string {
+    const ext = path.extname(fileName) || '';
+    return `shared/${fileMd5.substring(0, 2)}/${fileMd5}${ext}`;
+  }
+
+  private async generatePresignedPutUrl(
+    bucketName: string,
+    objectName: string,
+  ): Promise<string> {
+    const client = this.minioClient as unknown as {
+      getPresignedPutUrl?: (bucket: string, object: string, expiry?: number) => Promise<string>;
+      client?: {
+        presignedPutObject?: (bucket: string, object: string, expiry: number) => Promise<string>;
+      };
+    };
+
+    if (client.getPresignedPutUrl) {
+      return client.getPresignedPutUrl(bucketName, objectName, this.uploadUrlExpirySeconds);
+    }
+
+    if (client.client?.presignedPutObject) {
+      return client.client.presignedPutObject(bucketName, objectName, this.uploadUrlExpirySeconds);
+    }
+
+    throw new BadRequestException('暂不支持预签名上传，请联系管理员');
+  }
+
+  private async statObject(bucketName: string, objectName: string) {
+    const client = this.minioClient as unknown as {
+      statObject?: (bucket: string, object: string) => Promise<{ size: number }>;
+      client?: {
+        statObject?: (bucket: string, object: string) => Promise<{ size: number }>;
+      };
+    };
+
+    if (client.statObject) {
+      return client.statObject(bucketName, objectName);
+    }
+
+    if (client.client?.statObject) {
+      return client.client.statObject(bucketName, objectName);
+    }
+
+    throw new BadRequestException('无法校验上传对象状态');
+  }
+
+  private validateFile(file: Express.Multer.File): void {
+    this.validateFileMetadata(file.originalname, file.mimetype, file.size);
+  }
+
+  async createUploadIntent(params: {
+    eventId: string;
+    userId: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    fileMd5: string;
+  }): Promise<AttachmentUploadIntentResult> {
+    const { eventId, userId, fileName, mimeType, fileSize, fileMd5 } = params;
+
+    const event = await this.eventRepository.findOne({ where: { id: eventId } });
+    if (!event) {
+      throw new NotFoundException(`事件 ID ${eventId} 不存在`);
+    }
+
+    if (event.createdBy && event.createdBy !== userId) {
+      throw new ForbiddenException('没有权限上传该事件的附件');
+    }
+
+    const fileType = this.validateFileMetadata(fileName, mimeType, fileSize);
+
+    const existingAttachment = await this.attachmentRepository.findOne({ where: { fileMd5 } });
+    const objectName = existingAttachment
+      ? existingAttachment.objectName
+      : this.buildObjectName(fileMd5, fileName);
+    const bucketName = existingAttachment?.bucketName ?? this.bucketName;
+    const requiresUpload = !existingAttachment;
+
+    const expiresAt = new Date(Date.now() + this.uploadUrlExpirySeconds * 1000);
+
+    const token = this.uploadTokenRepository.create({
+      eventId,
+      userId,
+      fileName,
+      mimeType,
+      fileSize,
+      fileMd5,
+      objectName,
+      bucketName,
+      requiresUpload,
+      expiresAt,
+    });
+
+    const savedToken = await this.uploadTokenRepository.save(token);
+
+    let uploadUrl: string | undefined;
+    if (requiresUpload) {
+      uploadUrl = await this.generatePresignedPutUrl(bucketName, objectName);
+    }
+
+    this.logger.log(
+      `创建附件上传凭证: eventId=${eventId}, userId=${userId}, requiresUpload=${requiresUpload}, token=${savedToken.id}`,
+    );
+
+    return {
+      token: savedToken.id,
+      uploadUrl,
+      objectKey: objectName,
+      bucketName,
+      expiresAt,
+      requiresUpload,
+    } satisfies AttachmentUploadIntentResult;
+  }
+
+  async confirmUploadIntent(tokenId: string, userId: string): Promise<EventAttachmentEntity> {
+    const token = await this.uploadTokenRepository.findOne({ where: { id: tokenId } });
+
+    if (!token) {
+      throw new NotFoundException('上传凭证不存在或已失效');
+    }
+
+    if (token.userId !== userId) {
+      throw new ForbiddenException('无权确认该上传请求');
+    }
+
+    if (token.usedAt) {
+      throw new BadRequestException('上传凭证已被使用');
+    }
+
+    if (token.expiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('上传凭证已过期，请重新获取');
+    }
+
+    const event = await this.eventRepository.findOne({ where: { id: token.eventId } });
+    if (!event) {
+      throw new NotFoundException(`事件 ID ${token.eventId} 不存在`);
+    }
+
+    let targetAttachment = await this.attachmentRepository.findOne({ where: { fileMd5: token.fileMd5 } });
+
+    if (token.requiresUpload) {
+      try {
+        const stat = await this.statObject(token.bucketName, token.objectName);
+        if (Number(stat.size) !== Number(token.fileSize)) {
+          throw new BadRequestException('上传文件大小与声明不一致，请重新上传');
+        }
+      } catch (error) {
+        this.logger.error('确认上传时获取对象信息失败', error);
+        throw new BadRequestException('未检测到已上传的文件，请重试');
+      }
+
+      // 再次尝试查找是否已有相同 MD5 记录（可能在凭证创建后写入）
+      targetAttachment = await this.attachmentRepository.findOne({ where: { fileMd5: token.fileMd5 } });
+    }
+
+    const reuseExisting = Boolean(targetAttachment);
+    const objectName = targetAttachment?.objectName ?? token.objectName;
+    const bucketName = targetAttachment?.bucketName ?? token.bucketName;
+    const fileUrl = targetAttachment?.fileUrl ?? (await this.minioClient.getPresignedUrl(bucketName, objectName));
+
+    const maxSortOrder = await this.attachmentRepository
+      .createQueryBuilder('attachment')
+      .where('attachment.eventId = :eventId', { eventId: token.eventId })
+      .select('MAX(attachment.sortOrder)', 'maxSort')
+      .getRawOne();
+
+    const attachment = this.attachmentRepository.create({
+      eventId: token.eventId,
+      fileName: token.fileName,
+      fileUrl,
+      bucketName,
+      objectName,
+      fileType: this.resolveFileType(token.mimeType),
+      fileSize: Number(token.fileSize),
+      mimeType: token.mimeType,
+      fileMd5: token.fileMd5,
+      sortOrder: (maxSortOrder?.maxSort || 0) + 1,
+    });
+
+    const savedAttachment = await this.attachmentRepository.save(attachment);
+
+    token.usedAt = new Date();
+    await this.uploadTokenRepository.save(token);
+
+    this.logger.log(
+      `确认附件上传成功: eventId=${token.eventId}, attachmentId=${savedAttachment.id}, reused=${reuseExisting}`,
+    );
+
+    return savedAttachment;
   }
 
   async uploadAttachment(
@@ -157,7 +366,7 @@ export class AttachmentService {
         fileUrl: existingFile.fileUrl,
         bucketName: existingFile.bucketName,
         objectName: existingFile.objectName,
-        fileType: this.getFileType(file.mimetype),
+        fileType: this.resolveFileType(file.mimetype),
         fileSize: file.size,
         mimeType: file.mimetype,
         fileMd5,
@@ -193,7 +402,7 @@ export class AttachmentService {
         fileUrl,
         bucketName: this.bucketName,
         objectName,
-        fileType: this.getFileType(file.mimetype),
+        fileType: this.resolveFileType(file.mimetype),
         fileSize: file.size,
         mimeType: file.mimetype,
         fileMd5,

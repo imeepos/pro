@@ -1,7 +1,7 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
-import { Subject, Observable } from 'rxjs';
+import { Subject, Observable, Subscription } from 'rxjs';
 import { JdAccountEntity } from '@pro/entities';
 import { JdAccountService } from './jd-account.service';
 
@@ -34,7 +34,20 @@ interface LoginSession {
   context: BrowserContext;
   page: Page;
   subject: Subject<JdLoginEvent>;
-  timer: NodeJS.Timeout;
+  timer?: NodeJS.Timeout;
+  userId: string;
+  createdAt: Date;
+  expiresAt: Date;
+  lastEvent?: JdLoginEvent;
+  eventsSubscription?: Subscription;
+}
+
+export interface JdLoginSessionSnapshot {
+  sessionId: string;
+  userId: string;
+  lastEvent?: JdLoginEvent;
+  expiresAt: Date;
+  isExpired: boolean;
 }
 
 /**
@@ -110,29 +123,56 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
    * @returns Observable 事件流
    */
   async startLogin(userId: string): Promise<Observable<JdLoginEvent>> {
-    const sessionId = `${userId}_${Date.now()}`;
-    this.logger.log(`启动京东登录会话: ${sessionId}`);
-
-    // 检查浏览器是否可用
-    if (!this.browser) {
+    try {
+      const { events$ } = await this.createLoginSession(userId);
+      return events$;
+    } catch (error) {
       const subject = new Subject<JdLoginEvent>();
       subject.next({
         type: 'error',
-        data: { message: 'Playwright浏览器未就绪，京东登录功能暂时不可用' },
+        data: { message: error?.message || '京东登录暂时不可用' },
       });
       subject.complete();
       return subject.asObservable();
     }
+  }
 
-    // 创建新的浏览器上下文
+  async createLoginSession(
+    userId: string,
+  ): Promise<{ sessionId: string; expiresAt: Date; events$: Observable<JdLoginEvent> }> {
+    if (!this.browser) {
+      this.logger.warn('Playwright 浏览器未就绪，拒绝创建京东登录会话');
+      throw new ServiceUnavailableException('Playwright浏览器未就绪，京东登录功能暂时不可用');
+    }
+
+    const sessionId = `${userId}_${Date.now()}`;
+    this.logger.log(`启动京东登录会话: ${sessionId}`);
+
     const context = await this.browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      userAgent:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     });
 
     const page = await context.newPage();
     const subject = new Subject<JdLoginEvent>();
+    const createdAt = new Date();
+    const expiresAt = new Date(createdAt.getTime() + this.SESSION_TIMEOUT);
 
-    // 设置超时清理定时器
+    const session: LoginSession = {
+      context,
+      page,
+      subject,
+      userId,
+      createdAt,
+      expiresAt,
+    };
+
+    session.eventsSubscription = subject.subscribe((event) => {
+      session.lastEvent = event;
+    });
+
+    this.loginSessions.set(sessionId, session);
+
     const timer = setTimeout(() => {
       this.logger.warn(`登录会话超时: ${sessionId}`);
       subject.next({
@@ -143,19 +183,44 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
       this.cleanupSession(sessionId);
     }, this.SESSION_TIMEOUT);
 
-    // 保存会话
-    this.loginSessions.set(sessionId, { context, page, subject, timer });
+    session.timer = timer;
 
-    // 先设置监听器
     this.setupQrCodeListener(page, subject, sessionId);
     this.setupQrStatusMonitor(page, context, subject, sessionId, userId);
 
-    // 异步启动页面导航（在 SSE 连接建立后执行）
     setImmediate(async () => {
       await this.navigateToLoginPageWithRetry(page, subject, sessionId);
     });
 
-    return subject.asObservable();
+    return {
+      sessionId,
+      expiresAt,
+      events$: subject.asObservable(),
+    };
+  }
+
+  getLoginSessionSnapshot(sessionId: string): JdLoginSessionSnapshot {
+    const session = this.loginSessions.get(sessionId);
+    if (!session) {
+      throw new NotFoundException('登录会话不存在或已结束');
+    }
+
+    return {
+      sessionId,
+      userId: session.userId,
+      lastEvent: session.lastEvent,
+      expiresAt: session.expiresAt,
+      isExpired: session.expiresAt.getTime() <= Date.now(),
+    };
+  }
+
+  observeLoginSession(sessionId: string): Observable<JdLoginEvent> {
+    const session = this.loginSessions.get(sessionId);
+    if (!session) {
+      throw new NotFoundException('登录会话不存在或已结束');
+    }
+
+    return session.subject.asObservable();
   }
 
   /**
@@ -702,6 +767,9 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
     if (session.timer) {
       clearTimeout(session.timer);
     }
+
+    session.eventsSubscription?.unsubscribe();
+    session.subject.complete();
 
     // 关闭浏览器上下文
     try {

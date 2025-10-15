@@ -1,6 +1,7 @@
 import { IsString, IsEmail, IsNotEmpty, Validate } from 'class-validator';
+import { ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import { Field, InputType } from '@nestjs/graphql';
 import { validatePassword, validateUsername } from '@pro/utils';
-import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
 
 @ValidatorConstraint({ name: 'passwordStrength', async: false })
 class PasswordStrengthValidator implements ValidatorConstraintInterface {
@@ -25,18 +26,22 @@ class UsernameFormatValidator implements ValidatorConstraintInterface {
   }
 }
 
+@InputType()
 export class RegisterDto {
   @IsNotEmpty({ message: '用户名不能为空' })
   @IsString({ message: '用户名必须是字符串' })
   @Validate(UsernameFormatValidator)
+  @Field(() => String)
   username: string;
 
   @IsNotEmpty({ message: '邮箱不能为空' })
   @IsEmail({}, { message: '邮箱格式不正确' })
+  @Field(() => String)
   email: string;
 
   @IsNotEmpty({ message: '密码不能为空' })
   @IsString({ message: '密码必须是字符串' })
   @Validate(PasswordStrengthValidator)
+  @Field(() => String)
   password: string;
 }

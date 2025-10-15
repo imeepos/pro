@@ -74,7 +74,7 @@ export class UserService {
     await this.userRepository.remove(user);
   }
 
-  private sanitizeUser(user: UserEntity): User {
+  public sanitizeUser(user: UserEntity): User {
     const { password, ...sanitized } = user;
     return sanitized as User;
   }
