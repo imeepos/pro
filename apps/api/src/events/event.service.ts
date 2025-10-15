@@ -4,14 +4,37 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, SelectQueryBuilder } from 'typeorm';
 import { EventEntity, EventStatus } from '@pro/entities';
 import { EventTagEntity } from '@pro/entities';
 import { TagEntity } from '@pro/entities';
-import { CreateEventDto, UpdateEventDto, EventQueryDto } from './dto/event.dto';
+import {
+  CreateEventDto,
+  UpdateEventDto,
+  EventQueryDto,
+  EventMapQueryDto,
+} from './dto/event.dto';
+
+type EventFilterOptions = {
+  keyword?: string;
+  industryTypeId?: string;
+  eventTypeId?: string;
+  province?: string;
+  city?: string;
+  district?: string;
+  startTime?: string;
+  endTime?: string;
+  status?: EventStatus;
+  tagIds?: string[];
+};
 
 @Injectable()
 export class EventService {
+  private readonly filterAliases = {
+    eventTag: 'filterEventTag',
+    tag: 'filterTag',
+  };
+
   constructor(
     @InjectRepository(EventEntity)
     private readonly eventRepository: Repository<EventEntity>,
@@ -62,47 +85,18 @@ export class EventService {
       .leftJoinAndSelect('eventTags.tag', 'tag')
       .leftJoinAndSelect('event.attachments', 'attachments');
 
-    if (keyword) {
-      query.andWhere('(event.eventName LIKE :keyword OR event.summary LIKE :keyword)', {
-        keyword: `%${keyword}%`,
-      });
-    }
-
-    if (industryTypeId) {
-      query.andWhere('event.industryTypeId = :industryTypeId', { industryTypeId });
-    }
-
-    if (eventTypeId) {
-      query.andWhere('event.eventTypeId = :eventTypeId', { eventTypeId });
-    }
-
-    if (province) {
-      query.andWhere('event.province = :province', { province });
-    }
-
-    if (city) {
-      query.andWhere('event.city = :city', { city });
-    }
-
-    if (district) {
-      query.andWhere('event.district = :district', { district });
-    }
-
-    if (startTime) {
-      query.andWhere('event.occurTime >= :startTime', { startTime });
-    }
-
-    if (endTime) {
-      query.andWhere('event.occurTime <= :endTime', { endTime });
-    }
-
-    if (status !== undefined) {
-      query.andWhere('event.status = :status', { status });
-    }
-
-    if (tagIds && tagIds.length > 0) {
-      query.andWhere('tag.id IN (:...tagIds)', { tagIds });
-    }
+    this.applyFilterConditions(query, {
+      keyword,
+      industryTypeId,
+      eventTypeId,
+      province,
+      city,
+      district,
+      startTime,
+      endTime,
+      status,
+      tagIds,
+    });
 
     const [items, total] = await query
       .orderBy('event.occurTime', 'DESC')
@@ -234,6 +228,61 @@ export class EventService {
     return eventTags.map((et) => et.event);
   }
 
+  async findForMap(queryDto: EventMapQueryDto) {
+    const {
+      keyword,
+      industryTypeId,
+      eventTypeId,
+      province,
+      city,
+      district,
+      startTime,
+      endTime,
+      status,
+      tagIds,
+    } = queryDto;
+
+    const query = this.eventRepository
+      .createQueryBuilder('event')
+      .select([
+        'event.id',
+        'event.eventName',
+        'event.summary',
+        'event.occurTime',
+        'event.province',
+        'event.city',
+        'event.district',
+        'event.street',
+        'event.longitude',
+        'event.latitude',
+        'event.status',
+        'event.eventTypeId',
+        'event.industryTypeId',
+      ]);
+
+    const effectiveStatus =
+      status === undefined ? EventStatus.PUBLISHED : status;
+
+    this.applyFilterConditions(query, {
+      keyword,
+      industryTypeId,
+      eventTypeId,
+      province,
+      city,
+      district,
+      startTime,
+      endTime,
+      status: effectiveStatus,
+      tagIds,
+    });
+
+    query.andWhere('event.longitude IS NOT NULL');
+    query.andWhere('event.latitude IS NOT NULL');
+    query.orderBy('event.occurTime', 'DESC');
+
+    return query.getMany();
+  }
+
   async addTagsToEvent(eventId: string, tagIds: string[]) {
     const existingTags = await this.tagRepository.findBy({
       id: In(tagIds),
@@ -270,5 +319,77 @@ export class EventService {
     await this.tagRepository.decrement({ id: tagId }, 'usageCount', 1);
 
     return { message: '标签移除成功' };
+  }
+
+  private applyFilterConditions(
+    query: SelectQueryBuilder<EventEntity>,
+    filters: EventFilterOptions,
+  ): void {
+    const {
+      keyword,
+      industryTypeId,
+      eventTypeId,
+      province,
+      city,
+      district,
+      startTime,
+      endTime,
+      status,
+      tagIds,
+    } = filters;
+
+    if (keyword) {
+      query.andWhere(
+        '(event.eventName LIKE :keyword OR event.summary LIKE :keyword)',
+        {
+          keyword: `%${keyword}%`,
+        },
+      );
+    }
+
+    if (industryTypeId) {
+      query.andWhere('event.industryTypeId = :industryTypeId', {
+        industryTypeId,
+      });
+    }
+
+    if (eventTypeId) {
+      query.andWhere('event.eventTypeId = :eventTypeId', { eventTypeId });
+    }
+
+    if (province) {
+      query.andWhere('event.province = :province', { province });
+    }
+
+    if (city) {
+      query.andWhere('event.city = :city', { city });
+    }
+
+    if (district) {
+      query.andWhere('event.district = :district', { district });
+    }
+
+    if (startTime) {
+      query.andWhere('event.occurTime >= :startTime', { startTime });
+    }
+
+    if (endTime) {
+      query.andWhere('event.occurTime <= :endTime', { endTime });
+    }
+
+    if (status !== undefined) {
+      query.andWhere('event.status = :status', { status });
+    }
+
+    if (tagIds && tagIds.length > 0) {
+      query.leftJoin('event.eventTags', this.filterAliases.eventTag);
+      query.leftJoin(
+        `${this.filterAliases.eventTag}.tag`,
+        this.filterAliases.tag,
+      );
+      query.andWhere(`${this.filterAliases.tag}.id IN (:...tagIds)`, {
+        tagIds,
+      });
+    }
   }
 }

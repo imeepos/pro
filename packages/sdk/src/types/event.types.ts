@@ -40,6 +40,25 @@ export interface Event {
 }
 
 /**
+ * 地图展示所需的精简事件信息
+ */
+export interface EventMapPoint {
+  id: string;
+  eventName: string;
+  summary?: string;
+  occurTime: string;
+  province: string;
+  city: string;
+  district?: string;
+  street?: string;
+  longitude: number;
+  latitude: number;
+  status: EventStatus;
+  eventTypeId: string;
+  industryTypeId: string;
+}
+
+/**
  * 创建事件 DTO
  */
 export interface CreateEventDto {
@@ -70,6 +89,22 @@ export interface UpdateEventDto extends Partial<CreateEventDto> {
  * 事件查询参数
  */
 export interface EventQueryParams extends PageRequest {
+  industryTypeId?: string;
+  eventTypeId?: string;
+  province?: string;
+  city?: string;
+  district?: string;
+  startTime?: string;
+  endTime?: string;
+  status?: EventStatus;
+  tagIds?: string[];
+  keyword?: string;
+}
+
+/**
+ * 地图数据查询参数
+ */
+export interface EventMapQueryParams {
   industryTypeId?: string;
   eventTypeId?: string;
   province?: string;

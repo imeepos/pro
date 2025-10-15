@@ -13,7 +13,12 @@ import {
 import { CommonModule } from '@angular/common';
 import { Subject, interval, takeUntil } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
-import { SkerSDK, Event, EventStatus, EventQueryParams } from '@pro/sdk';
+import {
+  SkerSDK,
+  EventStatus,
+  EventMapQueryParams,
+  EventMapPoint
+} from '@pro/sdk';
 
 type MapTheme = 'midnight' | 'ocean' | 'sunrise' | 'minimal';
 
@@ -119,7 +124,7 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
         </div>
       </div>
 
-      <div *ngIf="config.showSummary && provinceSummary.length" class="map-summary grid mt-5">
+      <div *ngIf="config.showSummary && provinceSummary.length" class="map-summary grid">
         <div *ngFor="let item of provinceSummary" class="summary-item">
           <div class="summary-top flex items-center justify-between">
             <span class="summary-name">{{ item.name }}</span>
@@ -135,7 +140,7 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
         </div>
       </div>
 
-      <div *ngIf="lastUpdated" class="card-footer mt-4 text-xs text-slate-500 flex items-center justify-between">
+      <div *ngIf="lastUpdated" class="card-footer text-xs text-slate-500 flex items-center justify-between">
         <span>最后更新 · {{ lastUpdated | date:'yyyy-MM-dd HH:mm:ss' }}</span>
         <button type="button" class="manual-refresh" (click)="manualRefresh()" [disabled]="isLoading">
           <span>手动刷新</span>
@@ -155,33 +160,27 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     }
 
     .event-map-card {
-      background: radial-gradient(circle at top left, rgba(59,130,246,0.1), rgba(255,255,255,0.95) 48%),
-                  linear-gradient(180deg, #f8fafc, #ffffff);
-      border: 1px solid rgba(148,163,184,0.35);
-      border-radius: 24px;
-      padding: 24px;
       position: relative;
       overflow: hidden;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 20px 46px rgba(15,23,42,0.08);
-    }
-
-    .event-map-card.edit-mode {
-      box-shadow: 0 24px 60px rgba(59,130,246,0.18);
-      border-color: rgba(59,130,246,0.45);
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
     }
 
     .map-stage {
-      border-radius: 20px;
-      background: linear-gradient(180deg, rgba(226,232,240,0.75), rgba(255,255,255,0.95));
-      border: 1px solid rgba(148,163,184,0.25);
+      min-height: 0;
+      border-radius: 0;
+      background: transparent;
+      border: none;
       overflow: hidden;
     }
 
     .map-canvas {
       width: 100%;
       height: 100%;
-      min-height: 320px;
+      min-height: 0;
     }
 
     .map-overlay {
@@ -218,14 +217,15 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
       display: inline-flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.9);
-      color: #0f172a;
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(148,163,184,0.28);
-      box-shadow: 0 8px 18px rgba(15,23,42,0.08);
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #ffffff;
+      backdrop-filter: none;
+      border: none;
+      box-shadow: none;
       font-size: 12px;
+      text-shadow: 0 0 6px rgba(15,23,42,0.65);
     }
 
     .legend-item {
@@ -238,7 +238,7 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      box-shadow: 0 0 10px currentColor;
+      box-shadow: none;
     }
 
     .legend-dot-latest {
@@ -252,17 +252,17 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     }
 
     .legend-badge {
-      min-width: 32px;
+      min-width: 28px;
       height: 22px;
-      padding: 0 8px;
+      padding: 0 6px;
       border-radius: 999px;
-      background: rgba(59,130,246,0.12);
-      border: 1px solid rgba(59,130,246,0.25);
+      background: transparent;
+      border: 1px solid currentColor;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       font-weight: 600;
-      color: rgba(30,64,175,0.85);
+      color: #ffffff;
     }
 
     .empty-hint {
@@ -272,25 +272,24 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.92));
-      color: rgba(71,85,105,0.88);
+      background: rgba(15,23,42,0.6);
+      color: #f8fafc;
       gap: 6px;
       text-align: center;
     }
 
     .map-summary {
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
+      gap: 12px;
     }
 
     .summary-item {
-      padding: 16px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(34,197,94,0.08));
-      border: 1px solid rgba(148,163,184,0.28);
-      backdrop-filter: blur(10px);
+      padding: 12px 0;
+      border-radius: 0;
+      background: transparent;
+      border: none;
+      backdrop-filter: none;
       color: #0f172a;
-      min-height: 110px;
     }
 
     .summary-name {
@@ -307,7 +306,7 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     .summary-bar {
       height: 6px;
       border-radius: 999px;
-      background: rgba(148,163,184,0.3);
+      background: rgba(148,163,184,0.35);
       overflow: hidden;
     }
 
@@ -320,23 +319,22 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     }
 
     .card-footer {
-      border-top: 1px solid rgba(148,163,184,0.28);
-      padding-top: 16px;
+      border-top: none;
+      padding-top: 0;
     }
 
     .manual-refresh {
-      border: 1px solid rgba(59,130,246,0.3);
-      padding: 6px 12px;
-      border-radius: 999px;
-      color: rgba(30,64,175,0.9);
-      background: rgba(255,255,255,0.95);
+      border: none;
+      padding: 0;
+      border-radius: 0;
+      color: #2563eb;
+      background: transparent;
       transition: all 0.3s ease;
     }
 
     .manual-refresh:hover:not(:disabled) {
-      border-color: rgba(59,130,246,0.6);
-      color: rgba(30,58,138,0.95);
-      box-shadow: 0 0 14px rgba(59,130,246,0.3);
+      color: #1d4ed8;
+      box-shadow: none;
     }
 
     .manual-refresh:disabled {
@@ -359,9 +357,9 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
       margin-top: 8px;
       padding: 6px 18px;
       border-radius: 999px;
-      border: 1px solid rgba(248,113,113,0.45);
-      background: rgba(248,113,113,0.12);
-      color: rgba(185,28,28,0.88);
+      border: 1px solid rgba(248,113,113,0.6);
+      background: rgba(248,113,113,0.15);
+      color: rgba(185,28,28,0.95);
       transition: all 0.3s ease;
     }
 
@@ -370,13 +368,8 @@ const DISPLAY_CONFIG: EventMapDistributionConfig = {
     }
 
     @media (max-width: 1440px) {
-      .event-map-card {
-        border-radius: 20px;
-        padding: 20px;
-      }
-
       .map-canvas {
-        min-height: 280px;
+        min-height: 0;
       }
 
       .map-summary {
@@ -398,7 +391,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
   dataError: string | null = null;
   mapError: string | null = null;
 
-  private events: Event[] = [];
+  private events: EventMapPoint[] = [];
   private destroy$ = new Subject<void>();
   private refreshReset$ = new Subject<void>();
   private mapInstance: any;
@@ -526,12 +519,9 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     this.dataError = null;
 
     try {
-      const pageSize = this.config?.maxEvents && this.config.maxEvents > 0 ? this.config.maxEvents : 200;
-
-      const query: EventQueryParams = {
-        page: 1,
-        pageSize
-      };
+      const desiredEventCount =
+        this.config?.maxEvents && this.config.maxEvents > 0 ? this.config.maxEvents : 200;
+      const query: EventMapQueryParams = {};
 
       if (this.config?.eventStatus === 'published') {
         query.status = EventStatus.PUBLISHED;
@@ -549,8 +539,10 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
         query.province = this.config.province;
       }
 
-      const response = await this.sdk.event.getEvents(query);
-      const items = (response.data || []).filter(event => this.hasCoordinates(event));
+      const response = await this.sdk.event.getEventsForMap(query);
+      const dataset = (response || []).filter(event => this.hasCoordinates(event));
+      const items =
+        desiredEventCount > 0 ? dataset.slice(0, desiredEventCount) : dataset;
 
       this.events = items;
       this.totalEvents = items.length;
@@ -575,7 +567,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     }
   }
 
-  private renderMarkers(events: Event[], latestEventId?: string): void {
+  private renderMarkers(events: EventMapPoint[], latestEventId?: string): void {
     if (!this.amapNamespace || !this.mapInstance) {
       return;
     }
@@ -643,7 +635,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
   }
 
   private renderMarker(context: any, latestEventId?: string): void {
-    const data: Event = context.data[0].data;
+    const data: EventMapPoint = context.data[0].data;
     const marker = context.marker;
     marker.setIcon(this.createMarkerIcon(data.id === latestEventId));
     marker.setTitle(data.eventName);
@@ -658,7 +650,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     });
   }
 
-  private createEventMarker(event: Event, position: [number, number], highlight: boolean) {
+  private createEventMarker(event: EventMapPoint, position: [number, number], highlight: boolean) {
     const marker = new this.amapNamespace.Marker({
       position,
       map: this.mapInstance,
@@ -701,7 +693,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     });
   }
 
-  private composeInfoContent(event: Event): string {
+  private composeInfoContent(event: EventMapPoint): string {
     const time = event.occurTime ? new Date(event.occurTime).toLocaleString() : '未知时间';
     const address = [event.province, event.city, event.district, event.street]
       .filter(Boolean)
@@ -761,7 +753,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
       .subscribe(() => this.loadEvents());
   }
 
-  private buildProvinceSummary(events: Event[]): ProvinceSummaryEntry[] {
+  private buildProvinceSummary(events: EventMapPoint[]): ProvinceSummaryEntry[] {
     if (!events.length) {
       return [];
     }
@@ -784,22 +776,22 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     }));
   }
 
-  private findLatestEvent(events: Event[]): Event | undefined {
+  private findLatestEvent(events: EventMapPoint[]): EventMapPoint | undefined {
     if (!events.length) {
       return undefined;
     }
 
-    return events.reduce((latest: Event | undefined, current) => {
+    return events.reduce((latest: EventMapPoint | undefined, current) => {
       if (!latest) {
         return current;
       }
       const latestTime = latest.occurTime ? new Date(latest.occurTime).getTime() : 0;
       const currentTime = current.occurTime ? new Date(current.occurTime).getTime() : 0;
       return currentTime > latestTime ? current : latest;
-    }, undefined as Event | undefined);
+    }, undefined as EventMapPoint | undefined);
   }
 
-  private hasCoordinates(event: Event): boolean {
+  private hasCoordinates(event: EventMapPoint): boolean {
     return typeof event.longitude === 'number'
       && typeof event.latitude === 'number'
       && !Number.isNaN(event.longitude)
