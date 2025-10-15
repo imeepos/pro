@@ -1,5 +1,4 @@
-import { HttpClient } from '../client/http-client.js';
-import { Observable } from 'rxjs';
+import { GraphQLClient } from '../client/graphql-client.js';
 import {
   ScreenPage,
   CreateScreenDto,
@@ -8,321 +7,349 @@ import {
   normalizeScreenPageData
 } from '../types/screen.types.js';
 
-/**
- * 屏幕管理 API 类
- * 提供屏幕的增删改查、发布、设为默认等功能
- */
+interface ScreenEdge {
+  node: ScreenPage;
+  cursor: string;
+}
+
+interface PageInfo {
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  startCursor: string | null;
+  endCursor: string | null;
+}
+
+interface ScreenConnection {
+  edges: ScreenEdge[];
+  pageInfo: PageInfo;
+  totalCount: number;
+}
+
+interface ScreensResponse {
+  screens: ScreenConnection;
+}
+
+interface PublishedScreensResponse {
+  publishedScreens: ScreenConnection;
+}
+
+interface ScreenResponse {
+  screen: ScreenPage;
+}
+
+interface DefaultScreenResponse {
+  defaultScreen: ScreenPage;
+}
+
+interface CreateScreenResponse {
+  createScreen: ScreenPage;
+}
+
+interface UpdateScreenResponse {
+  updateScreen: ScreenPage;
+}
+
+interface RemoveScreenResponse {
+  removeScreen: boolean;
+}
+
+interface CopyScreenResponse {
+  copyScreen: ScreenPage;
+}
+
+interface PublishScreenResponse {
+  publishScreen: ScreenPage;
+}
+
+interface DraftScreenResponse {
+  draftScreen: ScreenPage;
+}
+
+interface SetDefaultScreenResponse {
+  setDefaultScreen: ScreenPage;
+}
+
 export class ScreenApi {
-  private readonly httpClient: HttpClient;
-  private readonly baseUrl: string;
+  private client: GraphQLClient;
 
   constructor(baseUrl: string, tokenKey?: string) {
     if (!baseUrl) {
       throw new Error('baseUrl is required for ScreenApi');
     }
-
-    this.baseUrl = baseUrl;
-
-    if (!this.isValidUrl(this.baseUrl)) {
-      throw new Error(`无效的 baseUrl: ${this.baseUrl}，必须是有效的 HTTP/HTTPS URL`);
-    }
-
-    this.httpClient = new HttpClient(this.baseUrl, tokenKey);
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
-  private isValidUrl(url: string): boolean {
-    try {
-      const parsed = new URL(url);
-      return ['http:', 'https:'].includes(parsed.protocol);
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * 获取屏幕列表
-   * @param page 页码，默认 1
-   * @param limit 每页数量，默认 20
-   * @returns 屏幕列表响应
-   */
   async getScreens(page = 1, limit = 20): Promise<ScreenListResponse> {
-    const response = await this.httpClient.get<ScreenListResponse>(
-      '/api/screens',
-      { page: page.toString(), limit: limit.toString() }
-    );
+    const query = `
+      query Screens($page: Int, $limit: Int) {
+        screens(page: $page, limit: $limit) {
+          edges {
+            node {
+              id
+              name
+              description
+              layout
+              components
+              status
+              isDefault
+              createdBy
+              createdAt
+              updatedAt
+            }
+          }
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
 
-    if (!response) {
-      throw new Error('API返回数据为空');
-    }
+    const response = await this.client.query<ScreensResponse>(query, { page, limit });
+    const connection = response.screens;
+    const items = connection.edges.map(edge => normalizeScreenPageData(edge.node));
+    const total = connection.totalCount;
+    const totalPages = Math.ceil(total / limit);
 
     return {
-      ...response,
-      items: response.items.map(item => normalizeScreenPageData(item))
+      items,
+      total,
+      page,
+      limit,
+      totalPages,
     };
   }
 
-  /**
-   * 获取已发布的屏幕列表
-   * @param page 页码，默认 1
-   * @param limit 每页数量，默认 20
-   * @returns 已发布的屏幕列表响应
-   */
   async getPublishedScreens(page = 1, limit = 20): Promise<ScreenListResponse> {
-    const response = await this.httpClient.get<ScreenListResponse>(
-      '/api/screens/published',
-      { page: page.toString(), limit: limit.toString() }
-    );
+    const query = `
+      query PublishedScreens($page: Int, $limit: Int) {
+        publishedScreens(page: $page, limit: $limit) {
+          edges {
+            node {
+              id
+              name
+              description
+              layout
+              components
+              status
+              isDefault
+              createdBy
+              createdAt
+              updatedAt
+            }
+          }
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
 
-    if (!response) {
-      throw new Error('API返回数据为空');
-    }
+    const response = await this.client.query<PublishedScreensResponse>(query, { page, limit });
+    const connection = response.publishedScreens;
+    const items = connection.edges.map(edge => normalizeScreenPageData(edge.node));
+    const total = connection.totalCount;
+    const totalPages = Math.ceil(total / limit);
 
     return {
-      ...response,
-      items: response.items.map(item => normalizeScreenPageData(item))
+      items,
+      total,
+      page,
+      limit,
+      totalPages,
     };
   }
 
-  /**
-   * 根据ID获取屏幕详情
-   * @param id 屏幕ID
-   * @returns 屏幕详情
-   */
   async getScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.get<ScreenPage>(`/api/screens/${id}`);
+    const query = `
+      query Screen($id: ID!) {
+        screen(id: $id) {
+          id
+          name
+          description
+          layout
+          components
+          status
+          isDefault
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
 
-    if (!response) {
-      throw new Error('API返回数据为空');
-    }
-
-    return normalizeScreenPageData(response);
+    const response = await this.client.query<ScreenResponse>(query, { id });
+    return normalizeScreenPageData(response.screen);
   }
 
-  /**
-   * 创建新屏幕
-   * @param dto 创建屏幕数据
-   * @returns 创建的屏幕详情
-   */
   async createScreen(dto: CreateScreenDto): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenPage>('/api/screens', dto);
+    const mutation = `
+      mutation CreateScreen($input: CreateScreenDto!) {
+        createScreen(input: $input) {
+          id
+          name
+          description
+          layout
+          components
+          status
+          isDefault
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
 
-    if (!response) {
-      throw new Error('API返回数据为空');
-    }
-
-    return normalizeScreenPageData(response);
+    const response = await this.client.mutate<CreateScreenResponse>(mutation, { input: dto });
+    return normalizeScreenPageData(response.createScreen);
   }
 
-  /**
-   * 更新屏幕
-   * @param id 屏幕ID
-   * @param dto 更新数据
-   * @returns 更新后的屏幕详情
-   */
   async updateScreen(id: string, dto: UpdateScreenDto): Promise<ScreenPage> {
-    const response = await this.httpClient.put<ScreenPage>(`/api/screens/${id}`, dto);
+    const mutation = `
+      mutation UpdateScreen($id: ID!, $input: UpdateScreenDto!) {
+        updateScreen(id: $id, input: $input) {
+          id
+          name
+          description
+          layout
+          components
+          status
+          isDefault
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
 
-    if (!response) {
-      throw new Error('API返回数据为空');
-    }
-
-    return normalizeScreenPageData(response);
+    const response = await this.client.mutate<UpdateScreenResponse>(mutation, { id, input: dto });
+    return normalizeScreenPageData(response.updateScreen);
   }
 
-  /**
-   * 删除屏幕
-   * @param id 屏幕ID
-   */
   async deleteScreen(id: string): Promise<void> {
-    await this.httpClient.delete<void>(`/api/screens/${id}`);
+    const mutation = `
+      mutation RemoveScreen($id: ID!) {
+        removeScreen(id: $id)
+      }
+    `;
+
+    await this.client.mutate<RemoveScreenResponse>(mutation, { id });
   }
 
-  /**
-   * 复制屏幕
-   * @param id 屏幕ID
-   * @returns 复制后的屏幕详情
-   */
   async copyScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenPage>(`/api/screens/${id}/copy`, {});
+    const mutation = `
+      mutation CopyScreen($id: ID!) {
+        copyScreen(id: $id) {
+          id
+          name
+          description
+          layout
+          components
+          status
+          isDefault
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
 
-    if (!response) {
-      throw new Error('API返回数据为空');
-    }
-
-    return normalizeScreenPageData(response);
+    const response = await this.client.mutate<CopyScreenResponse>(mutation, { id });
+    return normalizeScreenPageData(response.copyScreen);
   }
 
-  /**
-   * 发布屏幕
-   * @param id 屏幕ID
-   * @returns 发布后的屏幕详情
-   */
   async publishScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenPage>(`/api/screens/${id}/publish`, {});
+    const mutation = `
+      mutation PublishScreen($id: ID!) {
+        publishScreen(id: $id) {
+          id
+          name
+          description
+          layout
+          components
+          status
+          isDefault
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
 
-    if (!response) {
-      throw new Error('API返回数据为空');
-    }
-
-    return normalizeScreenPageData(response);
+    const response = await this.client.mutate<PublishScreenResponse>(mutation, { id });
+    return normalizeScreenPageData(response.publishScreen);
   }
 
-  /**
-   * 将屏幕状态改为草稿
-   * @param id 屏幕ID
-   * @returns 草稿状态的屏幕详情
-   */
   async draftScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.post<ScreenPage>(`/api/screens/${id}/draft`, {});
+    const mutation = `
+      mutation DraftScreen($id: ID!) {
+        draftScreen(id: $id) {
+          id
+          name
+          description
+          layout
+          components
+          status
+          isDefault
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
 
-    if (!response) {
-      throw new Error('API返回数据为空');
-    }
-
-    return normalizeScreenPageData(response);
+    const response = await this.client.mutate<DraftScreenResponse>(mutation, { id });
+    return normalizeScreenPageData(response.draftScreen);
   }
 
-  /**
-   * 设置默认屏幕
-   * @param id 屏幕ID
-   * @returns 设置为默认后的屏幕详情
-   */
   async setDefaultScreen(id: string): Promise<ScreenPage> {
-    const response = await this.httpClient.put<ScreenPage>(`/api/screens/default/${id}`, {});
+    const mutation = `
+      mutation SetDefaultScreen($id: ID!) {
+        setDefaultScreen(id: $id) {
+          id
+          name
+          description
+          layout
+          components
+          status
+          isDefault
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
 
-    if (!response) {
-      throw new Error('API返回数据为空');
-    }
-
-    return normalizeScreenPageData(response);
+    const response = await this.client.mutate<SetDefaultScreenResponse>(mutation, { id });
+    return normalizeScreenPageData(response.setDefaultScreen);
   }
 
-  /**
-   * 获取默认屏幕
-   * @returns 默认屏幕详情
-   */
   async getDefaultScreen(): Promise<ScreenPage> {
-    const response = await this.httpClient.get<ScreenPage>('/api/screens/default');
+    const query = `
+      query DefaultScreen {
+        defaultScreen {
+          id
+          name
+          description
+          layout
+          components
+          status
+          isDefault
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
 
-    if (!response) {
-      throw new Error('API返回数据为空');
-    }
-
-    return normalizeScreenPageData(response);
+    const response = await this.client.query<DefaultScreenResponse>(query);
+    return normalizeScreenPageData(response.defaultScreen);
   }
-
-  // 以下为兼容 RxJS Observable 的方法，用于 Angular 项目
-  private createObservable<T>(promise: Promise<T>): Observable<T> {
-    return new Observable<T>(subscriber => {
-      promise
-        .then(result => {
-          subscriber.next(result);
-          subscriber.complete();
-        })
-        .catch(error => {
-          subscriber.error(error);
-        });
-    });
-  }
-
-  /**
-   * 获取屏幕列表 (Observable 版本)
-   * @param page 页码，默认 1
-   * @param limit 每页数量，默认 20
-   * @returns 屏幕列表响应 Observable
-   */
-  getScreens$ = (page = 1, limit = 20): Observable<ScreenListResponse> => {
-    return this.createObservable(this.getScreens(page, limit));
-  };
-
-  /**
-   * 获取已发布的屏幕列表 (Observable 版本)
-   * @param page 页码，默认 1
-   * @param limit 每页数量，默认 20
-   * @returns 已发布的屏幕列表响应 Observable
-   */
-  getPublishedScreens$ = (page = 1, limit = 20): Observable<ScreenListResponse> => {
-    return this.createObservable(this.getPublishedScreens(page, limit));
-  };
-
-  /**
-   * 根据ID获取屏幕详情 (Observable 版本)
-   * @param id 屏幕ID
-   * @returns 屏幕详情 Observable
-   */
-  getScreen$ = (id: string): Observable<ScreenPage> => {
-    return this.createObservable(this.getScreen(id));
-  };
-
-  /**
-   * 创建新屏幕 (Observable 版本)
-   * @param dto 创建屏幕数据
-   * @returns 创建的屏幕详情 Observable
-   */
-  createScreen$ = (dto: CreateScreenDto): Observable<ScreenPage> => {
-    return this.createObservable(this.createScreen(dto));
-  };
-
-  /**
-   * 更新屏幕 (Observable 版本)
-   * @param id 屏幕ID
-   * @param dto 更新数据
-   * @returns 更新后的屏幕详情 Observable
-   */
-  updateScreen$ = (id: string, dto: UpdateScreenDto): Observable<ScreenPage> => {
-    return this.createObservable(this.updateScreen(id, dto));
-  };
-
-  /**
-   * 删除屏幕 (Observable 版本)
-   * @param id 屏幕ID
-   * @returns 删除操作 Observable
-   */
-  deleteScreen$ = (id: string): Observable<void> => {
-    return this.createObservable(this.deleteScreen(id));
-  };
-
-  /**
-   * 复制屏幕 (Observable 版本)
-   * @param id 屏幕ID
-   * @returns 复制后的屏幕详情 Observable
-   */
-  copyScreen$ = (id: string): Observable<ScreenPage> => {
-    return this.createObservable(this.copyScreen(id));
-  };
-
-  /**
-   * 发布屏幕 (Observable 版本)
-   * @param id 屏幕ID
-   * @returns 发布后的屏幕详情 Observable
-   */
-  publishScreen$ = (id: string): Observable<ScreenPage> => {
-    return this.createObservable(this.publishScreen(id));
-  };
-
-  /**
-   * 将屏幕状态改为草稿 (Observable 版本)
-   * @param id 屏幕ID
-   * @returns 草稿状态的屏幕详情 Observable
-   */
-  draftScreen$ = (id: string): Observable<ScreenPage> => {
-    return this.createObservable(this.draftScreen(id));
-  };
-
-  /**
-   * 设置默认屏幕 (Observable 版本)
-   * @param id 屏幕ID
-   * @returns 设置为默认后的屏幕详情 Observable
-   */
-  setDefaultScreen$ = (id: string): Observable<ScreenPage> => {
-    return this.createObservable(this.setDefaultScreen(id));
-  };
-
-  /**
-   * 获取默认屏幕 (Observable 版本)
-   * @returns 默认屏幕详情 Observable
-   */
-  getDefaultScreen$ = (): Observable<ScreenPage> => {
-    return this.createObservable(this.getDefaultScreen());
-  };
 }
