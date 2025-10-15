@@ -23,10 +23,15 @@
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\""
   },
-  "keywords": ["types", "typescript"],
+  "keywords": [
+    "types",
+    "typescript"
+  ],
   "license": "UNLICENSED",
   "devDependencies": {
-    "tsup": "^8.5.0",
-    "typescript": "~5.8.0"
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*",
+    "tsup": "8.5.0",
+    "typescript": "5.8.2"
   }
 }

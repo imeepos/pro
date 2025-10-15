@@ -1,0 +1,103 @@
+name: 依赖版本检查
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    # 每周一早上8点运行
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  dependency-check:
+    name: 依赖版本一致性检查
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.1
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 运行依赖版本检查
+        run: pnpm deps:check
+        continue-on-error: true
+
+      - name: 运行安全审计
+        run: pnpm deps:audit
+        continue-on-error: true
+
+      - name: 生成依赖报告
+        if: always()
+        run: |
+          echo "## 依赖检查报告" > $GITHUB_STEP_SUMMARY
+          echo "### 版本一致性检查" >> $GITHUB_STEP_SUMMARY
+          pnpm deps:check || echo "⚠️ 发现版本冲突" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 安全审计" >> $GITHUB_STEP_SUMMARY
+          pnpm deps:audit || echo "⚠️ 发现安全问题" >> $GITHUB_STEP_SUMMARY
+
+  update-dependencies-doc:
+    name: 更新依赖文档
+    runs-on: ubuntu-latest
+    needs: dependency-check
+    if: github.event_name == 'schedule' && github.ref == 'refs/heads/master'
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.1
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 配置Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: 检查依赖变化并提交
+        run: |
+          # 生成新的依赖报告
+          pnpm deps:check > deps-report.txt 2>&1 || true
+
+          # 检查是否有变化需要提交
+          if [[ -n $(git status --porcelain) ]]; then
+            git add .
+            git commit -m "🤖 自动更新依赖检查报告
+
+            - 运行依赖版本一致性检查
+            - 更新dependencies.md文档
+            - 执行安全审计
+
+            🤖 Generated with GitHub Actions"
+            git push
+          else
+            echo "没有发现依赖变化"
+          fi

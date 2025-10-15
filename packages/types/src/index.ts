@@ -69,3 +69,4 @@ export interface ValidationResult {
 
 export * from './weibo-search-task.js';
 export * from './api-key.js';
+export * from './bug.js';

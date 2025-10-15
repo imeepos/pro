@@ -23,7 +23,9 @@
     "@nestjs/common": "^11.0.0"
   },
   "devDependencies": {
-    "@nestjs/common": "^11.0.0",
+    "@nestjs/common": "11.0.13",
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*",
     "tsup": "^8.5.0",
     "typescript": "~5.8.0"
   }

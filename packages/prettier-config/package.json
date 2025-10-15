@@ -1,0 +1,23 @@
+{
+  "name": "@pro/prettier-config",
+  "version": "1.0.0",
+  "description": "Unified Prettier configuration for Pro monorepo - 优雅统一的代码格式化配置",
+  "main": "index.js",
+  "keywords": ["prettier", "config", "formatting", "code-style", "monorepo"],
+  "author": "Pro Team",
+  "license": "MIT",
+  "files": [
+    "index.js",
+    "backend.js",
+    "frontend.js",
+    "docs.js",
+    "json.js",
+    "markdown.js"
+  ],
+  "peerDependencies": {
+    "prettier": "^3.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

@@ -21,16 +21,22 @@
     "dev": "tsup --watch",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "pnpm test"
   },
-  "keywords": ["sdk", "api", "interfaces"],
+  "keywords": [
+    "sdk",
+    "api",
+    "interfaces"
+  ],
   "license": "UNLICENSED",
   "dependencies": {
     "@pro/types": "workspace:*",
-    "rxjs": "^7.8.1"
+    "rxjs": "7.8.1"
   },
   "devDependencies": {
-    "tsup": "^8.5.0",
-    "typescript": "~5.8.0"
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*",
+    "tsup": "8.5.0",
+    "typescript": "5.8.2"
   }
 }

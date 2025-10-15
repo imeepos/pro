@@ -1,0 +1,52 @@
+{
+  "name": "@pro/eslint-config",
+  "version": "1.0.0",
+  "description": "Unified ESLint configuration for Pro monorepo",
+  "main": "index.js",
+  "keywords": ["eslint", "config", "typescript", "nestjs", "angular"],
+  "author": "Pro Team",
+  "license": "MIT",
+  "files": [
+    "index.js",
+    "nestjs.js",
+    "angular.js",
+    "node.js",
+    "typescript.js"
+  ],
+  "peerDependencies": {
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
+    "@typescript-eslint/parser": "^8.19.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1"
+  },
+  "peerDependenciesMeta": {
+    "@angular-eslint/eslint-plugin": {
+      "optional": true
+    },
+    "@angular-eslint/eslint-plugin-template": {
+      "optional": true
+    },
+    "@angular-eslint/template-parser": {
+      "optional": true
+    },
+    "eslint-plugin-import": {
+      "optional": true
+    },
+    "eslint-plugin-jsdoc": {
+      "optional": true
+    },
+    "eslint-plugin-prefer-arrow": {
+      "optional": true
+    },
+    "eslint-plugin-security": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
