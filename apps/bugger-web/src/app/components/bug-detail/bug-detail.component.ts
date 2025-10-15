@@ -279,8 +279,7 @@ export class BugDetailComponent implements OnInit {
 
   editBug(): void {
     if (this.bug) {
-      // TODO: 实现编辑功能
-      alert('编辑功能待实现');
+      this.router.navigate(['/bugs', this.bug.id, 'edit']);
     }
   }
 
