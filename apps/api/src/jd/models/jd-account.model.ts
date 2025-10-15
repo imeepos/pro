@@ -32,7 +32,10 @@ export class JdAccountModel {
   createdAt: Date;
 }
 
-export class JdAccountConnection extends createOffsetConnectionType(JdAccountModel, 'JdAccount') {}
+const JdAccountConnectionBase = createOffsetConnectionType(JdAccountModel, 'JdAccount');
+
+@ObjectType()
+export class JdAccountConnection extends JdAccountConnectionBase {}
 
 @ObjectType('JdAccountStats')
 export class JdAccountStatsModel {

@@ -34,7 +34,10 @@ export class MediaTypeModel {
   updatedAt: Date;
 }
 
-export class MediaTypeConnection extends createOffsetConnectionType(MediaTypeModel, 'MediaType') {}
+const MediaTypeConnectionBase = createOffsetConnectionType(MediaTypeModel, 'MediaType');
+
+@ObjectType()
+export class MediaTypeConnection extends MediaTypeConnectionBase {}
 
 export const mapMediaTypeEntityToModel = (entity: MediaTypeEntity): MediaTypeModel => ({
   id: entity.id,

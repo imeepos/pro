@@ -23,7 +23,10 @@ export class TagModel {
   updatedAt: Date;
 }
 
-export class TagConnection extends createOffsetConnectionType(TagModel, 'Tag') {}
+const TagConnectionBase = createOffsetConnectionType(TagModel, 'Tag');
+
+@ObjectType()
+export class TagConnection extends TagConnectionBase {}
 
 export const mapTagEntityToModel = (tag: TagEntity): TagModel => ({
   id: tag.id,

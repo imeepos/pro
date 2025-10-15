@@ -115,7 +115,10 @@ export class EventModel {
   attachments: EventAttachmentModel[];
 }
 
-export class EventConnection extends createOffsetConnectionType(EventModel, 'Event') {}
+const EventConnectionBase = createOffsetConnectionType(EventModel, 'Event');
+
+@ObjectType()
+export class EventConnection extends EventConnectionBase {}
 
 @ObjectType('EventMapPoint')
 export class EventMapPointModel {

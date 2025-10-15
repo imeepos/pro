@@ -32,7 +32,10 @@ export class WeiboAccountModel {
   lastCheckAt?: Date;
 }
 
-export class WeiboAccountConnection extends createOffsetConnectionType(WeiboAccountModel, 'WeiboAccount') {}
+const WeiboAccountConnectionBase = createOffsetConnectionType(WeiboAccountModel, 'WeiboAccount');
+
+@ObjectType()
+export class WeiboAccountConnection extends WeiboAccountConnectionBase {}
 
 export const mapWeiboAccountEntityToModel = (entity: WeiboAccountEntity): WeiboAccountModel => ({
   id: entity.id,

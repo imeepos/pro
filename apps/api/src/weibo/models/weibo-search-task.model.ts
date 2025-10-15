@@ -61,7 +61,10 @@ export class WeiboSearchTaskModel {
   updatedAt: Date;
 }
 
-export class WeiboSearchTaskConnection extends createOffsetConnectionType(WeiboSearchTaskModel, 'WeiboSearchTask') {}
+const WeiboSearchTaskConnectionBase = createOffsetConnectionType(WeiboSearchTaskModel, 'WeiboSearchTask');
+
+@ObjectType()
+export class WeiboSearchTaskConnection extends WeiboSearchTaskConnectionBase {}
 
 export const mapWeiboSearchTaskEntityToModel = (entity: WeiboSearchTaskEntity): WeiboSearchTaskModel => ({
   id: entity.id,

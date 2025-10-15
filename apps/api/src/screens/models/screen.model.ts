@@ -143,7 +143,10 @@ export class ScreenModel {
   creator?: UserModel;
 }
 
-export class ScreenConnection extends createOffsetConnectionType(ScreenModel, 'Screen') {}
+const ScreenConnectionBase = createOffsetConnectionType(ScreenModel, 'Screen');
+
+@ObjectType()
+export class ScreenConnection extends ScreenConnectionBase {}
 
 type ScreenComponentSource = ScreenComponentEntity & {
   _dto?: ScreenComponentDto;

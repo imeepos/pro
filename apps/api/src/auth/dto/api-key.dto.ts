@@ -416,7 +416,10 @@ export class ApiKeyListResponseDto {
   hasPrev: boolean;
 }
 
-export class ApiKeyConnection extends createOffsetConnectionType(ApiKeyResponseDto, 'ApiKey') {}
+const ApiKeyConnectionBase = createOffsetConnectionType(ApiKeyResponseDto, 'ApiKey');
+
+@ObjectType()
+export class ApiKeyConnection extends ApiKeyConnectionBase {}
 
 /**
  * API Key使用统计DTO
