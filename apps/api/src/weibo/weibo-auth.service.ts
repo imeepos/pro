@@ -1,9 +1,17 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, forwardRef, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  forwardRef,
+  Inject,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PinoLogger } from '@pro/logger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
-import { Subject, Observable } from 'rxjs';
+import { Subject, Observable, Subscription } from 'rxjs';
 import { WeiboAccountEntity } from '@pro/entities';
 import { ScreensGateway } from '../screens/screens.gateway';
 
@@ -36,7 +44,20 @@ interface LoginSession {
   context: BrowserContext;
   page: Page;
   subject: Subject<WeiboLoginEvent>;
-  timer: NodeJS.Timeout;
+  timer?: NodeJS.Timeout;
+  userId: string;
+  createdAt: Date;
+  expiresAt: Date;
+  lastEvent?: WeiboLoginEvent;
+  eventsSubscription?: Subscription;
+}
+
+export interface WeiboLoginSessionSnapshot {
+  sessionId: string;
+  userId: string;
+  lastEvent?: WeiboLoginEvent;
+  expiresAt: Date;
+  isExpired: boolean;
 }
 
 /**
@@ -108,29 +129,56 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
    * @returns Observable 事件流
    */
   async startLogin(userId: string): Promise<Observable<WeiboLoginEvent>> {
-    const sessionId = `${userId}_${Date.now()}`;
-    this.logger.info(`启动微博登录会话: ${sessionId}`);
-
-    // 检查浏览器是否可用
-    if (!this.browser) {
+    try {
+      const { events$ } = await this.createLoginSession(userId);
+      return events$;
+    } catch (error) {
       const subject = new Subject<WeiboLoginEvent>();
       subject.next({
         type: 'error',
-        data: { message: 'Playwright浏览器未就绪，微博登录功能暂时不可用' },
+        data: { message: error?.message || '微博登录暂时不可用' },
       });
       subject.complete();
       return subject.asObservable();
     }
+  }
 
-    // 创建新的浏览器上下文
+  async createLoginSession(
+    userId: string,
+  ): Promise<{ sessionId: string; expiresAt: Date; events$: Observable<WeiboLoginEvent> }> {
+    if (!this.browser) {
+      this.logger.warn('Playwright 浏览器未就绪，拒绝创建微博登录会话');
+      throw new ServiceUnavailableException('Playwright浏览器未就绪，微博登录功能暂时不可用');
+    }
+
+    const sessionId = `${userId}_${Date.now()}`;
+    this.logger.info(`启动微博登录会话: ${sessionId}`);
+
     const context = await this.browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      userAgent:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     });
 
     const page = await context.newPage();
     const subject = new Subject<WeiboLoginEvent>();
+    const createdAt = new Date();
+    const expiresAt = new Date(createdAt.getTime() + this.SESSION_TIMEOUT);
 
-    // 设置超时清理定时器
+    const session: LoginSession = {
+      context,
+      page,
+      subject,
+      userId,
+      createdAt,
+      expiresAt,
+    };
+
+    session.eventsSubscription = subject.subscribe((event) => {
+      session.lastEvent = event;
+    });
+
+    this.loginSessions.set(sessionId, session);
+
     const timer = setTimeout(() => {
       this.logger.warn(`登录会话超时: ${sessionId}`);
       subject.next({
@@ -141,21 +189,16 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       this.cleanupSession(sessionId);
     }, this.SESSION_TIMEOUT);
 
-    // 保存会话
-    this.loginSessions.set(sessionId, { context, page, subject, timer });
+    session.timer = timer;
 
-    // 先设置监听器
     this.setupResponseListeners(page, subject, sessionId, userId);
     this.setupNavigationListeners(page, context, subject, sessionId, userId);
 
-    // 异步启动页面导航（在 SSE 连接建立后执行）
     setImmediate(async () => {
       try {
-        // 导航到微博登录页面
         await page.goto(this.WEIBO_LOGIN_URL, { waitUntil: 'networkidle' });
         this.logger.info(`已打开微博登录页面: ${sessionId}`);
 
-        // 等待二维码元素出现（确保页面完全加载）
         try {
           await page.waitForSelector('img[src*="qrcode"]', { timeout: 10000 });
           this.logger.info(`二维码元素已加载: ${sessionId}`);
@@ -173,7 +216,35 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
-    return subject.asObservable();
+    return {
+      sessionId,
+      expiresAt,
+      events$: subject.asObservable(),
+    };
+  }
+
+  getLoginSessionSnapshot(sessionId: string): WeiboLoginSessionSnapshot {
+    const session = this.loginSessions.get(sessionId);
+    if (!session) {
+      throw new NotFoundException('登录会话不存在或已结束');
+    }
+
+    return {
+      sessionId,
+      userId: session.userId,
+      lastEvent: session.lastEvent,
+      expiresAt: session.expiresAt,
+      isExpired: session.expiresAt.getTime() <= Date.now(),
+    };
+  }
+
+  observeLoginSession(sessionId: string): Observable<WeiboLoginEvent> {
+    const session = this.loginSessions.get(sessionId);
+    if (!session) {
+      throw new NotFoundException('登录会话不存在或已结束');
+    }
+
+    return session.subject.asObservable();
   }
 
   /**
@@ -470,6 +541,11 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     // 清除定时器
     if (session.timer) {
       clearTimeout(session.timer);
+    }
+
+    session.eventsSubscription?.unsubscribe();
+    if (!session.subject.closed) {
+      session.subject.complete();
     }
 
     // 关闭浏览器上下文

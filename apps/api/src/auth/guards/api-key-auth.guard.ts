@@ -1,5 +1,6 @@
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { resolveRequest } from '../../common/utils/context.utils';
 
 /**
  * API Key 认证守卫
@@ -7,25 +8,47 @@ import { AuthGuard } from '@nestjs/passport';
  */
 @Injectable()
 export class ApiKeyAuthGuard extends AuthGuard('api-key') {
+  getRequest(context: ExecutionContext) {
+    return resolveRequest(context);
+  }
+
   canActivate(context: ExecutionContext) {
     return super.canActivate(context);
   }
 
   // 重写请求提取逻辑，支持多种来源
   handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
-    const request = context.switchToHttp().getRequest();
+    const request = resolveRequest(context);
 
-    // 尝试从请求头获取
-    let apiKey = request.headers['x-api-key'];
+    const headerValue = request.headers['x-api-key'];
+    const headerKey = Array.isArray(headerValue) ? headerValue[0] : headerValue;
 
-    // 如果请求头没有，尝试从查询参数获取
-    if (!apiKey) {
-      apiKey = request.query?.apiKey || request.query?.api_key;
+    const queryKey = this.resolveFromQuery(request.query);
+    const resolvedKey = headerKey ?? queryKey;
+
+    if (resolvedKey) {
+      request.apiKey = resolvedKey;
     }
 
-    // 将API Key存储到请求中，便于后续使用
-    request.apiKey = apiKey;
-
     return super.handleRequest(err, user, info, context);
+  }
+
+  private resolveFromQuery(query: Record<string, unknown>) {
+    const candidates = [query['apiKey'], query['api_key']];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string') {
+        return candidate;
+      }
+
+      if (Array.isArray(candidate) && candidate.length > 0) {
+        const [first] = candidate;
+        if (typeof first === 'string') {
+          return first;
+        }
+      }
+    }
+
+    return undefined;
   }
 }

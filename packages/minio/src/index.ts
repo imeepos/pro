@@ -72,4 +72,16 @@ export class MinIOClient {
   ): Promise<string> {
     return this.client.presignedGetObject(bucketName, objectName, expiry);
   }
+
+  async getPresignedPutUrl(
+    bucketName: string,
+    objectName: string,
+    expiry: number = 60 * 10,
+  ): Promise<string> {
+    return this.client.presignedPutObject(bucketName, objectName, expiry);
+  }
+
+  async statObject(bucketName: string, objectName: string): Promise<Minio.BucketItemStat> {
+    return this.client.statObject(bucketName, objectName);
+  }
 }

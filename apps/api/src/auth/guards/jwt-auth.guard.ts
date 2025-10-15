@@ -1,5 +1,6 @@
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { resolveRequest } from '../../common/utils/context.utils';
 
 /**
  * 标准 JWT 认证守卫
@@ -7,6 +8,10 @@ import { AuthGuard } from '@nestjs/passport';
  */
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
+  getRequest(context: ExecutionContext) {
+    return resolveRequest(context);
+  }
+
   canActivate(context: ExecutionContext) {
     return super.canActivate(context);
   }
@@ -18,8 +23,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
  */
 @Injectable()
 export class JwtSseAuthGuard extends AuthGuard('jwt') {
+  getRequest(context: ExecutionContext) {
+    return resolveRequest(context);
+  }
+
   canActivate(context: ExecutionContext) {
-    const request = context.switchToHttp().getRequest();
+    const request = resolveRequest(context);
     const token = request.query?.token;
 
     // 如果 query 中有 token 且 header 中没有，则从 query 中提取

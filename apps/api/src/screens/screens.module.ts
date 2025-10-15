@@ -8,6 +8,7 @@ import { ScreensStatsScheduler } from './screens-stats.scheduler';
 import { ScreenPageEntity } from '@pro/entities';
 import { WeiboModule } from '../weibo/weibo.module';
 import { createJwtConfig } from '../config';
+import { ScreensResolver } from './screens.resolver';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { createJwtConfig } from '../config';
     forwardRef(() => WeiboModule),
   ],
   controllers: [ScreensController],
-  providers: [ScreensService, ScreensGateway, ScreensStatsScheduler],
+  providers: [ScreensService, ScreensGateway, ScreensStatsScheduler, ScreensResolver],
   exports: [ScreensService, ScreensGateway],
 })
 export class ScreensModule {}

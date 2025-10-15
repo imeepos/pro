@@ -11,6 +11,9 @@ import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { ApiKeyOwnerGuard } from './guards/api-key-owner.guard';
 import { UserEntity, ApiKeyEntity } from '@pro/entities';
 import { createJwtConfig } from '../config';
+import { AuthResolver } from './auth.resolver';
+import { ApiKeyResolver } from './api-key.resolver';
+import { ApiKeyLoader } from './api-key.loader';
 
 @Module({
   imports: [
@@ -25,7 +28,10 @@ import { createJwtConfig } from '../config';
     JwtStrategy,
     ApiKeyStrategy,
     ApiKeyOwnerGuard,
+    AuthResolver,
+    ApiKeyResolver,
+    ApiKeyLoader,
   ],
-  exports: [AuthService, ApiKeyService],
+  exports: [AuthService, ApiKeyService, ApiKeyLoader],
 })
 export class AuthModule {}
