@@ -1,4 +1,4 @@
-import { HttpClient } from '../client/http-client.js';
+import { GraphQLClient } from '../client/graphql-client.js';
 import {
   Event,
   EventDetail,
@@ -10,129 +10,430 @@ import {
 } from '../types/event.types.js';
 import { PageResponse } from '../types/common.types.js';
 
-interface EventListPayload {
-  items: Event[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages?: number;
+interface EventEdge {
+  node: Event;
+  cursor: string;
 }
 
-/**
- * 事件 API 接口封装
- */
-export class EventApi {
-  private http: HttpClient;
+interface PageInfo {
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  startCursor: string | null;
+  endCursor: string | null;
+}
 
-  constructor(baseUrl: string) {
-    this.http = new HttpClient(baseUrl);
+interface EventConnection {
+  edges: EventEdge[];
+  pageInfo: PageInfo;
+  totalCount: number;
+}
+
+interface EventsResponse {
+  events: EventConnection;
+}
+
+interface EventsForMapResponse {
+  eventsForMap: EventMapPoint[];
+}
+
+interface EventsNearbyResponse {
+  eventsNearby: Event[];
+}
+
+interface EventsByTagResponse {
+  eventsByTag: Event[];
+}
+
+interface EventResponse {
+  event: Event;
+}
+
+interface CreateEventResponse {
+  createEvent: Event;
+}
+
+interface UpdateEventResponse {
+  updateEvent: Event;
+}
+
+interface RemoveEventResponse {
+  removeEvent: boolean;
+}
+
+interface PublishEventResponse {
+  publishEvent: Event;
+}
+
+interface ArchiveEventResponse {
+  archiveEvent: Event;
+}
+
+interface AddTagsToEventResponse {
+  addTagsToEvent: Event;
+}
+
+interface RemoveTagFromEventResponse {
+  removeTagFromEvent: boolean;
+}
+
+export class EventApi {
+  private client: GraphQLClient;
+
+  constructor(baseUrl: string, tokenKey?: string) {
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
-  /**
-   * 查询事件列表
-   */
   async getEvents(params: EventQueryParams): Promise<PageResponse<Event>> {
-    const response = await this.http.get<EventListPayload>(
-      '/api/events',
-      params as unknown as Record<string, unknown>
-    );
+    const query = `
+      query Events($filter: EventQueryDto) {
+        events(filter: $filter) {
+          edges {
+            node {
+              id
+              status
+              eventName
+              summary
+              occurTime
+              province
+              city
+              district
+              street
+              locationText
+              longitude
+              latitude
+              eventTypeId
+              industryTypeId
+              createdBy
+              createdAt
+              updatedAt
+            }
+          }
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
+
+    const response = await this.client.query<EventsResponse>(query, { filter: params });
+    const connection = response.events;
+    const items = connection.edges.map(edge => edge.node);
+
+    const pageSize = params.pageSize ?? 20;
+    const page = params.page ?? 1;
+    const total = connection.totalCount;
+    const totalPages = Math.ceil(total / pageSize);
 
     return {
-      data: response.items,
-      total: response.total,
-      page: response.page,
-      pageSize: response.pageSize,
-      totalPages: response.totalPages,
+      data: items,
+      total,
+      page,
+      pageSize,
+      totalPages,
     };
   }
 
-  /**
-   * 获取地图展示所需的事件数据
-   */
-  async getEventsForMap(
-    params: EventMapQueryParams
-  ): Promise<EventMapPoint[]> {
-    return this.http.get<EventMapPoint[]>(
-      '/api/events/map',
-      params as unknown as Record<string, unknown>
-    );
+  async getEventsForMap(params: EventMapQueryParams): Promise<EventMapPoint[]> {
+    const query = `
+      query EventsForMap($filter: EventMapQueryDto) {
+        eventsForMap(filter: $filter) {
+          id
+          eventName
+          summary
+          occurTime
+          province
+          city
+          district
+          street
+          longitude
+          latitude
+          status
+          eventTypeId
+          industryTypeId
+        }
+      }
+    `;
+
+    const response = await this.client.query<EventsForMapResponse>(query, { filter: params });
+    return response.eventsForMap;
   }
 
-  /**
-   * 获取事件详情
-   */
   async getEventById(id: string): Promise<EventDetail> {
-    return this.http.get<EventDetail>(`/api/events/${id}`);
+    const query = `
+      query Event($id: ID!) {
+        event(id: $id) {
+          id
+          status
+          eventName
+          summary
+          occurTime
+          province
+          city
+          district
+          street
+          locationText
+          longitude
+          latitude
+          eventTypeId
+          industryTypeId
+          createdBy
+          createdAt
+          updatedAt
+          eventType {
+            id
+            name
+            description
+            icon
+          }
+          industryType {
+            id
+            name
+            description
+            icon
+          }
+          tags {
+            id
+            name
+            category
+            color
+          }
+          attachments {
+            id
+            eventId
+            fileName
+            fileUrl
+            bucketName
+            objectName
+            fileType
+            fileSize
+            mimeType
+            fileMd5
+            sortOrder
+            createdAt
+          }
+        }
+      }
+    `;
+
+    const response = await this.client.query<EventResponse>(query, { id });
+    return response.event as EventDetail;
   }
 
-  /**
-   * 创建事件
-   */
   async createEvent(dto: CreateEventDto): Promise<Event> {
-    return this.http.post<Event>('/api/events', dto);
+    const mutation = `
+      mutation CreateEvent($input: CreateEventDto!) {
+        createEvent(input: $input) {
+          id
+          status
+          eventName
+          summary
+          occurTime
+          province
+          city
+          district
+          street
+          locationText
+          longitude
+          latitude
+          eventTypeId
+          industryTypeId
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<CreateEventResponse>(mutation, { input: dto });
+    return response.createEvent;
   }
 
-  /**
-   * 更新事件
-   */
   async updateEvent(id: string, dto: UpdateEventDto): Promise<Event> {
-    return this.http.put<Event>(`/api/events/${id}`, dto);
+    const mutation = `
+      mutation UpdateEvent($id: ID!, $input: UpdateEventDto!) {
+        updateEvent(id: $id, input: $input) {
+          id
+          status
+          eventName
+          summary
+          occurTime
+          province
+          city
+          district
+          street
+          locationText
+          longitude
+          latitude
+          eventTypeId
+          industryTypeId
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<UpdateEventResponse>(mutation, { id, input: dto });
+    return response.updateEvent;
   }
 
-  /**
-   * 删除事件
-   */
   async deleteEvent(id: string): Promise<void> {
-    return this.http.delete(`/api/events/${id}`);
+    const mutation = `
+      mutation RemoveEvent($id: ID!) {
+        removeEvent(id: $id)
+      }
+    `;
+
+    await this.client.mutate<RemoveEventResponse>(mutation, { id });
   }
 
-  /**
-   * 发布事件
-   */
   async publishEvent(id: string): Promise<Event> {
-    return this.http.put<Event>(`/api/events/${id}/publish`, {});
+    const mutation = `
+      mutation PublishEvent($id: ID!) {
+        publishEvent(id: $id) {
+          id
+          status
+          eventName
+          summary
+          occurTime
+          province
+          city
+          district
+          street
+          locationText
+          longitude
+          latitude
+          eventTypeId
+          industryTypeId
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<PublishEventResponse>(mutation, { id });
+    return response.publishEvent;
   }
 
-  /**
-   * 归档事件
-   */
   async archiveEvent(id: string): Promise<Event> {
-    return this.http.put<Event>(`/api/events/${id}/archive`, {});
+    const mutation = `
+      mutation ArchiveEvent($id: ID!) {
+        archiveEvent(id: $id) {
+          id
+          status
+          eventName
+          summary
+          occurTime
+          province
+          city
+          district
+          street
+          locationText
+          longitude
+          latitude
+          eventTypeId
+          industryTypeId
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<ArchiveEventResponse>(mutation, { id });
+    return response.archiveEvent;
   }
 
-  /**
-   * 查询附近事件
-   */
   async getNearbyEvents(
     longitude: number,
     latitude: number,
     radius: number
   ): Promise<Event[]> {
-    return this.http.get<Event[]>('/api/events/nearby', {
+    const query = `
+      query EventsNearby($longitude: Float!, $latitude: Float!, $radius: Float!) {
+        eventsNearby(longitude: $longitude, latitude: $latitude, radius: $radius) {
+          id
+          status
+          eventName
+          summary
+          occurTime
+          province
+          city
+          district
+          street
+          locationText
+          longitude
+          latitude
+          eventTypeId
+          industryTypeId
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.query<EventsNearbyResponse>(query, {
       longitude,
       latitude,
-      radius,
+      radius
     });
+    return response.eventsNearby;
   }
 
-  /**
-   * 按标签查询事件
-   */
   async getEventsByTag(tagId: string): Promise<Event[]> {
-    return this.http.get<Event[]>(`/api/events/by-tag/${tagId}`);
+    const query = `
+      query EventsByTag($tagId: ID!) {
+        eventsByTag(tagId: $tagId) {
+          id
+          status
+          eventName
+          summary
+          occurTime
+          province
+          city
+          district
+          street
+          locationText
+          longitude
+          latitude
+          eventTypeId
+          industryTypeId
+          createdBy
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.query<EventsByTagResponse>(query, { tagId });
+    return response.eventsByTag;
   }
 
-  /**
-   * 为事件添加标签
-   */
   async addTagsToEvent(eventId: string, tagIds: string[]): Promise<void> {
-    return this.http.post(`/api/events/${eventId}/tags`, { tagIds });
+    const mutation = `
+      mutation AddTagsToEvent($eventId: ID!, $tagIds: [ID!]!) {
+        addTagsToEvent(eventId: $eventId, tagIds: $tagIds) {
+          id
+        }
+      }
+    `;
+
+    await this.client.mutate<AddTagsToEventResponse>(mutation, { eventId, tagIds });
   }
 
-  /**
-   * 移除事件标签
-   */
   async removeTagFromEvent(eventId: string, tagId: string): Promise<void> {
-    return this.http.delete(`/api/events/${eventId}/tags/${tagId}`);
+    const mutation = `
+      mutation RemoveTagFromEvent($eventId: ID!, $tagId: ID!) {
+        removeTagFromEvent(eventId: $eventId, tagId: $tagId)
+      }
+    `;
+
+    await this.client.mutate<RemoveTagFromEventResponse>(mutation, { eventId, tagId });
   }
 }

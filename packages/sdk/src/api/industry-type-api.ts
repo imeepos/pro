@@ -1,52 +1,131 @@
-import { HttpClient } from '../client/http-client.js';
+import { GraphQLClient } from '../client/graphql-client.js';
 import {
   IndustryType,
   CreateIndustryTypeDto,
   UpdateIndustryTypeDto,
 } from '../types/industry-type.types.js';
 
-/**
- * 行业类型 API 接口封装
- */
+interface IndustryTypesResponse {
+  industryTypes: IndustryType[];
+}
+
+interface IndustryTypeResponse {
+  industryType: IndustryType;
+}
+
+interface CreateIndustryTypeResponse {
+  createIndustryType: IndustryType;
+}
+
+interface UpdateIndustryTypeResponse {
+  updateIndustryType: IndustryType;
+}
+
+interface RemoveIndustryTypeResponse {
+  removeIndustryType: boolean;
+}
+
 export class IndustryTypeApi {
-  private http: HttpClient;
+  private client: GraphQLClient;
 
-  constructor(baseUrl: string) {
-    this.http = new HttpClient(baseUrl);
+  constructor(baseUrl: string, tokenKey?: string) {
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
-  /**
-   * 查询行业类型列表
-   */
   async getIndustryTypes(): Promise<IndustryType[]> {
-    return this.http.get<IndustryType[]>('/api/industry-types');
+    const query = `
+      query IndustryTypes {
+        industryTypes {
+          id
+          name
+          description
+          icon
+          color
+          sortOrder
+          isActive
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.query<IndustryTypesResponse>(query);
+    return response.industryTypes;
   }
 
-  /**
-   * 获取行业类型详情
-   */
   async getIndustryTypeById(id: number): Promise<IndustryType> {
-    return this.http.get<IndustryType>(`/api/industry-types/${id}`);
+    const query = `
+      query IndustryType($id: ID!) {
+        industryType(id: $id) {
+          id
+          name
+          description
+          icon
+          color
+          sortOrder
+          isActive
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.query<IndustryTypeResponse>(query, { id: id.toString() });
+    return response.industryType;
   }
 
-  /**
-   * 创建行业类型
-   */
   async createIndustryType(dto: CreateIndustryTypeDto): Promise<IndustryType> {
-    return this.http.post<IndustryType>('/api/industry-types', dto);
+    const mutation = `
+      mutation CreateIndustryType($input: CreateIndustryTypeDto!) {
+        createIndustryType(input: $input) {
+          id
+          name
+          description
+          icon
+          color
+          sortOrder
+          isActive
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<CreateIndustryTypeResponse>(mutation, { input: dto });
+    return response.createIndustryType;
   }
 
-  /**
-   * 更新行业类型
-   */
   async updateIndustryType(id: number, dto: UpdateIndustryTypeDto): Promise<IndustryType> {
-    return this.http.put<IndustryType>(`/api/industry-types/${id}`, dto);
+    const mutation = `
+      mutation UpdateIndustryType($id: ID!, $input: UpdateIndustryTypeDto!) {
+        updateIndustryType(id: $id, input: $input) {
+          id
+          name
+          description
+          icon
+          color
+          sortOrder
+          isActive
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<UpdateIndustryTypeResponse>(mutation, {
+      id: id.toString(),
+      input: dto
+    });
+    return response.updateIndustryType;
   }
 
-  /**
-   * 删除行业类型
-   */
   async deleteIndustryType(id: number): Promise<void> {
-    return this.http.delete(`/api/industry-types/${id}`);
+    const mutation = `
+      mutation RemoveIndustryType($id: ID!) {
+        removeIndustryType(id: $id)
+      }
+    `;
+
+    await this.client.mutate<RemoveIndustryTypeResponse>(mutation, { id: id.toString() });
   }
 }

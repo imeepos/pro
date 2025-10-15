@@ -1,76 +1,190 @@
-import { HttpClient } from '../client/http-client.js';
+import { GraphQLClient } from '../client/graphql-client.js';
 import { Tag, CreateTagDto, UpdateTagDto } from '../types/tag.types.js';
 import { PageResponse } from '../types/common.types.js';
 
-interface TagListPayload {
-  items: Tag[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages?: number;
+interface TagEdge {
+  node: Tag;
+  cursor: string;
 }
 
-/**
- * 标签 API 接口封装
- */
-export class TagApi {
-  private http: HttpClient;
+interface PageInfo {
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  startCursor: string | null;
+  endCursor: string | null;
+}
 
-  constructor(baseUrl: string) {
-    this.http = new HttpClient(baseUrl);
+interface TagConnection {
+  edges: TagEdge[];
+  pageInfo: PageInfo;
+  totalCount: number;
+}
+
+interface TagsResponse {
+  tags: TagConnection;
+}
+
+interface TagResponse {
+  tag: Tag;
+}
+
+interface CreateTagResponse {
+  createTag: Tag;
+}
+
+interface UpdateTagResponse {
+  updateTag: Tag;
+}
+
+interface RemoveTagResponse {
+  removeTag: boolean;
+}
+
+interface PopularTagsResponse {
+  popularTags: Tag[];
+}
+
+export class TagApi {
+  private client: GraphQLClient;
+
+  constructor(baseUrl: string, tokenKey?: string) {
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
-  /**
-   * 查询标签列表
-   */
   async getTags(params?: {
     page?: number;
     pageSize?: number;
     keyword?: string;
   }): Promise<PageResponse<Tag>> {
-    const response = await this.http.get<TagListPayload>('/api/tags', params);
+    const query = `
+      query Tags($page: Int, $pageSize: Int, $keyword: String) {
+        tags(page: $page, pageSize: $pageSize, keyword: $keyword) {
+          edges {
+            node {
+              id
+              name
+              category
+              color
+              eventCount
+              createdAt
+              updatedAt
+            }
+          }
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
+
+    const response = await this.client.query<TagsResponse>(query, params);
+    const connection = response.tags;
+    const items = connection.edges.map(edge => edge.node);
+
+    const pageSize = params?.pageSize ?? 20;
+    const page = params?.page ?? 1;
+    const total = connection.totalCount;
+    const totalPages = Math.ceil(total / pageSize);
 
     return {
-      data: response.items,
-      total: response.total,
-      page: response.page,
-      pageSize: response.pageSize,
-      totalPages: response.totalPages,
+      data: items,
+      total,
+      page,
+      pageSize,
+      totalPages,
     };
   }
 
-  /**
-   * 获取标签详情
-   */
   async getTagById(id: number): Promise<Tag> {
-    return this.http.get<Tag>(`/api/tags/${id}`);
+    const query = `
+      query Tag($id: ID!) {
+        tag(id: $id) {
+          id
+          name
+          category
+          color
+          eventCount
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.query<TagResponse>(query, { id: id.toString() });
+    return response.tag;
   }
 
-  /**
-   * 创建标签
-   */
   async createTag(dto: CreateTagDto): Promise<Tag> {
-    return this.http.post<Tag>('/api/tags', dto);
+    const mutation = `
+      mutation CreateTag($input: CreateTagDto!) {
+        createTag(input: $input) {
+          id
+          name
+          category
+          color
+          eventCount
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<CreateTagResponse>(mutation, { input: dto });
+    return response.createTag;
   }
 
-  /**
-   * 更新标签
-   */
   async updateTag(id: number, dto: UpdateTagDto): Promise<Tag> {
-    return this.http.put<Tag>(`/api/tags/${id}`, dto);
+    const mutation = `
+      mutation UpdateTag($id: ID!, $input: UpdateTagDto!) {
+        updateTag(id: $id, input: $input) {
+          id
+          name
+          category
+          color
+          eventCount
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<UpdateTagResponse>(mutation, {
+      id: id.toString(),
+      input: dto
+    });
+    return response.updateTag;
   }
 
-  /**
-   * 删除标签
-   */
   async deleteTag(id: number): Promise<void> {
-    return this.http.delete(`/api/tags/${id}`);
+    const mutation = `
+      mutation RemoveTag($id: ID!) {
+        removeTag(id: $id)
+      }
+    `;
+
+    await this.client.mutate<RemoveTagResponse>(mutation, { id: id.toString() });
   }
 
-  /**
-   * 获取热门标签
-   */
   async getPopularTags(limit = 20): Promise<Tag[]> {
-    return this.http.get<Tag[]>('/api/tags/popular', { limit });
+    const query = `
+      query PopularTags($limit: Int) {
+        popularTags(limit: $limit) {
+          id
+          name
+          category
+          color
+          eventCount
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.query<PopularTagsResponse>(query, { limit });
+    return response.popularTags;
   }
 }

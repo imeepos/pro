@@ -1,53 +1,131 @@
-import { HttpClient } from '../client/http-client.js';
+import { GraphQLClient } from '../client/graphql-client.js';
 import {
   EventType,
   CreateEventTypeDto,
   UpdateEventTypeDto,
 } from '../types/event-type.types.js';
 
-/**
- * 事件类型 API 接口封装
- */
+interface EventTypesResponse {
+  eventTypes: EventType[];
+}
+
+interface EventTypeResponse {
+  eventType: EventType;
+}
+
+interface CreateEventTypeResponse {
+  createEventType: EventType;
+}
+
+interface UpdateEventTypeResponse {
+  updateEventType: EventType;
+}
+
+interface RemoveEventTypeResponse {
+  removeEventType: boolean;
+}
+
 export class EventTypeApi {
-  private http: HttpClient;
+  private client: GraphQLClient;
 
-  constructor(baseUrl: string) {
-    this.http = new HttpClient(baseUrl);
+  constructor(baseUrl: string, tokenKey?: string) {
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
-  /**
-   * 查询事件类型列表
-   */
   async getEventTypes(): Promise<EventType[]> {
-    return this.http.get<EventType[]>('/api/event-types');
+    const query = `
+      query EventTypes {
+        eventTypes {
+          id
+          name
+          description
+          icon
+          color
+          sortOrder
+          isActive
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.query<EventTypesResponse>(query);
+    return response.eventTypes;
   }
 
-  /**
-   * 获取事件类型详情
-   */
   async getEventTypeById(id: number): Promise<EventType> {
-    return this.http.get<EventType>(`/api/event-types/${id}`);
+    const query = `
+      query EventType($id: ID!) {
+        eventType(id: $id) {
+          id
+          name
+          description
+          icon
+          color
+          sortOrder
+          isActive
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.query<EventTypeResponse>(query, { id: id.toString() });
+    return response.eventType;
   }
 
-  
-  /**
-   * 创建事件类型
-   */
   async createEventType(dto: CreateEventTypeDto): Promise<EventType> {
-    return this.http.post<EventType>('/api/event-types', dto);
+    const mutation = `
+      mutation CreateEventType($input: CreateEventTypeDto!) {
+        createEventType(input: $input) {
+          id
+          name
+          description
+          icon
+          color
+          sortOrder
+          isActive
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<CreateEventTypeResponse>(mutation, { input: dto });
+    return response.createEventType;
   }
 
-  /**
-   * 更新事件类型
-   */
   async updateEventType(id: number, dto: UpdateEventTypeDto): Promise<EventType> {
-    return this.http.put<EventType>(`/api/event-types/${id}`, dto);
+    const mutation = `
+      mutation UpdateEventType($id: ID!, $input: UpdateEventTypeDto!) {
+        updateEventType(id: $id, input: $input) {
+          id
+          name
+          description
+          icon
+          color
+          sortOrder
+          isActive
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<UpdateEventTypeResponse>(mutation, {
+      id: id.toString(),
+      input: dto
+    });
+    return response.updateEventType;
   }
 
-  /**
-   * 删除事件类型
-   */
   async deleteEventType(id: number): Promise<void> {
-    return this.http.delete(`/api/event-types/${id}`);
+    const mutation = `
+      mutation RemoveEventType($id: ID!) {
+        removeEventType(id: $id)
+      }
+    `;
+
+    await this.client.mutate<RemoveEventTypeResponse>(mutation, { id: id.toString() });
   }
 }
