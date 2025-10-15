@@ -200,3 +200,46 @@ export class EventQueryDto {
   @Type(() => Number)
   pageSize?: number = 20;
 }
+
+export class EventMapQueryDto {
+  @IsOptional()
+  @IsString()
+  industryTypeId?: string;
+
+  @IsOptional()
+  @IsString()
+  eventTypeId?: string;
+
+  @IsOptional()
+  @IsString()
+  province?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  district?: string;
+
+  @IsOptional()
+  @IsDateString()
+  startTime?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endTime?: string;
+
+  @IsOptional()
+  @IsIn([EventStatus.DRAFT, EventStatus.PUBLISHED, EventStatus.ARCHIVED])
+  status?: EventStatus;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tagIds?: string[];
+
+  @IsOptional()
+  @IsString()
+  keyword?: string;
+}

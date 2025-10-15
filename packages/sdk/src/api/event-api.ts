@@ -5,6 +5,8 @@ import {
   CreateEventDto,
   UpdateEventDto,
   EventQueryParams,
+  EventMapPoint,
+  EventMapQueryParams,
 } from '../types/event.types.js';
 import { PageResponse } from '../types/common.types.js';
 
@@ -42,6 +44,18 @@ export class EventApi {
       pageSize: response.pageSize,
       totalPages: response.totalPages,
     };
+  }
+
+  /**
+   * 获取地图展示所需的事件数据
+   */
+  async getEventsForMap(
+    params: EventMapQueryParams
+  ): Promise<EventMapPoint[]> {
+    return this.http.get<EventMapPoint[]>(
+      '/api/events/map',
+      params as unknown as Record<string, unknown>
+    );
   }
 
   /**

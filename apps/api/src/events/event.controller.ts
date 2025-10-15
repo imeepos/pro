@@ -12,7 +12,12 @@ import {
   ParseFloatPipe,
 } from '@nestjs/common';
 import { EventService } from './event.service';
-import { CreateEventDto, UpdateEventDto, EventQueryDto } from './dto/event.dto';
+import {
+  CreateEventDto,
+  UpdateEventDto,
+  EventQueryDto,
+  EventMapQueryDto,
+} from './dto/event.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('events')
@@ -43,6 +48,11 @@ export class EventController {
   @Get('by-tag/:tagId')
   findByTag(@Param('tagId') tagId: string) {
     return this.eventService.findByTag(tagId);
+  }
+
+  @Get('map')
+  findForMap(@Query() queryDto: EventMapQueryDto) {
+    return this.eventService.findForMap(queryDto);
   }
 
   @Get(':id')

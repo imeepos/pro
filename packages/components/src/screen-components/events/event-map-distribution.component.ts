@@ -13,7 +13,12 @@ import {
 import { CommonModule } from '@angular/common';
 import { Subject, interval, takeUntil } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
-import { SkerSDK, Event, EventStatus, EventQueryParams } from '@pro/sdk';
+import {
+  SkerSDK,
+  EventStatus,
+  EventMapQueryParams,
+  EventMapPoint
+} from '@pro/sdk';
 
 type MapTheme = 'midnight' | 'ocean' | 'sunrise' | 'minimal';
 
@@ -386,7 +391,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
   dataError: string | null = null;
   mapError: string | null = null;
 
-  private events: Event[] = [];
+  private events: EventMapPoint[] = [];
   private destroy$ = new Subject<void>();
   private refreshReset$ = new Subject<void>();
   private mapInstance: any;
@@ -514,12 +519,9 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     this.dataError = null;
 
     try {
-      const pageSize = this.config?.maxEvents && this.config.maxEvents > 0 ? this.config.maxEvents : 200;
-
-      const query: EventQueryParams = {
-        page: 1,
-        pageSize
-      };
+      const desiredEventCount =
+        this.config?.maxEvents && this.config.maxEvents > 0 ? this.config.maxEvents : 200;
+      const query: EventMapQueryParams = {};
 
       if (this.config?.eventStatus === 'published') {
         query.status = EventStatus.PUBLISHED;
@@ -537,8 +539,10 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
         query.province = this.config.province;
       }
 
-      const response = await this.sdk.event.getEvents(query);
-      const items = (response.data || []).filter(event => this.hasCoordinates(event));
+      const response = await this.sdk.event.getEventsForMap(query);
+      const dataset = (response || []).filter(event => this.hasCoordinates(event));
+      const items =
+        desiredEventCount > 0 ? dataset.slice(0, desiredEventCount) : dataset;
 
       this.events = items;
       this.totalEvents = items.length;
@@ -563,7 +567,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     }
   }
 
-  private renderMarkers(events: Event[], latestEventId?: string): void {
+  private renderMarkers(events: EventMapPoint[], latestEventId?: string): void {
     if (!this.amapNamespace || !this.mapInstance) {
       return;
     }
@@ -631,7 +635,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
   }
 
   private renderMarker(context: any, latestEventId?: string): void {
-    const data: Event = context.data[0].data;
+    const data: EventMapPoint = context.data[0].data;
     const marker = context.marker;
     marker.setIcon(this.createMarkerIcon(data.id === latestEventId));
     marker.setTitle(data.eventName);
@@ -646,7 +650,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     });
   }
 
-  private createEventMarker(event: Event, position: [number, number], highlight: boolean) {
+  private createEventMarker(event: EventMapPoint, position: [number, number], highlight: boolean) {
     const marker = new this.amapNamespace.Marker({
       position,
       map: this.mapInstance,
@@ -689,7 +693,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     });
   }
 
-  private composeInfoContent(event: Event): string {
+  private composeInfoContent(event: EventMapPoint): string {
     const time = event.occurTime ? new Date(event.occurTime).toLocaleString() : '未知时间';
     const address = [event.province, event.city, event.district, event.street]
       .filter(Boolean)
@@ -749,7 +753,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
       .subscribe(() => this.loadEvents());
   }
 
-  private buildProvinceSummary(events: Event[]): ProvinceSummaryEntry[] {
+  private buildProvinceSummary(events: EventMapPoint[]): ProvinceSummaryEntry[] {
     if (!events.length) {
       return [];
     }
@@ -772,22 +776,22 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
     }));
   }
 
-  private findLatestEvent(events: Event[]): Event | undefined {
+  private findLatestEvent(events: EventMapPoint[]): EventMapPoint | undefined {
     if (!events.length) {
       return undefined;
     }
 
-    return events.reduce((latest: Event | undefined, current) => {
+    return events.reduce((latest: EventMapPoint | undefined, current) => {
       if (!latest) {
         return current;
       }
       const latestTime = latest.occurTime ? new Date(latest.occurTime).getTime() : 0;
       const currentTime = current.occurTime ? new Date(current.occurTime).getTime() : 0;
       return currentTime > latestTime ? current : latest;
-    }, undefined as Event | undefined);
+    }, undefined as EventMapPoint | undefined);
   }
 
-  private hasCoordinates(event: Event): boolean {
+  private hasCoordinates(event: EventMapPoint): boolean {
     return typeof event.longitude === 'number'
       && typeof event.latitude === 'number'
       && !Number.isNaN(event.longitude)
