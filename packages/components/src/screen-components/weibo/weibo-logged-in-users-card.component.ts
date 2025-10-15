@@ -478,7 +478,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     console.log('[WeiboLoggedInUsersCardComponent] loadData 开始', {
       isLoading: this.isLoading,
       hasSdk: !!this.sdk,
-      sdkWeiboMethod: this.sdk ? typeof this.sdk.weibo?.getLoggedInUsersStats : 'N/A'
+      sdkWeiboMethod: this.sdk ? typeof this.sdk.weibo?.getAccountStats : 'N/A'
     });
 
     if (this.isLoading) {
@@ -498,10 +498,15 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     console.log('[WeiboLoggedInUsersCardComponent] 调用 SDK API');
 
     try {
-      this.sdk.weibo.getLoggedInUsersStats().pipe(
+      this.sdk.weibo.getAccountStats().pipe(
         takeUntil(this.destroy$)
       ).subscribe({
-        next: (stats: LoggedInUsersStats) => {
+        next: (accountStats) => {
+          const stats: LoggedInUsersStats = {
+            total: accountStats.total,
+            todayNew: 0,
+            online: accountStats.active
+          };
           console.log('[WeiboLoggedInUsersCardComponent] 数据加载成功', {
             stats,
             statsType: typeof stats
