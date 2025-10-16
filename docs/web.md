@@ -24,7 +24,7 @@
    - ✅ 建立 `ScreenSignalStore`，现已贯通首页与大屏展示，统一轮播、默认屏幕与加载状态。
 3. **错误与埋点统一**
    - ✅ 在 `GraphqlGateway` 中扩展错误语义与自动重试策略。
-   - ☐ 接入统一的结构化日志（依托 `@pro/logger`），为前后端追踪提供相同语料。
+   - ✅ 前端引入结构化记录器，沿用 `@pro/logger` 语料（`service/scope/level/msg/context`），Web 端日志现与后端格式一致。
 
 ## 第三阶段（规划）
 1. **UI 体验焕新**
@@ -37,6 +37,7 @@
    - 添加 GraphQL 数据访问层的契约测试。
    - 为关键组件补齐 Cypress/Playwright 冒烟用例，保障动态拼装逻辑。
    - ✅ 补齐 `ScreenSignalStore` 与 `GraphqlGateway` 的单元测试覆盖，确保状态同步与重试语义稳定。
+   - ✅ 增补 `StructuredLogger` 单元测试，验证作用域继承与日志级别阈值。
 
 ## 净化收尾
 - 删除遗留 `sdk` 接口引用，统一类型来源。

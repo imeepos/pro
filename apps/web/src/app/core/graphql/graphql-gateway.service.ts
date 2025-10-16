@@ -12,6 +12,9 @@ import { logger } from '../utils/logger';
 export class GraphqlGateway {
   private readonly endpoint = this.resolveEndpoint();
   private readonly maxAttempts = 3;
+  private readonly log = logger.withScope('GraphqlGateway', {
+    endpoint: this.endpoint
+  });
 
   constructor(private readonly tokenStorage: TokenStorageService) {}
 
@@ -31,12 +34,12 @@ export class GraphqlGateway {
         const context = this.buildErrorContext(error, document, variables, attempt);
 
         if (attempt < this.maxAttempts && this.shouldRetry(error)) {
-          logger.warn('[GraphqlGateway] 请求重试', context);
+          this.log.warn('请求重试', context);
           await this.delay(150 * attempt);
           continue;
         }
 
-        logger.error('[GraphqlGateway] 请求失败', context);
+        this.log.error('请求失败', context);
         throw error;
       }
     }
