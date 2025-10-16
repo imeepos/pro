@@ -53,6 +53,7 @@ import { TagLoader } from './events/tag.loader';
           autoSchemaFile: join(process.cwd(), 'apps', 'api', 'schema.graphql'),
           sortSchema: true,
           path: '/graphql',
+          graphiql: true,
           introspection: !isProduction,
           subscriptions: {
             'graphql-ws': true,
