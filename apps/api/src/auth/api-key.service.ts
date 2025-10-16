@@ -205,6 +205,10 @@ export class ApiKeyService {
     userId: string,
     query: ApiKeyQueryDto,
   ): Promise<ApiKeyListResponseDto> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
     const { page = 1, limit = 10, search, status, includeExpired = false, sortBy, sortOrder, startDate, endDate } = query;
     const offset = (page - 1) * limit;
 

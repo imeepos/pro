@@ -2,7 +2,6 @@ import {
   ArgumentsHost,
   Catch,
   HttpException,
-  HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { GqlArgumentsHost, GqlExceptionFilter } from '@nestjs/graphql';
@@ -18,12 +17,12 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
     const context = gqlHost.getContext<{ req?: { url?: string } }>();
     const info = gqlHost.getInfo();
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let status = 500;
     let message: string | string[] = '服务器内部错误';
     let errors: string[] | undefined;
 
     if (exception instanceof HttpException) {
-      status = exception.getStatus();
+      status = exception.getStatus() || 500;
       const exceptionResponse = exception.getResponse();
 
       if (typeof exceptionResponse === 'object') {
@@ -34,7 +33,7 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
         message = exceptionResponse;
       }
     } else if (exception instanceof QueryFailedError) {
-      status = HttpStatus.BAD_REQUEST;
+      status = 400;
       message = this.handleDatabaseError(exception);
       this.logger.error(`数据库错误: ${exception.message}`, exception.stack);
     } else if (exception instanceof Error) {
@@ -42,7 +41,7 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
       this.logger.error(`未处理的错误: ${exception.message}`, exception.stack);
     }
 
-    const messageList = Array.isArray(message) ? message : [message];
+    const messageList = Array.isArray(message) ? message : [message || '未知错误'];
     const formattedResponse = {
       success: false,
       statusCode: status,
@@ -52,15 +51,30 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
       ...(errors && { errors }),
     };
 
-    return new GraphQLError(messageList[0], {
-      extensions: {
-        code: HttpStatus[status] ?? 'INTERNAL_SERVER_ERROR',
+    try {
+      // 确保 extensions 对象存在且有效
+      const extensions = {
+        code: status === 500 ? 'INTERNAL_SERVER_ERROR' : 'BAD_REQUEST',
         http: {
-          status,
+          status: Number(status) || 500,
         },
         response: formattedResponse,
-      },
-    });
+      };
+
+      const errorMessage = messageList[0] || '未知错误';
+
+      return new GraphQLError(errorMessage, {
+        extensions: extensions || {},
+      });
+    } catch (error) {
+      // 如果构建 GraphQL 错误失败，返回一个简单的错误
+      return new GraphQLError('服务器内部错误', {
+        extensions: {
+          code: 'INTERNAL_SERVER_ERROR',
+          http: { status: 500 },
+        },
+      });
+    }
   }
 
   private handleDatabaseError(error: QueryFailedError): string {
