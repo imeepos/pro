@@ -1,5 +1,5 @@
 {
-  "name": "@pro/bugger-web",
+  "name": "@pro/bugger",
   "version": "0.0.1",
   "description": "Bug守护者 - 前端管理界面",
   "scripts": {

@@ -48,3 +48,27 @@ services:
         limits:
           memory: 64M
           cpus: '0.2'
+
+  # Bugger Web 应用 - 使用 nginx 部署静态文件
+  bugger:
+    image: nginx:alpine
+    container_name: pro-bugger-dev
+    ports:
+      - "${BUGGER_PORT:-4200}:80"
+    volumes:
+      # 挂载构建后的静态文件（需要先构建）
+      - ./apps/bugger/dist/bugger/browser:/usr/share/nginx/html:ro
+      # 挂载 nginx 配置
+      - ./nginx/bugger.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.2'

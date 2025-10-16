@@ -19,7 +19,7 @@
 
 | 项目 | 说明 | 命令 |
 | --- | --- | --- |
-| `apps/bugger-web` | 使用 `eslint.config.mjs` 引入 Angular preset，保留 `pnpm run lint/build` 工作流 | `pnpm run --filter=@pro/bugger-web lint` |
+| `apps/bugger` | 使用 `eslint.config.mjs` 引入 Angular preset，保留 `pnpm run lint/build` 工作流 | `pnpm run --filter=@pro/bugger lint` |
 | `apps/web` | 同样切换到 Angular preset，并将 `package.json` 的 `lint` 脚本改为直接调用 ESLint | `pnpm run --filter=@pro/web lint` |
 
 两套前端均通过 `pnpm run … lint` 和 `pnpm run … build` 验证。注意：`apps/web` 仍会在构建时提示历史存在的 bundle 预算与可选链警告，这些将在后续性能/模板优化中处理。
