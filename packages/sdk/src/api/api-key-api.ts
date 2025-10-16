@@ -17,7 +17,7 @@ import {
   UpdateApiKeyDto,
 } from '@pro/types';
 import { GraphQLClient } from '../client/graphql-client.js';
-import { AuthConfig, AuthMode, JWT_AUTH_CONFIG, API_KEY_AUTH_CONFIG, AUTO_AUTH_CONFIG } from '../types/auth-config';
+import { AuthConfig, AuthMode } from '../types/auth-config';
 
 interface ApiKeyRecord {
   id: number;

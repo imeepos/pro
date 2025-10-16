@@ -16,6 +16,8 @@ import { WeiboAuthResolver } from './weibo-auth.resolver';
 import { WeiboRabbitMQConfigService } from './weibo-rabbitmq-config.service';
 import { WeiboTaskStatusConsumer } from './weibo-task-status.consumer';
 import { WeiboTaskStatusResolver } from './weibo-task-status.resolver';
+import { WeiboStatsRedisService } from './weibo-stats-redis.service';
+import { WeiboHourlyStatsService } from './weibo-hourly-stats.service';
 
 /**
  * 微博模块
@@ -42,6 +44,8 @@ import { WeiboTaskStatusResolver } from './weibo-task-status.resolver';
     WeiboSearchTaskResolver,
     WeiboAuthResolver,
     WeiboRabbitMQConfigService,
+    WeiboStatsRedisService,
+    WeiboHourlyStatsService,
     WeiboTaskStatusConsumer,
     WeiboTaskStatusResolver,
   ],
@@ -52,6 +56,8 @@ import { WeiboTaskStatusResolver } from './weibo-task-status.resolver';
     WeiboHealthCheckService,
     WeiboSearchTaskService,
     WeiboRabbitMQConfigService,
+    WeiboStatsRedisService,
+    WeiboHourlyStatsService,
   ],
 })
 export class WeiboModule {}

@@ -9,6 +9,7 @@ import { WeiboSearchTaskEntity } from '@pro/entities';
 import { WeiboTaskStatusConsumer } from '../src/weibo/weibo-task-status.consumer';
 import { WeiboRabbitMQConfigService } from '../src/weibo/weibo-rabbitmq-config.service';
 import { WeiboSearchTaskService } from '../src/weibo/weibo-search-task.service';
+import { WeiboStatsRedisService } from '../src/weibo/weibo-stats-redis.service';
 import { WeiboTaskStatusMessage } from '../src/weibo/interfaces/weibo-task-status.interface';
 
 describe('WeiboTaskStatus Integration Tests', () => {
@@ -16,6 +17,7 @@ describe('WeiboTaskStatus Integration Tests', () => {
   let consumer: WeiboTaskStatusConsumer;
   let rabbitMQConfig: WeiboRabbitMQConfigService;
   let taskService: WeiboSearchTaskService;
+  let statsService: WeiboStatsRedisService;
   let mockRabbitMQClient: any;
 
   beforeAll(async () => {
@@ -75,11 +77,30 @@ describe('WeiboTaskStatus Integration Tests', () => {
         return rabbitMQConfig;
       },
     })
+    .overrideProvider(WeiboStatsRedisService)
+    .useFactory({
+      factory: () => {
+        const mockStatsService = {
+          getStats: jest.fn().mockResolvedValue({
+            totalMessages: 0,
+            successCount: 0,
+            failureCount: 0,
+            retryCount: 0,
+            avgProcessingTime: 0,
+          }),
+          resetStats: jest.fn().mockResolvedValue(undefined),
+          updateStats: jest.fn().mockResolvedValue(undefined),
+          isRedisAvailable: jest.fn().mockResolvedValue(true),
+        };
+        return mockStatsService;
+      },
+    })
     .compile();
 
     consumer = module.get<WeiboTaskStatusConsumer>(WeiboTaskStatusConsumer);
     rabbitMQConfig = module.get<WeiboRabbitMQConfigService>(WeiboRabbitMQConfigService);
     taskService = module.get<WeiboSearchTaskService>(WeiboSearchTaskService);
+    statsService = module.get<WeiboStatsRedisService>(WeiboStatsRedisService);
 
     // Initialize the consumer
     await consumer.onModuleInit();
@@ -90,9 +111,9 @@ describe('WeiboTaskStatus Integration Tests', () => {
     await module.close();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
-    consumer.resetStats();
+    await consumer.resetStats();
   });
 
   describe('End-to-End Status Update Flow', () => {
@@ -139,7 +160,7 @@ describe('WeiboTaskStatus Integration Tests', () => {
       expect(updatedTask.progress).toBe(25);
 
       // Verify stats were updated
-      const stats = consumer.getStats();
+      const stats = await consumer.getStats();
       expect(stats.totalMessages).toBe(1);
       expect(stats.successCount).toBe(1);
       expect(stats.failureCount).toBe(0);
@@ -203,7 +224,7 @@ describe('WeiboTaskStatus Integration Tests', () => {
       expect(mockRabbitMQClient.nack).toHaveBeenCalledWith(mockMessage, false, false);
 
       // Verify stats show failure
-      const stats = consumer.getStats();
+      const stats = await consumer.getStats();
       expect(stats.totalMessages).toBe(1);
       expect(stats.failureCount).toBe(1);
     });
@@ -231,7 +252,7 @@ describe('WeiboTaskStatus Integration Tests', () => {
       expect(mockRabbitMQClient.nack).toHaveBeenCalledWith(mockMessage, false, true);
 
       // Verify stats show retry
-      const stats = consumer.getStats();
+      const stats = await consumer.getStats();
       expect(stats.totalMessages).toBe(1);
       expect(stats.retryCount).toBe(1);
     });
@@ -327,7 +348,7 @@ describe('WeiboTaskStatus Integration Tests', () => {
       await Promise.all(promises);
 
       // Verify all messages were processed
-      const stats = consumer.getStats();
+      const stats = await consumer.getStats();
       expect(stats.totalMessages).toBe(10);
       expect(stats.successCount).toBe(10);
       expect(stats.avgProcessingTime).toBeGreaterThan(0);
@@ -375,7 +396,7 @@ describe('WeiboTaskStatus Integration Tests', () => {
       expect(avgTimePerMessage).toBeLessThan(100); // Less than 100ms per message
       expect(totalTime).toBeLessThan(5000); // Less than 5 seconds total
 
-      const stats = consumer.getStats();
+      const stats = await consumer.getStats();
       expect(stats.totalMessages).toBe(messageCount);
       expect(stats.successCount).toBe(messageCount);
     });

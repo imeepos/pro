@@ -1,11 +1,14 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { WeiboRabbitMQConfigService } from './weibo-rabbitmq-config.service';
 import { WeiboSearchTaskService } from './weibo-search-task.service';
+import { WeiboStatsRedisService } from './weibo-stats-redis.service';
+import { WeiboHourlyStatsService } from './weibo-hourly-stats.service';
 import {
   WeiboTaskStatusMessage,
   MessageProcessResult,
   ConsumerStats,
 } from './interfaces/weibo-task-status.interface';
+import { HourlyStatsType } from './interfaces/hourly-stats.interface';
 import { WeiboSearchTaskStatus } from '@pro/entities';
 
 /**
@@ -15,20 +18,13 @@ import { WeiboSearchTaskStatus } from '@pro/entities';
 @Injectable()
 export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WeiboTaskStatusConsumer.name);
-  private readonly stats: ConsumerStats = {
-    totalMessages: 0,
-    successCount: 0,
-    failureCount: 0,
-    retryCount: 0,
-    avgProcessingTime: 0,
-  };
   private consumerTag: string | null = null;
-  private processingTimes: number[] = [];
-  private readonly maxProcessingTimeSamples = 100;
 
   constructor(
     private readonly rabbitMQConfig: WeiboRabbitMQConfigService,
     private readonly taskService: WeiboSearchTaskService,
+    private readonly statsService: WeiboStatsRedisService,
+    private readonly hourlyStatsService: WeiboHourlyStatsService,
   ) {
     this.logger.log('微博任务状态消费者初始化');
   }
@@ -78,14 +74,13 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
    */
   private async handleStatusUpdate(message: any): Promise<void> {
     const startTime = Date.now();
-    this.stats.totalMessages++;
 
     try {
       // 解析消息
       const statusMessage = this.rabbitMQConfig.parseStatusMessage(message);
       if (!statusMessage) {
         this.logger.warn('收到无效的状态消息', { message });
-        this.updateStats(startTime, MessageProcessResult.FAILED);
+        await this.updateStats(startTime, MessageProcessResult.FAILED);
         return;
       }
 
@@ -99,7 +94,7 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
       const result = await this.processStatusUpdate(statusMessage);
 
       if (result === MessageProcessResult.SUCCESS) {
-        this.updateStats(startTime, MessageProcessResult.SUCCESS);
+        await this.updateStats(startTime, MessageProcessResult.SUCCESS);
         this.logger.log(`任务状态更新成功`, {
           taskId: statusMessage.taskId,
           status: statusMessage.status,
@@ -109,7 +104,7 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
         // 对于需要重试的情况，抛出异常让RabbitMQ客户端处理重试
         throw new Error(`任务状态更新失败，将重试: taskId=${statusMessage.taskId}`);
       } else {
-        this.updateStats(startTime, MessageProcessResult.FAILED);
+        await this.updateStats(startTime, MessageProcessResult.FAILED);
         this.logger.error(`任务状态更新失败，不再重试`, {
           taskId: statusMessage.taskId,
           status: statusMessage.status,
@@ -122,7 +117,7 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
         stack: error.stack,
       });
 
-      this.updateStats(startTime, MessageProcessResult.FAILED);
+      await this.updateStats(startTime, MessageProcessResult.FAILED);
       throw error; // 重新抛出异常让RabbitMQ客户端处理重试逻辑
     }
   }
@@ -213,55 +208,102 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
 
   
   /**
-   * 更新统计信息
+   * 更新统计信息（使用 Redis 持久化）
    */
-  private updateStats(startTime: number, result: MessageProcessResult): void {
-    const processingTime = Date.now() - startTime;
-    this.processingTimes.push(processingTime);
+  private async updateStats(startTime: number, result: MessageProcessResult): Promise<void> {
+    try {
+      const processingTime = Date.now() - startTime;
+      const now = new Date();
 
-    // 保持样本数量在限制内
-    if (this.processingTimes.length > this.maxProcessingTimeSamples) {
-      this.processingTimes.shift();
+      // 将 MessageProcessResult 枚举值映射为字符串
+      const resultStr = result === MessageProcessResult.SUCCESS ? 'success' :
+                       result === MessageProcessResult.RETRY ? 'retry' : 'failure';
+
+      // 使用 Redis 批量更新统计信息
+      await this.statsService.updateStats(resultStr, processingTime);
+
+      // 记录小时统计数据 - 异步执行，不阻塞主流程
+      this.recordHourlyStatsAsync(now, resultStr, processingTime).catch(error => {
+        this.logger.warn('记录小时统计数据失败', { error });
+      });
+
+      this.logger.debug(`统计信息已更新到 Redis`, {
+        result: resultStr,
+        processingTime,
+      });
+    } catch (error) {
+      this.logger.error('更新统计信息失败', { error });
+      // 统计更新失败不应该影响主要业务逻辑，只记录错误
     }
-
-    // 计算平均处理时间
-    this.stats.avgProcessingTime = this.processingTimes.reduce((a, b) => a + b, 0) / this.processingTimes.length;
-
-    // 更新计数
-    switch (result) {
-      case MessageProcessResult.SUCCESS:
-        this.stats.successCount++;
-        break;
-      case MessageProcessResult.RETRY:
-        this.stats.retryCount++;
-        break;
-      case MessageProcessResult.FAILED:
-        this.stats.failureCount++;
-        break;
-    }
-
-    this.stats.lastProcessedAt = new Date();
   }
 
   /**
-   * 获取消费者统计信息
+   * 异步记录小时统计数据
    */
-  getStats(): ConsumerStats {
-    return { ...this.stats };
+  private async recordHourlyStatsAsync(
+    timestamp: Date,
+    result: string,
+    processingTime: number
+  ): Promise<void> {
+    try {
+      // 记录消息处理统计
+      await this.hourlyStatsService.recordHourlyStat(
+        HourlyStatsType.MESSAGE_PROCESSING,
+        timestamp,
+        1,
+        { result, processingTime }
+      );
+
+      // 记录性能统计
+      await this.hourlyStatsService.recordHourlyStat(
+        HourlyStatsType.PERFORMANCE,
+        timestamp,
+        processingTime,
+        { result }
+      );
+
+      // 记录任务执行统计
+      await this.hourlyStatsService.recordHourlyStat(
+        HourlyStatsType.TASK_EXECUTION,
+        timestamp,
+        1,
+        { result, processingTime }
+      );
+    } catch (error) {
+      this.logger.error('记录小时统计数据失败', { timestamp, result, processingTime, error });
+      throw error;
+    }
   }
 
   /**
-   * 重置统计信息
+   * 获取消费者统计信息（从 Redis）
    */
-  resetStats(): void {
-    this.stats.totalMessages = 0;
-    this.stats.successCount = 0;
-    this.stats.failureCount = 0;
-    this.stats.retryCount = 0;
-    this.stats.avgProcessingTime = 0;
-    this.stats.lastProcessedAt = undefined;
-    this.processingTimes = [];
+  async getStats(): Promise<ConsumerStats> {
+    try {
+      return await this.statsService.getStats();
+    } catch (error) {
+      this.logger.error('获取统计信息失败', error);
+      // 返回默认统计信息
+      return {
+        totalMessages: 0,
+        successCount: 0,
+        failureCount: 0,
+        retryCount: 0,
+        avgProcessingTime: 0,
+      };
+    }
+  }
 
-    this.logger.log('消费者统计信息已重置');
+  /**
+   * 重置统计信息（从 Redis）
+   */
+  async resetStats(): Promise<void> {
+    try {
+      await this.statsService.resetStats();
+      this.logger.log('消费者统计信息已重置');
+    } catch (error) {
+      this.logger.error('重置统计信息失败', error);
+      throw error;
+    }
   }
 }

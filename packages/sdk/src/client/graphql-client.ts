@@ -56,8 +56,10 @@ export class GraphQLClient {
    * 使用自定义配置创建客户端
    */
   static withConfig(baseUrl: string, config: AuthConfig): GraphQLClient {
-    const client = new GraphQLClient(baseUrl, config.tokenKey, config.mode);
-    client.config = { ...DEFAULT_AUTH_CONFIG, ...config };
+    const mergedConfig = { ...DEFAULT_AUTH_CONFIG, ...config };
+    const client = new GraphQLClient(baseUrl, mergedConfig.tokenKey, mergedConfig.mode);
+    // 通过类型断言来设置合并后的配置
+    (client as any).config = mergedConfig;
     return client;
   }
 

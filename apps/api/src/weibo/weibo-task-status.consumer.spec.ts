@@ -1,17 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { LoggerService } from '@pro/logger';
 import { WeiboSearchTaskService } from './weibo-search-task.service';
 import { WeiboTaskStatusConsumer } from './weibo-task-status.consumer';
 import { WeiboRabbitMQConfigService } from './weibo-rabbitmq-config.service';
-import { WeiboTaskStatusMessage, MessageProcessResult } from './interfaces/weibo-task-status.interface';
+import { WeiboStatsRedisService } from './weibo-stats-redis.service';
+import { WeiboTaskStatusMessage, MessageProcessResult, ConsumerStats } from './interfaces/weibo-task-status.interface';
 import { WeiboSearchTaskStatus } from '@pro/entities';
 
 describe('WeiboTaskStatusConsumer', () => {
   let consumer: WeiboTaskStatusConsumer;
   let rabbitMQConfig: WeiboRabbitMQConfigService;
   let taskService: WeiboSearchTaskService;
+  let statsService: WeiboStatsRedisService;
   let mockRabbitMQClient: any;
+  let mockRabbitMQConfig: any;
+  let mockTaskService: any;
+  let mockStatsService: any;
 
   beforeEach(async () => {
     mockRabbitMQClient = {
@@ -40,6 +43,12 @@ describe('WeiboTaskStatusConsumer', () => {
       updateTaskProgress: jest.fn(),
     };
 
+    mockStatsService = {
+      getStats: jest.fn(),
+      resetStats: jest.fn(),
+      updateStats: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WeiboTaskStatusConsumer,
@@ -51,12 +60,17 @@ describe('WeiboTaskStatusConsumer', () => {
           provide: WeiboSearchTaskService,
           useValue: mockTaskService,
         },
+        {
+          provide: WeiboStatsRedisService,
+          useValue: mockStatsService,
+        },
       ],
     }).compile();
 
     consumer = module.get<WeiboTaskStatusConsumer>(WeiboTaskStatusConsumer);
     rabbitMQConfig = module.get<WeiboRabbitMQConfigService>(WeiboRabbitMQConfigService);
     taskService = module.get<WeiboSearchTaskService>(WeiboSearchTaskService);
+    statsService = module.get<WeiboStatsRedisService>(WeiboStatsRedisService);
   });
 
   it('should be defined', () => {
@@ -191,7 +205,9 @@ describe('WeiboTaskStatusConsumer', () => {
       ];
 
       retryableErrors.forEach(error => {
-        expect(consumer['isRetryableError'](error)).toBe(true);
+        const errorObj = new Error(error.message);
+        errorObj.message = error.message;
+        expect(consumer['isRetryableError'](errorObj)).toBe(true);
       });
     });
 
@@ -208,30 +224,58 @@ describe('WeiboTaskStatusConsumer', () => {
     });
   });
 
-  describe('stats tracking', () => {
-    it('should track stats correctly', () => {
-      const initialStats = consumer.getStats();
-      expect(initialStats.totalMessages).toBe(0);
-      expect(initialStats.successCount).toBe(0);
-      expect(initialStats.failureCount).toBe(0);
-      expect(initialStats.retryCount).toBe(0);
+  describe('stats tracking (with Redis)', () => {
+    it('should get stats from Redis service', async () => {
+      const mockStats: ConsumerStats = {
+        totalMessages: 100,
+        successCount: 90,
+        failureCount: 5,
+        retryCount: 5,
+        avgProcessingTime: 25.5,
+        lastProcessedAt: new Date(),
+      };
+
+      mockStatsService.getStats.mockResolvedValue(mockStats);
+
+      const stats = await consumer.getStats();
+
+      expect(stats).toEqual(mockStats);
+      expect(mockStatsService.getStats).toHaveBeenCalled();
     });
 
-    it('should reset stats correctly', () => {
-      consumer['updateStats'](100, MessageProcessResult.SUCCESS);
-      consumer['updateStats'](150, MessageProcessResult.FAILED);
+    it('should return default stats when Redis fails', async () => {
+      mockStatsService.getStats.mockRejectedValue(new Error('Redis error'));
 
-      expect(consumer.getStats().totalMessages).toBe(2);
-      expect(consumer.getStats().successCount).toBe(1);
-      expect(consumer.getStats().failureCount).toBe(1);
+      const stats = await consumer.getStats();
 
-      consumer.resetStats();
+      expect(stats).toEqual({
+        totalMessages: 0,
+        successCount: 0,
+        failureCount: 0,
+        retryCount: 0,
+        avgProcessingTime: 0,
+      });
+    });
 
-      const resetStats = consumer.getStats();
-      expect(resetStats.totalMessages).toBe(0);
-      expect(resetStats.successCount).toBe(0);
-      expect(resetStats.failureCount).toBe(0);
-      expect(resetStats.retryCount).toBe(0);
+    it('should reset stats using Redis service', async () => {
+      await consumer.resetStats();
+
+      expect(mockStatsService.resetStats).toHaveBeenCalled();
+    });
+
+    it('should update stats using Redis service', async () => {
+      // 测试私有方法 updateStats
+      const startTime = Date.now() - 100;
+      await consumer['updateStats'](startTime, MessageProcessResult.SUCCESS);
+
+      expect(mockStatsService.updateStats).toHaveBeenCalledWith('success', expect.any(Number));
+    });
+
+    it('should handle updateStats errors gracefully', async () => {
+      mockStatsService.updateStats.mockRejectedValue(new Error('Redis error'));
+
+      // 这不应该抛出错误，只是记录日志
+      await expect(consumer['updateStats'](Date.now(), MessageProcessResult.SUCCESS)).resolves.toBeUndefined();
     });
   });
 
