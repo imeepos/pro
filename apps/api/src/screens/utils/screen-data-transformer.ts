@@ -22,8 +22,8 @@ export class ScreenDataTransformer {
     if (layoutDto.cols && layoutDto.rows) {
       const gridPixelSize = 50;
       return {
-        width: layoutDto.cols * gridPixelSize,
-        height: layoutDto.rows * gridPixelSize,
+        width: Math.round(layoutDto.cols * gridPixelSize),
+        height: Math.round(layoutDto.rows * gridPixelSize),
         background: layoutDto.background || '#ffffff',
         grid: {
           enabled: true,
@@ -34,12 +34,12 @@ export class ScreenDataTransformer {
 
     // 使用新的像素单位格式
     return {
-      width: layoutDto.width || 1920,
-      height: layoutDto.height || 1080,
+      width: Math.round(layoutDto.width || 1920),
+      height: Math.round(layoutDto.height || 1080),
       background: layoutDto.background || '#ffffff',
       grid: {
         enabled: layoutDto.grid?.enabled || false,
-        size: layoutDto.grid?.size || 50,
+        size: Math.round(layoutDto.grid?.size || 50),
       },
     };
   }
@@ -52,11 +52,11 @@ export class ScreenDataTransformer {
       id: componentDto.id,
       type: componentDto.type,
       position: {
-        x: componentDto.position.x,
-        y: componentDto.position.y,
-        width: componentDto.position.width,
-        height: componentDto.position.height,
-        zIndex: componentDto.position.zIndex,
+        x: Math.round(componentDto.position.x),
+        y: Math.round(componentDto.position.y),
+        width: Math.round(componentDto.position.width),
+        height: Math.round(componentDto.position.height),
+        zIndex: Math.round(componentDto.position.zIndex),
       },
       config: componentDto.config || {},
       dataSource: componentDto.dataSource ? {
@@ -95,11 +95,11 @@ export class ScreenDataTransformer {
       id: component.id,
       type: component.type,
       position: {
-        x: component.position.x,
-        y: component.position.y,
-        width: component.position.width,
-        height: component.position.height,
-        zIndex: component.position.zIndex,
+        x: Math.round(component.position.x),
+        y: Math.round(component.position.y),
+        width: Math.round(component.position.width),
+        height: Math.round(component.position.height),
+        zIndex: Math.round(component.position.zIndex),
       },
       config: component.config || {},
       dataSource: component.dataSource ? {
