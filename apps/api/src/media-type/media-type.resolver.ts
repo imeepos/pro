@@ -1,7 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { MediaTypeService } from './media-type.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CreateMediaTypeDto,
   QueryMediaTypeDto,
@@ -13,9 +12,10 @@ import {
   mapMediaTypeEntityToModel,
 } from './models/media-type.model';
 import { buildOffsetConnection } from '../common/utils/pagination.utils';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => MediaTypeModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class MediaTypeResolver {
   constructor(private readonly mediaTypeService: MediaTypeService) {}
 

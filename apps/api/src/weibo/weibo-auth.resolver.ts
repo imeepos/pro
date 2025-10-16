@@ -1,6 +1,5 @@
 import { ForbiddenException, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { WeiboAuthService } from './weibo-auth.service';
 import { observableToAsyncIterator } from '../common/utils/observable.utils';
@@ -12,9 +11,10 @@ import {
 } from './models/weibo-login.model';
 import { concat, EMPTY, of } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => WeiboLoginSessionModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class WeiboAuthResolver {
   constructor(private readonly weiboAuthService: WeiboAuthService) {}
 

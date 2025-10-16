@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Context, Float, ID, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { EventService } from './event.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import {
   CreateEventDto,
   EventMapQueryDto,
@@ -23,7 +23,7 @@ import { IndustryTypeModel, mapIndustryTypeEntityToModel } from './models/indust
 import { TagModel, mapTagEntityToModel } from './models/tag.model';
 
 @Resolver(() => EventModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class EventResolver {
   constructor(private readonly eventService: EventService) {}
 

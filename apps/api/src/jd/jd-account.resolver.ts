@@ -1,7 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { JdAccountStatus } from '@pro/entities';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { buildOffsetConnection } from '../common/utils/pagination.utils';
 import { JdAccountService } from './jd-account.service';
@@ -15,6 +14,7 @@ import {
   JdAccountStatsModel,
   mapJdAccountSummaryToModel,
 } from './models/jd-account.model';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 type HealthCheckResultPayload = {
   accountId: number;
@@ -33,7 +33,7 @@ type HealthCheckBatchPayload = {
 };
 
 @Resolver(() => JdAccountModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class JdAccountResolver {
   constructor(
     private readonly jdAccountService: JdAccountService,

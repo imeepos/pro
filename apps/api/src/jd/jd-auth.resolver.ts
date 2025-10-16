@@ -1,6 +1,5 @@
 import { ForbiddenException, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JdAuthService } from './jd-auth.service';
 import { observableToAsyncIterator } from '../common/utils/observable.utils';
@@ -12,9 +11,10 @@ import {
 } from './models/jd-login.model';
 import { concat, EMPTY, of } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => JdLoginSessionModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class JdAuthResolver {
   constructor(private readonly jdAuthService: JdAuthService) {}
 

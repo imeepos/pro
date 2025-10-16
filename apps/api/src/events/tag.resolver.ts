@@ -5,9 +5,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateTagDto, UpdateTagDto } from './dto/tag.dto';
 import { TagConnection, TagModel, mapTagEntityToModel } from './models/tag.model';
 import { buildOffsetConnection } from '../common/utils/pagination.utils';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => TagModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class TagResolver {
   constructor(private readonly tagService: TagService) {}
 

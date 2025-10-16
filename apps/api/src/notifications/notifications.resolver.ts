@@ -2,13 +2,13 @@ import { UseGuards } from '@nestjs/common';
 import { Mutation, Resolver, Args } from '@nestjs/graphql';
 import { randomUUID } from 'crypto';
 import { NotificationsGateway } from './notifications.gateway';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NotificationInput } from './dto/notification.dto';
 import { NotificationModel } from './models/notification.model';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => NotificationModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class NotificationsResolver {
   constructor(private readonly notificationsGateway: NotificationsGateway) {}
 

@@ -2,12 +2,12 @@ import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { NotFoundException, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserModel } from './models/user.model';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateUserDto } from './dto';
 import { GraphqlLoaders } from '../common/dataloaders/types';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => UserModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class UserResolver {
   constructor(private readonly userService: UserService) {}
 

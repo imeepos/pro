@@ -17,6 +17,7 @@ import {
   UpdateApiKeyDto,
 } from '@pro/types';
 import { GraphQLClient } from '../client/graphql-client.js';
+import { AuthConfig, AuthMode, JWT_AUTH_CONFIG, API_KEY_AUTH_CONFIG, AUTO_AUTH_CONFIG } from '../types/auth-config';
 
 interface ApiKeyRecord {
   id: number;
@@ -74,11 +75,49 @@ interface ApiKeySummaryStatsPayload {
 export class ApiKeyApi {
   private readonly client: GraphQLClient;
 
-  constructor(baseUrl?: string, tokenKey?: string) {
+  constructor(baseUrl?: string, tokenKey?: string, authMode?: AuthMode) {
     if (!baseUrl) {
       throw new Error(`ApiKeyApi missing base url!`);
     }
-    this.client = new GraphQLClient(baseUrl, tokenKey);
+    this.client = new GraphQLClient(baseUrl, tokenKey, authMode);
+  }
+
+  /**
+   * 创建使用 JWT 认证的 API Key 客户端
+   */
+  static withJwt(baseUrl: string, tokenKey: string = 'access_token'): ApiKeyApi {
+    return new ApiKeyApi(baseUrl, tokenKey, AuthMode.JWT);
+  }
+
+  /**
+   * 创建使用 API Key 认证的 API Key 客户端
+   */
+  static withApiKey(baseUrl: string, tokenKey: string = 'api_key'): ApiKeyApi {
+    return new ApiKeyApi(baseUrl, tokenKey, AuthMode.API_KEY);
+  }
+
+  /**
+   * 创建自动模式认证的 API Key 客户端
+   */
+  static withAutoAuth(baseUrl: string, tokenKey: string = 'access_token'): ApiKeyApi {
+    return new ApiKeyApi(baseUrl, tokenKey, AuthMode.AUTO);
+  }
+
+  /**
+   * 使用自定义配置创建 API Key 客户端
+   */
+  static withConfig(baseUrl: string, config: AuthConfig): ApiKeyApi {
+    const client = GraphQLClient.withConfig(baseUrl, config);
+    const apiKeyApi = new ApiKeyApi(baseUrl, config.tokenKey, config.mode);
+    (apiKeyApi as any).client = client;
+    return apiKeyApi;
+  }
+
+  /**
+   * 创建默认配置的 API Key 客户端（向后兼容）
+   */
+  static createDefault(baseUrl: string, tokenKey: string = 'access_token'): ApiKeyApi {
+    return new ApiKeyApi(baseUrl, tokenKey, AuthMode.JWT);
   }
 
   findAll(filters?: ApiKeyFilters): Observable<ApiKeyListResponse> {

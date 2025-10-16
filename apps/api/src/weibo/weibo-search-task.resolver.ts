@@ -1,6 +1,5 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, ID, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { WeiboSearchTaskService } from './weibo-search-task.service';
 import {
   WeiboSearchTaskConnection,
@@ -18,9 +17,10 @@ import {
 import { buildOffsetConnection } from '../common/utils/pagination.utils';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => WeiboSearchTaskModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class WeiboSearchTaskResolver {
   constructor(private readonly weiboSearchTaskService: WeiboSearchTaskService) {}
 

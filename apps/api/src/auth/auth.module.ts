@@ -6,12 +6,16 @@ import { AuthService } from './auth.service';
 import { ApiKeyService } from './api-key.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ApiKeyAuthGuard } from './guards/api-key-auth.guard';
+import { CompositeAuthGuard } from './guards/composite-auth.guard';
 import { ApiKeyOwnerGuard } from './guards/api-key-owner.guard';
 import { UserEntity, ApiKeyEntity } from '@pro/entities';
 import { createJwtConfig } from '../config';
 import { AuthResolver } from './auth.resolver';
 import { ApiKeyResolver } from './api-key.resolver';
 import { ApiKeyLoader } from './api-key.loader';
+import { AuthUtils } from './utils/auth-utils';
 
 @Module({
   imports: [
@@ -25,11 +29,22 @@ import { ApiKeyLoader } from './api-key.loader';
     ApiKeyService,
     JwtStrategy,
     ApiKeyStrategy,
+    JwtAuthGuard,
+    ApiKeyAuthGuard,
+    CompositeAuthGuard,
     ApiKeyOwnerGuard,
     AuthResolver,
     ApiKeyResolver,
     ApiKeyLoader,
   ],
-  exports: [AuthService, ApiKeyService, ApiKeyLoader],
+  exports: [
+    AuthService,
+    ApiKeyService,
+    ApiKeyLoader,
+    JwtAuthGuard,
+    ApiKeyAuthGuard,
+    CompositeAuthGuard,
+    AuthUtils
+  ],
 })
 export class AuthModule {}

@@ -4,13 +4,13 @@ import { ConfigService } from '@nestjs/config';
 import { buildOffsetConnection } from '../common/utils/pagination.utils';
 import { WeiboAccountService } from './weibo-account.service';
 import { WeiboHealthCheckService } from './weibo-health-check.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { WeiboAccountConnection, WeiboAccountModel, mapWeiboAccountEntityToModel } from './models/weibo-account.model';
 import { WeiboAccountFilterDto } from './dto/weibo-account.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => WeiboAccountModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class WeiboAccountResolver {
   constructor(
     private readonly weiboAccountService: WeiboAccountService,

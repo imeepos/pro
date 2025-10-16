@@ -1,3 +1,5 @@
+import { AuthConfig, AuthMode, DEFAULT_AUTH_CONFIG } from '../types/auth-config';
+
 interface GraphQLError {
   message: string;
   locations?: Array<{ line: number; column: number }>;
@@ -18,11 +20,45 @@ export interface GraphQLRequestOptions {
 
 export class GraphQLClient {
   private readonly endpoint: string;
-  private readonly tokenKey: string;
+  private readonly config: AuthConfig;
 
-  constructor(baseUrl: string, tokenKey: string = 'access_token') {
+  constructor(baseUrl: string, tokenKey: string = 'access_token', authMode: AuthMode = AuthMode.JWT) {
     this.endpoint = `${baseUrl}/graphql`;
-    this.tokenKey = tokenKey;
+    this.config = {
+      ...DEFAULT_AUTH_CONFIG,
+      tokenKey,
+      mode: authMode,
+    };
+  }
+
+  /**
+   * 创建 JWT 认证的客户端
+   */
+  static withJwt(baseUrl: string, tokenKey: string = 'access_token'): GraphQLClient {
+    return new GraphQLClient(baseUrl, tokenKey, AuthMode.JWT);
+  }
+
+  /**
+   * 创建 API Key 认证的客户端
+   */
+  static withApiKey(baseUrl: string, tokenKey: string = 'api_key'): GraphQLClient {
+    return new GraphQLClient(baseUrl, tokenKey, AuthMode.API_KEY);
+  }
+
+  /**
+   * 创建自动模式认证的客户端
+   */
+  static withAutoAuth(baseUrl: string, tokenKey: string = 'access_token'): GraphQLClient {
+    return new GraphQLClient(baseUrl, tokenKey, AuthMode.AUTO);
+  }
+
+  /**
+   * 使用自定义配置创建客户端
+   */
+  static withConfig(baseUrl: string, config: AuthConfig): GraphQLClient {
+    const client = new GraphQLClient(baseUrl, config.tokenKey, config.mode);
+    client.config = { ...DEFAULT_AUTH_CONFIG, ...config };
+    return client;
   }
 
   async request<T>(options: GraphQLRequestOptions): Promise<T> {
@@ -32,10 +68,8 @@ export class GraphQLClient {
       'Content-Type': 'application/json',
     };
 
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    // 根据认证模式添加认证头
+    this.addAuthHeaders(headers);
 
     const response = await fetch(this.endpoint, {
       method: 'POST',
@@ -66,6 +100,60 @@ export class GraphQLClient {
     return result.data;
   }
 
+  /**
+   * 根据认证模式添加相应的认证头
+   */
+  private addAuthHeaders(headers: Record<string, string>): void {
+    switch (this.config.mode) {
+      case AuthMode.JWT:
+        this.addJwtHeaders(headers);
+        break;
+      case AuthMode.API_KEY:
+        this.addApiKeyHeaders(headers);
+        break;
+      case AuthMode.AUTO:
+        this.addAutoAuthHeaders(headers);
+        break;
+      default:
+        this.addJwtHeaders(headers);
+    }
+  }
+
+  /**
+   * 添加 JWT 认证头
+   */
+  private addJwtHeaders(headers: Record<string, string>): void {
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
+  /**
+   * 添加 API Key 认证头
+   */
+  private addApiKeyHeaders(headers: Record<string, string>): void {
+    const apiKey = this.getToken();
+    if (apiKey) {
+      headers['X-API-Key'] = apiKey;
+    }
+  }
+
+  /**
+   * 自动选择认证方式并添加相应头
+   */
+  private addAutoAuthHeaders(headers: Record<string, string>): void {
+    const jwtToken = this.getToken('access_token');
+    const apiKey = this.getToken('api_key');
+
+    // 优先使用 JWT
+    if (jwtToken) {
+      headers['Authorization'] = `Bearer ${jwtToken}`;
+    } else if (apiKey) {
+      headers['X-API-Key'] = apiKey;
+    }
+  }
+
   query<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
     return this.request<T>({ query, variables });
   }
@@ -74,9 +162,11 @@ export class GraphQLClient {
     return this.request<T>({ query: mutation, variables });
   }
 
-  private getToken(): string | null {
+  private getToken(tokenKey?: string): string | null {
+    const key = tokenKey || this.config.tokenKey;
+
     if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem(this.tokenKey);
+      return localStorage.getItem(key);
     }
     return null;
   }
