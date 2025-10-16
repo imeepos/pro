@@ -13,6 +13,9 @@ import { WeiboSearchTaskResolver } from './weibo-search-task.resolver';
 import { ScreensModule } from '../screens/screens.module';
 import { AuthModule } from '../auth/auth.module';
 import { WeiboAuthResolver } from './weibo-auth.resolver';
+import { WeiboRabbitMQConfigService } from './weibo-rabbitmq-config.service';
+import { WeiboTaskStatusConsumer } from './weibo-task-status.consumer';
+import { WeiboTaskStatusResolver } from './weibo-task-status.resolver';
 
 /**
  * 微博模块
@@ -38,6 +41,9 @@ import { WeiboAuthResolver } from './weibo-auth.resolver';
     WeiboAccountResolver,
     WeiboSearchTaskResolver,
     WeiboAuthResolver,
+    WeiboRabbitMQConfigService,
+    WeiboTaskStatusConsumer,
+    WeiboTaskStatusResolver,
   ],
   exports: [
     TypeOrmModule,
@@ -45,6 +51,7 @@ import { WeiboAuthResolver } from './weibo-auth.resolver';
     WeiboAuthService,
     WeiboHealthCheckService,
     WeiboSearchTaskService,
+    WeiboRabbitMQConfigService,
   ],
 })
 export class WeiboModule {}
