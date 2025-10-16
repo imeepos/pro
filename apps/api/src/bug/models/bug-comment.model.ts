@@ -15,6 +15,9 @@ export class BugCommentModel {
   authorId?: string;
 
   @Field()
+  authorName: string;
+
+  @Field()
   createdAt: Date;
 
   @Field()

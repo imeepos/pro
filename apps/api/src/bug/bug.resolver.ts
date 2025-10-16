@@ -1,5 +1,5 @@
 import { Args, Mutation, Query, Resolver, ID } from '@nestjs/graphql';
-import { Logger } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import { BugModel } from './models/bug.model';
 import { BugCommentModel } from './models/bug-comment.model';
 import { BugStatisticsModel } from './models/bug-statistics.model';
@@ -14,8 +14,11 @@ import {
   UpdateBugStatusInput,
   AssignBugInput,
 } from './dto/bug.input';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Resolver(() => BugModel)
+@UseGuards(CompositeAuthGuard)
 export class BugResolver {
   private readonly logger = new Logger(BugResolver.name);
 
@@ -25,31 +28,41 @@ export class BugResolver {
   ) {}
 
   @Mutation(() => BugModel, { name: 'createBug' })
-  async createBug(@Args('input') input: CreateBugInput): Promise<BugModel> {
+  async createBug(
+    @CurrentUser('userId') userId: string,
+    @Args('input') input: CreateBugInput
+  ): Promise<BugModel> {
     this.logger.log(`创建Bug: ${input.title}`);
     return this.bugService.create(input);
   }
 
   @Query(() => BugsPaginationModel, { name: 'bugs' })
-  async findBugs(@Args('filters', { nullable: true }) filters?: BugFiltersInput): Promise<BugsPaginationModel> {
+  async findBugs(
+    @CurrentUser('userId') userId: string,
+    @Args('filters', { nullable: true }) filters?: BugFiltersInput
+  ): Promise<BugsPaginationModel> {
     this.logger.log(`查询Bug列表: ${JSON.stringify(filters)}`);
     return this.bugService.findAll(filters || {});
   }
 
   @Query(() => BugStatisticsModel, { name: 'bugStatistics' })
-  async getBugStatistics(): Promise<BugStatisticsModel> {
+  async getBugStatistics(@CurrentUser('userId') userId: string): Promise<BugStatisticsModel> {
     this.logger.log('获取Bug统计信息');
     return this.bugService.getStatistics();
   }
 
   @Query(() => BugModel, { name: 'bug' })
-  async findBug(@Args('id', { type: () => ID }) id: string): Promise<BugModel> {
+  async findBug(
+    @CurrentUser('userId') userId: string,
+    @Args('id', { type: () => ID }) id: string
+  ): Promise<BugModel> {
     this.logger.log(`获取Bug详情: ${id}`);
     return this.bugService.findOne(id);
   }
 
   @Mutation(() => BugModel, { name: 'updateBug' })
   async updateBug(
+    @CurrentUser('userId') userId: string,
     @Args('id', { type: () => ID }) id: string,
     @Args('input') input: UpdateBugInput,
   ): Promise<BugModel> {
@@ -58,7 +71,10 @@ export class BugResolver {
   }
 
   @Mutation(() => Boolean, { name: 'removeBug' })
-  async removeBug(@Args('id', { type: () => ID }) id: string): Promise<boolean> {
+  async removeBug(
+    @CurrentUser('userId') userId: string,
+    @Args('id', { type: () => ID }) id: string
+  ): Promise<boolean> {
     this.logger.log(`删除Bug: ${id}`);
     await this.bugService.remove(id);
     return true;
@@ -66,6 +82,7 @@ export class BugResolver {
 
   @Mutation(() => BugCommentModel, { name: 'addBugComment' })
   async addComment(
+    @CurrentUser('userId') userId: string,
     @Args('bugId', { type: () => ID }) bugId: string,
     @Args('input') input: CreateBugCommentInput,
   ): Promise<BugCommentModel> {
@@ -74,13 +91,17 @@ export class BugResolver {
   }
 
   @Query(() => [BugCommentModel], { name: 'bugComments' })
-  async getBugComments(@Args('bugId', { type: () => ID }) bugId: string): Promise<BugCommentModel[]> {
+  async getBugComments(
+    @CurrentUser('userId') userId: string,
+    @Args('bugId', { type: () => ID }) bugId: string
+  ): Promise<BugCommentModel[]> {
     this.logger.log(`获取Bug ${bugId} 的评论`);
     return this.commentService.findByBugId(bugId);
   }
 
   @Mutation(() => BugModel, { name: 'updateBugStatus' })
   async updateStatus(
+    @CurrentUser('userId') userId: string,
     @Args('id', { type: () => ID }) id: string,
     @Args('input') input: UpdateBugStatusInput,
   ): Promise<BugModel> {
@@ -90,6 +111,7 @@ export class BugResolver {
 
   @Mutation(() => BugModel, { name: 'assignBug' })
   async assignBug(
+    @CurrentUser('userId') userId: string,
     @Args('id', { type: () => ID }) id: string,
     @Args('input') input: AssignBugInput,
   ): Promise<BugModel> {

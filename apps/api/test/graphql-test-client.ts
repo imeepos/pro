@@ -12,6 +12,16 @@ export class GraphQLTestSetup {
   private app: INestApplication;
 
   async createTestApp(): Promise<INestApplication> {
+    // 设置测试环境变量
+    process.env.NODE_ENV = 'test';
+    process.env.RABBITMQ_URL = 'amqp://localhost:5672';
+    process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
+    process.env.REDIS_URL = 'redis://localhost:6379';
+    process.env.MINIO_ENDPOINT = 'localhost';
+    process.env.MINIO_PORT = '9000';
+    process.env.MINIO_ACCESS_KEY = 'testkey';
+    process.env.MINIO_SECRET_KEY = 'testsecret';
+
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();

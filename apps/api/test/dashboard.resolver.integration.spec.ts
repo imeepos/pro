@@ -51,67 +51,42 @@ describe('DashboardResolver Integration Tests', () => {
       const query = `
         query DashboardStats {
           dashboardStats {
+            totalScreens
             totalEvents
-            activeEvents
-            completedEvents
-            totalUsers
-            activeUsers
-            totalTasks
-            runningTasks
-            completedTasks
-            systemHealth {
-              database
-              redis
-              rabbitmq
-              minio
-            }
+            totalWeiboAccounts
+            totalSearchTasks
           }
         }
       `;
 
       const result = await client.query(query);
       expect(result).toHaveProperty('dashboardStats');
+      expect(result.dashboardStats).toHaveProperty('totalScreens');
       expect(result.dashboardStats).toHaveProperty('totalEvents');
-      expect(result.dashboardStats).toHaveProperty('activeEvents');
-      expect(result.dashboardStats).toHaveProperty('completedEvents');
-      expect(result.dashboardStats).toHaveProperty('totalUsers');
-      expect(result.dashboardStats).toHaveProperty('activeUsers');
-      expect(result.dashboardStats).toHaveProperty('totalTasks');
-      expect(result.dashboardStats).toHaveProperty('runningTasks');
-      expect(result.dashboardStats).toHaveProperty('completedTasks');
-      expect(result.dashboardStats).toHaveProperty('systemHealth');
+      expect(result.dashboardStats).toHaveProperty('totalWeiboAccounts');
+      expect(result.dashboardStats).toHaveProperty('totalSearchTasks');
 
       // Check that all numeric values are numbers
+      expect(typeof result.dashboardStats.totalScreens).toBe('number');
       expect(typeof result.dashboardStats.totalEvents).toBe('number');
-      expect(typeof result.dashboardStats.activeEvents).toBe('number');
-      expect(typeof result.dashboardStats.completedEvents).toBe('number');
-      expect(typeof result.dashboardStats.totalUsers).toBe('number');
-      expect(typeof result.dashboardStats.activeUsers).toBe('number');
-      expect(typeof result.dashboardStats.totalTasks).toBe('number');
-      expect(typeof result.dashboardStats.runningTasks).toBe('number');
-      expect(typeof result.dashboardStats.completedTasks).toBe('number');
+      expect(typeof result.dashboardStats.totalWeiboAccounts).toBe('number');
+      expect(typeof result.dashboardStats.totalSearchTasks).toBe('number');
 
-      // Check system health object
-      expect(result.dashboardStats.systemHealth).toHaveProperty('database');
-      expect(result.dashboardStats.systemHealth).toHaveProperty('redis');
-      expect(result.dashboardStats.systemHealth).toHaveProperty('rabbitmq');
-      expect(result.dashboardStats.systemHealth).toHaveProperty('minio');
+      // Verify that stats are non-negative numbers
+      expect(result.dashboardStats.totalScreens).toBeGreaterThanOrEqual(0);
+      expect(result.dashboardStats.totalEvents).toBeGreaterThanOrEqual(0);
+      expect(result.dashboardStats.totalWeiboAccounts).toBeGreaterThanOrEqual(0);
+      expect(result.dashboardStats.totalSearchTasks).toBeGreaterThanOrEqual(0);
     });
 
     it('should get recent activities', async () => {
       const query = `
         query DashboardRecentActivities {
           dashboardRecentActivities {
-            id
             type
-            title
-            description
-            createdAt
-            user {
-              id
-              username
-            }
-            metadata
+            message
+            time
+            entityId
           }
         }
       `;
@@ -122,25 +97,21 @@ describe('DashboardResolver Integration Tests', () => {
 
       if (result.dashboardRecentActivities.length > 0) {
         const activity = result.dashboardRecentActivities[0];
-        expect(activity).toHaveProperty('id');
         expect(activity).toHaveProperty('type');
-        expect(activity).toHaveProperty('title');
-        expect(activity).toHaveProperty('description');
-        expect(activity).toHaveProperty('createdAt');
-        expect(activity).toHaveProperty('user');
-        expect(activity).toHaveProperty('metadata');
+        expect(activity).toHaveProperty('message');
+        expect(activity).toHaveProperty('time');
 
-        expect(typeof activity.id).toBe('string');
         expect(typeof activity.type).toBe('string');
-        expect(typeof activity.title).toBe('string');
-        expect(typeof activity.description).toBe('string');
-        expect(typeof activity.createdAt).toBe('string');
+        expect(typeof activity.message).toBe('string');
+        expect(typeof activity.time).toBe('string');
 
-        if (activity.user) {
-          expect(activity.user).toHaveProperty('id');
-          expect(activity.user).toHaveProperty('username');
-          expect(typeof activity.user.id).toBe('string');
-          expect(typeof activity.user.username).toBe('string');
+        // Check that type is valid
+        const validTypes = ['screen', 'event', 'weibo', 'task'];
+        expect(validTypes).toContain(activity.type);
+
+        // entityId is optional
+        if (activity.entityId) {
+          expect(typeof activity.entityId).toBe('string');
         }
       }
     });
@@ -177,10 +148,9 @@ describe('DashboardResolver Integration Tests', () => {
       const query = `
         query DashboardRecentActivities {
           dashboardRecentActivities {
-            id
             type
-            title
-            createdAt
+            message
+            time
           }
         }
       `;
@@ -188,10 +158,12 @@ describe('DashboardResolver Integration Tests', () => {
       const result = await client.query(query);
       expect(result).toHaveProperty('dashboardRecentActivities');
 
-      const validTypes = ['EVENT_CREATED', 'EVENT_UPDATED', 'EVENT_DELETED', 'USER_REGISTERED', 'USER_LOGIN', 'TASK_CREATED', 'TASK_UPDATED'];
+      const validTypes = ['screen', 'event', 'weibo', 'task'];
 
       result.dashboardRecentActivities.forEach((activity: any) => {
         expect(validTypes).toContain(activity.type);
+        expect(typeof activity.message).toBe('string');
+        expect(typeof activity.time).toBe('string');
       });
     });
   });
@@ -207,9 +179,10 @@ describe('DashboardResolver Integration Tests', () => {
       const statsQuery = `
         query DashboardStats {
           dashboardStats {
+            totalScreens
             totalEvents
-            totalUsers
-            totalTasks
+            totalWeiboAccounts
+            totalSearchTasks
           }
         }
       `;
@@ -218,23 +191,25 @@ describe('DashboardResolver Integration Tests', () => {
       const stats = statsResult.dashboardStats;
 
       // Verify that stats are non-negative numbers
+      expect(stats.totalScreens).toBeGreaterThanOrEqual(0);
       expect(stats.totalEvents).toBeGreaterThanOrEqual(0);
-      expect(stats.totalUsers).toBeGreaterThanOrEqual(0);
-      expect(stats.totalTasks).toBeGreaterThanOrEqual(0);
+      expect(stats.totalWeiboAccounts).toBeGreaterThanOrEqual(0);
+      expect(stats.totalSearchTasks).toBeGreaterThanOrEqual(0);
 
       // Verify that total includes active and completed items
+      expect(typeof stats.totalScreens).toBe('number');
       expect(typeof stats.totalEvents).toBe('number');
-      expect(typeof stats.totalUsers).toBe('number');
-      expect(typeof stats.totalTasks).toBe('number');
+      expect(typeof stats.totalWeiboAccounts).toBe('number');
+      expect(typeof stats.totalSearchTasks).toBe('number');
     });
 
     it('should handle pagination for recent activities', async () => {
       const query = `
         query DashboardRecentActivities {
           dashboardRecentActivities {
-            id
-            title
-            createdAt
+            type
+            message
+            time
           }
         }
       `;
@@ -261,16 +236,10 @@ describe('DashboardResolver Integration Tests', () => {
       const query = `
         query DashboardStats {
           dashboardStats {
+            totalScreens
             totalEvents
-            activeEvents
-            totalUsers
-            totalTasks
-            systemHealth {
-              database
-              redis
-              rabbitmq
-              minio
-            }
+            totalWeiboAccounts
+            totalSearchTasks
           }
         }
       `;
@@ -286,12 +255,10 @@ describe('DashboardResolver Integration Tests', () => {
       const query = `
         query DashboardStats {
           dashboardStats {
+            totalScreens
             totalEvents
-            totalUsers
-            systemHealth {
-              database
-              redis
-            }
+            totalWeiboAccounts
+            totalSearchTasks
           }
         }
       `;
@@ -302,9 +269,10 @@ describe('DashboardResolver Integration Tests', () => {
       // All requests should succeed
       results.forEach(result => {
         expect(result).toHaveProperty('dashboardStats');
+        expect(result.dashboardStats).toHaveProperty('totalScreens');
         expect(result.dashboardStats).toHaveProperty('totalEvents');
-        expect(result.dashboardStats).toHaveProperty('totalUsers');
-        expect(result.dashboardStats).toHaveProperty('systemHealth');
+        expect(result.dashboardStats).toHaveProperty('totalWeiboAccounts');
+        expect(result.dashboardStats).toHaveProperty('totalSearchTasks');
       });
     });
   });
@@ -322,7 +290,7 @@ describe('DashboardResolver Integration Tests', () => {
       const query = `
         query DashboardStats {
           dashboardStats {
-            totalEvents
+            totalScreens
           }
         }
       `;
@@ -336,7 +304,7 @@ describe('DashboardResolver Integration Tests', () => {
       const query = `
         query DashboardStats {
           dashboardStats {
-            totalEvents
+            totalScreens
           }
         }
       `;
@@ -355,68 +323,6 @@ describe('DashboardResolver Integration Tests', () => {
 
       // Should throw error for non-existent field
       await expect(client.query(malformedQuery)).rejects.toThrow();
-    });
-  });
-
-  describe('System Health Monitoring', () => {
-    let client: any;
-
-    beforeEach(() => {
-      client = testSetup.createTestClient(TEST_API_KEY);
-    });
-
-    it('should return system health status for all services', async () => {
-      const query = `
-        query DashboardStats {
-          dashboardStats {
-            systemHealth {
-              database
-              redis
-              rabbitmq
-              minio
-            }
-          }
-        }
-      `;
-
-      const result = await client.query(query);
-      const systemHealth = result.dashboardStats.systemHealth;
-
-      // All services should have health status
-      expect(Object.keys(systemHealth)).toContain('database');
-      expect(Object.keys(systemHealth)).toContain('redis');
-      expect(Object.keys(systemHealth)).toContain('rabbitmq');
-      expect(Object.keys(systemHealth)).toContain('minio');
-
-      // Health status should be valid
-      const validStatuses = ['healthy', 'unhealthy', 'degraded', 'unknown'];
-      Object.values(systemHealth).forEach(status => {
-        expect(validStatuses).toContain(status);
-      });
-    });
-
-    it('should handle service unavailability gracefully', async () => {
-      const query = `
-        query DashboardStats {
-          dashboardStats {
-            systemHealth {
-              database
-              redis
-              rabbitmq
-              minio
-            }
-          }
-        }
-      `;
-
-      const result = await client.query(query);
-      const systemHealth = result.dashboardStats.systemHealth;
-
-      // Even if services are unavailable, should return status
-      Object.values(systemHealth).forEach(status => {
-        expect(status).toBeDefined();
-        expect(typeof status).toBe('string');
-      });
     });
   });
 });

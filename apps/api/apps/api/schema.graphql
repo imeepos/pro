@@ -117,6 +117,7 @@ type AuthPayload {
 
 type BugCommentModel {
   authorId: String
+  authorName: String!
   bugId: String!
   content: String!
   createdAt: DateTime!

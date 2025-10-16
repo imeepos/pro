@@ -401,8 +401,40 @@ describe('EventResolver Integration Tests', () => {
     });
 
     it('should add tags to event', async () => {
-      // First create some tags (assuming tags exist or can be created)
-      const tagIds = ['tag1', 'tag2']; // This would need actual tag IDs in real implementation
+      // First create some tags
+      const createTagMutation1 = `
+        mutation CreateTag($input: CreateTagInput!) {
+          createTag(input: $input) {
+            id
+            tagName
+          }
+        }
+      `;
+
+      const createTagMutation2 = `
+        mutation CreateTag($input: CreateTagInput!) {
+          createTag(input: $input) {
+            id
+            tagName
+          }
+        }
+      `;
+
+      const tag1Result = await client.mutate(createTagMutation1, {
+        input: {
+          tagName: `Test Tag 1 ${Date.now()}`,
+          tagColor: '#ff0000',
+        },
+      });
+
+      const tag2Result = await client.mutate(createTagMutation2, {
+        input: {
+          tagName: `Test Tag 2 ${Date.now()}`,
+          tagColor: '#00ff00',
+        },
+      });
+
+      const tagIds = [tag1Result.createTag.id, tag2Result.createTag.id];
 
       const mutation = `
         mutation AddTagsToEvent($eventId: ID!, $tagIds: [ID!]!) {
@@ -417,7 +449,6 @@ describe('EventResolver Integration Tests', () => {
         }
       `;
 
-      // Note: This test may need adjustment based on actual tag creation/management
       const result = await client.mutate(mutation, {
         eventId,
         tagIds,
@@ -425,9 +456,48 @@ describe('EventResolver Integration Tests', () => {
 
       expect(result).toHaveProperty('addTagsToEvent');
       expect(result.addTagsToEvent.id).toBe(eventId);
+      expect(result.addTagsToEvent.tags).toHaveLength(2);
     });
 
     it('should remove tag from event', async () => {
+      // First create a tag and add it to the event
+      const createTagMutation = `
+        mutation CreateTag($input: CreateTagInput!) {
+          createTag(input: $input) {
+            id
+            tagName
+          }
+        }
+      `;
+
+      const tagResult = await client.mutate(createTagMutation, {
+        input: {
+          tagName: `Test Tag To Remove ${Date.now()}`,
+          tagColor: '#ff00ff',
+        },
+      });
+
+      const tagId = tagResult.createTag.id;
+
+      // Add the tag to the event first
+      const addTagMutation = `
+        mutation AddTagsToEvent($eventId: ID!, $tagIds: [ID!]!) {
+          addTagsToEvent(eventId: $eventId, tagIds: $tagIds) {
+            id
+            tags {
+              id
+              tagName
+            }
+          }
+        }
+      `;
+
+      await client.mutate(addTagMutation, {
+        eventId,
+        tagIds: [tagId],
+      });
+
+      // Now remove the tag
       const mutation = `
         mutation RemoveTagFromEvent($eventId: ID!, $tagId: ID!) {
           removeTagFromEvent(eventId: $eventId, tagId: $tagId)
@@ -436,7 +506,7 @@ describe('EventResolver Integration Tests', () => {
 
       const result = await client.mutate(mutation, {
         eventId,
-        tagId: 'tag1',
+        tagId,
       });
 
       expect(result).toHaveProperty('removeTagFromEvent');
@@ -558,7 +628,7 @@ describe('EventResolver Integration Tests', () => {
         mutation UpdateEvent($id: ID!, $input: UpdateEventInput!) {
           updateEvent(id: $id, input: $input) {
             id
-            title
+            eventName
           }
         }
       `;

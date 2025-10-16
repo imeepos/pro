@@ -50,7 +50,8 @@
       "Bash(pm2:*)",
       "Bash(pnpm install)",
       "Bash(npx tsc:*)",
-      "WebFetch(domain:www.apollographql.com)"
+      "WebFetch(domain:www.apollographql.com)",
+      "Bash(pnpm run test)"
     ],
     "deny": [],
     "ask": []
