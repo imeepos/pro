@@ -51,7 +51,11 @@
       "Bash(pnpm install)",
       "Bash(npx tsc:*)",
       "WebFetch(domain:www.apollographql.com)",
-      "Bash(pnpm run test)"
+      "Bash(pnpm run test)",
+      "Bash(pnpm run codegen:*)",
+      "Bash(npx graphql-codegen:*)",
+      "Bash(npx @graphql-codegen/cli:*)",
+      "Bash(./node_modules/.bin/graphql-codegen:*)"
     ],
     "deny": [],
     "ask": []

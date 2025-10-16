@@ -45,6 +45,13 @@ export class RabbitMQClient {
   }
 
   /**
+   * 检查连接状态
+   */
+  isConnected(): boolean {
+    return !!(this.channel && this.connection);
+  }
+
+  /**
    * 设置队列，包括死信队列配置
    */
   private async setupQueue(queue: string): Promise<void> {

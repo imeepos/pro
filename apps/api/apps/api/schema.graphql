@@ -115,6 +115,10 @@ type AuthPayload {
   user: User!
 }
 
+input BatchHourlyStatsRecordDto {
+  records: [HourlyStatsRecordDto!]!
+}
+
 type BugCommentModel {
   authorId: String
   authorName: String!
@@ -219,6 +223,26 @@ type ConfigValue {
 
 input ConfirmAttachmentUploadInput {
   token: String!
+}
+
+type ConsumerStats {
+  """平均处理时间（毫秒）"""
+  avgProcessingTime: Float!
+
+  """失败处理数"""
+  failureCount: Int!
+
+  """最后处理时间"""
+  lastProcessedAt: DateTime
+
+  """重试处理数"""
+  retryCount: Int!
+
+  """成功处理数"""
+  successCount: Int!
+
+  """总处理消息数"""
+  totalMessages: Int!
 }
 
 input CreateApiKeyDto {
@@ -466,6 +490,94 @@ type HealthStatus {
   timestamp: DateTime!
 }
 
+type HourlyStatsPeak {
+  """峰值数量"""
+  count: Int!
+
+  """峰值时间"""
+  hour: String!
+}
+
+type HourlyStatsPoint {
+  """统计数量"""
+  count: Int!
+
+  """时间点 (ISO 8601格式)"""
+  hour: String!
+
+  """占比 (可选)"""
+  percentage: Float
+
+  """趋势 (可选)"""
+  trend: String
+}
+
+input HourlyStatsQueryDto {
+  endDate: DateTime!
+  interval: String
+  startDate: DateTime!
+  timezone: String
+  type: HourlyStatsType!
+}
+
+input HourlyStatsRecordDto {
+  count: Int!
+  metadata: JSON
+  timestamp: DateTime!
+  type: HourlyStatsType!
+}
+
+type HourlyStatsResponse {
+  """统计数据点"""
+  data: [HourlyStatsPoint!]!
+
+  """汇总信息"""
+  summary: HourlyStatsSummary!
+
+  """时间范围"""
+  timeRange: HourlyStatsTimeRange!
+}
+
+type HourlyStatsSummary {
+  """平均值"""
+  average: Float!
+
+  """增长率 (可选)"""
+  growth: Float
+
+  """峰值"""
+  peak: HourlyStatsPeak!
+
+  """总数"""
+  total: Int!
+}
+
+type HourlyStatsTimeRange {
+  """结束时间"""
+  end: String!
+
+  """开始时间"""
+  start: String!
+
+  """时区"""
+  timezone: String!
+}
+
+"""小时统计类型"""
+enum HourlyStatsType {
+  """消息处理统计"""
+  MESSAGE_PROCESSING
+
+  """性能统计"""
+  PERFORMANCE
+
+  """任务执行统计"""
+  TASK_EXECUTION
+
+  """用户活跃度"""
+  USER_ACTIVITY
+}
+
 type IndustryType {
   createdAt: DateTime!
   description: String
@@ -476,6 +588,11 @@ type IndustryType {
   status: Int!
   updatedAt: DateTime!
 }
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
 
 """
 The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
@@ -600,6 +717,27 @@ enum MediaTypeStatus {
   INACTIVE
 }
 
+type MultiTypeHourlyStats {
+  """消息处理统计"""
+  message_processing: HourlyStatsResponse
+
+  """性能统计"""
+  performance: HourlyStatsResponse
+
+  """任务执行统计"""
+  task_execution: HourlyStatsResponse
+
+  """用户活跃度"""
+  user_activity: HourlyStatsResponse
+}
+
+input MultiTypeStatsQueryDto {
+  endDate: DateTime!
+  startDate: DateTime!
+  timezone: String
+  types: [HourlyStatsType!]!
+}
+
 type Mutation {
   addBugComment(bugId: ID!, input: CreateBugCommentInput!): BugCommentModel!
   addTagsToEvent(eventId: ID!, tagIds: [ID!]!): Event!
@@ -609,6 +747,7 @@ type Mutation {
   checkAllWeiboAccounts: Boolean!
   checkJdAccount(id: Int!): JdAccountCheckResult!
   checkWeiboAccount(id: Int!): Boolean!
+  cleanupExpiredStats: Int!
   clearConfigCache(type: ConfigType): Boolean!
   confirmEventAttachmentUpload(input: ConfirmAttachmentUploadInput!): EventAttachment!
   copyScreen(id: ID!): Screen!
@@ -632,6 +771,7 @@ type Mutation {
   pauseWeiboSearchTask(id: Int!, input: PauseWeiboTaskInput): WeiboSearchTask!
   publishEvent(id: ID!): Event!
   publishScreen(id: ID!): Screen!
+  recordBatchHourlyStats(input: BatchHourlyStatsRecordDto!): Boolean!
   refreshToken(input: RefreshTokenDto!): AuthPayload!
   regenerateApiKey(id: Int!): RegenerateApiKeyDto!
   register(input: RegisterDto!): AuthPayload!
@@ -649,6 +789,7 @@ type Mutation {
   removeWeiboAccount(id: Int!): Boolean!
   removeWeiboSearchTask(id: Int!): Boolean!
   requestEventAttachmentUpload(input: RequestAttachmentUploadInput!): AttachmentUploadCredential!
+  resetWeiboTaskStatusConsumerStats: Boolean!
   resumeAllWeiboSearchTasks: Int!
   resumeWeiboSearchTask(id: Int!, input: ResumeWeiboTaskInput): WeiboSearchTask!
   runWeiboSearchTaskNow(id: Int!, input: RunWeiboTaskNowInput): WeiboSearchTask!
@@ -737,10 +878,14 @@ type Query {
   weiboAccountStats: WeiboAccountStats!
   weiboAccounts(filter: WeiboAccountFilterInput): WeiboAccountConnection!
   weiboAccountsWithCookies(token: String!): [WeiboAccountWithCookies!]!
+  weiboAggregatedStats(query: StatsAggregationQueryDto!): HourlyStatsResponse!
+  weiboHourlyStats(query: HourlyStatsQueryDto!): HourlyStatsResponse!
   weiboLoginSession(sessionId: String!): WeiboLoginSession!
+  weiboMultiTypeHourlyStats(query: MultiTypeStatsQueryDto!): MultiTypeHourlyStats!
   weiboSearchTask(id: Int!): WeiboSearchTask!
   weiboSearchTaskStats: WeiboSearchTaskStats!
   weiboSearchTasks(filter: WeiboSearchTaskFilterInput): WeiboSearchTaskConnection!
+  weiboTaskStatusConsumerStats: ConsumerStats!
 }
 
 input RefreshTokenDto {
@@ -895,6 +1040,14 @@ input ScreenLayoutInput {
 enum ScreenStatus {
   Draft
   Published
+}
+
+input StatsAggregationQueryDto {
+  endDate: DateTime!
+  interval: String!
+  startDate: DateTime!
+  timezone: String
+  type: HourlyStatsType!
 }
 
 type Subscription {

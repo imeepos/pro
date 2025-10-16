@@ -10,6 +10,9 @@ import {
   StatsAggregationQueryDto,
   BatchHourlyStatsRecordDto,
 } from './dto/hourly-stats.dto';
+import { ConsumerStatsDto } from './dto/consumer-stats.dto';
+import { HourlyStatsResponseDto } from './dto/hourly-stats-response.dto';
+import { MultiTypeHourlyStatsDto } from './dto/multi-type-stats.dto';
 
 /**
  * 微博任务状态监控接口
@@ -28,8 +31,8 @@ export class WeiboTaskStatusResolver {
   /**
    * 获取消费者统计信息
    */
-  @Query(() => Object, { name: 'weiboTaskStatusConsumerStats' })
-  async getConsumerStats(): Promise<ConsumerStats> {
+  @Query(() => ConsumerStatsDto, { name: 'weiboTaskStatusConsumerStats' })
+  async getConsumerStats(): Promise<ConsumerStatsDto> {
     try {
       const stats = await this.taskStatusConsumer.getStats();
       this.logger.debug('获取消费者统计信息', { stats });
@@ -58,8 +61,8 @@ export class WeiboTaskStatusResolver {
   /**
    * 获取小时统计数据
    */
-  @Query(() => Object, { name: 'weiboHourlyStats' })
-  async getHourlyStats(@Args() query: HourlyStatsQueryDto): Promise<HourlyStatsResponse> {
+  @Query(() => HourlyStatsResponseDto, { name: 'weiboHourlyStats' })
+  async getHourlyStats(@Args('query') query: HourlyStatsQueryDto): Promise<HourlyStatsResponseDto> {
     try {
       this.logger.debug('获取小时统计数据', { type: query.type });
       return await this.hourlyStatsService.getHourlyStats(query);
@@ -72,10 +75,10 @@ export class WeiboTaskStatusResolver {
   /**
    * 获取多类型小时统计数据
    */
-  @Query(() => Object, { name: 'weiboMultiTypeHourlyStats' })
+  @Query(() => MultiTypeHourlyStatsDto, { name: 'weiboMultiTypeHourlyStats' })
   async getMultiTypeStats(
-    @Args() query: MultiTypeStatsQueryDto,
-  ): Promise<Record<HourlyStatsType, HourlyStatsResponse>> {
+    @Args('query') query: MultiTypeStatsQueryDto,
+  ): Promise<MultiTypeHourlyStatsDto> {
     try {
       this.logger.debug('获取多类型小时统计数据', { types: query.types });
       return await this.hourlyStatsService.getMultiTypeStats(
@@ -93,8 +96,8 @@ export class WeiboTaskStatusResolver {
   /**
    * 获取聚合统计数据
    */
-  @Query(() => Object, { name: 'weiboAggregatedStats' })
-  async getAggregatedStats(@Args() query: StatsAggregationQueryDto): Promise<HourlyStatsResponse> {
+  @Query(() => HourlyStatsResponseDto, { name: 'weiboAggregatedStats' })
+  async getAggregatedStats(@Args('query') query: StatsAggregationQueryDto): Promise<HourlyStatsResponseDto> {
     try {
       this.logger.debug('获取聚合统计数据', { type: query.type, interval: query.interval });
       return await this.hourlyStatsService.aggregateStats(
@@ -113,7 +116,7 @@ export class WeiboTaskStatusResolver {
    * 批量记录小时统计数据
    */
   @Mutation(() => Boolean, { name: 'recordBatchHourlyStats' })
-  async recordBatchHourlyStats(@Args() dto: BatchHourlyStatsRecordDto): Promise<boolean> {
+  async recordBatchHourlyStats(@Args('input') dto: BatchHourlyStatsRecordDto): Promise<boolean> {
     try {
       const records = dto.records.map(record => ({
         type: record.type,

@@ -18,6 +18,9 @@ import { WeiboTaskStatusConsumer } from './weibo-task-status.consumer';
 import { WeiboTaskStatusResolver } from './weibo-task-status.resolver';
 import { WeiboStatsRedisService } from './weibo-stats-redis.service';
 import { WeiboHourlyStatsService } from './weibo-hourly-stats.service';
+import { RedisClient } from '@pro/redis';
+import { redisConfigFactory } from '../config';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * 微博模块
@@ -48,6 +51,13 @@ import { WeiboHourlyStatsService } from './weibo-hourly-stats.service';
     WeiboHourlyStatsService,
     WeiboTaskStatusConsumer,
     WeiboTaskStatusResolver,
+    {
+      provide: RedisClient,
+      useFactory: (configService: ConfigService) => {
+        return new RedisClient(redisConfigFactory(configService));
+      },
+      inject: [ConfigService],
+    },
   ],
   exports: [
     TypeOrmModule,

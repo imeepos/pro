@@ -37,7 +37,16 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
       const config = this.rabbitMQConfig.getConsumerConfig();
       this.consumerTag = config.consumerTag;
 
-      await this.rabbitMQConfig.getRabbitMQClient().consume(
+      // 确保RabbitMQ客户端已连接
+      const rabbitMQClient = this.rabbitMQConfig.getRabbitMQClient();
+
+      // 检查连接状态，如果未连接则等待并重试
+      if (!rabbitMQClient.isConnected()) {
+        this.logger.log('RabbitMQ连接未建立，等待连接...');
+        await this.waitForConnection(rabbitMQClient);
+      }
+
+      await rabbitMQClient.consume(
         config.queueName,
         this.handleStatusUpdate.bind(this),
         {
@@ -55,6 +64,26 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
       this.logger.error('启动微博任务状态消费者失败', error);
       throw error;
     }
+  }
+
+  /**
+   * 等待RabbitMQ连接建立
+   */
+  private async waitForConnection(rabbitMQClient: any): Promise<void> {
+    const maxAttempts = 10;
+    const retryDelay = 1000; // 1秒
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (rabbitMQClient.isConnected()) {
+        this.logger.log(`RabbitMQ连接在第${attempt}次检查时已建立`);
+        return;
+      }
+
+      this.logger.log(`等待RabbitMQ连接建立... (${attempt}/${maxAttempts})`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+    }
+
+    throw new Error(`RabbitMQ连接在${maxAttempts}次尝试后仍未建立`);
   }
 
   /**
