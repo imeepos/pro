@@ -1,0 +1,1031 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type ApiKeyConnection {
+  edges: [ApiKeyEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ApiKeyEdge {
+  cursor: String!
+  node: ApiKeyResponseDto!
+}
+
+input ApiKeyQueryDto {
+  endDate: DateTime
+  includeExpired: Boolean = false
+  limit: Int = 10
+  page: Int = 1
+  search: String
+  sortBy: ApiKeySortBy = CREATED_AT
+  sortOrder: ApiKeySortOrder = DESC
+  startDate: DateTime
+  status: ApiKeyStatus
+}
+
+type ApiKeyResponseDto {
+  createdAt: DateTime!
+  createdIp: String
+  description: String
+  expiresAt: DateTime
+  id: Int!
+  isActive: Boolean!
+  isExpired: Boolean!
+  isValid: Boolean!
+  key: String!
+  lastUsedAt: DateTime
+  name: String!
+  permissions: [String!]
+  type: ApiKeyType!
+  updatedAt: DateTime!
+  usageCount: Int!
+}
+
+"""API Key 排序字段"""
+enum ApiKeySortBy {
+  CREATED_AT
+  LAST_USED_AT
+  NAME
+  UPDATED_AT
+  USAGE_COUNT
+}
+
+"""排序方向"""
+enum ApiKeySortOrder {
+  ASC
+  DESC
+}
+
+type ApiKeyStatsDto {
+  averageDailyUsage: Float!
+  createdAt: DateTime!
+  daysSinceCreation: Int!
+  id: Int!
+  lastUsedAt: DateTime
+  name: String!
+  usageCount: Int!
+}
+
+"""API Key 状态过滤枚举"""
+enum ApiKeyStatus {
+  ACTIVE
+  ALL
+  EXPIRED
+  INACTIVE
+}
+
+type ApiKeySummaryStatsDto {
+  active: Int!
+  averageDailyUsage: Float!
+  expired: Int!
+  expiringSoon: Int!
+  inactive: Int!
+  mostUsed: ApiKeyStatsDto
+  neverUsed: Int!
+  recentlyUsed: ApiKeyStatsDto
+  total: Int!
+  totalUsage: Int!
+}
+
+"""API Key 类型"""
+enum ApiKeyType {
+  ADMIN
+  READ_ONLY
+  READ_WRITE
+}
+
+type AttachmentUploadCredential {
+  bucketName: String!
+  expiresAt: DateTime!
+  objectKey: String!
+  requiresUpload: Boolean!
+  token: String!
+  uploadUrl: String
+}
+
+type AuthPayload {
+  accessToken: String!
+  refreshToken: String!
+  user: User!
+}
+
+type ConfigCacheStats {
+  keys: [String!]!
+  size: Int!
+}
+
+"""配置项类型标识"""
+enum ConfigType {
+  AMAP_API_KEY
+}
+
+type ConfigValue {
+  expiresAt: DateTime
+  value: String!
+}
+
+input ConfirmAttachmentUploadInput {
+  token: String!
+}
+
+input CreateApiKeyDto {
+  description: String
+  expiresAt: String
+  name: String!
+  permissions: [String!]
+  type: ApiKeyType!
+}
+
+input CreateEventInput {
+  city: String!
+  district: String
+  eventName: String!
+  eventTypeId: ID!
+  industryTypeId: ID!
+  latitude: Float
+  locationText: String
+  longitude: Float
+  occurTime: String!
+  province: String!
+  status: EventStatus
+  street: String
+  summary: String
+  tagIds: [ID!]
+}
+
+input CreateEventTypeInput {
+  description: String
+  eventCode: String!
+  eventName: String!
+  sortOrder: Int
+  status: Int
+}
+
+input CreateIndustryTypeInput {
+  description: String
+  industryCode: String!
+  industryName: String!
+  sortOrder: Int
+  status: Int
+}
+
+input CreateMediaTypeInput {
+  description: String
+  sort: Int
+  status: MediaTypeStatus
+  typeCode: String!
+  typeName: String!
+}
+
+input CreateScreenInput {
+  components: [ScreenComponentInput!]
+  description: String
+  layout: ScreenLayoutInput!
+  name: String!
+}
+
+input CreateTagInput {
+  tagColor: String
+  tagName: String!
+}
+
+input CreateWeiboSearchTaskInput {
+  crawlInterval: String
+  enableAccountRotation: Boolean
+  keyword: String!
+  latitude: Float
+  locationAddress: String
+  locationName: String
+  longitude: Float
+  maxRetries: Int
+  noDataThreshold: Int
+  startDate: String!
+  weiboAccountId: Int
+}
+
+type DashboardActivity {
+  entityId: String
+  message: String!
+  time: String!
+  type: DashboardActivityType!
+}
+
+"""仪表盘最近动态类别"""
+enum DashboardActivityType {
+  Event
+  Screen
+  Task
+  Weibo
+}
+
+type DashboardStats {
+  totalEvents: Int!
+  totalScreens: Int!
+  totalSearchTasks: Int!
+  totalWeiboAccounts: Int!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Event {
+  attachments: [EventAttachment!]!
+  city: String!
+  createdAt: DateTime!
+  createdBy: String
+  district: String
+  eventName: String!
+  eventType: EventType
+  eventTypeId: ID!
+  id: ID!
+  industryType: IndustryType
+  industryTypeId: ID!
+  latitude: Float
+  locationText: String
+  longitude: Float
+  occurTime: DateTime!
+  province: String!
+  status: EventStatus!
+  street: String
+  summary: String
+  tags: [Tag!]!
+  updatedAt: DateTime!
+}
+
+type EventAttachment {
+  bucketName: String!
+  createdAt: DateTime!
+  eventId: ID!
+  fileMd5: String
+  fileName: String!
+  fileSize: Int
+  fileType: EventAttachmentFileType!
+  fileUrl: String!
+  id: ID!
+  mimeType: String
+  objectName: String!
+  sortOrder: Int!
+}
+
+"""事件附件文件类型"""
+enum EventAttachmentFileType {
+  DOCUMENT
+  IMAGE
+  VIDEO
+}
+
+type EventConnection {
+  edges: [EventEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type EventEdge {
+  cursor: String!
+  node: Event!
+}
+
+type EventMapPoint {
+  city: String!
+  district: String
+  eventName: String!
+  eventTypeId: ID!
+  id: ID!
+  industryTypeId: ID!
+  latitude: Float!
+  longitude: Float!
+  occurTime: DateTime!
+  province: String!
+  status: EventStatus!
+  street: String
+  summary: String
+}
+
+input EventMapQueryInput {
+  city: String
+  district: String
+  endTime: String
+  eventTypeId: ID
+  industryTypeId: ID
+  keyword: String
+  province: String
+  startTime: String
+  status: EventStatus
+  tagIds: [ID!]
+}
+
+input EventQueryInput {
+  city: String
+  district: String
+  endTime: String
+  eventTypeId: ID
+  industryTypeId: ID
+  keyword: String
+  page: Int = 1
+  pageSize: Int = 20
+  province: String
+  startTime: String
+  status: EventStatus
+  tagIds: [ID!]
+}
+
+"""事件状态枚举"""
+enum EventStatus {
+  ARCHIVED
+  DRAFT
+  PUBLISHED
+}
+
+type EventType {
+  createdAt: DateTime!
+  description: String
+  eventCode: String!
+  eventName: String!
+  id: ID!
+  sortOrder: Int!
+  status: Int!
+  updatedAt: DateTime!
+}
+
+type HealthStatus {
+  status: String!
+  timestamp: DateTime!
+}
+
+type IndustryType {
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  industryCode: String!
+  industryName: String!
+  sortOrder: Int!
+  status: Int!
+  updatedAt: DateTime!
+}
+
+"""
+The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSONObject
+
+type JdAccount {
+  createdAt: DateTime!
+  id: Int!
+  jdAvatar: String
+  jdNickname: String
+  jdUid: String!
+  lastCheckAt: DateTime
+  status: JdAccountStatus!
+}
+
+type JdAccountCheckResult {
+  accountId: Int!
+  checkedAt: DateTime!
+  jdUid: String!
+  message: String!
+  newStatus: JdAccountStatus!
+  oldStatus: JdAccountStatus!
+  statusChanged: Boolean!
+}
+
+type JdAccountCheckSummary {
+  checked: Int!
+  results: [JdAccountCheckResult!]!
+  total: Int!
+}
+
+type JdAccountConnection {
+  edges: [JdAccountEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type JdAccountEdge {
+  cursor: String!
+  node: JdAccount!
+}
+
+input JdAccountFilterInput {
+  page: Int = 1
+  pageSize: Int = 10
+}
+
+type JdAccountStats {
+  online: Int!
+  todayNew: Int!
+  total: Int!
+}
+
+"""京东账号当前状态"""
+enum JdAccountStatus {
+  ACTIVE
+  BANNED
+  EXPIRED
+  RESTRICTED
+}
+
+type JdLoginEvent {
+  data: JSONObject
+  type: JdLoginEventType!
+}
+
+"""京东扫码登录事件类型"""
+enum JdLoginEventType {
+  Error
+  Expired
+  Qrcode
+  Scanned
+  Status
+  Success
+}
+
+type JdLoginSession {
+  expired: Boolean!
+  expiresAt: DateTime!
+  lastEvent: JdLoginEvent
+  sessionId: String!
+}
+
+input LoginDto {
+  password: String!
+  usernameOrEmail: String!
+}
+
+type MediaType {
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  sort: Int!
+  status: MediaTypeStatus!
+  typeCode: String!
+  typeName: String!
+  updatedAt: DateTime!
+}
+
+type MediaTypeConnection {
+  edges: [MediaTypeEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type MediaTypeEdge {
+  cursor: String!
+  node: MediaType!
+}
+
+input MediaTypeFilterInput {
+  keyword: String
+  page: Int = 1
+  pageSize: Int = 10
+  status: MediaTypeStatus
+}
+
+"""媒体类型状态"""
+enum MediaTypeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+type Mutation {
+  addTagsToEvent(eventId: ID!, tagIds: [ID!]!): Event!
+  archiveEvent(id: ID!): Event!
+  checkAllJdAccounts: JdAccountCheckSummary!
+  checkAllWeiboAccounts: Boolean!
+  checkJdAccount(id: Int!): JdAccountCheckResult!
+  checkWeiboAccount(id: Int!): Boolean!
+  clearConfigCache(type: ConfigType): Boolean!
+  confirmEventAttachmentUpload(input: ConfirmAttachmentUploadInput!): EventAttachment!
+  copyScreen(id: ID!): Screen!
+  createApiKey(input: CreateApiKeyDto!): ApiKeyResponseDto!
+  createEvent(input: CreateEventInput!): Event!
+  createEventType(input: CreateEventTypeInput!): EventType!
+  createIndustryType(input: CreateIndustryTypeInput!): IndustryType!
+  createMediaType(input: CreateMediaTypeInput!): MediaType!
+  createScreen(input: CreateScreenInput!): Screen!
+  createTag(input: CreateTagInput!): Tag!
+  createWeiboSearchTask(input: CreateWeiboSearchTaskInput!): WeiboSearchTask!
+  disableApiKey(id: Int!): Boolean!
+  dispatchNotification(input: NotificationInput!): Notification!
+  draftScreen(id: ID!): Screen!
+  enableApiKey(id: Int!): Boolean!
+  login(input: LoginDto!): AuthPayload!
+  logout: Boolean!
+  markWeiboAccountBanned(id: Int!, token: String!): Boolean!
+  pauseAllWeiboSearchTasks: Int!
+  pauseWeiboSearchTask(id: Int!, input: PauseWeiboTaskInput): WeiboSearchTask!
+  publishEvent(id: ID!): Event!
+  publishScreen(id: ID!): Screen!
+  refreshToken(input: RefreshTokenDto!): AuthPayload!
+  regenerateApiKey(id: Int!): RegenerateApiKeyDto!
+  register(input: RegisterDto!): AuthPayload!
+  removeApiKey(id: Int!): Boolean!
+  removeEvent(id: ID!): Boolean!
+  removeEventType(id: ID!): Boolean!
+  removeIndustryType(id: ID!): Boolean!
+  removeJdAccount(id: Int!): Boolean!
+  removeMediaType(id: Int!): Boolean!
+  removeScreen(id: ID!): Boolean!
+  removeTag(id: ID!): Boolean!
+  removeTagFromEvent(eventId: ID!, tagId: ID!): Boolean!
+  removeUser(id: String!): Boolean!
+  removeWeiboAccount(id: Int!): Boolean!
+  removeWeiboSearchTask(id: Int!): Boolean!
+  requestEventAttachmentUpload(input: RequestAttachmentUploadInput!): AttachmentUploadCredential!
+  resumeAllWeiboSearchTasks: Int!
+  resumeWeiboSearchTask(id: Int!, input: ResumeWeiboTaskInput): WeiboSearchTask!
+  runWeiboSearchTaskNow(id: Int!, input: RunWeiboTaskNowInput): WeiboSearchTask!
+  setDefaultScreen(id: ID!): Screen!
+  startJdLogin: JdLoginSession!
+  startWeiboLogin: WeiboLoginSession!
+  updateApiKey(id: Int!, input: UpdateApiKeyDto!): ApiKeyResponseDto!
+  updateEvent(id: ID!, input: UpdateEventInput!): Event!
+  updateEventType(id: ID!, input: UpdateEventTypeInput!): EventType!
+  updateIndustryType(id: ID!, input: UpdateIndustryTypeInput!): IndustryType!
+  updateMediaType(id: Int!, input: UpdateMediaTypeInput!): MediaType!
+  updateScreen(id: ID!, input: UpdateScreenInput!): Screen!
+  updateTag(id: ID!, input: UpdateTagInput!): Tag!
+  updateUser(id: String!, input: UpdateUserDto!): User!
+  updateWeiboSearchTask(id: Int!, input: UpdateWeiboSearchTaskInput!): WeiboSearchTask!
+}
+
+type Notification {
+  id: ID!
+  message: String!
+  timestamp: DateTime!
+  title: String!
+  userId: ID
+}
+
+input NotificationInput {
+  id: ID
+  message: String!
+  timestamp: DateTime
+  title: String!
+  userId: ID
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+input PauseWeiboTaskInput {
+  reason: String
+}
+
+type Query {
+  apiKey(id: Int!): ApiKeyResponseDto!
+  apiKeyStats(id: Int!): ApiKeyStatsDto!
+  apiKeySummary: ApiKeySummaryStatsDto!
+  apiKeys(filter: ApiKeyQueryDto): ApiKeyConnection!
+  configCacheStats: ConfigCacheStats!
+  configValue(type: ConfigType!): ConfigValue!
+  dashboardRecentActivities: [DashboardActivity!]!
+  dashboardStats: DashboardStats!
+  defaultScreen: Screen!
+  event(id: ID!): Event!
+  eventType(id: ID!): EventType!
+  eventTypes: [EventType!]!
+  events(filter: EventQueryInput): EventConnection!
+  eventsByTag(tagId: ID!): [Event!]!
+  eventsForMap(filter: EventMapQueryInput): [EventMapPoint!]!
+  eventsNearby(latitude: Float!, longitude: Float!, radius: Float!): [Event!]!
+  health: HealthStatus!
+  industryType(id: ID!): IndustryType!
+  industryTypes: [IndustryType!]!
+  jdAccountStats: JdAccountStats!
+  jdAccounts(filter: JdAccountFilterInput): JdAccountConnection!
+  jdLoginSession(sessionId: String!): JdLoginSession!
+  me: User!
+  mediaType(id: Int!): MediaType!
+  mediaTypes(filter: MediaTypeFilterInput): MediaTypeConnection!
+  popularTags(limit: Int): [Tag!]!
+  publishedScreens(limit: Int, page: Int): ScreenConnection!
+  screen(id: ID!): Screen!
+  screens(limit: Int, page: Int): ScreenConnection!
+  tag(id: ID!): Tag!
+  tags(keyword: String, page: Int, pageSize: Int): TagConnection!
+  user(id: String!): User!
+  users: [User!]!
+  weiboAccount(id: Int!): WeiboAccount!
+  weiboAccountStats: WeiboAccountStats!
+  weiboAccounts(filter: WeiboAccountFilterInput): WeiboAccountConnection!
+  weiboAccountsWithCookies(token: String!): [WeiboAccountWithCookies!]!
+  weiboLoginSession(sessionId: String!): WeiboLoginSession!
+  weiboSearchTask(id: Int!): WeiboSearchTask!
+  weiboSearchTaskStats: WeiboSearchTaskStats!
+  weiboSearchTasks(filter: WeiboSearchTaskFilterInput): WeiboSearchTaskConnection!
+}
+
+input RefreshTokenDto {
+  refreshToken: String!
+}
+
+type RegenerateApiKeyDto {
+  key: String!
+  warning: String!
+}
+
+input RegisterDto {
+  email: String!
+  password: String!
+  username: String!
+}
+
+input RequestAttachmentUploadInput {
+  eventId: ID!
+  fileMd5: String!
+  fileName: String!
+  fileSize: Float!
+  mimeType: String!
+}
+
+input ResumeWeiboTaskInput {
+  reason: String
+}
+
+input RunWeiboTaskNowInput {
+  reason: String
+}
+
+type Screen {
+  components: [ScreenComponent!]!
+  createdAt: DateTime!
+  createdBy: String!
+  creator: User
+  description: String
+  id: ID!
+  isDefault: Boolean!
+  layout: ScreenLayout!
+  name: String!
+  status: ScreenStatus!
+  updatedAt: DateTime!
+}
+
+type ScreenComponent {
+  config: JSONObject
+  dataSource: ScreenComponentDataSource
+  id: ID!
+  position: ScreenComponentPosition!
+  type: String!
+}
+
+type ScreenComponentDataSource {
+  data: JSONObject
+  refreshInterval: Int
+  type: ScreenComponentDataSourceType!
+  url: String
+}
+
+input ScreenComponentDataSourceInput {
+  data: JSONObject
+
+  """刷新频率，单位毫秒"""
+  refreshInterval: Int
+  type: ScreenComponentDataSourceType!
+  url: String
+}
+
+"""屏幕组件数据源类型"""
+enum ScreenComponentDataSourceType {
+  API
+  STATIC
+}
+
+input ScreenComponentInput {
+  config: JSONObject
+  dataSource: ScreenComponentDataSourceInput
+  id: String!
+  position: ScreenComponentPositionInput!
+  type: String!
+}
+
+type ScreenComponentPosition {
+  height: Int!
+  width: Int!
+  x: Int!
+  y: Int!
+  zIndex: Int!
+}
+
+input ScreenComponentPositionInput {
+  height: Int!
+  width: Int!
+  x: Int!
+  y: Int!
+  zIndex: Int!
+}
+
+type ScreenConnection {
+  edges: [ScreenEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ScreenEdge {
+  cursor: String!
+  node: Screen!
+}
+
+type ScreenGrid {
+  enabled: Boolean!
+  size: Int
+}
+
+input ScreenGridInput {
+  enabled: Boolean
+
+  """网格尺寸，单位为像素"""
+  size: Int
+}
+
+type ScreenLayout {
+  background: String!
+
+  """向后兼容的列数信息"""
+  cols: Int
+  grid: ScreenGrid
+  height: Int!
+
+  """向后兼容的行数信息"""
+  rows: Int
+  width: Int!
+}
+
+input ScreenLayoutInput {
+  background: String
+  cols: Int @deprecated(reason: "请使用 width + grid.size 表达列数")
+  grid: ScreenGridInput
+
+  """画布高度，单位像素"""
+  height: Int
+  rows: Int @deprecated(reason: "请使用 height + grid.size 表达行数")
+
+  """画布宽度，单位像素"""
+  width: Int
+}
+
+"""大屏状态"""
+enum ScreenStatus {
+  Draft
+  Published
+}
+
+type Subscription {
+  jdLoginEvents(sessionId: String!): JdLoginEvent!
+  weiboLoginEvents(sessionId: String!): WeiboLoginEvent!
+}
+
+type Tag {
+  createdAt: DateTime!
+  id: ID!
+  tagColor: String!
+  tagName: String!
+  updatedAt: DateTime!
+  usageCount: Int!
+}
+
+type TagConnection {
+  edges: [TagEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type TagEdge {
+  cursor: String!
+  node: Tag!
+}
+
+input UpdateApiKeyDto {
+  description: String
+  expiresAt: String
+  isActive: Boolean
+  name: String
+  permissions: [String!]
+  type: ApiKeyType
+}
+
+input UpdateEventInput {
+  city: String
+  district: String
+  eventName: String
+  eventTypeId: ID
+  industryTypeId: ID
+  latitude: Float
+  locationText: String
+  longitude: Float
+  occurTime: String
+  province: String
+  status: EventStatus
+  street: String
+  summary: String
+  tagIds: [ID!]
+}
+
+input UpdateEventTypeInput {
+  description: String
+  eventCode: String
+  eventName: String
+  sortOrder: Int
+  status: Int
+}
+
+input UpdateIndustryTypeInput {
+  description: String
+  industryCode: String
+  industryName: String
+  sortOrder: Int
+  status: Int
+}
+
+input UpdateMediaTypeInput {
+  description: String
+  sort: Int
+  status: MediaTypeStatus
+  typeCode: String
+  typeName: String
+}
+
+input UpdateScreenInput {
+  components: [ScreenComponentInput!]
+  description: String
+  layout: ScreenLayoutInput
+  name: String
+}
+
+input UpdateTagInput {
+  tagColor: String
+  tagName: String
+}
+
+input UpdateUserDto {
+  email: String
+  status: UserStatus
+  username: String
+}
+
+input UpdateWeiboSearchTaskInput {
+  crawlInterval: String
+  enableAccountRotation: Boolean
+  enabled: Boolean
+  keyword: String
+  latitude: Float
+  locationAddress: String
+  locationName: String
+  longitude: Float
+  maxRetries: Int
+  noDataThreshold: Int
+  resetNoDataCount: Boolean
+  resetRetryCount: Boolean
+  startDate: String
+  status: WeiboSearchTaskStatus
+  totalSegments: Int
+  weiboAccountId: Int
+}
+
+type User {
+  createdAt: DateTime!
+  email: String!
+  id: ID!
+  status: UserStatus!
+  updatedAt: DateTime!
+  username: String!
+}
+
+"""用户状态枚举"""
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+type WeiboAccount {
+  avatar: String
+  createdAt: DateTime!
+  hasCookies: Boolean!
+  id: ID!
+  lastCheckAt: DateTime
+  nickname: String!
+  status: String!
+  uid: String!
+  updatedAt: DateTime!
+}
+
+type WeiboAccountConnection {
+  edges: [WeiboAccountEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type WeiboAccountEdge {
+  cursor: String!
+  node: WeiboAccount!
+}
+
+input WeiboAccountFilterInput {
+  keyword: String
+  page: Float = 1
+  pageSize: Float = 10
+}
+
+type WeiboAccountStats {
+  online: Int!
+  todayNew: Int!
+  total: Int!
+}
+
+type WeiboAccountWithCookies {
+  cookies: String!
+  id: Int!
+  lastCheckAt: DateTime
+  status: String!
+  weiboNickname: String
+  weiboUid: String!
+}
+
+type WeiboLoginEvent {
+  data: JSONObject
+  type: WeiboLoginEventType!
+}
+
+"""微博扫码登录事件类型"""
+enum WeiboLoginEventType {
+  Error
+  Expired
+  Qrcode
+  Scanned
+  Status
+  Success
+}
+
+type WeiboLoginSession {
+  expired: Boolean!
+  expiresAt: DateTime!
+  lastEvent: WeiboLoginEvent
+  sessionId: String!
+}
+
+type WeiboSearchTask {
+  createdAt: DateTime!
+  currentCrawlTime: DateTime
+  enableAccountRotation: Boolean!
+  enabled: Boolean!
+  errorMessage: String
+  id: ID!
+  keyword: String!
+  latestCrawlTime: DateTime
+  maxRetries: Int!
+  nextRunAt: DateTime
+  progress: Int!
+  retryCount: Int!
+  startDate: DateTime!
+  status: WeiboSearchTaskStatus!
+  totalSegments: Int!
+  updatedAt: DateTime!
+  weiboAccountId: Int
+}
+
+type WeiboSearchTaskConnection {
+  edges: [WeiboSearchTaskEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type WeiboSearchTaskEdge {
+  cursor: String!
+  node: WeiboSearchTask!
+}
+
+input WeiboSearchTaskFilterInput {
+  enabled: Boolean
+  keyword: String
+  limit: Int = 10
+  page: Int = 1
+  sortBy: String
+  sortOrder: String = "DESC"
+  status: WeiboSearchTaskStatus
+}
+
+type WeiboSearchTaskStats {
+  completed: Int!
+  enabled: Int!
+  failed: Int!
+  paused: Int!
+  running: Int!
+  total: Int!
+}
+
+"""微博搜索任务状态"""
+enum WeiboSearchTaskStatus {
+  FAILED
+  PAUSED
+  PENDING
+  RUNNING
+  TIMEOUT
+}

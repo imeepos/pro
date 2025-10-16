@@ -22,11 +22,10 @@ export class AuthStateService {
 
     return this.authService.login(dto).pipe(
       tap(response => {
-        const actualResponse = (response as any).data || response;
-        this.tokenStorage.setToken(actualResponse.accessToken);
-        this.tokenStorage.setRefreshToken(actualResponse.refreshToken);
+        this.tokenStorage.setToken(response.accessToken);
+        this.tokenStorage.setRefreshToken(response.refreshToken);
         this.authStore.update({
-          user: actualResponse.user,
+          user: response.user,
           isAuthenticated: true,
           loading: false,
           error: null
@@ -36,7 +35,7 @@ export class AuthStateService {
       catchError(error => {
         this.authStore.update({
           loading: false,
-          error: error.error?.message || '登录失败'
+          error: error.message || '登录失败'
         });
         return of(null);
       })
@@ -48,11 +47,10 @@ export class AuthStateService {
 
     return this.authService.register(dto).pipe(
       tap(response => {
-        const actualResponse = (response as any).data || response;
-        this.tokenStorage.setToken(actualResponse.accessToken);
-        this.tokenStorage.setRefreshToken(actualResponse.refreshToken);
+        this.tokenStorage.setToken(response.accessToken);
+        this.tokenStorage.setRefreshToken(response.refreshToken);
         this.authStore.update({
-          user: actualResponse.user,
+          user: response.user,
           isAuthenticated: true,
           loading: false,
           error: null
@@ -62,7 +60,7 @@ export class AuthStateService {
       catchError(error => {
         this.authStore.update({
           loading: false,
-          error: error.error?.message || '注册失败'
+          error: error.message || '注册失败'
         });
         return of(null);
       })
@@ -112,16 +110,9 @@ export class AuthStateService {
 
     this.authStore.update({ loading: true });
     return this.authService.getProfile().pipe(
-      tap((profile) => {
+      tap(user => {
         this.authStore.update({
-          user: {
-            id: profile.userId,
-            username: '',
-            email: '',
-            status: 'active' as any,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          },
+          user,
           isAuthenticated: true,
           loading: false,
           error: null

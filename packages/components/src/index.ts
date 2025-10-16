@@ -18,6 +18,15 @@ export type {
   ConsistencyValidationReport
 } from './validation/component-consistency.service';
 
+// Data providers
+export {
+  WEIBO_STATS_DATA_SOURCE,
+  EVENT_DATA_SOURCE,
+  TOKEN_STORAGE,
+  type WeiboStatsDataSource,
+  type EventDataSource
+} from './data-providers/data-providers';
+
 // WebSocket Services (Unified Architecture)
 export {
   ConnectionState,

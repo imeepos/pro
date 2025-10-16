@@ -4,7 +4,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractContro
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { ApiKey, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyType, ApiKeyStatus } from '@pro/sdk';
+import { ApiKey, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyType, ApiKeyStatus } from '@pro/types';
 
 @Component({
   selector: 'app-api-key-form',

@@ -14,7 +14,11 @@
     "typecheck": "turbo typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "clean": "turbo clean && rm -rf node_modules",
-    "claude": "claude --dangerously-skip-permissions"
+    "claude": "claude --dangerously-skip-permissions",
+    "check-deps": "node scripts/check-dependencies.js",
+    "deps:check": "node scripts/check-dependencies.js",
+    "deps:audit": "pnpm audit --audit-level moderate",
+    "deps:update": "pnpm update --interactive"
   },
   "devDependencies": {
     "@swc/core": "^1.13.5",
@@ -25,12 +29,47 @@
     "eslint-plugin-prettier": "^5.2.1",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
-    "turbo": "^2.3.3",
+    "turbo": "2.3.3",
     "typescript": "~5.8.0"
   },
   "resolutions": {
-    "undici": "^5.28.0",
-    "@nestjs/typeorm": "^11.0.0"
+    "typescript": "~5.8.0",
+    "@types/node": "^20.3.1",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
+    "@typescript-eslint/parser": "^8.19.1",
+    "tailwindcss": "^3.4.1",
+
+    "@nestjs/common": "11.0.13",
+    "@nestjs/core": "11.0.13",
+    "@nestjs/platform-express": "11.0.13",
+    "@nestjs/config": "4.0.2",
+    "@nestjs/typeorm": "11.0.0",
+    "@nestjs/jwt": "11.0.0",
+    "@nestjs/passport": "11.0.5",
+    "@nestjs/swagger": "11.0.5",
+    "@nestjs/platform-socket.io": "^11.0.0",
+    "@nestjs/websockets": "^11.0.0",
+    "@nestjs/microservices": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
+
+    "typeorm": "^0.3.20",
+    "pg": "8.13.1",
+    "reflect-metadata": "0.2.2",
+    "mongoose": "8.8.4",
+
+    "bcryptjs": "2.4.3",
+    "passport-jwt": "4.0.1",
+    "passport-local": "1.0.0",
+
+    "tsup": "^8.5.0",
+    "turbo": "2.3.3",
+
+    "undici": "5.28.0",
+
+    "rxjs": "7.8.1",
+    "axios": "1.7.9"
   },
   "dependencies": {
     "nestjs-pino": "^4.4.1",
@@ -45,7 +84,8 @@
       "signal-exit@^3": "4.1.0",
       "signal-exit@3.0.7": "4.1.0",
       "restore-cursor@5.1.0>signal-exit": "4.1.0",
-      "restore-cursor@3.1.0>signal-exit": "4.1.0"
+      "restore-cursor@3.1.0>signal-exit": "4.1.0",
+      "source-map": "0.7.4"
     }
   }
 }

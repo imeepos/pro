@@ -4,7 +4,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { Subject, combineLatest, debounceTime, distinctUntilChanged } from 'rxjs';
 import { takeUntil, startWith, map } from 'rxjs/operators';
 
-import { SkerSDK, ApiKey, ApiKeyFilters, ApiKeyStats, ApiKeyStatus, ApiKeyType } from '@pro/sdk';
+import { ApiKey, ApiKeyFilters, ApiKeyStats, ApiKeyStatus, ApiKeyType } from '@pro/types';
 import { ApiKeyTableComponent, ApiKeyModalComponent, ApiKeyStatsComponent } from './components';
 import { ApiKeyService } from './services';
 
@@ -47,8 +47,7 @@ export class ApiKeysComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
-    private apiKeyService: ApiKeyService,
-    private sdk: SkerSDK
+    private apiKeyService: ApiKeyService
   ) {
     this.searchForm = this.fb.group({
       search: [''],

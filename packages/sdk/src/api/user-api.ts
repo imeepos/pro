@@ -1,13 +1,26 @@
-import { HttpClient } from '../client/http-client.js';
+import { GraphQLClient } from '../client/graphql-client.js';
 import { User } from '@pro/types';
 import { fromPromise } from '../utils/observable-adapter.js';
 import { Observable } from 'rxjs';
 
-/**
- * 用户 API 接口封装
- */
+interface UsersResponse {
+  users: User[];
+}
+
+interface UserResponse {
+  user: User;
+}
+
+interface UpdateUserResponse {
+  updateUser: User;
+}
+
+interface RemoveUserResponse {
+  removeUser: boolean;
+}
+
 export class UserApi {
-  private http: HttpClient;
+  private client: GraphQLClient;
   private readonly baseUrl: string;
 
   constructor(baseUrl?: string, tokenKey?: string) {
@@ -15,22 +28,73 @@ export class UserApi {
       throw new Error(`UserApi missing base url!`);
     }
     this.baseUrl = baseUrl;
-    this.http = new HttpClient(this.baseUrl, tokenKey);
+    this.client = new GraphQLClient(this.baseUrl, tokenKey);
   }
 
-  /**
-   * 获取用户信息
-   */
   getUserInfo(id: string): Observable<User> {
-    const promise = this.http.get<User>(`/api/users/${id}`);
+    const query = `
+      query User($id: String!) {
+        user(id: $id) {
+          id
+          username
+          email
+          status
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const promise = this.client.query<UserResponse>(query, { id }).then((response) => response.user);
     return fromPromise(promise);
   }
 
-  /**
-   * 更新用户信息
-   */
   updateUserInfo(id: string, data: Partial<User>): Observable<User> {
-    const promise = this.http.put<User>(`/api/users/${id}`, data);
+    const mutation = `
+      mutation UpdateUser($id: String!, $input: UpdateUserDto!) {
+        updateUser(id: $id, input: $input) {
+          id
+          username
+          email
+          status
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const promise = this.client
+      .mutate<UpdateUserResponse>(mutation, { id, input: data })
+      .then((response) => response.updateUser);
+    return fromPromise(promise);
+  }
+
+  getUsers(): Observable<User[]> {
+    const query = `
+      query Users {
+        users {
+          id
+          username
+          email
+          status
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    const promise = this.client.query<UsersResponse>(query).then((response) => response.users);
+    return fromPromise(promise);
+  }
+
+  removeUser(id: string): Observable<boolean> {
+    const mutation = `
+      mutation RemoveUser($id: String!) {
+        removeUser(id: $id)
+      }
+    `;
+
+    const promise = this.client.mutate<RemoveUserResponse>(mutation, { id }).then((response) => response.removeUser);
     return fromPromise(promise);
   }
 }

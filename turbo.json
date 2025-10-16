@@ -4,7 +4,6 @@
     ".env",
     "tsconfig.base.json"
   ],
-  "concurrency": "2",
   "tasks": {
     "build": {
       "dependsOn": [

@@ -1,0 +1,42 @@
+{
+  "name": "@pro/llm",
+  "version": "1.0.0",
+  "description": "Elegant LLM toolkit with OpenAI SDK",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup && tsc --project tsconfig.types.json",
+    "build:js": "tsup",
+    "build:types": "tsc --project tsconfig.types.json",
+    "clean": "rimraf dist",
+    "dev": "tsup --watch",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "llm",
+    "openai",
+    "gpt",
+    "ai"
+  ],
+  "license": "UNLICENSED",
+  "dependencies": {
+    "openai": "^4.77.3"
+  },
+  "devDependencies": {
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*",
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.0"
+  }
+}

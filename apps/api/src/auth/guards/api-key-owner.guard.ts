@@ -5,9 +5,11 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiKeyEntity } from '@pro/entities';
+import { resolveRequest } from '../../common/utils/context.utils';
 
 /**
  * API Key 所有者守卫
@@ -21,11 +23,16 @@ export class ApiKeyOwnerGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    const user = request.user;
-    const apiKeyId = request.params.id || request.params.keyId;
+    const request = resolveRequest(context);
+    const gqlArgs = this.tryGetGraphqlArgs(context);
+    const user = request.user as { userId?: string } | undefined;
+    const apiKeyId =
+      request.params?.id ??
+      request.params?.keyId ??
+      gqlArgs?.id ??
+      gqlArgs?.keyId;
 
-    if (!user || !user.userId) {
+    if (!user?.userId) {
       throw new ForbiddenException('用户未认证');
     }
 
@@ -35,7 +42,7 @@ export class ApiKeyOwnerGuard implements CanActivate {
     }
 
     const apiKey = await this.apiKeyRepo.findOne({
-      where: { id: parseInt(apiKeyId) },
+      where: { id: Number(apiKeyId) },
     });
 
     if (!apiKey) {
@@ -50,5 +57,13 @@ export class ApiKeyOwnerGuard implements CanActivate {
     request.apiKey = apiKey;
 
     return true;
+  }
+
+  private tryGetGraphqlArgs(context: ExecutionContext) {
+    try {
+      return GqlExecutionContext.create(context).getArgs<Record<string, any>>();
+    } catch (error) {
+      return {} as Record<string, any>;
+    }
   }
 }

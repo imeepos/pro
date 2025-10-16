@@ -24,17 +24,28 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage"
   },
-  "keywords": ["mongodb", "database", "crawler"],
+  "keywords": [
+    "mongodb",
+    "database",
+    "crawler"
+  ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@pro/types": "workspace:*",
-    "@nestjs/common": "^11.0.0",
+    "@nestjs/common": "11.0.13",
+    "@nestjs/core": "11.0.13",
+    "@nestjs/microservices": "^11.0.0",
     "@nestjs/mongoose": "^11.0.3",
+    "@nestjs/platform-express": "11.0.13",
+    "@nestjs/platform-socket.io": "^11.0.0",
+    "@nestjs/websockets": "^11.0.0",
+    "@pro/types": "workspace:*",
     "mongoose": "^8.0.0"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "@nestjs/testing": "^11.0.0",
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*",
     "@types/jest": "^29.5.2",
     "@types/node": "^20.3.1",
     "jest": "^29.5.0",

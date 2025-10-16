@@ -94,6 +94,10 @@ export class HttpClient {
     return this.request<T>('DELETE', url, undefined, params);
   }
 
+  async patch<T>(url: string, data?: unknown): Promise<T> {
+    return this.request<T>('PATCH', url, data);
+  }
+
   /**
    * 上传文件，支持进度回调
    */

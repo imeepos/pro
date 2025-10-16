@@ -1,4 +1,4 @@
-import { HttpClient } from '../client/http-client.js';
+import { GraphQLClient } from '../client/graphql-client.js';
 import {
   ConfigType,
   GetConfigParams,
@@ -6,43 +6,71 @@ import {
   CacheStats,
 } from '../types/config.types.js';
 
-/**
- * 配置 API 接口封装
- */
+interface ConfigValueResponse {
+  configValue: {
+    value: string;
+    expiresAt?: string;
+  };
+}
+
+interface ConfigCacheStatsResponse {
+  configCacheStats: CacheStats;
+}
+
+interface ClearConfigCacheResponse {
+  clearConfigCache: boolean;
+}
+
 export class ConfigApi {
-  private http: HttpClient;
+  private client: GraphQLClient;
 
-  constructor(baseUrl: string) {
-    this.http = new HttpClient(baseUrl);
+  constructor(baseUrl: string, tokenKey?: string) {
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
-  /**
-   * 获取配置值
-   */
   async getConfig(params: GetConfigParams): Promise<ConfigResponse> {
-    return this.http.get<ConfigResponse>('/api/config', params as unknown as Record<string, unknown>);
+    const query = `
+      query ConfigValue($type: ConfigType!) {
+        configValue(type: $type) {
+          value
+          expiresAt
+        }
+      }
+    `;
+
+    const response = await this.client.query<ConfigValueResponse>(query, { type: params.type });
+    return {
+      value: response.configValue.value,
+      expiresAt: response.configValue.expiresAt,
+    };
   }
 
-  /**
-   * 获取高德地图API Key
-   */
   async getAmapApiKey(): Promise<string> {
     const response = await this.getConfig({ type: ConfigType.AMAP_API_KEY });
     return response.value;
   }
 
-  /**
-   * 清除配置缓存
-   */
   async clearCache(type?: ConfigType): Promise<void> {
-    const params = type ? { type } : undefined;
-    await this.http.delete('/api/config/cache', params as unknown as Record<string, unknown>);
+    const mutation = `
+      mutation ClearConfigCache($type: ConfigType) {
+        clearConfigCache(type: $type)
+      }
+    `;
+
+    await this.client.mutate<ClearConfigCacheResponse>(mutation, type ? { type } : undefined);
   }
 
-  /**
-   * 获取缓存统计信息
-   */
   async getCacheStats(): Promise<CacheStats> {
-    return this.http.get<CacheStats>('/api/config/cache/stats');
+    const query = `
+      query ConfigCacheStats {
+        configCacheStats {
+          size
+          keys
+        }
+      }
+    `;
+
+    const response = await this.client.query<ConfigCacheStatsResponse>(query);
+    return response.configCacheStats;
   }
 }

@@ -23,14 +23,20 @@
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\""
   },
-  "keywords": ["entities", "data", "models"],
+  "keywords": [
+    "entities",
+    "data",
+    "models"
+  ],
   "license": "UNLICENSED",
   "dependencies": {
-    "reflect-metadata": "^0.2.0",
-    "typeorm": "^0.3.20",
-    "@pro/types": "workspace:*"
+    "@pro/types": "workspace:*",
+    "reflect-metadata": "0.2.2",
+    "typeorm": "^0.3.20"
   },
   "devDependencies": {
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*",
     "@types/node": "^20.3.1",
     "tsup": "^8.5.0",
     "typescript": "~5.8.0"

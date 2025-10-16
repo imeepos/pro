@@ -47,7 +47,7 @@ export class ApiKeyService {
   /**
    * 为用户创建新的API Key
    */
-  async createApiKey(userId: string, createDto: CreateApiKeyDto, createdIp?: string): Promise<ApiKeyEntity> {
+  async createApiKey(userId: string, createDto: CreateApiKeyDto, createdIp?: string): Promise<ApiKeyResponseDto> {
     // 验证用户存在
     const user = await this.userRepo.findOne({ where: { id: userId, status: UserStatus.ACTIVE } });
     if (!user) {
@@ -81,10 +81,7 @@ export class ApiKeyService {
 
     const savedApiKey = await this.apiKeyRepo.save(apiKey);
 
-    // 不返回完整的key，只返回前缀和后几位
-    savedApiKey.key = `${savedApiKey.key.substring(0, 7)}...${savedApiKey.key.substring(savedApiKey.key.length - 4)}`;
-
-    return savedApiKey;
+    return this.toResponse(savedApiKey);
   }
 
   /**
@@ -123,20 +120,14 @@ export class ApiKeyService {
   /**
    * 获取用户的所有API Key
    */
-  async getUserApiKeys(userId: string): Promise<ApiKeyEntity[]> {
+  async getUserApiKeys(userId: string): Promise<ApiKeyResponseDto[]> {
     const apiKeys = await this.apiKeyRepo.find({
       where: { userId },
       order: { createdAt: 'DESC' },
     });
 
     // 隐藏完整的key
-    return apiKeys.map(key => {
-      const hiddenKey = {
-        ...key,
-        key: `${key.key.substring(0, 7)}...${key.key.substring(key.key.length - 4)}`,
-      };
-      return hiddenKey as ApiKeyEntity;
-    });
+    return apiKeys.map((key) => this.toResponse(key));
   }
 
   /**
@@ -157,7 +148,7 @@ export class ApiKeyService {
   /**
    * 更新API Key
    */
-  async updateApiKey(userId: string, keyId: number, updateDto: UpdateApiKeyDto): Promise<ApiKeyEntity> {
+  async updateApiKey(userId: string, keyId: number, updateDto: UpdateApiKeyDto): Promise<ApiKeyResponseDto> {
     const apiKey = await this.apiKeyRepo.findOne({
       where: { id: keyId, userId },
     });
@@ -184,9 +175,12 @@ export class ApiKeyService {
     await this.apiKeyRepo.update(keyId, updateData);
 
     const updatedApiKey = await this.apiKeyRepo.findOne({ where: { id: keyId } });
-    updatedApiKey.key = `${updatedApiKey.key.substring(0, 7)}...${updatedApiKey.key.substring(updatedApiKey.key.length - 4)}`;
 
-    return updatedApiKey;
+    if (!updatedApiKey) {
+      throw new NotFoundException('API Key 不存在');
+    }
+
+    return this.toResponse(updatedApiKey);
   }
 
   /**
@@ -280,7 +274,7 @@ export class ApiKeyService {
       .getMany();
 
     // 转换为响应格式（隐藏完整的key）
-    const items = apiKeys.map(apiKey => this.transformToResponseDto(apiKey));
+    const items = apiKeys.map(apiKey => this.toResponse(apiKey));
 
     const totalPages = Math.ceil(total / limit);
 
@@ -307,7 +301,7 @@ export class ApiKeyService {
       throw new NotFoundException('API Key 不存在');
     }
 
-    return this.transformToResponseDto(apiKey);
+    return this.toResponse(apiKey);
   }
 
   /**
@@ -443,7 +437,7 @@ export class ApiKeyService {
   /**
    * 将ApiKeyEntity转换为响应DTO
    */
-  private transformToResponseDto(apiKey: ApiKeyEntity): ApiKeyResponseDto {
+  public toResponse(apiKey: ApiKeyEntity): ApiKeyResponseDto {
     return {
       id: apiKey.id,
       key: `${apiKey.key.substring(0, 7)}...${apiKey.key.substring(apiKey.key.length - 4)}`,

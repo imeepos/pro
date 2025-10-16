@@ -1,15 +1,18 @@
 import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { provideAngularQuery, QueryClient } from '@tanstack/angular-query-experimental';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, EventMapDistributionComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig } from '@pro/components';
-import { SkerSDK } from '@pro/sdk';
+import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, EventMapDistributionComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig, TOKEN_STORAGE, WEIBO_STATS_DATA_SOURCE, EVENT_DATA_SOURCE } from '@pro/components';
 import { TokenStorageService } from './core/services/token-storage.service';
-import { HttpClientService } from './core/services/http-client.service';
 import { AuthStateService } from './core/state/auth-state.service';
 import { environment } from '../environments/environment';
+import { WeiboDataService } from './core/services/weibo-data.service';
+import { EventDataService } from './core/services/event-data.service';
+import { provideAnimations } from '@angular/platform-browser/animations';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
   return () => {
@@ -83,7 +86,7 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
 
 function initializeAuth(authStateService: AuthStateService) {
   return () => {
-    return authStateService.checkAuth().toPromise();
+    return firstValueFrom(authStateService.checkAuth());
   };
 }
 
@@ -93,6 +96,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([tokenInterceptor, errorInterceptor])
     ),
+    provideAnimations(),
     {
       provide: APP_INITIALIZER,
       useFactory: initializeComponentRegistry,
@@ -105,21 +109,32 @@ export const appConfig: ApplicationConfig = {
       deps: [AuthStateService],
       multi: true
     },
+    provideAngularQuery(new QueryClient({
+      defaultOptions: {
+        queries: {
+          staleTime: 60_000,
+          gcTime: 300_000,
+          retry: 2,
+          refetchOnWindowFocus: false
+        }
+      }
+    })),
     // Services
     TokenStorageService,
-    HttpClientService,
+    WeiboDataService,
+    EventDataService,
     // Token Storage injection for components
     {
-      provide: 'ITokenStorage',
+      provide: TOKEN_STORAGE,
       useExisting: TokenStorageService
     },
-    // SDK
     {
-      provide: SkerSDK,
-      useFactory: () => {
-        const baseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
-        return new SkerSDK(baseUrl, environment.tokenKey);
-      }
+      provide: WEIBO_STATS_DATA_SOURCE,
+      useExisting: WeiboDataService
+    },
+    {
+      provide: EVENT_DATA_SOURCE,
+      useExisting: EventDataService
     },
     // WebSocket Auth Service
     JwtAuthService,

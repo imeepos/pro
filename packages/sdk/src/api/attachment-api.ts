@@ -1,36 +1,53 @@
-import { HttpClient } from '../client/http-client.js';
-import { Attachment, FileType, UploadOptions, SortData } from '../types/attachment.types.js';
+import { GraphQLClient } from '../client/graphql-client.js';
+import { Attachment, FileType, UploadOptions } from '../types/attachment.types.js';
 
-/**
- * 附件 API 接口封装
- */
+interface AttachmentUploadCredential {
+  token: string;
+  uploadUrl?: string;
+  objectKey: string;
+  bucketName: string;
+  expiresAt: Date;
+  requiresUpload: boolean;
+}
+
+interface RequestEventAttachmentUploadResponse {
+  requestEventAttachmentUpload: AttachmentUploadCredential;
+}
+
+interface ConfirmEventAttachmentUploadResponse {
+  confirmEventAttachmentUpload: Attachment;
+}
+
 export class AttachmentApi {
-  private http: HttpClient;
+  private client: GraphQLClient;
 
-  constructor(baseUrl: string) {
-    this.http = new HttpClient(baseUrl);
+  constructor(baseUrl: string, tokenKey?: string) {
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
-  /**
-   * 上传附件（带进度回调）
-   */
   async uploadAttachment(
     eventId: number,
     file: File,
     options?: UploadOptions
   ): Promise<Attachment> {
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const result = await this.http.upload<Attachment>(
-        `/api/events/${eventId}/attachments`,
-        formData,
-        options?.onProgress
-      );
+      const fileMd5 = await this.calculateFileMd5(file);
 
-      options?.onSuccess?.(result);
-      return result;
+      const credential = await this.requestUpload({
+        eventId: eventId.toString(),
+        fileName: file.name,
+        mimeType: file.type,
+        fileSize: file.size,
+        fileMd5,
+      });
+
+      if (credential.requiresUpload && credential.uploadUrl) {
+        await this.uploadToStorage(credential.uploadUrl, file, options?.onProgress);
+      }
+
+      const attachment = await this.confirmUpload(credential.token);
+      options?.onSuccess?.(attachment);
+      return attachment;
     } catch (error) {
       const err = error instanceof Error ? error : new Error('上传失败');
       options?.onError?.(err);
@@ -38,9 +55,6 @@ export class AttachmentApi {
     }
   }
 
-  /**
-   * 上传图片
-   */
   async uploadImage(
     eventId: number,
     file: File,
@@ -50,9 +64,6 @@ export class AttachmentApi {
     return this.uploadAttachment(eventId, file, options);
   }
 
-  /**
-   * 上传视频
-   */
   async uploadVideo(
     eventId: number,
     file: File,
@@ -62,9 +73,6 @@ export class AttachmentApi {
     return this.uploadAttachment(eventId, file, options);
   }
 
-  /**
-   * 上传文档
-   */
   async uploadDocument(
     eventId: number,
     file: File,
@@ -74,30 +82,157 @@ export class AttachmentApi {
     return this.uploadAttachment(eventId, file, options);
   }
 
-  /**
-   * 获取事件的所有附件
-   */
   async getAttachments(eventId: number): Promise<Attachment[]> {
-    return this.http.get<Attachment[]>(`/api/events/${eventId}/attachments`);
+    const query = `
+      query Event($id: ID!) {
+        event(id: $id) {
+          attachments {
+            id
+            eventId
+            fileName
+            fileUrl
+            bucketName
+            objectName
+            fileType
+            fileSize
+            mimeType
+            fileMd5
+            sortOrder
+            createdAt
+          }
+        }
+      }
+    `;
+
+    const response = await this.client.query<{ event: { attachments: Attachment[] } }>(
+      query,
+      { id: eventId.toString() }
+    );
+    return response.event.attachments;
   }
 
-  /**
-   * 删除附件
-   */
   async deleteAttachment(eventId: number, attachmentId: number): Promise<void> {
-    return this.http.delete(`/api/events/${eventId}/attachments/${attachmentId}`);
+    const mutation = `
+      mutation RemoveEventAttachment($eventId: ID!, $attachmentId: ID!) {
+        removeEventAttachment(eventId: $eventId, attachmentId: $attachmentId)
+      }
+    `;
+
+    await this.client.mutate(mutation, {
+      eventId: eventId.toString(),
+      attachmentId: attachmentId.toString(),
+    });
   }
 
-  /**
-   * 更新附件排序
-   */
-  async updateSort(eventId: number, sortData: SortData[]): Promise<void> {
-    return this.http.put(`/api/events/${eventId}/attachments/sort`, { attachments: sortData });
+  async updateSort(eventId: number, sortData: Array<{ id: string; sortOrder: number }>): Promise<void> {
+    const mutation = `
+      mutation UpdateEventAttachmentsSort($eventId: ID!, $attachments: [UpdateAttachmentSortInput!]!) {
+        updateEventAttachmentsSort(eventId: $eventId, attachments: $attachments)
+      }
+    `;
+
+    await this.client.mutate(mutation, {
+      eventId: eventId.toString(),
+      attachments: sortData,
+    });
   }
 
-  /**
-   * 验证文件类型
-   */
+  private async requestUpload(input: {
+    eventId: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    fileMd5: string;
+  }): Promise<AttachmentUploadCredential> {
+    const mutation = `
+      mutation RequestEventAttachmentUpload($input: RequestAttachmentUploadInput!) {
+        requestEventAttachmentUpload(input: $input) {
+          token
+          uploadUrl
+          objectKey
+          bucketName
+          expiresAt
+          requiresUpload
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<RequestEventAttachmentUploadResponse>(
+      mutation,
+      { input }
+    );
+    return response.requestEventAttachmentUpload;
+  }
+
+  private async uploadToStorage(
+    uploadUrl: string,
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const progress = (event.loaded / event.total) * 100;
+            onProgress(progress);
+          }
+        });
+      }
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        reject(new Error('Upload failed'));
+      });
+
+      xhr.open('PUT', uploadUrl);
+      xhr.setRequestHeader('Content-Type', file.type);
+      xhr.send(file);
+    });
+  }
+
+  private async confirmUpload(token: string): Promise<Attachment> {
+    const mutation = `
+      mutation ConfirmEventAttachmentUpload($input: ConfirmAttachmentUploadInput!) {
+        confirmEventAttachmentUpload(input: $input) {
+          id
+          eventId
+          fileName
+          fileUrl
+          bucketName
+          objectName
+          fileType
+          fileSize
+          mimeType
+          fileMd5
+          sortOrder
+          createdAt
+        }
+      }
+    `;
+
+    const response = await this.client.mutate<ConfirmEventAttachmentUploadResponse>(
+      mutation,
+      { input: { token } }
+    );
+    return response.confirmEventAttachmentUpload;
+  }
+
+  private async calculateFileMd5(file: File): Promise<string> {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('MD5', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
   private validateFileType(file: File, expectedType: FileType): void {
     const mimeType = file.type.toLowerCase();
 
@@ -113,10 +248,13 @@ export class AttachmentApi {
         }
         break;
       case FileType.DOCUMENT:
-        const docTypes = ['application/pdf', 'application/msword',
+        const docTypes = [
+          'application/pdf',
+          'application/msword',
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           'application/vnd.ms-excel',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
         if (!docTypes.includes(mimeType)) {
           throw new Error('文件必须是文档格式（PDF、Word、Excel）');
         }

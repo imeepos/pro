@@ -1,209 +1,333 @@
-import { Observable } from 'rxjs';
-import { HttpClient } from '../client/http-client.js';
+import { Observable, from } from 'rxjs';
+import { GraphQLClient } from '../client/graphql-client.js';
 import {
   WeiboSearchTask,
   WeiboSearchTaskListResponse,
   CreateWeiboSearchTaskDto,
   UpdateWeiboSearchTaskDto,
-  WeiboSearchTaskFilters
+  WeiboSearchTaskFilters,
+  WeiboSearchTaskStatus,
 } from '@pro/types';
 import { TaskStats } from '../types/weibo-search-tasks.types.js';
 
-/**
- * 微博搜索任务 API 接口封装
- * 将 Angular 中的 WeiboSearchTasksApiService 功能迁移到 SDK
- */
+interface WeiboSearchTaskNode {
+  id: number;
+  keyword: string;
+  enabled: boolean;
+  status: string;
+  startDate: string | Date;
+  nextRunAt?: string | Date;
+  latestCrawlTime?: string | Date;
+  currentCrawlTime?: string | Date;
+  progress: number;
+  totalSegments: number;
+  retryCount: number;
+  maxRetries: number;
+  errorMessage?: string;
+  enableAccountRotation: boolean;
+  weiboAccountId?: number;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+interface PageInfo {
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+interface WeiboSearchTaskConnection {
+  nodes: WeiboSearchTaskNode[];
+  pageInfo: PageInfo;
+}
+
+interface WeiboSearchTaskStatsResponse {
+  total: number;
+  enabled: number;
+  running: number;
+  paused: number;
+  failed: number;
+  completed: number;
+}
+
 export class WeiboSearchTasksApi {
-  private readonly http: HttpClient;
-  private readonly baseUrl: string;
+  private readonly client: GraphQLClient;
 
   constructor(baseUrl?: string, tokenKey?: string) {
-    // 如果没有提供 baseUrl，使用默认值
-    const baseApiUrl = baseUrl || 'http://localhost:3000';
-    this.http = new HttpClient(baseApiUrl, tokenKey);
-    this.baseUrl = '/api/weibo-search-tasks';
+    if (!baseUrl) {
+      throw new Error('baseUrl is required for WeiboSearchTasksApi');
+    }
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
-  /**
-   * 获取任务列表
-   */
   findAll(filters?: WeiboSearchTaskFilters): Observable<WeiboSearchTaskListResponse> {
-    return new Observable<WeiboSearchTaskListResponse>((subscriber) => {
-      const params = this.buildQueryParams(filters);
-      this.http.get<WeiboSearchTaskListResponse>(this.baseUrl, params)
-        .then((response) => {
-          subscriber.next(response);
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    const query = `
+      query GetWeiboSearchTasks($filter: WeiboSearchTaskFilterInput) {
+        weiboSearchTasks(filter: $filter) {
+          nodes {
+            id keyword enabled status startDate nextRunAt
+            latestCrawlTime currentCrawlTime progress totalSegments
+            retryCount maxRetries errorMessage enableAccountRotation
+            weiboAccountId createdAt updatedAt
+          }
+          pageInfo {
+            total page pageSize totalPages
+          }
+        }
+      }
+    `;
+
+    const filter = this.buildFilterInput(filters);
+
+    return from(
+      this.client
+        .query<{ weiboSearchTasks: WeiboSearchTaskConnection }>(query, { filter })
+        .then(res => ({
+          data: res.weiboSearchTasks.nodes.map(node => this.adaptTask(node)),
+          total: res.weiboSearchTasks.pageInfo.total,
+          page: res.weiboSearchTasks.pageInfo.page,
+          limit: res.weiboSearchTasks.pageInfo.pageSize,
+          totalPages: res.weiboSearchTasks.pageInfo.totalPages,
+        }))
+    );
   }
 
-  /**
-   * 获取单个任务
-   */
   findOne(id: number): Observable<WeiboSearchTask> {
-    return new Observable<WeiboSearchTask>((subscriber) => {
-      this.http.get<WeiboSearchTask>(`${this.baseUrl}/${id}`)
-        .then((response) => {
-          subscriber.next(response);
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    const query = `
+      query GetWeiboSearchTask($id: Int!) {
+        weiboSearchTask(id: $id) {
+          id keyword enabled status startDate nextRunAt
+          latestCrawlTime currentCrawlTime progress totalSegments
+          retryCount maxRetries errorMessage enableAccountRotation
+          weiboAccountId createdAt updatedAt
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .query<{ weiboSearchTask: WeiboSearchTaskNode }>(query, { id })
+        .then(res => this.adaptTask(res.weiboSearchTask))
+    );
   }
 
-  /**
-   * 创建任务
-   */
   create(dto: CreateWeiboSearchTaskDto): Observable<WeiboSearchTask> {
-    return new Observable<WeiboSearchTask>((subscriber) => {
-      this.http.post<WeiboSearchTask>(this.baseUrl, dto)
-        .then((response) => {
-          subscriber.next(response);
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    const mutation = `
+      mutation CreateWeiboSearchTask($input: CreateWeiboSearchTaskInput!) {
+        createWeiboSearchTask(input: $input) {
+          id keyword enabled status startDate nextRunAt
+          latestCrawlTime currentCrawlTime progress totalSegments
+          retryCount maxRetries errorMessage enableAccountRotation
+          weiboAccountId createdAt updatedAt
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<{ createWeiboSearchTask: WeiboSearchTaskNode }>(mutation, { input: dto })
+        .then(res => this.adaptTask(res.createWeiboSearchTask))
+    );
   }
 
-  /**
-   * 更新任务
-   */
   update(id: number, updates: UpdateWeiboSearchTaskDto): Observable<WeiboSearchTask> {
-    return new Observable<WeiboSearchTask>((subscriber) => {
-      this.http.put<WeiboSearchTask>(`${this.baseUrl}/${id}`, updates)
-        .then((response) => {
-          subscriber.next(response);
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    const mutation = `
+      mutation UpdateWeiboSearchTask($id: Int!, $input: UpdateWeiboSearchTaskInput!) {
+        updateWeiboSearchTask(id: $id, input: $input) {
+          id keyword enabled status startDate nextRunAt
+          latestCrawlTime currentCrawlTime progress totalSegments
+          retryCount maxRetries errorMessage enableAccountRotation
+          weiboAccountId createdAt updatedAt
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<{ updateWeiboSearchTask: WeiboSearchTaskNode }>(mutation, { id, input: updates })
+        .then(res => this.adaptTask(res.updateWeiboSearchTask))
+    );
   }
 
-  /**
-   * 删除任务
-   */
   delete(id: number): Observable<void> {
-    return new Observable<void>((subscriber) => {
-      this.http.delete<void>(`${this.baseUrl}/${id}`)
-        .then(() => {
-          subscriber.next();
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    const mutation = `
+      mutation RemoveWeiboSearchTask($id: Int!) {
+        removeWeiboSearchTask(id: $id)
+      }
+    `;
+
+    return from(
+      this.client.mutate<{ removeWeiboSearchTask: boolean }>(mutation, { id }).then(() => undefined)
+    );
   }
 
-  /**
-   * 暂停任务
-   */
   pause(id: number): Observable<WeiboSearchTask> {
-    return new Observable<WeiboSearchTask>((subscriber) => {
-      this.http.post<WeiboSearchTask>(`${this.baseUrl}/${id}/pause`, {})
-        .then((task) => {
-          subscriber.next(task);
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    const mutation = `
+      mutation PauseWeiboSearchTask($id: Int!) {
+        pauseWeiboSearchTask(id: $id) {
+          id keyword enabled status startDate nextRunAt
+          latestCrawlTime currentCrawlTime progress totalSegments
+          retryCount maxRetries errorMessage enableAccountRotation
+          weiboAccountId createdAt updatedAt
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<{ pauseWeiboSearchTask: WeiboSearchTaskNode }>(mutation, { id })
+        .then(res => this.adaptTask(res.pauseWeiboSearchTask))
+    );
   }
 
-  /**
-   * 恢复任务
-   */
   resume(id: number): Observable<WeiboSearchTask> {
-    return new Observable<WeiboSearchTask>((subscriber) => {
-      this.http.post<WeiboSearchTask>(`${this.baseUrl}/${id}/resume`, {})
-        .then((task) => {
-          subscriber.next(task);
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    const mutation = `
+      mutation ResumeWeiboSearchTask($id: Int!) {
+        resumeWeiboSearchTask(id: $id) {
+          id keyword enabled status startDate nextRunAt
+          latestCrawlTime currentCrawlTime progress totalSegments
+          retryCount maxRetries errorMessage enableAccountRotation
+          weiboAccountId createdAt updatedAt
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<{ resumeWeiboSearchTask: WeiboSearchTaskNode }>(mutation, { id })
+        .then(res => this.adaptTask(res.resumeWeiboSearchTask))
+    );
   }
 
-  /**
-   * 立即执行任务
-   */
   runNow(id: number): Observable<WeiboSearchTask> {
-    return new Observable<WeiboSearchTask>((subscriber) => {
-      this.http.post<WeiboSearchTask>(`${this.baseUrl}/${id}/run-now`, {})
-        .then((task) => {
-          subscriber.next(task);
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    const mutation = `
+      mutation RunWeiboSearchTaskNow($id: Int!) {
+        runWeiboSearchTaskNow(id: $id) {
+          id keyword enabled status startDate nextRunAt
+          latestCrawlTime currentCrawlTime progress totalSegments
+          retryCount maxRetries errorMessage enableAccountRotation
+          weiboAccountId createdAt updatedAt
+        }
+      }
+    `;
+
+    return from(
+      this.client
+        .mutate<{ runWeiboSearchTaskNow: WeiboSearchTaskNode }>(mutation, { id })
+        .then(res => this.adaptTask(res.runWeiboSearchTaskNow))
+    );
   }
 
-  /**
-   * 获取任务统计
-   */
+  pauseAll(): Observable<number> {
+    const mutation = `
+      mutation PauseAllWeiboSearchTasks {
+        pauseAllWeiboSearchTasks
+      }
+    `;
+
+    return from(
+      this.client.mutate<{ pauseAllWeiboSearchTasks: number }>(mutation).then(res => res.pauseAllWeiboSearchTasks)
+    );
+  }
+
+  resumeAll(): Observable<number> {
+    const mutation = `
+      mutation ResumeAllWeiboSearchTasks {
+        resumeAllWeiboSearchTasks
+      }
+    `;
+
+    return from(
+      this.client.mutate<{ resumeAllWeiboSearchTasks: number }>(mutation).then(res => res.resumeAllWeiboSearchTasks)
+    );
+  }
+
   getStats(): Observable<TaskStats> {
-    return new Observable<TaskStats>((subscriber) => {
-      this.http.get<{
-        total: number;
-        enabled: number;
-        running: number;
-        paused: number;
-        failed: number;
-        completed: number;
-      }>(`${this.baseUrl}/stats/overview`)
-        .then((response) => {
-          const pending = Math.max(
-            response.total - response.running - response.paused - response.failed - response.completed,
-            0
-          );
+    const query = `
+      query GetWeiboSearchTaskStats {
+        weiboSearchTaskStats {
+          total enabled running paused failed completed
+        }
+      }
+    `;
 
-          subscriber.next({
-            total: response.total,
-            enabled: response.enabled,
-            running: response.running,
-            pending,
-            failed: response.failed,
-            paused: response.paused,
-          });
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    return from(
+      this.client.query<{ weiboSearchTaskStats: WeiboSearchTaskStatsResponse }>(query).then(res => {
+        const stats = res.weiboSearchTaskStats;
+        const pending = Math.max(
+          stats.total - stats.running - stats.paused - stats.failed - stats.completed,
+          0
+        );
+
+        return {
+          total: stats.total,
+          enabled: stats.enabled,
+          running: stats.running,
+          pending,
+          failed: stats.failed,
+          paused: stats.paused,
+        };
+      })
+    );
   }
 
-  /**
-   * 构建查询参数
-   */
-  private buildQueryParams(filters?: WeiboSearchTaskFilters): Record<string, unknown> {
-    if (!filters) return {};
+  private adaptTask(node: WeiboSearchTaskNode): WeiboSearchTask {
+    return {
+      id: node.id,
+      keyword: node.keyword,
+      enabled: node.enabled,
+      status: this.parseTaskStatus(node.status),
+      startDate: this.normalizeDate(node.startDate) ?? new Date(),
+      crawlInterval: '1h',
+      nextRunAt: this.normalizeDate(node.nextRunAt),
+      latestCrawlTime: this.normalizeDate(node.latestCrawlTime),
+      currentCrawlTime: this.normalizeDate(node.currentCrawlTime),
+      progress: node.progress,
+      totalSegments: node.totalSegments,
+      noDataCount: 0,
+      noDataThreshold: 3,
+      retryCount: node.retryCount,
+      maxRetries: node.maxRetries,
+      errorMessage: node.errorMessage,
+      enableAccountRotation: node.enableAccountRotation,
+      weiboAccountId: node.weiboAccountId,
+      createdAt: this.normalizeDate(node.createdAt) ?? new Date(),
+      updatedAt: this.normalizeDate(node.updatedAt) ?? new Date(),
+    };
+  }
 
-    const params: Record<string, unknown> = {};
+  private normalizeDate(value?: string | Date | null): Date | undefined {
+    if (!value) return undefined;
+    if (value instanceof Date) return value;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
 
-    if (filters.keyword) params['keyword'] = filters.keyword;
-    if (filters.status) params['status'] = filters.status;
-    if (filters.enabled !== undefined) params['enabled'] = filters.enabled;
-    if (filters.page) params['page'] = filters.page;
-    if (filters.limit) params['limit'] = filters.limit;
-    if (filters.sortBy) params['sortBy'] = filters.sortBy;
-    if (filters.sortOrder) params['sortOrder'] = filters.sortOrder;
+  private parseTaskStatus(status: string): WeiboSearchTaskStatus {
+    const statusMap: Record<string, WeiboSearchTaskStatus> = {
+      'pending': WeiboSearchTaskStatus.PENDING,
+      'running': WeiboSearchTaskStatus.RUNNING,
+      'paused': WeiboSearchTaskStatus.PAUSED,
+      'failed': WeiboSearchTaskStatus.FAILED,
+      'timeout': WeiboSearchTaskStatus.TIMEOUT,
+    };
+    return statusMap[status] ?? WeiboSearchTaskStatus.PENDING;
+  }
 
-    return params;
+  private buildFilterInput(filters?: WeiboSearchTaskFilters): Record<string, unknown> | undefined {
+    if (!filters) return undefined;
+
+    const input: Record<string, unknown> = {};
+
+    if (filters.keyword) input['keyword'] = filters.keyword;
+    if (filters.status) input['status'] = filters.status;
+    if (filters.enabled !== undefined) input['enabled'] = filters.enabled;
+    if (filters.page) input['page'] = filters.page;
+    if (filters.limit) input['limit'] = filters.limit;
+    if (filters.sortBy) input['sortBy'] = filters.sortBy;
+    if (filters.sortOrder) input['sortOrder'] = filters.sortOrder;
+
+    return Object.keys(input).length > 0 ? input : undefined;
   }
 }

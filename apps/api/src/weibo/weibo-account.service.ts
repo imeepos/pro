@@ -11,7 +11,7 @@ import {
   WeiboAccountEntity,
   WeiboAccountStatus,
 } from '@pro/entities';
-import { LoggedInUsersStats } from '@pro/sdk';
+import { LoggedInUsersStats } from '@pro/types';
 import { ScreensGateway } from '../screens/screens.gateway';
 
 /**
@@ -32,10 +32,7 @@ export class WeiboAccountService {
    * 不返回敏感信息（如 cookies）
    */
   async getAccounts(userId: string) {
-    const accounts = await this.weiboAccountRepo.find({
-      where: { userId },
-      order: { createdAt: 'DESC' },
-    });
+    const accounts = await this.findAccounts(userId);
 
     return {
       accounts: accounts.map((account) => ({
@@ -46,8 +43,16 @@ export class WeiboAccountService {
         status: account.status,
         lastCheckAt: account.lastCheckAt,
         createdAt: account.createdAt,
+        updatedAt: account.updatedAt,
       })),
     };
+  }
+
+  async findAccounts(userId: string): Promise<WeiboAccountEntity[]> {
+    return this.weiboAccountRepo.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   /**
@@ -55,19 +60,7 @@ export class WeiboAccountService {
    * 包含权限验证：只能删除自己的账号
    */
   async deleteAccount(userId: string, accountId: number) {
-    const account = await this.weiboAccountRepo.findOne({
-      where: { id: accountId },
-    });
-
-    if (!account) {
-      throw new NotFoundException('账号不存在');
-    }
-
-    // 权限验证: 只能删除自己的账号
-    if (account.userId !== userId) {
-      throw new ForbiddenException('无权删除此账号');
-    }
-
+    const account = await this.findOwnedAccount(userId, accountId);
     await this.weiboAccountRepo.delete(accountId);
 
     // 推送微博用户统计更新
@@ -76,11 +69,25 @@ export class WeiboAccountService {
     return { success: true };
   }
 
+  async findOwnedAccount(userId: string, accountId: number): Promise<WeiboAccountEntity> {
+    const account = await this.weiboAccountRepo.findOne({ where: { id: accountId } });
+
+    if (!account) {
+      throw new NotFoundException('账号不存在');
+    }
+
+    if (account.userId !== userId) {
+      throw new ForbiddenException('无权访问该账号');
+    }
+
+    return account;
+  }
+
   /**
    * 获取微博已登录用户统计
    * 返回总数、今日新增、在线用户数
    */
-  async getLoggedInUsersStats() {
+  async getLoggedInUsersStats(): Promise<LoggedInUsersStats> {
     // 总用户数
     const total = await this.weiboAccountRepo.count();
 

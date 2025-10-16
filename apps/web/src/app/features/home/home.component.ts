@@ -1,19 +1,24 @@
-import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, AfterViewInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subject, interval } from 'rxjs';
-import { takeUntil, switchMap, debounceTime } from 'rxjs/operators';
-import { ScreenPage, Component as ScreenComponent, SkerSDK } from '@pro/sdk';
+import { takeUntil, debounceTime } from 'rxjs/operators';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 import { WebSocketManager, createScreensWebSocketConfig, JwtAuthService, ComponentRegistryService, IScreenComponent } from '@pro/components';
 import { AuthStateService } from '../../core/state/auth-state.service';
 import { AuthQuery } from '../../core/state/auth.query';
 import { TokenStorageService } from '../../core/services/token-storage.service';
+import { ScreenService } from '../../core/services/screen.service';
+import { ScreenPage, ScreenComponentConfig as ScreenComponent } from '../../core/types/screen.types';
+import { ToastService } from '../../shared/services/toast.service';
+import { EmptyStateComponent, EmptyStateConfig } from '../../shared/components/empty-state/empty-state.component';
+import { logger } from '../../core/utils/logger';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, EmptyStateComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
@@ -47,33 +52,140 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private pendingComponentCreation = false;
   private componentCreationRetryCount = 0;
   private readonly maxRetryCount = 3;
+  private readonly publishedScreensQuery = injectQuery(() => ({
+    queryKey: ['screens', 'published'],
+    queryFn: () => this.screenService.fetchPublishedScreens(),
+    staleTime: 60_000,
+    gcTime: 300_000
+  }));
+  private readonly defaultScreenQuery = injectQuery(() => ({
+    queryKey: ['screens', 'default'],
+    queryFn: () => this.screenService.fetchDefaultScreen(),
+    staleTime: 60_000,
+    gcTime: 300_000,
+    retry: 1
+  }));
+  private hasInitializedScreen = false;
+  private hasAnnouncedEmptyState = false;
+  private hasReportedListError = false;
+  private hasReportedDefaultError = false;
 
   constructor(
     private authStateService: AuthStateService,
     private authQuery: AuthQuery,
     private router: Router,
-    private sdk: SkerSDK,
+    private screenService: ScreenService,
     private wsManager: WebSocketManager,
     private authService: JwtAuthService,
     private componentRegistry: ComponentRegistryService,
     private cdr: ChangeDetectorRef,
-    private tokenStorage: TokenStorageService
-  ) {}
+    private tokenStorage: TokenStorageService,
+    private toastService: ToastService
+  ) {
+    this.registerScreenSynchronization();
+  }
+
+  private registerScreenSynchronization(): void {
+    effect(() => {
+      const publishedPending = this.publishedScreensQuery.isPending();
+      const publishedError = this.publishedScreensQuery.error();
+      const publishedIsError = this.publishedScreensQuery.isError();
+      const published = this.publishedScreensQuery.data();
+
+      if (publishedPending) {
+        this.loading = true;
+        this.error = null;
+        this.cdr.markForCheck();
+        return;
+      }
+
+      if (publishedIsError) {
+        this.loading = false;
+        this.availableScreens = [];
+        this.screenConfig = null;
+        this.clearComponents();
+
+        if (!this.hasReportedListError) {
+          this.toastService.error('加载大屏列表失败，请稍后再试');
+          this.hasReportedListError = true;
+        }
+
+        this.error = (publishedError as Error | undefined)?.message || '加载屏幕列表失败';
+        this.cdr.markForCheck();
+        return;
+      }
+
+      this.hasReportedListError = false;
+
+      if (!published || published.items.length === 0) {
+        this.loading = false;
+        this.availableScreens = [];
+        this.screenConfig = null;
+        this.clearComponents();
+
+        if (!this.hasAnnouncedEmptyState) {
+          this.toastService.info('暂无已发布的屏幕，请在管理后台创建并发布');
+          this.hasAnnouncedEmptyState = true;
+        }
+
+        this.error = '没有可用的屏幕';
+        this.cdr.markForCheck();
+        return;
+      }
+
+      this.hasAnnouncedEmptyState = false;
+      this.availableScreens = published.items;
+
+      const defaultData = this.defaultScreenQuery.data();
+      const defaultIsError = this.defaultScreenQuery.isError();
+      const defaultError = this.defaultScreenQuery.error();
+
+      if (defaultIsError && !this.hasReportedDefaultError) {
+        logger.warn('[HomeComponent] 获取默认屏幕失败，使用第一个已发布屏幕', defaultError);
+        this.toastService.info('默认屏幕暂不可用，已展示第一个已发布的大屏');
+        this.hasReportedDefaultError = true;
+      }
+
+      if (!defaultIsError && defaultData) {
+        this.hasReportedDefaultError = false;
+      }
+
+      const defaultId = defaultData?.id ?? null;
+      const fallbackIndex = defaultId
+        ? this.availableScreens.findIndex(screen => screen.id === defaultId)
+        : -1;
+
+      const desiredScreen =
+        fallbackIndex !== -1
+          ? this.availableScreens[fallbackIndex]
+          : this.availableScreens[this.currentScreenIndex] ?? this.availableScreens[0];
+
+      if (!desiredScreen) {
+        return;
+      }
+
+      if (!this.screenConfig || this.screenConfig.id !== desiredScreen.id) {
+        this.loadScreenConfig(desiredScreen);
+        this.hasInitializedScreen = true;
+      }
+
+      this.loading = false;
+      this.error = null;
+      this.cdr.markForCheck();
+    });
+  }
 
   ngOnInit(): void {
-    console.log('[HomeComponent] ngOnInit 开始');
+    logger.log('[HomeComponent] ngOnInit 开始');
 
     // 设置防抖监听器
     this.setupResizeDebouncer();
-
-    // 一次性加载所有屏幕数据并正确设置默认页面
-    this.loadScreensAndSetDefault();
 
     this.initializeWebSocketConnection();
     this.listenToFullscreenChanges();
     this.setupRealtimeSync();
 
-    console.log('[HomeComponent] ngOnInit 完成');
+    logger.log('[HomeComponent] ngOnInit 完成');
   }
 
   @HostListener('window:resize')
@@ -83,13 +195,13 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    console.log('[HomeComponent] ngAfterViewInit - 视图初始化完成');
+    logger.log('[HomeComponent] ngAfterViewInit - 视图初始化完成');
     this.isViewInitialized = true;
     this.cdr.markForCheck();
 
     // 如果有待处理的组件创建请求，现在执行
     if (this.pendingComponentCreation && this.screenConfig) {
-      console.log('[HomeComponent] ngAfterViewInit - 执行待处理的组件创建');
+      logger.log('[HomeComponent] ngAfterViewInit - 执行待处理的组件创建');
       this.pendingComponentCreation = false;
       this.scheduleComponentCreation();
     }
@@ -126,7 +238,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private scheduleComponentCreation(): void {
-    console.log('[HomeComponent] scheduleComponentCreation 开始', {
+    logger.log('[HomeComponent] scheduleComponentCreation 开始', {
       hasScreenConfig: !!this.screenConfig,
       isViewInitialized: this.isViewInitialized,
       hasComponentsContainer: !!this.componentsContainer,
@@ -134,12 +246,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     });
 
     if (!this.screenConfig?.components) {
-      console.log('[HomeComponent] 没有组件需要创建');
+      logger.log('[HomeComponent] 没有组件需要创建');
       return;
     }
 
     if (!this.isViewInitialized || !this.componentsContainer) {
-      console.log('[HomeComponent] 视图未初始化或容器不可用，标记待处理');
+      logger.log('[HomeComponent] 视图未初始化或容器不可用，标记待处理');
       this.pendingComponentCreation = true;
       return;
     }
@@ -155,7 +267,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private renderComponentsWithRetry(): void {
-    console.log('[HomeComponent] renderComponentsWithRetry 开始', {
+    logger.log('[HomeComponent] renderComponentsWithRetry 开始', {
       retryCount: this.componentCreationRetryCount,
       maxRetryCount: this.maxRetryCount
     });
@@ -164,31 +276,32 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       this.renderComponents();
       this.componentCreationRetryCount = 0; // 成功后重置计数
     } catch (error) {
-      console.error('[HomeComponent] renderComponents 失败', error);
+      logger.error('[HomeComponent] renderComponents 失败', error);
       this.componentCreationRetryCount++;
 
       if (this.componentCreationRetryCount < this.maxRetryCount) {
-        console.log(`[HomeComponent] 将在 ${1000 * this.componentCreationRetryCount}ms 后重试`);
+        logger.log(`[HomeComponent] 将在 ${1000 * this.componentCreationRetryCount}ms 后重试`);
         setTimeout(() => {
           this.renderComponentsWithRetry();
         }, 1000 * this.componentCreationRetryCount);
       } else {
-        console.error('[HomeComponent] 组件创建重试次数已达上限，放弃重试');
+        logger.error('[HomeComponent] 组件创建重试次数已达上限，放弃重试');
         this.error = '组件创建失败，请刷新页面重试';
+        this.toastService.error('组件渲染失败，请刷新页面重试');
         this.cdr.markForCheck();
       }
     }
   }
 
   private renderComponents(): void {
-    console.log('[HomeComponent] renderComponents 开始', {
+    logger.log('[HomeComponent] renderComponents 开始', {
       hasScreenConfig: !!this.screenConfig,
       hasComponentsContainer: !!this.componentsContainer,
       componentCount: this.screenConfig?.components?.length || 0
     });
 
     if (!this.screenConfig?.components || !this.componentsContainer) {
-      console.warn('[HomeComponent] renderComponents 条件不满足', {
+      logger.warn('[HomeComponent] renderComponents 条件不满足', {
         hasScreenConfig: !!this.screenConfig,
         hasComponentsContainer: !!this.componentsContainer
       });
@@ -198,7 +311,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     this.clearComponents();
 
     const componentConfigs = this.screenConfig.components;
-    console.log(`[HomeComponent] 准备创建 ${componentConfigs.length} 个组件`);
+    logger.log(`[HomeComponent] 准备创建 ${componentConfigs.length} 个组件`);
 
     let successCount = 0;
     let failureCount = 0;
@@ -212,12 +325,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           failureCount++;
         }
       } catch (error) {
-        console.error(`[HomeComponent] 创建组件 ${index} 时发生错误`, error);
+        logger.error(`[HomeComponent] 创建组件 ${index} 时发生错误`, error);
         failureCount++;
       }
     });
 
-    console.log(`[HomeComponent] 组件创建完成: 成功 ${successCount}，失败 ${failureCount}`);
+    logger.log(`[HomeComponent] 组件创建完成: 成功 ${successCount}，失败 ${failureCount}`);
 
     // 确保DOM更新完成后再计算缩放
     requestAnimationFrame(() => {
@@ -227,7 +340,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private createComponent(componentConfig: ScreenComponent, index: number): boolean {
-    console.log(`[HomeComponent] createComponent 开始`, {
+    logger.log(`[HomeComponent] createComponent 开始`, {
       componentType: componentConfig.type,
       componentIndex: index,
       position: componentConfig.position
@@ -236,22 +349,22 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       // 验证容器是否可用
       if (!this.componentsContainer) {
-        console.error('[HomeComponent] 组件容器不可用');
+        logger.error('[HomeComponent] 组件容器不可用');
         return false;
       }
 
       // 获取组件类型
       const componentType = this.componentRegistry.get(componentConfig.type);
       if (!componentType) {
-        console.error(`[HomeComponent] 组件类型未注册: ${componentConfig.type}`);
+        logger.error(`[HomeComponent] 组件类型未注册: ${componentConfig.type}`);
         return false;
       }
 
-      console.log(`[HomeComponent] 开始创建组件实例: ${componentConfig.type}`);
+      logger.log(`[HomeComponent] 开始创建组件实例: ${componentConfig.type}`);
 
       // 创建组件实例
       const componentRef = this.componentsContainer.createComponent(componentType);
-      console.log(`[HomeComponent] 组件实例创建成功: ${componentConfig.type}`);
+      logger.log(`[HomeComponent] 组件实例创建成功: ${componentConfig.type}`);
 
       // 设置组件样式和位置
       const wrapper = componentRef.location.nativeElement;
@@ -263,16 +376,16 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       wrapper.style.height = `${componentConfig.position.height}px`;
       wrapper.style.zIndex = `${componentConfig.position.zIndex}`;
 
-      console.log(`[HomeComponent] 组件样式设置完成: ${componentConfig.type}`);
+      logger.log(`[HomeComponent] 组件样式设置完成: ${componentConfig.type}`);
 
       // 设置组件配置
       const instance = componentRef.instance as IScreenComponent;
       if (instance.onConfigChange && componentConfig.config) {
         try {
           instance.onConfigChange(componentConfig.config);
-          console.log(`[HomeComponent] 组件配置设置完成: ${componentConfig.type}`);
+          logger.log(`[HomeComponent] 组件配置设置完成: ${componentConfig.type}`);
         } catch (configError) {
-          console.error(`[HomeComponent] 设置组件配置失败: ${componentConfig.type}`, configError);
+          logger.error(`[HomeComponent] 设置组件配置失败: ${componentConfig.type}`, configError);
           // 配置失败不应该阻止组件显示，继续执行
         }
       }
@@ -283,12 +396,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       this.componentRefs.push(componentRef);
-      console.log(`[HomeComponent] 组件创建完成: ${componentConfig.type}`);
+      logger.log(`[HomeComponent] 组件创建完成: ${componentConfig.type}`);
 
       return true;
 
     } catch (error) {
-      console.error(`[HomeComponent] 创建组件失败: ${componentConfig.type}`, {
+      logger.error(`[HomeComponent] 创建组件失败: ${componentConfig.type}`, {
         error: error instanceof Error ? error.message : error,
         stack: error instanceof Error ? error.stack : undefined,
         componentConfig,
@@ -308,43 +421,43 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private initializeWebSocketConnection(): void {
-    console.log('[HomeComponent] WebSocket连接初始化开始');
+    logger.log('[HomeComponent] WebSocket连接初始化开始');
 
     const existingConnection = this.wsManager.getConnection(environment.wsNamespace);
     if (existingConnection) {
-      console.log('[HomeComponent] WebSocket连接已存在，跳过重复创建');
+      logger.log('[HomeComponent] WebSocket连接已存在，跳过重复创建');
       return;
     }
 
     const token = this.tokenStorage.getToken();
-    console.log('[HomeComponent] 获取认证令牌', { hasToken: !!token, tokenLength: token?.length });
+    logger.log('[HomeComponent] 获取认证令牌', { hasToken: !!token, tokenLength: token?.length });
 
     const wsConfig = createScreensWebSocketConfig(environment.wsUrl, token ?? undefined, {
       autoRefresh: true,
       onTokenExpired: async () => {
-        console.log('[HomeComponent] JWT Token 已过期，跳转到登录页');
+        logger.log('[HomeComponent] JWT Token 已过期，跳转到登录页');
         this.handleTokenExpired();
         throw new Error('Token expired - redirecting to login');
       }
     });
-    console.log('[HomeComponent] 创建WebSocket配置', { wsUrl: environment.wsUrl, namespace: environment.wsNamespace });
+    logger.log('[HomeComponent] 创建WebSocket配置', { wsUrl: environment.wsUrl, namespace: environment.wsNamespace });
 
     const wsInstance = this.wsManager.connectToNamespace(wsConfig);
 
     // 监听认证错误事件
     wsInstance.on('auth:token-expired')
       .subscribe(() => {
-        console.log('[HomeComponent] JWT Token 已过期，跳转到登录页');
+        logger.log('[HomeComponent] JWT Token 已过期，跳转到登录页');
         this.handleTokenExpired();
       });
 
     wsInstance.on('auth:authentication-failed')
       .subscribe((error: any) => {
-        console.log('[HomeComponent] 认证失败，跳转到登录页', error);
+        logger.log('[HomeComponent] 认证失败，跳转到登录页', error);
         this.handleTokenExpired();
       });
 
-    console.log('[HomeComponent] WebSocket连接请求已发送');
+    logger.log('[HomeComponent] WebSocket连接请求已发送');
   }
 
   private handleTokenExpired(): void {
@@ -354,89 +467,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // 跳转到登录页
     this.router.navigate(['/auth/login']);
-  }
-
-  private async loadScreensAndSetDefault(): Promise<void> {
-    try {
-      console.log('[HomeComponent] loadScreensAndSetDefault 开始');
-
-      // 并行加载可用屏幕和默认屏幕
-      const [publishedResponse, defaultScreen] = await Promise.allSettled([
-        this.sdk.screen.getPublishedScreens$().pipe(takeUntil(this.destroy$)).toPromise(),
-        this.sdk.screen.getDefaultScreen$().pipe(takeUntil(this.destroy$)).toPromise()
-      ]);
-
-      // 处理已发布屏幕列表
-      if (publishedResponse.status === 'fulfilled' && publishedResponse.value) {
-        this.availableScreens = publishedResponse.value.items;
-        console.log('[HomeComponent] 已发布屏幕加载完成', { count: this.availableScreens.length });
-      }
-
-      // 设置默认屏幕选中状态
-      if (this.availableScreens.length > 0) {
-        if (defaultScreen.status === 'fulfilled' && defaultScreen.value) {
-          // 找到默认屏幕在列表中的索引
-          const defaultIndex = this.availableScreens.findIndex(screen => screen.id === defaultScreen.value!.id);
-          if (defaultIndex !== -1) {
-            this.currentScreenIndex = defaultIndex;
-            console.log('[HomeComponent] 默认屏幕选中', {
-              screenId: defaultScreen.value!.id,
-              screenName: defaultScreen.value!.name,
-              index: defaultIndex
-            });
-          } else {
-            // 如果默认屏幕不在已发布列表中，使用第一个屏幕
-            this.currentScreenIndex = 0;
-            console.log('[HomeComponent] 默认屏幕不在已发布列表中，使用第一个屏幕');
-          }
-        } else {
-          // 如果获取默认屏幕失败，使用第一个屏幕
-          this.currentScreenIndex = 0;
-          const reason = defaultScreen.status === 'rejected' ? defaultScreen.reason : 'No default screen returned';
-          console.warn('[HomeComponent] 获取默认屏幕失败，使用第一个屏幕', reason);
-        }
-
-        // 加载当前选中的屏幕配置
-        const selectedScreen = this.availableScreens[this.currentScreenIndex];
-        if (selectedScreen) {
-          this.screenConfig = selectedScreen;
-          this.loading = false;
-          this.componentCreationRetryCount = 0;
-          this.error = null;
-          this.cdr.markForCheck();
-
-          // 创建组件
-          this.scheduleComponentCreation();
-          console.log('[HomeComponent] 屏幕配置加载完成', {
-            screenId: selectedScreen.id,
-            screenName: selectedScreen.name
-          });
-        }
-      } else {
-        this.loading = false;
-        this.error = '没有可用的屏幕';
-        this.cdr.markForCheck();
-      }
-
-      console.log('[HomeComponent] loadScreensAndSetDefault 完成');
-    } catch (error) {
-      console.error('[HomeComponent] loadScreensAndSetDefault 失败:', error);
-      this.loading = false;
-      this.error = '加载屏幕配置失败';
-      this.cdr.markForCheck();
-    }
-  }
-
-  private async loadAvailableScreens(): Promise<void> {
-    try {
-      const response = await this.sdk.screen.getPublishedScreens$().pipe(takeUntil(this.destroy$)).toPromise();
-      if (response) {
-        this.availableScreens = response.items;
-        this.cdr.markForCheck();
-      }
-    } catch (error) {
-      console.error('Failed to load available screens:', error);
-    }
   }
 
   // 切换和轮播功能
@@ -495,7 +525,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadScreenConfig(screen: ScreenPage): void {
-    console.log('[HomeComponent] loadScreenConfig 开始', { screenId: screen.id, screenName: screen.name });
+    logger.log('[HomeComponent] loadScreenConfig 开始', { screenId: screen.id, screenName: screen.name });
     this.screenConfig = screen;
     this.loading = false;
     this.componentCreationRetryCount = 0; // 重置重试计数
@@ -510,7 +540,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       this.currentScreenIndex = screenIndex;
     }
 
-    console.log('[HomeComponent] loadScreenConfig 完成');
+    logger.log('[HomeComponent] loadScreenConfig 完成');
   }
 
   // 实时同步功能
@@ -523,45 +553,45 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private listenToScreenPublishEvents(): void {
     const wsInstance = this.wsManager.getConnection(environment.wsNamespace);
     if (wsInstance) {
-      console.log('[HomeComponent] 设置屏幕发布事件监听');
+      logger.log('[HomeComponent] 设置屏幕发布事件监听');
       wsInstance.on('screen:published')
         .pipe(takeUntil(this.destroy$))
         .subscribe((data: any) => {
-          console.log('[HomeComponent] 收到屏幕发布事件', { data });
+          logger.log('[HomeComponent] 收到屏幕发布事件', { data });
           this.handleNewScreenPublished(data.screen);
         });
     } else {
-      console.warn('[HomeComponent] 未找到WebSocket实例，无法设置屏幕发布事件监听');
+      logger.warn('[HomeComponent] 未找到WebSocket实例，无法设置屏幕发布事件监听');
     }
   }
 
   private listenToScreenUpdateEvents(): void {
     const wsInstance = this.wsManager.getConnection(environment.wsNamespace);
     if (wsInstance) {
-      console.log('[HomeComponent] 设置屏幕更新事件监听');
+      logger.log('[HomeComponent] 设置屏幕更新事件监听');
       wsInstance.on('screen:updated')
         .pipe(takeUntil(this.destroy$))
         .subscribe((data: any) => {
-          console.log('[HomeComponent] 收到屏幕更新事件', { data });
+          logger.log('[HomeComponent] 收到屏幕更新事件', { data });
           this.handleScreenUpdated(data.screen);
         });
     } else {
-      console.warn('[HomeComponent] 未找到WebSocket实例，无法设置屏幕更新事件监听');
+      logger.warn('[HomeComponent] 未找到WebSocket实例，无法设置屏幕更新事件监听');
     }
   }
 
   private listenToScreenDeleteEvents(): void {
     const wsInstance = this.wsManager.getConnection(environment.wsNamespace);
     if (wsInstance) {
-      console.log('[HomeComponent] 设置屏幕删除事件监听');
+      logger.log('[HomeComponent] 设置屏幕删除事件监听');
       wsInstance.on('screen:unpublished')
         .pipe(takeUntil(this.destroy$))
         .subscribe((data: any) => {
-          console.log('[HomeComponent] 收到屏幕删除事件', { data });
+          logger.log('[HomeComponent] 收到屏幕删除事件', { data });
           this.handleScreenUnpublished(data.screenId);
         });
     } else {
-      console.warn('[HomeComponent] 未找到WebSocket实例，无法设置屏幕删除事件监听');
+      logger.warn('[HomeComponent] 未找到WebSocket实例，无法设置屏幕删除事件监听');
     }
   }
 
@@ -650,7 +680,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // 添加容器尺寸检查
       if (wrapperWidth <= 0 || wrapperHeight <= 0) {
-        console.warn('[HomeComponent] 容器尺寸无效，跳过缩放计算');
+        logger.warn('[HomeComponent] 容器尺寸无效，跳过缩放计算');
         return;
       }
 
@@ -677,7 +707,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.cdr.markForCheck();
     } catch (error) {
-      console.error('[HomeComponent] 缩放计算失败:', error);
+      logger.error('[HomeComponent] 缩放计算失败:', error);
       // 设置默认缩放值，确保页面仍可显示
       this.scale = 1;
       this.scaleOffsetX = 0;
@@ -687,7 +717,14 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getScaleTransform(): string {
-    // 仅负责缩放，实际定位交由绝对定位与偏移量完成
     return `scale(${this.scale})`;
+  }
+
+  reloadPage(): void {
+    window.location.reload();
+  }
+
+  goToAdmin(): void {
+    window.open('/admin', '_blank');
   }
 }

@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-import { ApiKey, ApiKeyStatus, ApiKeyType } from '@pro/sdk';
+import { ApiKey, ApiKeyStatus, ApiKeyType } from '@pro/types';
 
 @Component({
   selector: 'app-api-key-table',

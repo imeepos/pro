@@ -1,63 +1,62 @@
-import { Observable } from 'rxjs';
-import { HttpClient } from '../client/http-client.js';
+import { Observable, from } from 'rxjs';
+import { GraphQLClient } from '../client/graphql-client.js';
 import { DashboardStats, RecentActivity } from '../types/dashboard.types.js';
 
-/**
- * Dashboard API 接口封装
- */
+interface DashboardStatsResponse {
+  dashboardStats: DashboardStats;
+}
+
+interface DashboardRecentActivitiesResponse {
+  dashboardRecentActivities: RecentActivity[];
+}
+
 export class DashboardApi {
-  private readonly http: HttpClient;
+  private client: GraphQLClient;
 
   constructor(baseUrl?: string, tokenKey?: string) {
     if (!baseUrl) {
       throw new Error(`DashboardApi missing base url`);
     }
-    this.http = new HttpClient(baseUrl, tokenKey);
+    this.client = new GraphQLClient(baseUrl, tokenKey);
   }
 
-  /**
-   * 获取 Dashboard 统计数据
-   */
   async getStats(): Promise<DashboardStats> {
-    return this.http.get<DashboardStats>('/api/dashboard/stats');
+    const query = `
+      query DashboardStats {
+        dashboardStats {
+          totalScreens
+          totalEvents
+          totalWeiboAccounts
+          totalSearchTasks
+        }
+      }
+    `;
+
+    const response = await this.client.query<DashboardStatsResponse>(query);
+    return response.dashboardStats;
   }
 
-  /**
-   * 获取最近活动数据
-   */
   async getRecentActivities(): Promise<RecentActivity[]> {
-    return this.http.get<RecentActivity[]>('/api/dashboard/recent-activities');
+    const query = `
+      query DashboardRecentActivities {
+        dashboardRecentActivities {
+          type
+          message
+          time
+          entityId
+        }
+      }
+    `;
+
+    const response = await this.client.query<DashboardRecentActivitiesResponse>(query);
+    return response.dashboardRecentActivities;
   }
 
-  /**
-   * 获取 Dashboard 统计数据 (Observable 版本)
-   */
   getStats$ = (): Observable<DashboardStats> => {
-    return new Observable<DashboardStats>((subscriber) => {
-      this.getStats()
-        .then((result) => {
-          subscriber.next(result);
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    return from(this.getStats());
   };
 
-  /**
-   * 获取最近活动数据 (Observable 版本)
-   */
   getRecentActivities$ = (): Observable<RecentActivity[]> => {
-    return new Observable<RecentActivity[]>((subscriber) => {
-      this.getRecentActivities()
-        .then((result) => {
-          subscriber.next(result);
-          subscriber.complete();
-        })
-        .catch((error) => {
-          subscriber.error(error);
-        });
-    });
+    return from(this.getRecentActivities());
   };
 }

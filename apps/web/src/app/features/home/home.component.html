@@ -21,13 +21,31 @@
          [style.left.px]="scaleOffsetX"
          [style.top.px]="scaleOffsetY">
       @if (loading) {
-        <div class="loading-container">
-          <div class="loading-spinner"></div>
-          <p class="text-white">加载中...</p>
+        <div class="loading-container" role="status" aria-live="polite">
+          <div class="loading-spinner" aria-hidden="true"></div>
+          <p class="text-white text-lg">正在加载屏幕配置...</p>
         </div>
       } @else if (error) {
+        <div class="error-container" role="alert">
+          <app-empty-state
+            [config]="{
+              icon: '⚠️',
+              title: error,
+              description: '请检查网络连接或联系管理员',
+              actionLabel: '刷新页面',
+              actionHandler: reloadPage.bind(this)
+            }" />
+        </div>
+      } @else if (!screenConfig || !availableScreens.length) {
         <div class="error-container">
-          <p class="error-message">{{ error }}</p>
+          <app-empty-state
+            [config]="{
+              icon: '📺',
+              title: '暂无可用的屏幕',
+              description: '请在管理后台创建并发布屏幕后刷新页面',
+              actionLabel: '前往管理后台',
+              actionHandler: goToAdmin.bind(this)
+            }" />
         </div>
       } @else if (screenConfig) {
         <div [style.background]="screenConfig.layout.background" class="screen-canvas">
@@ -38,40 +56,62 @@
 
     @if (!loading && !error && screenConfig) {
       <!-- 控制面板 -->
-      <div class="control-panel" [class.hidden]="isFullscreen">
+      <div
+        class="control-panel"
+        [class.hidden]="isFullscreen"
+        role="toolbar"
+        aria-label="屏幕控制">
         <div class="control-group">
           <button
             *ngIf="availableScreens.length > 1"
             class="control-button"
             (click)="toggleAutoPlay()"
-            [title]="isAutoPlay ? '停止轮播' : '开始轮播'">
-            {{ isAutoPlay ? '⏸️' : '▶️' }}
+            [attr.aria-label]="isAutoPlay ? '停止自动轮播' : '开始自动轮播'"
+            [attr.aria-pressed]="isAutoPlay"
+            type="button">
+            <span class="text-lg" aria-hidden="true">{{ isAutoPlay ? '⏸' : '▶' }}</span>
+            <span class="ml-1.5 text-xs font-medium">{{ isAutoPlay ? '停止' : '轮播' }}</span>
           </button>
+
+          <div class="separator" *ngIf="availableScreens.length > 1"></div>
+
           <button
             *ngIf="availableScreens.length > 1"
             class="control-button"
             (click)="previousScreen()"
-            title="上一页">
-            ⬅️
+            aria-label="切换到上一个屏幕"
+            type="button">
+            <span class="text-lg" aria-hidden="true">←</span>
+            <span class="ml-1 text-xs font-medium">上一个</span>
           </button>
+
           <button
             *ngIf="availableScreens.length > 1"
             class="control-button"
             (click)="nextScreen()"
-            title="下一页">
-            ➡️
+            aria-label="切换到下一个屏幕"
+            type="button">
+            <span class="text-lg" aria-hidden="true">→</span>
+            <span class="ml-1 text-xs font-medium">下一个</span>
           </button>
+
+          <div class="separator" *ngIf="availableScreens.length > 1"></div>
+
           <select
             *ngIf="availableScreens.length > 1"
             class="screen-selector"
             [value]="currentScreenIndex"
-            (change)="switchToScreen($event)">
+            (change)="switchToScreen($event)"
+            aria-label="选择屏幕">
             <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
               {{ screen.name }}
             </option>
           </select>
-          <div *ngIf="availableScreens.length > 1" class="screen-indicator">
-            {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
+
+          <div *ngIf="availableScreens.length > 1" class="screen-indicator" aria-live="polite">
+            <span class="font-semibold">{{ currentScreenIndex + 1 }}</span>
+            <span class="mx-1">/</span>
+            <span>{{ availableScreens.length }}</span>
           </div>
         </div>
       </div>
@@ -79,8 +119,10 @@
       <button
         class="fullscreen-button"
         (click)="toggleFullscreen()"
-        title="全屏切换">
-        {{ isFullscreen ? '退出全屏' : '全屏显示' }}
+        [attr.aria-label]="isFullscreen ? '退出全屏模式' : '进入全屏模式'"
+        type="button">
+        <span class="text-lg mr-2" aria-hidden="true">{{ isFullscreen ? '⊗' : '⛶' }}</span>
+        <span class="text-sm font-medium">{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
       </button>
     }
   </main>

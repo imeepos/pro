@@ -2,14 +2,22 @@ export * from './http-client.interface.js';
 export * from './auth.interface.js';
 export * from './user.interface.js';
 export * from './config.interface.js';
-export * from './weibo.interface.js';
-export * from './weibo-auth.sdk.js';
 export * from './jd.interface.js';
 export * from './jd-auth.sdk.js';
 export * from './media-type.interface.js';
 export * from './media-type.sdk.js';
 
-export * from '@pro/types';
+export {
+  type WeiboLoginEventType,
+  type WeiboLoginEvent,
+  type QrcodeEventData,
+  type SuccessEventData,
+  type WeiboLoginEventHandler,
+  type WeiboAccount,
+  type WeiboAccountCheckResult,
+  type WeiboAuthSDK,
+} from './weibo.interface.js';
+export * from './weibo-auth.sdk.js';
 
 // 事件管理系统类型导出
 export * from './types/common.types.js';
@@ -23,6 +31,7 @@ export * from './types/screen.types.js';
 export * from './types/weibo-search-tasks.types.js';
 export * from './types/weibo.types.js';
 export * from './types/dashboard.types.js';
+export * from './types/bug.types.js';
 
 // HTTP 客户端导出
 export { HttpClient } from './client/http-client.js';
@@ -41,6 +50,7 @@ import { ScreenApi } from './api/screen-api.js';
 import { WeiboApi } from './api/weibo-api.js';
 import { ApiKeyApi } from './api/api-key-api.js';
 import { DashboardApi } from './api/dashboard-api.js';
+import { BugApi } from './api/bug-api.js';
 
 export { EventApi } from './api/event-api.js';
 export { TagApi } from './api/tag-api.js';
@@ -55,6 +65,7 @@ export { ScreenApi } from './api/screen-api.js';
 export { WeiboApi } from './api/weibo-api.js';
 export { ApiKeyApi } from './api/api-key-api.js';
 export { DashboardApi } from './api/dashboard-api.js';
+export { BugApi } from './api/bug-api.js';
 
 /**
  * SDK 主类
@@ -76,6 +87,7 @@ export class SkerSDK {
   public screen: ScreenApi;
   public apiKey: ApiKeyApi;
   public dashboard: DashboardApi;
+  public bug: BugApi;
 
   constructor(baseUrl: string, tokenKey: string = 'access_token') {
     if (!baseUrl) {
@@ -98,5 +110,6 @@ export class SkerSDK {
     this.screen = new ScreenApi(baseUrl, tokenKey);
     this.apiKey = new ApiKeyApi(baseUrl, tokenKey);
     this.dashboard = new DashboardApi(baseUrl, tokenKey);
+    this.bug = new BugApi(baseUrl, tokenKey);
   }
 }

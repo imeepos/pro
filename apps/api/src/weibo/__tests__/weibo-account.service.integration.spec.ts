@@ -5,7 +5,7 @@ import { WeiboAccountService } from '../weibo-account.service';
 import { ScreensGateway } from '../../screens/screens.gateway';
 import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
 import { JwtService } from '@nestjs/jwt';
-import { LoggedInUsersStats } from '@pro/sdk';
+import { LoggedInUsersStats } from '@pro/types';
 
 describe('WeiboAccountService Integration', () => {
   let service: WeiboAccountService;

@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { UserStatus } from '@pro/types';
+import { BugEntity } from './bug.entity.js';
 
 @Entity('users')
 export class UserEntity {
@@ -36,4 +38,11 @@ export class UserEntity {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updatedAt: Date;
+
+  // Relations with Bug system
+  @OneToMany(() => BugEntity, (bug) => bug.reporter)
+  reportedBugs: BugEntity[];
+
+  @OneToMany(() => BugEntity, (bug) => bug.assignee)
+  assignedBugs: BugEntity[];
 }

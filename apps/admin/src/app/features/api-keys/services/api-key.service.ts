@@ -2,7 +2,17 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 
-import { SkerSDK, ApiKey, ApiKeyFilters, ApiKeyListResponse, ApiKeyStats, ApiKeyUsageStats, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyRegenerationResponse } from '@pro/sdk';
+import { SkerSDK } from '@pro/sdk';
+import {
+  ApiKey,
+  ApiKeyFilters,
+  ApiKeyListResponse,
+  ApiKeyStats,
+  ApiKeyUsageStats,
+  CreateApiKeyDto,
+  UpdateApiKeyDto,
+  ApiKeyRegenerationResponse
+} from '@pro/types';
 import { environment } from '../../../../environments/environment';
 
 @Injectable({

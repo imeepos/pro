@@ -1,8 +1,9 @@
-import { Component, Input, OnInit, OnDestroy, Optional, ViewEncapsulation } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, Optional, ViewEncapsulation, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { interval, Subject, takeUntil } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
-import { EventStatus, EventQueryParams, SkerSDK } from '@pro/sdk';
+import { EventStatus, EventQueryParams, EventSummary } from '@pro/types';
+import { EVENT_DATA_SOURCE, EventDataSource } from '../../data-providers/data-providers';
 
 export interface HotEventStaticEntry {
   id: string;
@@ -458,7 +459,7 @@ export class HotEventsRankingComponent implements IScreenComponent, OnInit, OnDe
   private refreshReset$ = new Subject<void>();
   private snapshot = new Map<string, SnapshotEntry>();
 
-  constructor(@Optional() private sdk: SkerSDK | null) {}
+  constructor(@Optional() @Inject(EVENT_DATA_SOURCE) private dataSource: EventDataSource | null) {}
 
   get isEditMode(): boolean {
     return (this.config?.mode || 'display') === 'edit';
@@ -578,11 +579,11 @@ export class HotEventsRankingComponent implements IScreenComponent, OnInit, OnDe
       return this.normalizeStaticEntries(this.config.staticEntries);
     }
 
-    if (!this.sdk) {
+    if (!this.dataSource) {
       return [];
     }
 
-    const events = await this.fetchEventsFromSdk();
+    const events = await this.fetchEventsFromSource();
 
     if (events.length) {
       return events;
@@ -591,8 +592,8 @@ export class HotEventsRankingComponent implements IScreenComponent, OnInit, OnDe
     return [];
   }
 
-  private async fetchEventsFromSdk(): Promise<HotEventSource[]> {
-    if (!this.sdk) {
+  private async fetchEventsFromSource(): Promise<HotEventSource[]> {
+    if (!this.dataSource) {
       return [];
     }
 
@@ -618,8 +619,7 @@ export class HotEventsRankingComponent implements IScreenComponent, OnInit, OnDe
       params.province = this.config.province;
     }
 
-    const response = await this.sdk.event.getEvents(params);
-    const dataset = response?.data || [];
+    const dataset = await this.dataSource.fetchEvents(params);
 
     return dataset.map(event => ({
       id: event.id,

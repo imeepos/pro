@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Observable, Subject, of } from 'rxjs';
 import { takeUntil, catchError, map } from 'rxjs/operators';
 
-import { ApiKeyStats, ApiKeyUsageStats, ApiKey } from '@pro/sdk';
+import { ApiKeyStats, ApiKeyUsageStats, ApiKey } from '@pro/types';
 import { ApiKeyService } from '../services/api-key.service';
 
 @Component({

@@ -1,15 +1,85 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError, finalize, of, map } from 'rxjs';
+import { Observable, tap, catchError, throwError, finalize, of, map, from } from 'rxjs';
 import { AuthStore } from './auth.store';
 import { AuthQuery } from './auth.query';
-import { SkerSDK } from '@pro/sdk';
 import { TokenStorageService } from '../core/services/token-storage.service';
 import { LoginDto, RegisterDto, AuthResponse, User, UserProfile } from '@pro/types';
+import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
+
+const LOGIN_MUTATION = /* GraphQL */ `
+  mutation Login($input: LoginDto!) {
+    login(input: $input) {
+      accessToken
+      refreshToken
+      user {
+        id
+        username
+        email
+        status
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+const REGISTER_MUTATION = /* GraphQL */ `
+  mutation Register($input: RegisterDto!) {
+    register(input: $input) {
+      accessToken
+      refreshToken
+      user {
+        id
+        username
+        email
+        status
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+const REFRESH_MUTATION = /* GraphQL */ `
+  mutation Refresh($input: RefreshTokenDto!) {
+    refreshToken(input: $input) {
+      accessToken
+      refreshToken
+      user {
+        id
+        username
+        email
+        status
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+const LOGOUT_MUTATION = /* GraphQL */ `
+  mutation Logout {
+    logout
+  }
+`;
+
+const ME_QUERY = /* GraphQL */ `
+  query Me {
+    me {
+      id
+      username
+      email
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private sdk = inject(SkerSDK);
+  private gateway = inject(GraphqlGateway);
   private store = inject(AuthStore);
   private query = inject(AuthQuery);
   private tokenStorage = inject(TokenStorageService);
@@ -19,10 +89,12 @@ export class AuthService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.sdk.auth.login(dto).pipe(
+    return from(
+      this.gateway.request<{ login: AuthResponse }>(LOGIN_MUTATION, { input: dto })
+    ).pipe(
+      map(result => result.login),
       tap(response => {
-        const actualResponse = (response as any).data || response;
-        this.handleAuthSuccess(actualResponse);
+        this.handleAuthSuccess(response);
       }),
       catchError(error => {
         this.setError(error.message);
@@ -36,7 +108,10 @@ export class AuthService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.sdk.auth.register(dto).pipe(
+    return from(
+      this.gateway.request<{ register: AuthResponse }>(REGISTER_MUTATION, { input: dto })
+    ).pipe(
+      map(result => result.register),
       tap(response => {
         this.handleAuthSuccess(response);
       }),
@@ -51,7 +126,7 @@ export class AuthService {
   logout(): void {
     this.setLoading(true);
 
-    this.sdk.auth.logout().subscribe({
+    from(this.gateway.request<{ logout: boolean }>(LOGOUT_MUTATION)).subscribe({
       complete: () => {
         this.handleLogout();
       },
@@ -76,10 +151,10 @@ export class AuthService {
     this.setLoading(true);
     this.setError(null);
 
-    return this.sdk.auth.getProfile().pipe(
-      tap(user => {
+    return from(this.gateway.request<{ me: User }>(ME_QUERY)).pipe(
+      tap(result => {
         this.store.update({
-          user: user,
+          user: this.convertUserToProfile(result.me),
           isAuthenticated: true,
           error: null,
           loading: false
