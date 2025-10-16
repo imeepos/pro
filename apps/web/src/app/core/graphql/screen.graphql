@@ -1,0 +1,130 @@
+query PublishedScreens($page: Int, $limit: Int) {
+  publishedScreens(page: $page, limit: $limit) {
+    edges {
+      node {
+        id
+        name
+        description
+        layout {
+          width
+          height
+          background
+          cols
+          rows
+          grid {
+            size
+            enabled
+          }
+        }
+        components {
+          id
+          type
+          position {
+            x
+            y
+            width
+            height
+            zIndex
+          }
+          config
+          dataSource {
+            type
+            url
+            data
+            refreshInterval
+          }
+        }
+        status
+        isDefault
+        createdBy
+        createdAt
+        updatedAt
+      }
+    }
+    totalCount
+  }
+}
+
+query DefaultScreen {
+  defaultScreen {
+    id
+    name
+    description
+      layout {
+        width
+        height
+        background
+        cols
+        rows
+        grid {
+          size
+          enabled
+        }
+      }
+      components {
+        id
+        type
+        position {
+          x
+          y
+          width
+          height
+          zIndex
+        }
+        config
+        dataSource {
+          type
+          url
+          data
+          refreshInterval
+        }
+      }
+      status
+      isDefault
+      createdBy
+      createdAt
+      updatedAt
+  }
+}
+
+query Screen($id: ID!) {
+  screen(id: $id) {
+    id
+    name
+    description
+      layout {
+        width
+        height
+        background
+        cols
+        rows
+        grid {
+          size
+          enabled
+        }
+      }
+      components {
+        id
+        type
+        position {
+          x
+          y
+          width
+          height
+          zIndex
+        }
+        config
+        dataSource {
+          type
+          url
+          data
+          refreshInterval
+        }
+      }
+      status
+      isDefault
+      createdBy
+      createdAt
+      updatedAt
+  }
+}

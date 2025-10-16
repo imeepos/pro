@@ -2,76 +2,27 @@ import { Injectable } from '@angular/core';
 import { from, Observable, map } from 'rxjs';
 import { LoginDto, RegisterDto, AuthResponse, User } from '@pro/types';
 import { GraphqlGateway } from '../graphql/graphql-gateway.service';
+import {
+  LoginDocument,
+  LoginMutation,
+  LoginMutationVariables,
+  LogoutDocument,
+  LogoutMutation,
+  LogoutMutationVariables,
+  MeDocument,
+  MeQuery,
+  MeQueryVariables,
+  RefreshDocument,
+  RefreshMutation,
+  RefreshMutationVariables,
+  RegisterDocument,
+  RegisterMutation,
+  RegisterMutationVariables
+} from '../graphql/generated/graphql';
+import { toDomainUser } from '../utils/user-mapper';
 
-const LOGIN_MUTATION = /* GraphQL */ `
-  mutation Login($input: LoginDto!) {
-    login(input: $input) {
-      accessToken
-      refreshToken
-      user {
-        id
-        username
-        email
-        status
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
-
-const REGISTER_MUTATION = /* GraphQL */ `
-  mutation Register($input: RegisterDto!) {
-    register(input: $input) {
-      accessToken
-      refreshToken
-      user {
-        id
-        username
-        email
-        status
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
-
-const REFRESH_MUTATION = /* GraphQL */ `
-  mutation Refresh($input: RefreshTokenDto!) {
-    refreshToken(input: $input) {
-      accessToken
-      refreshToken
-      user {
-        id
-        username
-        email
-        status
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
-
-const LOGOUT_MUTATION = /* GraphQL */ `
-  mutation Logout {
-    logout
-  }
-`;
-
-const ME_QUERY = /* GraphQL */ `
-  query Me {
-    me {
-      id
-      username
-      email
-      status
-      createdAt
-      updatedAt
-    }
-  }
-`;
+type GraphqlAuthPayload = LoginMutation['login'];
+type GraphqlUser = GraphqlAuthPayload['user'];
 
 @Injectable({
   providedIn: 'root'
@@ -81,31 +32,49 @@ export class AuthService {
 
   login(dto: LoginDto): Observable<AuthResponse> {
     return from(
-      this.gateway.request<{ login: AuthResponse }>(LOGIN_MUTATION, { input: dto })
-    ).pipe(map(result => result.login));
+      this.gateway.request<LoginMutation, LoginMutationVariables>(LoginDocument, {
+        input: dto
+      })
+    ).pipe(map(result => this.toAuthResponse(result.login)));
   }
 
   register(dto: RegisterDto): Observable<AuthResponse> {
     return from(
-      this.gateway.request<{ register: AuthResponse }>(REGISTER_MUTATION, { input: dto })
-    ).pipe(map(result => result.register));
+      this.gateway.request<RegisterMutation, RegisterMutationVariables>(RegisterDocument, {
+        input: dto
+      })
+    ).pipe(map(result => this.toAuthResponse(result.register)));
   }
 
   logout(): Observable<void> {
     return from(
-      this.gateway.request<{ logout: boolean }>(LOGOUT_MUTATION)
+      this.gateway.request<LogoutMutation, LogoutMutationVariables>(LogoutDocument)
     ).pipe(map(() => void 0));
   }
 
   refreshToken(refreshToken: string): Observable<AuthResponse> {
     return from(
-      this.gateway.request<{ refreshToken: AuthResponse }>(REFRESH_MUTATION, {
+      this.gateway.request<RefreshMutation, RefreshMutationVariables>(RefreshDocument, {
         input: { refreshToken }
       })
-    ).pipe(map(result => result.refreshToken));
+    ).pipe(map(result => this.toAuthResponse(result.refreshToken)));
   }
 
   getProfile(): Observable<User> {
-    return from(this.gateway.request<{ me: User }>(ME_QUERY)).pipe(map(result => result.me));
+    return from(this.gateway.request<MeQuery, MeQueryVariables>(MeDocument)).pipe(
+      map(result => this.toUser(result.me))
+    );
+  }
+
+  private toAuthResponse(payload: GraphqlAuthPayload): AuthResponse {
+    return {
+      accessToken: payload.accessToken,
+      refreshToken: payload.refreshToken,
+      user: toDomainUser(payload.user)
+    };
+  }
+
+  private toUser(user: GraphqlUser): User {
+    return toDomainUser(user);
   }
 }

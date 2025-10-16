@@ -1,25 +1,31 @@
 import { Injectable } from '@angular/core';
-import { Query } from '@datorama/akita';
-import { AuthStore, AuthState } from './auth.store';
 import { Observable } from 'rxjs';
 import { User } from '@pro/types';
+import { AuthSignalStore } from './auth.signal-store';
+import { AuthState } from './auth.state';
 
 @Injectable({ providedIn: 'root' })
-export class AuthQuery extends Query<AuthState> {
-  currentUser$: Observable<User | null> = this.select(state => state.user);
-  isAuthenticated$: Observable<boolean> = this.select(state => state.isAuthenticated);
-  loading$: Observable<boolean> = this.select(state => state.loading);
-  error$: Observable<string | null> = this.select(state => state.error);
+export class AuthQuery {
+  currentUser$ = this.store.user$;
+  isAuthenticated$ = this.store.isAuthenticated$;
+  loading$ = this.store.loading$;
+  error$ = this.store.error$;
 
-  constructor(protected override store: AuthStore) {
-    super(store);
-  }
+  constructor(private readonly store: AuthSignalStore) {}
 
   get currentUser(): User | null {
-    return this.getValue().user;
+    return this.store.user();
   }
 
   get isAuthenticated(): boolean {
-    return this.getValue().isAuthenticated;
+    return this.store.isAuthenticated();
+  }
+
+  select<T>(project: (state: AuthState) => T): Observable<T> {
+    return this.store.select(project);
+  }
+
+  snapshot(): AuthState {
+    return this.store.getValue();
   }
 }

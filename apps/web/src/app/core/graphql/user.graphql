@@ -1,0 +1,21 @@
+query User($id: String!) {
+  user(id: $id) {
+    id
+    username
+    email
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateUser($id: String!, $input: UpdateUserDto!) {
+  updateUser(id: $id, input: $input) {
+    id
+    username
+    email
+    status
+    createdAt
+    updatedAt
+  }
+}

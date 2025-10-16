@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 import { GraphQLClient } from 'graphql-request';
+import { TypedDocumentNode } from '@graphql-typed-document-node/core';
+import { Kind, OperationDefinitionNode } from 'graphql';
 import { environment } from '../../../environments/environment';
 import { TokenStorageService } from '../services/token-storage.service';
 import { logger } from '../utils/logger';
-
-type GraphqlVariables = Record<string, unknown> | undefined;
 
 @Injectable({
   providedIn: 'root'
@@ -14,16 +14,23 @@ export class GraphqlGateway {
 
   constructor(private readonly tokenStorage: TokenStorageService) {}
 
-  async request<T>(query: string, variables?: GraphqlVariables): Promise<T> {
+  async request<TResult, TVariables extends Record<string, unknown> = Record<string, never>>(
+    document: TypedDocumentNode<TResult, TVariables>,
+    variables?: TVariables
+  ): Promise<TResult> {
     const client = new GraphQLClient(this.endpoint, {
       headers: this.buildHeaders()
     });
 
     try {
-      return await client.request<T>(query, variables);
+      return await client.request<TResult>(
+        document,
+        variables as Record<string, unknown> | undefined
+      );
     } catch (error) {
       logger.error('[GraphqlGateway] 请求失败', {
         message: (error as Error).message,
+        operation: this.lookupOperation(document),
         variables
       });
       throw error;
@@ -60,5 +67,14 @@ export class GraphqlGateway {
     }
 
     return `${base}/graphql`;
+  }
+
+  private lookupOperation(document: TypedDocumentNode<unknown, any>): string | undefined {
+    const operation = document.definitions.find(
+      (definition): definition is OperationDefinitionNode =>
+        definition.kind === Kind.OPERATION_DEFINITION && Boolean(definition.name)
+    );
+
+    return operation?.name?.value;
   }
 }

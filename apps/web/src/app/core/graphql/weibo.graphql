@@ -1,0 +1,7 @@
+query WeiboAccountStats {
+  weiboAccountStats {
+    total
+    todayNew
+    online
+  }
+}

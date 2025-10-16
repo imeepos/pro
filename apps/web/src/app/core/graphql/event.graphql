@@ -1,0 +1,43 @@
+query EventsForMap($filter: EventMapQueryInput) {
+  eventsForMap(filter: $filter) {
+    id
+    eventName
+    summary
+    occurTime
+    province
+    city
+    district
+    street
+    longitude
+    latitude
+    status
+    eventTypeId
+    industryTypeId
+  }
+}
+
+query Events($filter: EventQueryInput) {
+  events(filter: $filter) {
+    edges {
+      node {
+        id
+        eventName
+        summary
+        occurTime
+        province
+        city
+        district
+        street
+        status
+        eventTypeId
+        industryTypeId
+      }
+    }
+  }
+}
+
+query AmapKey {
+  configValue(type: AMAP_API_KEY) {
+    value
+  }
+}

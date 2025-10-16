@@ -7,69 +7,23 @@ import {
   EventSummary
 } from '@pro/types';
 import { GraphqlGateway } from '../graphql/graphql-gateway.service';
-
-const EVENTS_FOR_MAP_QUERY = /* GraphQL */ `
-  query EventsForMap($filter: EventMapQueryInput) {
-    eventsForMap(filter: $filter) {
-      id
-      eventName
-      summary
-      occurTime
-      province
-      city
-      district
-      street
-      longitude
-      latitude
-      status
-      eventTypeId
-      industryTypeId
-    }
-  }
-`;
-
-const EVENTS_QUERY = /* GraphQL */ `
-  query Events($filter: EventQueryInput) {
-    events(filter: $filter) {
-      edges {
-        node {
-          id
-          eventName
-          summary
-          occurTime
-          province
-          city
-          district
-          street
-          status
-          eventTypeId
-          industryTypeId
-        }
-      }
-    }
-  }
-`;
-
-const AMAP_KEY_QUERY = /* GraphQL */ `
-  query AmapKey {
-    configValue(type: AMAP_API_KEY) {
-      value
-    }
-  }
-`;
-interface EventsForMapPayload {
-  eventsForMap: EventMapPoint[];
-}
-
-interface EventsConnectionPayload {
-  events: {
-    edges: Array<{ node: EventSummary }>;
-  };
-}
-
-interface ConfigValuePayload {
-  configValue: { value?: string } | null;
-}
+import {
+  AmapKeyDocument,
+  AmapKeyQuery,
+  AmapKeyQueryVariables,
+  EventsDocument,
+  EventsForMapDocument,
+  EventsForMapQuery,
+  EventsForMapQueryVariables,
+  EventsQuery,
+  EventsQueryVariables
+} from '../graphql/generated/graphql';
+import {
+  toDomainEventPoint,
+  toDomainEventSummary,
+  toGraphqlEventFilter,
+  toGraphqlEventMapFilter
+} from '../utils/event-mapper';
 
 @Injectable({ providedIn: 'root' })
 export class EventDataService implements EventDataSource {
@@ -77,20 +31,24 @@ export class EventDataService implements EventDataSource {
 
   fetchEventsForMap(params: EventMapQueryParams): Promise<EventMapPoint[]> {
     return this.gateway
-      .request<EventsForMapPayload>(EVENTS_FOR_MAP_QUERY, params ? { filter: params } : undefined)
-      .then(result => result.eventsForMap ?? []);
+      .request<EventsForMapQuery, EventsForMapQueryVariables>(
+        EventsForMapDocument,
+        params ? { filter: toGraphqlEventMapFilter(params) } : undefined
+      )
+      .then(result => (result.eventsForMap ?? []).map(toDomainEventPoint));
   }
 
   async fetchEvents(params: EventQueryParams): Promise<EventSummary[]> {
-    const response = await this.gateway.request<EventsConnectionPayload>(EVENTS_QUERY, {
-      filter: params
-    });
+    const response = await this.gateway.request<EventsQuery, EventsQueryVariables>(
+      EventsDocument,
+      { filter: toGraphqlEventFilter(params) }
+    );
 
-    return response.events?.edges?.map(edge => edge.node) ?? [];
+    return response.events?.edges?.map(edge => toDomainEventSummary(edge.node)) ?? [];
   }
 
   async fetchAmapApiKey(): Promise<string | null> {
-    const result = await this.gateway.request<ConfigValuePayload>(AMAP_KEY_QUERY);
+    const result = await this.gateway.request<AmapKeyQuery, AmapKeyQueryVariables>(AmapKeyDocument);
     return result.configValue?.value ?? null;
   }
 }

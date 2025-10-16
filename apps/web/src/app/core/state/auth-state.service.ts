@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { tap, catchError, of } from 'rxjs';
-import { AuthStore } from './auth.store';
-import { AuthQuery } from './auth.query';
+import { AuthSignalStore } from './auth.signal-store';
 import { AuthService } from '../services/auth.service';
 import { TokenStorageService } from '../services/token-storage.service';
 import { LoginDto, RegisterDto } from '@pro/types';
@@ -10,21 +9,20 @@ import { Router } from '@angular/router';
 @Injectable({ providedIn: 'root' })
 export class AuthStateService {
   constructor(
-    private authStore: AuthStore,
-    private authQuery: AuthQuery,
+    private authStore: AuthSignalStore,
     private authService: AuthService,
     private tokenStorage: TokenStorageService,
     private router: Router
   ) {}
 
   login(dto: LoginDto) {
-    this.authStore.update({ loading: true, error: null });
+    this.authStore.patch({ loading: true, error: null });
 
     return this.authService.login(dto).pipe(
       tap(response => {
         this.tokenStorage.setToken(response.accessToken);
         this.tokenStorage.setRefreshToken(response.refreshToken);
-        this.authStore.update({
+        this.authStore.patch({
           user: response.user,
           isAuthenticated: true,
           loading: false,
@@ -33,7 +31,7 @@ export class AuthStateService {
         this.router.navigate(['/']);
       }),
       catchError(error => {
-        this.authStore.update({
+        this.authStore.patch({
           loading: false,
           error: error.message || '登录失败'
         });
@@ -43,13 +41,13 @@ export class AuthStateService {
   }
 
   register(dto: RegisterDto) {
-    this.authStore.update({ loading: true, error: null });
+    this.authStore.patch({ loading: true, error: null });
 
     return this.authService.register(dto).pipe(
       tap(response => {
         this.tokenStorage.setToken(response.accessToken);
         this.tokenStorage.setRefreshToken(response.refreshToken);
-        this.authStore.update({
+        this.authStore.patch({
           user: response.user,
           isAuthenticated: true,
           loading: false,
@@ -58,7 +56,7 @@ export class AuthStateService {
         this.router.navigate(['/']);
       }),
       catchError(error => {
-        this.authStore.update({
+        this.authStore.patch({
           loading: false,
           error: error.message || '注册失败'
         });
@@ -68,12 +66,12 @@ export class AuthStateService {
   }
 
   logout() {
-    this.authStore.update({ loading: true, error: null });
+    this.authStore.patch({ loading: true, error: null });
 
     return this.authService.logout().pipe(
       tap(() => {
         this.tokenStorage.clearAll();
-        this.authStore.update({
+        this.authStore.patch({
           user: null,
           isAuthenticated: false,
           loading: false,
@@ -83,7 +81,7 @@ export class AuthStateService {
       }),
       catchError(() => {
         this.tokenStorage.clearAll();
-        this.authStore.update({
+        this.authStore.patch({
           user: null,
           isAuthenticated: false,
           loading: false,
@@ -99,7 +97,7 @@ export class AuthStateService {
     const token = this.tokenStorage.getToken();
     if (!token) {
       this.tokenStorage.clearAll();
-      this.authStore.update({
+      this.authStore.patch({
         user: null,
         isAuthenticated: false,
         loading: false,
@@ -108,10 +106,10 @@ export class AuthStateService {
       return of(null);
     }
 
-    this.authStore.update({ loading: true });
+    this.authStore.patch({ loading: true });
     return this.authService.getProfile().pipe(
       tap(user => {
-        this.authStore.update({
+        this.authStore.patch({
           user,
           isAuthenticated: true,
           loading: false,
@@ -120,7 +118,7 @@ export class AuthStateService {
       }),
       catchError(() => {
         this.tokenStorage.clearAll();
-        this.authStore.update({
+        this.authStore.patch({
           user: null,
           isAuthenticated: false,
           loading: false,
