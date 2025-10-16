@@ -1,6 +1,6 @@
 import { ApplicationConfig, inject } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, HttpHeaders } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
@@ -26,6 +26,13 @@ export const appConfig: ApplicationConfig = {
       const httpLink = inject(HttpLink);
       const http = httpLink.create({ uri: environment.graphqlEndpoint });
 
+      const authLink = new ApolloLink((operation, forward) => {
+        operation.setContext({
+          headers: new HttpHeaders().set('X-API-Key', environment.apiKey),
+        });
+        return forward(operation);
+      });
+
       const errorLink = onError(({ error }) => {
         if (CombinedGraphQLErrors.is(error)) {
           error.errors.forEach((graphError: GraphQLFormattedError) => {
@@ -42,7 +49,7 @@ export const appConfig: ApplicationConfig = {
       });
 
       return {
-        link: ApolloLink.from([errorLink, http]),
+        link: ApolloLink.from([authLink, errorLink, http]),
         cache: new InMemoryCache({
           typePolicies: {
             Query: {
