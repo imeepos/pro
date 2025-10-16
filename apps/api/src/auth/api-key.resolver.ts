@@ -11,15 +11,15 @@ import {
   RegenerateApiKeyDto,
   UpdateApiKeyDto,
 } from './dto/api-key.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiKeyOwnerGuard } from './guards/api-key-owner.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AugmentedRequest } from '../common/utils/context.utils';
 import { GraphqlLoaders } from '../common/dataloaders/types';
 import { buildOffsetConnection } from '../common/utils/pagination.utils';
+import { CompositeAuthGuard } from './guards/composite-auth.guard';
 
 @Resolver()
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class ApiKeyResolver {
   constructor(private readonly apiKeyService: ApiKeyService) {}
 

@@ -1,12 +1,12 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { IndustryTypeService } from './industry-type.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateIndustryTypeDto, UpdateIndustryTypeDto } from './dto/industry-type.dto';
 import { IndustryTypeModel, mapIndustryTypeEntityToModel } from './models/industry-type.model';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => IndustryTypeModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class IndustryTypeResolver {
   constructor(private readonly industryTypeService: IndustryTypeService) {}
 

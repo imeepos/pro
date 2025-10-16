@@ -1,12 +1,12 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { EventTypeService } from './event-type.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateEventTypeDto, UpdateEventTypeDto } from './dto/event-type.dto';
 import { EventTypeModel, mapEventTypeEntityToModel } from './models/event-type.model';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => EventTypeModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class EventTypeResolver {
   constructor(private readonly eventTypeService: EventTypeService) {}
 

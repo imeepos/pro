@@ -8,6 +8,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AugmentedRequest } from '../common/utils/context.utils';
 import { GraphqlLoaders } from '../common/dataloaders/types';
+import { CompositeAuthGuard } from './guards/composite-auth.guard';
 
 @Resolver()
 export class AuthResolver {
@@ -29,7 +30,7 @@ export class AuthResolver {
   }
 
   @Mutation(() => Boolean, { name: 'logout' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CompositeAuthGuard)
   async logout(@Context('req') req: AugmentedRequest) {
     const authorization = req.headers.authorization;
     const token = authorization?.replace(/^Bearer\\s+/i, '');
@@ -43,7 +44,7 @@ export class AuthResolver {
   }
 
   @Query(() => UserModel, { name: 'me' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CompositeAuthGuard)
   async me(
     @CurrentUser('userId') userId: string,
     @Context('loaders') loaders: GraphqlLoaders,

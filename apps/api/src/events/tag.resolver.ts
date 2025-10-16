@@ -1,7 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, ID, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { TagService } from './tag.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateTagDto, UpdateTagDto } from './dto/tag.dto';
 import { TagConnection, TagModel, mapTagEntityToModel } from './models/tag.model';
 import { buildOffsetConnection } from '../common/utils/pagination.utils';

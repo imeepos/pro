@@ -1,12 +1,12 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConfigService } from './config.service';
 import { ConfigType } from './dto/config.dto';
 import { ConfigCacheStatsModel, ConfigValueModel } from './models/config.model';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver()
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class ConfigResolver {
   constructor(private readonly configService: ConfigService) {}
 

@@ -1,7 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AttachmentService } from './attachment.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   AttachmentUploadCredential,
   ConfirmAttachmentUploadInput,
@@ -9,9 +8,10 @@ import {
 } from './dto/attachment.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { EventAttachmentModel, mapEventAttachmentEntityToModel } from './models/event.model';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver(() => EventAttachmentModel)
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class AttachmentResolver {
   constructor(private readonly attachmentService: AttachmentService) {}
 

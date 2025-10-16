@@ -1,13 +1,13 @@
 import { UseGuards } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
 import { DashboardService } from './dashboard.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { DashboardActivityModel, DashboardActivityType, DashboardStatsModel } from './models/dashboard.model';
 import { RecentActivity } from './dto/dashboard.dto';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 
 @Resolver()
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class DashboardResolver {
   constructor(private readonly dashboardService: DashboardService) {}
 
