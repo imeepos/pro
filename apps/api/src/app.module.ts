@@ -17,6 +17,7 @@ import { MediaTypeModule } from './media-type/media-type.module';
 import { ConfigModule } from './config/config.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { BugModule } from './bug/bug.module';
 import { LoadersModule } from './loaders.module';
 import { createDatabaseConfig } from './config';
 import { AugmentedRequest, GraphqlContext } from './common/utils/context.utils';
@@ -97,6 +98,7 @@ import { TagLoader } from './events/tag.loader';
     MediaTypeModule,
     DashboardModule,
     NotificationsModule,
+    BugModule,
   ],
   controllers: [],
   providers: [HealthResolver],

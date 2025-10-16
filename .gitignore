@@ -5,6 +5,7 @@ node_modules/
 nul
 .pnpm-store
 .angular
+.jest-cache
 # Testing
 coverage/
 *.lcov

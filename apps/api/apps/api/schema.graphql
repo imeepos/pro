@@ -96,6 +96,10 @@ enum ApiKeyType {
   READ_WRITE
 }
 
+input AssignBugInput {
+  assigneeId: String!
+}
+
 type AttachmentUploadCredential {
   bucketName: String!
   expiresAt: DateTime!
@@ -109,6 +113,92 @@ type AuthPayload {
   accessToken: String!
   refreshToken: String!
   user: User!
+}
+
+type BugCommentModel {
+  authorId: String
+  bugId: String!
+  content: String!
+  createdAt: DateTime!
+  id: ID!
+  updatedAt: DateTime!
+}
+
+input BugFiltersInput {
+  assigneeId: String
+  limit: Float
+  page: Float
+  priority: [BugPriority!]
+  reporterId: String
+  search: String
+  sortBy: String
+  sortOrder: String
+  status: [BugStatus!]
+}
+
+type BugModel {
+  actualBehavior: String
+  actualHours: Float
+  assigneeId: String
+  category: String
+  closedAt: DateTime
+  closedBy: String
+  createdAt: DateTime!
+  description: String
+  dueDate: DateTime
+  estimatedHours: Float
+  expectedBehavior: String
+  id: ID!
+  priority: BugPriority!
+  reporterId: String!
+  reproductionRate: String
+  resolvedAt: DateTime
+  resolvedBy: String
+  status: BugStatus!
+  stepsToReproduce: String
+  title: String!
+  updatedAt: DateTime!
+}
+
+enum BugPriority {
+  CRITICAL
+  HIGH
+  LOW
+  MEDIUM
+}
+
+type BugPriorityStatistics {
+  critical: Int!
+  high: Int!
+  low: Int!
+  medium: Int!
+}
+
+type BugStatisticsModel {
+  byPriority: BugPriorityStatistics!
+  byStatus: BugStatusStatistics!
+  total: Int!
+}
+
+enum BugStatus {
+  CLOSED
+  IN_PROGRESS
+  OPEN
+  REJECTED
+  REOPENED
+  RESOLVED
+}
+
+type BugStatusStatistics {
+  closed: Int!
+  inProgress: Int!
+  open: Int!
+  resolved: Int!
+}
+
+type BugsPaginationModel {
+  bugs: [BugModel!]!
+  total: Int!
 }
 
 type ConfigCacheStats {
@@ -136,6 +226,25 @@ input CreateApiKeyDto {
   name: String!
   permissions: [String!]
   type: ApiKeyType!
+}
+
+input CreateBugCommentInput {
+  authorId: String
+  content: String!
+}
+
+input CreateBugInput {
+  actualBehavior: String
+  assigneeId: String
+  category: String
+  description: String
+  dueDate: DateTime
+  estimatedHours: Float
+  expectedBehavior: String
+  priority: BugPriority
+  reproductionRate: String
+  stepsToReproduce: String
+  title: String!
 }
 
 input CreateEventInput {
@@ -491,8 +600,10 @@ enum MediaTypeStatus {
 }
 
 type Mutation {
+  addBugComment(bugId: ID!, input: CreateBugCommentInput!): BugCommentModel!
   addTagsToEvent(eventId: ID!, tagIds: [ID!]!): Event!
   archiveEvent(id: ID!): Event!
+  assignBug(id: ID!, input: AssignBugInput!): BugModel!
   checkAllJdAccounts: JdAccountCheckSummary!
   checkAllWeiboAccounts: Boolean!
   checkJdAccount(id: Int!): JdAccountCheckResult!
@@ -501,6 +612,7 @@ type Mutation {
   confirmEventAttachmentUpload(input: ConfirmAttachmentUploadInput!): EventAttachment!
   copyScreen(id: ID!): Screen!
   createApiKey(input: CreateApiKeyDto!): ApiKeyResponseDto!
+  createBug(input: CreateBugInput!): BugModel!
   createEvent(input: CreateEventInput!): Event!
   createEventType(input: CreateEventTypeInput!): EventType!
   createIndustryType(input: CreateIndustryTypeInput!): IndustryType!
@@ -523,6 +635,7 @@ type Mutation {
   regenerateApiKey(id: Int!): RegenerateApiKeyDto!
   register(input: RegisterDto!): AuthPayload!
   removeApiKey(id: Int!): Boolean!
+  removeBug(id: ID!): Boolean!
   removeEvent(id: ID!): Boolean!
   removeEventType(id: ID!): Boolean!
   removeIndustryType(id: ID!): Boolean!
@@ -542,6 +655,8 @@ type Mutation {
   startJdLogin: JdLoginSession!
   startWeiboLogin: WeiboLoginSession!
   updateApiKey(id: Int!, input: UpdateApiKeyDto!): ApiKeyResponseDto!
+  updateBug(id: ID!, input: UpdateBugInput!): BugModel!
+  updateBugStatus(id: ID!, input: UpdateBugStatusInput!): BugModel!
   updateEvent(id: ID!, input: UpdateEventInput!): Event!
   updateEventType(id: ID!, input: UpdateEventTypeInput!): EventType!
   updateIndustryType(id: ID!, input: UpdateIndustryTypeInput!): IndustryType!
@@ -584,6 +699,10 @@ type Query {
   apiKeyStats(id: Int!): ApiKeyStatsDto!
   apiKeySummary: ApiKeySummaryStatsDto!
   apiKeys(filter: ApiKeyQueryDto): ApiKeyConnection!
+  bug(id: ID!): BugModel!
+  bugComments(bugId: ID!): [BugCommentModel!]!
+  bugStatistics: BugStatisticsModel!
+  bugs(filters: BugFiltersInput): BugsPaginationModel!
   configCacheStats: ConfigCacheStats!
   configValue(type: ConfigType!): ConfigValue!
   dashboardRecentActivities: [DashboardActivity!]!
@@ -809,6 +928,27 @@ input UpdateApiKeyDto {
   name: String
   permissions: [String!]
   type: ApiKeyType
+}
+
+input UpdateBugInput {
+  actualBehavior: String
+  actualHours: Float
+  assigneeId: String
+  category: String
+  description: String
+  dueDate: DateTime
+  estimatedHours: Float
+  expectedBehavior: String
+  priority: BugPriority
+  reproductionRate: String
+  status: BugStatus
+  stepsToReproduce: String
+  title: String
+}
+
+input UpdateBugStatusInput {
+  comment: String
+  status: BugStatus!
 }
 
 input UpdateEventInput {

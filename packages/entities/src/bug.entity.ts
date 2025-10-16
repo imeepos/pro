@@ -57,7 +57,7 @@ export class BugEntity {
   category: BugCategory;
 
   @Index()
-  @Column({ type: 'varchar', name: 'reporter_id' })
+  @Column({ type: 'varchar', nullable: true, name: 'reporter_id' })
   reporterId: string;
 
   @Index()
