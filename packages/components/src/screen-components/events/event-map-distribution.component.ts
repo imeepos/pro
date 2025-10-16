@@ -8,17 +8,14 @@ import {
   Optional,
   ViewChild,
   ViewEncapsulation,
-  NgZone
+  NgZone,
+  Inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, interval, takeUntil } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
-import {
-  SkerSDK,
-  EventStatus,
-  EventMapQueryParams,
-  EventMapPoint
-} from '@pro/sdk';
+import { EventStatus, EventMapQueryParams, EventMapPoint } from '@pro/types';
+import { EVENT_DATA_SOURCE, EventDataSource } from '../../data-providers/data-providers';
 
 type MapTheme = 'midnight' | 'ocean' | 'sunrise' | 'minimal';
 
@@ -405,7 +402,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
 
   constructor(
     private ngZone: NgZone,
-    @Optional() private sdk: SkerSDK | null
+    @Optional() @Inject(EVENT_DATA_SOURCE) private dataSource: EventDataSource | null
   ) {}
 
   get isEditMode(): boolean {
@@ -463,7 +460,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
       return;
     }
 
-    if (!this.sdk && !this.config?.apiKeyOverride) {
+    if (!this.dataSource && !this.config?.apiKeyOverride) {
       this.mapError = '等待认证完成后方可加载地图';
       return;
     }
@@ -506,7 +503,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
   }
 
   private async loadEvents(force = false): Promise<void> {
-    if (!this.sdk) {
+    if (!this.dataSource) {
       this.dataError = '事件服务不可用';
       return;
     }
@@ -539,7 +536,7 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
         query.province = this.config.province;
       }
 
-      const response = await this.sdk.event.getEventsForMap(query);
+      const response = await this.dataSource.fetchEventsForMap(query);
       const dataset = (response || []).filter(event => this.hasCoordinates(event));
       const items =
         desiredEventCount > 0 ? dataset.slice(0, desiredEventCount) : dataset;
@@ -863,11 +860,11 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
       return cached.value;
     }
 
-    if (!this.sdk) {
-      throw new Error('无法获取地图密钥：SkerSDK 未注入');
+    if (!this.dataSource) {
+      throw new Error('无法获取地图密钥：事件数据源未注入');
     }
 
-    const value = await this.sdk.config.getAmapApiKey();
+    const value = await this.dataSource.fetchAmapApiKey();
     if (!value || value.length < 8) {
       throw new Error('高德地图密钥不可用');
     }

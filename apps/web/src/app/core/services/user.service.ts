@@ -1,20 +1,50 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
-import { IUserService } from '@pro/sdk';
+import { from, Observable, map } from 'rxjs';
 import { User } from '@pro/types';
-import { HttpClientService } from './http-client.service';
+import { GraphqlGateway } from '../graphql/graphql-gateway.service';
 
-@Injectable({
-  providedIn: 'root'
-})
-export class UserService implements IUserService {
-  constructor(private httpClient: HttpClientService) {}
+const USER_QUERY = /* GraphQL */ `
+  query User($id: String!) {
+    user(id: $id) {
+      id
+      username
+      email
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+const UPDATE_USER_MUTATION = /* GraphQL */ `
+  mutation UpdateUser($id: String!, $input: UpdateUserDto!) {
+    updateUser(id: $id, input: $input) {
+      id
+      username
+      email
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+@Injectable({ providedIn: 'root' })
+export class UserService {
+  constructor(private gateway: GraphqlGateway) {}
 
   getUserInfo(id: string): Observable<User> {
-    return this.httpClient.get<User>(`/users/${id}`);
+    return from(this.gateway.request<{ user: User }>(USER_QUERY, { id })).pipe(
+      map(result => result.user)
+    );
   }
 
   updateUserInfo(id: string, data: Partial<User>): Observable<User> {
-    return this.httpClient.put<User>(`/users/${id}`, data);
+    return from(
+      this.gateway.request<{ updateUser: User }>(UPDATE_USER_MUTATION, {
+        id,
+        input: data
+      })
+    ).pipe(map(result => result.updateUser));
   }
 }

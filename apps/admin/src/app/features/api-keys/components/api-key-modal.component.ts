@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { ApiKey, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyRegenerationResponse } from '@pro/sdk';
+import { ApiKey, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyRegenerationResponse } from '@pro/types';
 import { ApiKeyService } from '../services/api-key.service';
 import { ApiKeyFormComponent } from './api-key-form.component';
 

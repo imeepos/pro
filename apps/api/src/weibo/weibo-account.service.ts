@@ -11,7 +11,7 @@ import {
   WeiboAccountEntity,
   WeiboAccountStatus,
 } from '@pro/entities';
-import { LoggedInUsersStats } from '@pro/sdk';
+import { LoggedInUsersStats } from '@pro/types';
 import { ScreensGateway } from '../screens/screens.gateway';
 
 /**
@@ -87,7 +87,7 @@ export class WeiboAccountService {
    * 获取微博已登录用户统计
    * 返回总数、今日新增、在线用户数
    */
-  async getLoggedInUsersStats() {
+  async getLoggedInUsersStats(): Promise<LoggedInUsersStats> {
     // 总用户数
     const total = await this.weiboAccountRepo.count();
 

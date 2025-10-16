@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ScreensGateway } from '../screens.gateway';
 import { Server, Socket } from 'socket.io';
-import { LoggedInUsersStats } from '@pro/sdk';
+import { LoggedInUsersStats } from '@pro/types';
 
 describe('ScreensGateway Integration', () => {
   let gateway: ScreensGateway;

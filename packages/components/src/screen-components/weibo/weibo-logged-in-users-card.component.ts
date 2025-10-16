@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, interval, Observable, combineLatest, filter, switchMap } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
 import { WebSocketManager, WebSocketService, ConnectionState, createScreensWebSocketConfig, JwtAuthService } from '../../websocket';
-import { SkerSDK, type LoggedInUsersStats, type ITokenStorage } from '@pro/sdk';
+import { LoggedInUsersStats, TokenStorage } from '@pro/types';
+import { WEIBO_STATS_DATA_SOURCE, TOKEN_STORAGE, WeiboStatsDataSource } from '../../data-providers/data-providers';
 
 export interface WeiboUsersCardConfig {
   mode?: 'edit' | 'display';
@@ -323,17 +324,17 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
 
   constructor(
     @Optional() private wsManager: WebSocketManager | null,
-    @Optional() private sdk: SkerSDK | null,
-    @Optional() @Inject('ITokenStorage') private tokenStorage: ITokenStorage | null,
+    @Optional() @Inject(WEIBO_STATS_DATA_SOURCE) private weiboDataSource: WeiboStatsDataSource | null,
+    @Optional() @Inject(TOKEN_STORAGE) private tokenStorage: TokenStorage | null,
     private cdr: ChangeDetectorRef
   ) {
     console.log('[WeiboLoggedInUsersCardComponent] 构造函数调用 - 可选依赖模式', {
       componentName: 'weibo-logged-in-users-card',
       wsManager: !!this.wsManager,
-      sdk: !!this.sdk,
+      weiboDataSource: !!this.weiboDataSource,
       tokenStorage: !!this.tokenStorage,
       wsManagerType: this.wsManager?.constructor?.name,
-      sdkType: this.sdk?.constructor?.name,
+      dataSourceType: this.weiboDataSource?.constructor?.name,
       tokenStorageType: this.tokenStorage?.constructor?.name
     });
   }
@@ -343,7 +344,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
       componentId: 'weibo-logged-in-users-card',
       config: this.config,
       hasWsManager: !!this.wsManager,
-      hasSdk: !!this.sdk,
+      hasDataSource: !!this.weiboDataSource,
       hasTokenStorage: !!this.tokenStorage
     });
 
@@ -385,11 +386,11 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   }
 
   private validateServicesAndInitialize(): void {
-    const hasRequiredServices = this.sdk !== null;
+    const hasRequiredServices = this.weiboDataSource !== null;
 
     if (!hasRequiredServices) {
       console.warn('[WeiboLoggedInUsersCardComponent] 关键服务不可用，进入降级模式', {
-        hasSDK: !!this.sdk,
+        hasDataSource: !!this.weiboDataSource,
         hasWSManager: !!this.wsManager,
         hasTokenStorage: !!this.tokenStorage
       });
@@ -398,7 +399,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     }
 
     console.log('[WeiboLoggedInUsersCardComponent] 服务验证通过，启动完整功能', {
-      hasSDK: !!this.sdk,
+      hasDataSource: !!this.weiboDataSource,
       hasWSManager: !!this.wsManager,
       hasTokenStorage: !!this.tokenStorage
     });
@@ -453,12 +454,12 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
       takeUntil(this.destroy$),
       takeUntil(this.refreshTimer$)
     ).subscribe(() => {
-      if (this.sdk) {
-        console.log('[WeiboLoggedInUsersCardComponent] SDK服务恢复，尝试重新加载数据');
+      if (this.weiboDataSource) {
+        console.log('[WeiboLoggedInUsersCardComponent] 数据源恢复，尝试重新加载数据');
         this.clearErrorState();
         this.loadData();
       } else {
-        console.log('[WeiboLoggedInUsersCardComponent] 降级模式定时器触发，SDK仍不可用');
+        console.log('[WeiboLoggedInUsersCardComponent] 降级模式定时器触发，数据源仍不可用');
       }
     });
   }
@@ -477,8 +478,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   private loadData(): void {
     console.log('[WeiboLoggedInUsersCardComponent] loadData 开始', {
       isLoading: this.isLoading,
-      hasSdk: !!this.sdk,
-      sdkWeiboMethod: this.sdk ? typeof this.sdk.weibo?.getAccountStats : 'N/A'
+      hasDataSource: !!this.weiboDataSource
     });
 
     if (this.isLoading) {
@@ -486,8 +486,8 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
       return;
     }
 
-    if (!this.sdk) {
-      console.error('[WeiboLoggedInUsersCardComponent] SDK服务不可用，无法加载数据');
+    if (!this.weiboDataSource) {
+      console.error('[WeiboLoggedInUsersCardComponent] 数据源不可用，无法加载数据');
       this.setDataError('数据服务不可用');
       return;
     }
@@ -495,17 +495,15 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     this.isLoading = true;
     this.clearErrorState();
 
-    console.log('[WeiboLoggedInUsersCardComponent] 调用 SDK API');
+    console.log('[WeiboLoggedInUsersCardComponent] 调用微博统计数据源');
 
     try {
-      this.sdk.weibo.getAccountStats().pipe(
-        takeUntil(this.destroy$)
-      ).subscribe({
+      this.weiboDataSource.fetchLoggedInUsers().pipe(takeUntil(this.destroy$)).subscribe({
         next: (accountStats) => {
           const stats: LoggedInUsersStats = {
-            total: accountStats.total,
-            todayNew: 0,
-            online: accountStats.active
+            total: accountStats.total ?? 0,
+            todayNew: accountStats.todayNew ?? 0,
+            online: accountStats.online ?? 0
           };
           console.log('[WeiboLoggedInUsersCardComponent] 数据加载成功', {
             stats,
@@ -525,11 +523,11 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
         }
       });
     } catch (syncError) {
-      console.error('[WeiboLoggedInUsersCardComponent] SDK调用同步错误', {
+      console.error('[WeiboLoggedInUsersCardComponent] 数据源调用同步错误', {
         error: syncError instanceof Error ? syncError.message : syncError,
         stack: syncError instanceof Error ? syncError.stack : undefined
       });
-      this.setDataError('SDK调用失败');
+      this.setDataError('数据源调用失败');
       this.isLoading = false;
     }
   }

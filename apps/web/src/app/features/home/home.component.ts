@@ -1,13 +1,15 @@
-import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, AfterViewInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subject, interval } from 'rxjs';
-import { takeUntil, switchMap, debounceTime } from 'rxjs/operators';
-import { ScreenPage, Component as ScreenComponent, SkerSDK } from '@pro/sdk';
+import { takeUntil, debounceTime } from 'rxjs/operators';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 import { WebSocketManager, createScreensWebSocketConfig, JwtAuthService, ComponentRegistryService, IScreenComponent } from '@pro/components';
 import { AuthStateService } from '../../core/state/auth-state.service';
 import { AuthQuery } from '../../core/state/auth.query';
 import { TokenStorageService } from '../../core/services/token-storage.service';
+import { ScreenService } from '../../core/services/screen.service';
+import { ScreenPage, ScreenComponentConfig as ScreenComponent } from '../../core/types/screen.types';
 import { ToastService } from '../../shared/services/toast.service';
 import { EmptyStateComponent, EmptyStateConfig } from '../../shared/components/empty-state/empty-state.component';
 import { logger } from '../../core/utils/logger';
@@ -50,28 +52,134 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private pendingComponentCreation = false;
   private componentCreationRetryCount = 0;
   private readonly maxRetryCount = 3;
+  private readonly publishedScreensQuery = injectQuery(() => ({
+    queryKey: ['screens', 'published'],
+    queryFn: () => this.screenService.fetchPublishedScreens(),
+    staleTime: 60_000,
+    gcTime: 300_000
+  }));
+  private readonly defaultScreenQuery = injectQuery(() => ({
+    queryKey: ['screens', 'default'],
+    queryFn: () => this.screenService.fetchDefaultScreen(),
+    staleTime: 60_000,
+    gcTime: 300_000,
+    retry: 1
+  }));
+  private hasInitializedScreen = false;
+  private hasAnnouncedEmptyState = false;
+  private hasReportedListError = false;
+  private hasReportedDefaultError = false;
 
   constructor(
     private authStateService: AuthStateService,
     private authQuery: AuthQuery,
     private router: Router,
-    private sdk: SkerSDK,
+    private screenService: ScreenService,
     private wsManager: WebSocketManager,
     private authService: JwtAuthService,
     private componentRegistry: ComponentRegistryService,
     private cdr: ChangeDetectorRef,
     private tokenStorage: TokenStorageService,
     private toastService: ToastService
-  ) {}
+  ) {
+    this.registerScreenSynchronization();
+  }
+
+  private registerScreenSynchronization(): void {
+    effect(() => {
+      const publishedPending = this.publishedScreensQuery.isPending();
+      const publishedError = this.publishedScreensQuery.error();
+      const publishedIsError = this.publishedScreensQuery.isError();
+      const published = this.publishedScreensQuery.data();
+
+      if (publishedPending) {
+        this.loading = true;
+        this.error = null;
+        this.cdr.markForCheck();
+        return;
+      }
+
+      if (publishedIsError) {
+        this.loading = false;
+        this.availableScreens = [];
+        this.screenConfig = null;
+        this.clearComponents();
+
+        if (!this.hasReportedListError) {
+          this.toastService.error('加载大屏列表失败，请稍后再试');
+          this.hasReportedListError = true;
+        }
+
+        this.error = (publishedError as Error | undefined)?.message || '加载屏幕列表失败';
+        this.cdr.markForCheck();
+        return;
+      }
+
+      this.hasReportedListError = false;
+
+      if (!published || published.items.length === 0) {
+        this.loading = false;
+        this.availableScreens = [];
+        this.screenConfig = null;
+        this.clearComponents();
+
+        if (!this.hasAnnouncedEmptyState) {
+          this.toastService.info('暂无已发布的屏幕，请在管理后台创建并发布');
+          this.hasAnnouncedEmptyState = true;
+        }
+
+        this.error = '没有可用的屏幕';
+        this.cdr.markForCheck();
+        return;
+      }
+
+      this.hasAnnouncedEmptyState = false;
+      this.availableScreens = published.items;
+
+      const defaultData = this.defaultScreenQuery.data();
+      const defaultIsError = this.defaultScreenQuery.isError();
+      const defaultError = this.defaultScreenQuery.error();
+
+      if (defaultIsError && !this.hasReportedDefaultError) {
+        logger.warn('[HomeComponent] 获取默认屏幕失败，使用第一个已发布屏幕', defaultError);
+        this.toastService.info('默认屏幕暂不可用，已展示第一个已发布的大屏');
+        this.hasReportedDefaultError = true;
+      }
+
+      if (!defaultIsError && defaultData) {
+        this.hasReportedDefaultError = false;
+      }
+
+      const defaultId = defaultData?.id ?? null;
+      const fallbackIndex = defaultId
+        ? this.availableScreens.findIndex(screen => screen.id === defaultId)
+        : -1;
+
+      const desiredScreen =
+        fallbackIndex !== -1
+          ? this.availableScreens[fallbackIndex]
+          : this.availableScreens[this.currentScreenIndex] ?? this.availableScreens[0];
+
+      if (!desiredScreen) {
+        return;
+      }
+
+      if (!this.screenConfig || this.screenConfig.id !== desiredScreen.id) {
+        this.loadScreenConfig(desiredScreen);
+        this.hasInitializedScreen = true;
+      }
+
+      this.loading = false;
+      this.error = null;
+      this.cdr.markForCheck();
+    });
+  }
 
   ngOnInit(): void {
     logger.log('[HomeComponent] ngOnInit 开始');
 
     // 设置防抖监听器
     this.setupResizeDebouncer();
-
-    // 一次性加载所有屏幕数据并正确设置默认页面
-    this.loadScreensAndSetDefault();
 
     this.initializeWebSocketConnection();
     this.listenToFullscreenChanges();
@@ -359,91 +467,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // 跳转到登录页
     this.router.navigate(['/auth/login']);
-  }
-
-  private async loadScreensAndSetDefault(): Promise<void> {
-    try {
-      logger.log('[HomeComponent] loadScreensAndSetDefault 开始');
-
-      // 并行加载可用屏幕和默认屏幕
-      const [publishedResponse, defaultScreen] = await Promise.allSettled([
-        this.sdk.screen.getPublishedScreens$().pipe(takeUntil(this.destroy$)).toPromise(),
-        this.sdk.screen.getDefaultScreen$().pipe(takeUntil(this.destroy$)).toPromise()
-      ]);
-
-      // 处理已发布屏幕列表
-      if (publishedResponse.status === 'fulfilled' && publishedResponse.value) {
-        this.availableScreens = publishedResponse.value.items;
-        logger.log('[HomeComponent] 已发布屏幕加载完成', { count: this.availableScreens.length });
-      }
-
-      // 设置默认屏幕选中状态
-      if (this.availableScreens.length > 0) {
-        if (defaultScreen.status === 'fulfilled' && defaultScreen.value) {
-          // 找到默认屏幕在列表中的索引
-          const defaultIndex = this.availableScreens.findIndex(screen => screen.id === defaultScreen.value!.id);
-          if (defaultIndex !== -1) {
-            this.currentScreenIndex = defaultIndex;
-            logger.log('[HomeComponent] 默认屏幕选中', {
-              screenId: defaultScreen.value!.id,
-              screenName: defaultScreen.value!.name,
-              index: defaultIndex
-            });
-          } else {
-            // 如果默认屏幕不在已发布列表中，使用第一个屏幕
-            this.currentScreenIndex = 0;
-            logger.log('[HomeComponent] 默认屏幕不在已发布列表中，使用第一个屏幕');
-          }
-        } else {
-          // 如果获取默认屏幕失败，使用第一个屏幕
-          this.currentScreenIndex = 0;
-          const reason = defaultScreen.status === 'rejected' ? defaultScreen.reason : 'No default screen returned';
-          logger.warn('[HomeComponent] 获取默认屏幕失败，使用第一个屏幕', reason);
-        }
-
-        // 加载当前选中的屏幕配置
-        const selectedScreen = this.availableScreens[this.currentScreenIndex];
-        if (selectedScreen) {
-          this.screenConfig = selectedScreen;
-          this.loading = false;
-          this.componentCreationRetryCount = 0;
-          this.error = null;
-          this.cdr.markForCheck();
-
-          // 创建组件
-          this.scheduleComponentCreation();
-          logger.log('[HomeComponent] 屏幕配置加载完成', {
-            screenId: selectedScreen.id,
-            screenName: selectedScreen.name
-          });
-        }
-      } else {
-        this.loading = false;
-        this.error = '没有可用的屏幕';
-        this.toastService.info('暂无已发布的屏幕，请在管理后台创建并发布');
-        this.cdr.markForCheck();
-      }
-
-      logger.log('[HomeComponent] loadScreensAndSetDefault 完成');
-    } catch (error) {
-      logger.error('[HomeComponent] loadScreensAndSetDefault 失败:', error);
-      this.loading = false;
-      this.error = '加载屏幕配置失败';
-      this.toastService.error('加载屏幕配置失败，请检查网络连接');
-      this.cdr.markForCheck();
-    }
-  }
-
-  private async loadAvailableScreens(): Promise<void> {
-    try {
-      const response = await this.sdk.screen.getPublishedScreens$().pipe(takeUntil(this.destroy$)).toPromise();
-      if (response) {
-        this.availableScreens = response.items;
-        this.cdr.markForCheck();
-      }
-    } catch (error) {
-      logger.error('Failed to load available screens:', error);
-    }
   }
 
   // 切换和轮播功能

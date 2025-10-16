@@ -1,11 +1,13 @@
-import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { Subject, interval } from 'rxjs';
-import { takeUntil, switchMap, debounceTime } from 'rxjs/operators';
-import { ScreenPage, Component as ScreenComponent, SkerSDK } from '@pro/sdk';
+import { takeUntil, debounceTime } from 'rxjs/operators';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 import { WebSocketManager, createScreensWebSocketConfig, JwtAuthService, ComponentRegistryService, IScreenComponent } from '@pro/components';
 import { TokenStorageService } from '../../core/services/token-storage.service';
+import { ScreenService } from '../../core/services/screen.service';
+import { ScreenPage, ScreenComponentConfig as ScreenComponent } from '../../core/types/screen.types';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -794,7 +796,37 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   }
 
   private destroy$ = new Subject<void>();
-  private screenId: string | null = null;
+  private readonly routeScreenId = signal<string | null>(null);
+  private readonly publishedScreensQuery = injectQuery(() => ({
+    queryKey: ['screens', 'published'],
+    queryFn: () => this.screenService.fetchPublishedScreens(),
+    staleTime: 60_000,
+    gcTime: 300_000
+  }));
+  private readonly defaultScreenQuery = injectQuery(() => ({
+    queryKey: ['screens', 'default'],
+    queryFn: () => this.screenService.fetchDefaultScreen(),
+    staleTime: 60_000,
+    gcTime: 300_000,
+    retry: 1,
+    enabled: !this.routeScreenId()
+  }));
+  private readonly screenQuery = injectQuery(() => {
+    const id = this.routeScreenId();
+    return {
+      queryKey: ['screens', 'detail', id],
+      queryFn: () => this.screenService.fetchScreen(id!),
+      staleTime: 60_000,
+      gcTime: 300_000,
+      retry: 1,
+      enabled: !!id
+    };
+  });
+  private manualSelectionId: string | null = null;
+  private hasReportedListError = false;
+  private hasAnnouncedEmptyState = false;
+  private hasReportedDefaultError = false;
+  private hasReportedScreenError = false;
   private componentRefs: ComponentRef<any>[] = [];
   private componentCache = new Map<string, ComponentRef<any>>();
   private componentMetadata = new Map<ComponentRef<any>, { id: string; type: string; config: ScreenComponent }>();
@@ -804,28 +836,173 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
-    private sdk: SkerSDK,
+    private screenService: ScreenService,
     private wsManager: WebSocketManager,
     private authService: JwtAuthService,
     private componentRegistry: ComponentRegistryService,
     private cdr: ChangeDetectorRef,
     private tokenStorage: TokenStorageService
-  ) {}
+  ) {
+    this.registerScreenSynchronization();
+  }
+
+  private registerScreenSynchronization(): void {
+    effect(() => {
+      const publishedPending = this.publishedScreensQuery.isPending();
+      const publishedIsError = this.publishedScreensQuery.isError();
+      const publishedError = this.publishedScreensQuery.error();
+      const published = this.publishedScreensQuery.data();
+
+      if (publishedPending && !this.screenConfig) {
+        this.loading = true;
+        this.error = null;
+        this.cdr.markForCheck();
+      }
+
+      if (publishedIsError) {
+        if (!this.hasReportedListError) {
+          console.error('[ScreenDisplay] 加载已发布大屏失败', publishedError);
+          this.hasReportedListError = true;
+        }
+
+        this.loading = false;
+        this.error = (publishedError as Error | undefined)?.message || '加载大屏列表失败';
+        this.availableScreens = [];
+        this.currentScreenIndex = 0;
+        this.screenConfig = null;
+        this.destroyComponents();
+        this.cdr.markForCheck();
+        return;
+      }
+
+      this.hasReportedListError = false;
+
+      const publishedItems = published?.items ?? [];
+      const availableScreens = [...publishedItems];
+      this.availableScreens = availableScreens;
+      this.cdr.markForCheck();
+
+      const routeId = this.routeScreenId();
+      let target: ScreenPage | null = null;
+
+      if (this.manualSelectionId) {
+        target = availableScreens.find(screen => screen.id === this.manualSelectionId) ?? null;
+
+        if (!target) {
+          this.manualSelectionId = null;
+        }
+      }
+
+      if (!target && routeId) {
+        target = availableScreens.find(screen => screen.id === routeId) ?? null;
+
+        if (!target) {
+          if (this.screenQuery.isPending()) {
+            this.loading = true;
+            this.error = null;
+            this.cdr.markForCheck();
+            return;
+          }
+
+          if (this.screenQuery.isError()) {
+            if (!this.hasReportedScreenError) {
+              console.warn('[ScreenDisplay] 指定大屏加载失败，尝试使用列表数据', this.screenQuery.error());
+              this.hasReportedScreenError = true;
+            }
+
+            this.loading = false;
+            this.error = (this.screenQuery.error() as Error | undefined)?.message || '无法加载指定大屏';
+            this.screenConfig = null;
+            this.destroyComponents();
+            this.cdr.markForCheck();
+            return;
+          }
+
+          const detail = this.screenQuery.data();
+          if (detail) {
+            target = detail;
+          }
+        } else {
+          this.hasReportedScreenError = false;
+        }
+      } else {
+        this.hasReportedScreenError = false;
+      }
+
+      if (!target) {
+        if (this.defaultScreenQuery.isPending() && availableScreens.length === 0) {
+          this.loading = true;
+          this.error = null;
+          this.cdr.markForCheck();
+          return;
+        }
+
+        if (this.defaultScreenQuery.isError()) {
+          if (!this.hasReportedDefaultError && !routeId) {
+            console.warn('[ScreenDisplay] 获取默认大屏失败，使用第一个已发布大屏作为回退', this.defaultScreenQuery.error());
+            this.hasReportedDefaultError = true;
+          }
+        } else {
+          const defaultScreen = this.defaultScreenQuery.data();
+          if (defaultScreen) {
+            target = defaultScreen;
+          }
+          this.hasReportedDefaultError = false;
+        }
+      } else {
+        this.hasReportedDefaultError = false;
+      }
+
+      if (!target && availableScreens.length > 0) {
+        target = availableScreens[0];
+      }
+
+      if (!target) {
+        if (!this.hasAnnouncedEmptyState) {
+          console.info('[ScreenDisplay] 暂无已发布大屏');
+          this.hasAnnouncedEmptyState = true;
+        }
+
+        this.loading = false;
+        this.error = '暂无可展示的大屏，请先在管理后台发布屏幕';
+        this.screenConfig = null;
+        this.destroyComponents();
+        this.cdr.markForCheck();
+        return;
+      }
+
+      this.hasAnnouncedEmptyState = false;
+
+      const index = availableScreens.findIndex(screen => screen.id === target!.id);
+      if (index !== -1) {
+        this.currentScreenIndex = index;
+      }
+
+      if (!this.screenConfig || this.screenConfig.id !== target.id || this.shouldRerenderComponents(target)) {
+        void this.loadScreenConfig(target);
+      } else {
+        this.loading = false;
+        this.error = null;
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   ngOnInit(): void {
-    this.screenId = this.route.snapshot.paramMap.get('id');
+    this.routeScreenId.set(this.route.snapshot.paramMap.get('id'));
+
+    this.route.paramMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        const id = params.get('id');
+        this.routeScreenId.set(id);
+        if (id) {
+          this.manualSelectionId = null;
+        }
+      });
 
     // 设置防抖监听器
     this.setupResizeDebouncer();
-
-    // 首先加载所有已发布的页面
-    this.loadAvailableScreens().then(() => {
-      if (this.screenId) {
-        this.loadScreen(this.screenId);
-      } else {
-        this.loadDefaultScreen();
-      }
-    });
 
     this.initializeWebSocketConnection();
     this.listenToFullscreenChanges();
@@ -856,47 +1033,6 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       });
   }
 
-  private loadScreen(id: string): void {
-    this.loading = true;
-    this.error = null;
-
-    this.sdk.screen.getScreen$(id)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (config) => {
-          this.screenConfig = config;
-          this.loading = false;
-          this.cdr.markForCheck();
-          this.renderComponents();
-        },
-        error: (err) => {
-          this.error = err.error?.message || '加载大屏配置失败';
-          this.loading = false;
-          this.cdr.markForCheck();
-        }
-      });
-  }
-
-  private loadDefaultScreen(): void {
-    this.loading = true;
-    this.error = null;
-
-    this.sdk.screen.getDefaultScreen$()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (config) => {
-          this.screenConfig = config;
-          this.loading = false;
-          this.cdr.markForCheck();
-          this.renderComponents();
-        },
-        error: (err) => {
-          this.error = err.error?.message || '加载默认大屏配置失败';
-          this.loading = false;
-          this.cdr.markForCheck();
-        }
-      });
-  }
 
   toggleFullscreen(): void {
     if (!document.fullscreenElement) {
@@ -1329,26 +1465,14 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     this.wsManager.connectToNamespace(wsConfig);
   }
 
-  // 加载所有已发布的页面
-  private async loadAvailableScreens(): Promise<void> {
-    try {
-      const response = await this.sdk.screen.getPublishedScreens$().pipe(takeUntil(this.destroy$)).toPromise();
-      if (response) {
-        this.availableScreens = response.items;
-        this.cdr.markForCheck();
-      }
-    } catch (error) {
-      console.error('Failed to load available screens:', error);
-    }
-  }
-
   // 切换和轮播功能
   switchToScreen(event: any): void {
     const index = parseInt(event.target.value);
     if (index >= 0 && index < this.availableScreens.length) {
       this.currentScreenIndex = index;
       const screen = this.availableScreens[index];
-      this.loadScreenConfig(screen);
+      this.manualSelectionId = screen.id;
+      void this.loadScreenConfig(screen);
     }
   }
 
@@ -1356,7 +1480,8 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     if (this.availableScreens.length > 1) {
       this.currentScreenIndex = (this.currentScreenIndex + 1) % this.availableScreens.length;
       const screen = this.availableScreens[this.currentScreenIndex];
-      this.loadScreenConfig(screen);
+      this.manualSelectionId = screen.id;
+      void this.loadScreenConfig(screen);
     }
   }
 
@@ -1366,7 +1491,8 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         ? this.availableScreens.length - 1
         : this.currentScreenIndex - 1;
       const screen = this.availableScreens[this.currentScreenIndex];
-      this.loadScreenConfig(screen);
+      this.manualSelectionId = screen.id;
+      void this.loadScreenConfig(screen);
     }
   }
 
@@ -1520,6 +1646,8 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     const existingIndex = this.availableScreens.findIndex(s => s.id === screen.id);
     if (existingIndex === -1) {
       this.availableScreens.push(screen);
+      void this.publishedScreensQuery.refetch();
+      void this.defaultScreenQuery.refetch();
       this.cdr.markForCheck();
       this.showNotification('新页面可用', `页面 "${screen.name}" 已发布，可用于展示`);
     }
@@ -1529,10 +1657,12 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     const index = this.availableScreens.findIndex(s => s.id === updatedScreen.id);
     if (index !== -1) {
       this.availableScreens[index] = updatedScreen;
+      void this.publishedScreensQuery.refetch();
 
       // 如果更新的是当前显示的页面，重新加载
       if (this.screenConfig?.id === updatedScreen.id) {
-        this.loadScreenConfig(updatedScreen);
+        this.manualSelectionId = updatedScreen.id;
+        void this.loadScreenConfig(updatedScreen);
         this.showNotification('页面已更新', `当前页面 "${updatedScreen.name}" 已更新并重新加载`);
       }
 
@@ -1545,13 +1675,20 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     if (index !== -1) {
       const screenName = this.availableScreens[index].name;
       this.availableScreens.splice(index, 1);
+      if (this.manualSelectionId === screenId) {
+        this.manualSelectionId = null;
+      }
+      void this.publishedScreensQuery.refetch();
+      void this.defaultScreenQuery.refetch();
 
       // 如果取消发布的是当前显示的页面
       if (this.screenConfig?.id === screenId) {
         if (this.availableScreens.length > 0) {
           // 切换到第一个可用页面
           this.currentScreenIndex = 0;
-          this.loadScreenConfig(this.availableScreens[0]);
+          const fallbackScreen = this.availableScreens[0];
+          this.manualSelectionId = fallbackScreen.id;
+          void this.loadScreenConfig(fallbackScreen);
           this.showNotification('页面不可用', `页面 "${screenName}" 已取消发布，已切换到其他页面`);
         } else {
           // 没有可用页面

@@ -4,7 +4,7 @@ import { CanvasQuery } from './canvas.query';
 import { SnapshotService } from './snapshot.service';
 import { ComponentItem, ComponentStyle } from '../../models/component.model';
 import { EditMode } from '../../models/canvas.model';
-import { Subject, BehaviorSubject, Observable, merge, timer, EMPTY, throwError } from 'rxjs';
+import { Subject, BehaviorSubject, Observable, merge, timer, EMPTY, throwError, from } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, takeUntil, tap, catchError, delay, retryWhen, scan, finalize } from 'rxjs/operators';
 import { UpdateScreenDto, SkerSDK } from '@pro/sdk';
 
@@ -1032,7 +1032,7 @@ export class CanvasService implements OnDestroy {
 
     console.log('📡 [CanvasService] 调用 SDK updateScreen API');
 
-    return this.sdk.screen.updateScreen$(this.currentPageId, updateDto).pipe(
+    return from(this.sdk.screen.updateScreen(this.currentPageId, updateDto)).pipe(
       tap(() => {
         console.log('✅ [CanvasService] API 调用成功，更新状态');
         this.clearErrorState();

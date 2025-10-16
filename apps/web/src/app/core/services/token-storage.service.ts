@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
-import { ITokenStorage } from '@pro/sdk';
+import { TokenStorage } from '@pro/types';
 
 @Injectable({
   providedIn: 'root'
 })
-export class TokenStorageService implements ITokenStorage {
+export class TokenStorageService implements TokenStorage {
   private readonly tokenKey = 'access_token';
   private readonly refreshTokenKey = 'refresh_token';
 

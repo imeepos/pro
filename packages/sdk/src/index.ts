@@ -7,14 +7,14 @@ export * from './jd-auth.sdk.js';
 export * from './media-type.interface.js';
 export * from './media-type.sdk.js';
 
-export * from '@pro/types';
-
 export {
   type WeiboLoginEventType,
   type WeiboLoginEvent,
   type QrcodeEventData,
   type SuccessEventData,
   type WeiboLoginEventHandler,
+  type WeiboAccount,
+  type WeiboAccountCheckResult,
   type WeiboAuthSDK,
 } from './weibo.interface.js';
 export * from './weibo-auth.sdk.js';

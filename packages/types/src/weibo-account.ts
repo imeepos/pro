@@ -52,6 +52,12 @@ export interface WeiboAccountStats {
   unhealthy: number;
 }
 
+export interface LoggedInUsersStats {
+  total: number;
+  todayNew: number;
+  online: number;
+}
+
 export interface WeiboLoginSession {
   id: number;
   accountId: number;
