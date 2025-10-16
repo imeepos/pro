@@ -191,11 +191,11 @@ const toComponentModel = (component: ScreenComponentSource): ScreenComponentMode
     id: dto.id,
     type: dto.type,
     position: {
-      x: dto.position.x,
-      y: dto.position.y,
-      width: dto.position.width,
-      height: dto.position.height,
-      zIndex: dto.position.zIndex,
+      x: Math.round(dto.position.x),
+      y: Math.round(dto.position.y),
+      width: Math.round(dto.position.width),
+      height: Math.round(dto.position.height),
+      zIndex: Math.round(dto.position.zIndex),
     },
     config: dto.config ?? {},
     dataSource: dto.dataSource
