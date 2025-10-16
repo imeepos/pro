@@ -13,12 +13,43 @@ enum BugStatus {
   REOPENED = 'reopened'
 }
 
-enum BugPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical'
+type StatusKey = 'open' | 'in_progress' | 'resolved' | 'closed' | 'rejected' | 'reopened';
+type PriorityKey = 'low' | 'medium' | 'high' | 'critical';
+
+interface BugStatisticsSnapshot {
+  total: number;
+  byStatus: Record<StatusKey, number>;
+  byPriority: Record<PriorityKey, number>;
+  byCategory: Record<string, number>;
 }
+
+const DEFAULT_STATISTICS: BugStatisticsSnapshot = {
+  total: 0,
+  byStatus: {
+    open: 0,
+    in_progress: 0,
+    resolved: 0,
+    closed: 0,
+    rejected: 0,
+    reopened: 0,
+  },
+  byPriority: {
+    low: 0,
+    medium: 0,
+    high: 0,
+    critical: 0,
+  },
+  byCategory: {
+    functional: 0,
+    performance: 0,
+    security: 0,
+    ui_ux: 0,
+    integration: 0,
+    data: 0,
+    configuration: 0,
+    documentation: 0,
+  },
+};
 
 @Component({
   selector: 'app-dashboard',
@@ -56,7 +87,7 @@ enum BugPriority {
             </div>
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">待处理</p>
-              <p class="text-2xl font-bold text-yellow-600">{{ statistics.byStatus?.open || 0 }}</p>
+              <p class="text-2xl font-bold text-yellow-600">{{ statistics.byStatus.open || 0 }}</p>
             </div>
           </div>
         </div>
@@ -70,7 +101,7 @@ enum BugPriority {
             </div>
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">进行中</p>
-              <p class="text-2xl font-bold text-blue-600">{{ statistics.byStatus?.in_progress || 0 }}</p>
+              <p class="text-2xl font-bold text-blue-600">{{ statistics.byStatus.in_progress || 0 }}</p>
             </div>
           </div>
         </div>
@@ -84,7 +115,7 @@ enum BugPriority {
             </div>
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">已解决</p>
-              <p class="text-2xl font-bold text-green-600">{{ statistics.byStatus?.resolved || 0 }}</p>
+              <p class="text-2xl font-bold text-green-600">{{ statistics.byStatus.resolved || 0 }}</p>
             </div>
           </div>
         </div>
@@ -100,28 +131,28 @@ enum BugPriority {
                 <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
                 <span class="text-sm text-gray-600">低优先级</span>
               </div>
-              <span class="text-sm font-medium text-gray-900">{{ statistics.byPriority?.low || 0 }}</span>
+              <span class="text-sm font-medium text-gray-900">{{ statistics.byPriority.low || 0 }}</span>
             </div>
             <div class="flex items-center justify-between">
               <div class="flex items-center">
                 <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
                 <span class="text-sm text-gray-600">中优先级</span>
               </div>
-              <span class="text-sm font-medium text-gray-900">{{ statistics.byPriority?.medium || 0 }}</span>
+              <span class="text-sm font-medium text-gray-900">{{ statistics.byPriority.medium || 0 }}</span>
             </div>
             <div class="flex items-center justify-between">
               <div class="flex items-center">
                 <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
                 <span class="text-sm text-gray-600">高优先级</span>
               </div>
-              <span class="text-sm font-medium text-gray-900">{{ statistics.byPriority?.high || 0 }}</span>
+              <span class="text-sm font-medium text-gray-900">{{ statistics.byPriority.high || 0 }}</span>
             </div>
             <div class="flex items-center justify-between">
               <div class="flex items-center">
                 <div class="w-3 h-3 bg-red-700 rounded-full mr-2"></div>
                 <span class="text-sm text-gray-600">紧急</span>
               </div>
-              <span class="text-sm font-medium text-gray-900">{{ statistics.byPriority?.critical || 0 }}</span>
+              <span class="text-sm font-medium text-gray-900">{{ statistics.byPriority.critical || 0 }}</span>
             </div>
           </div>
         </div>
@@ -149,7 +180,7 @@ enum BugPriority {
   styles: []
 })
 export class DashboardComponent implements OnInit {
-  statistics: any = {};
+  statistics: BugStatisticsSnapshot = this.cloneStatistics();
   recentBugs: Bug[] = [];
 
   constructor(private bugService: BugService) {}
@@ -161,11 +192,7 @@ export class DashboardComponent implements OnInit {
 
   loadStatistics(): void {
     this.bugService.getStatistics().subscribe(result => {
-      if (result.success && result.data) {
-        this.statistics = result.data;
-      } else {
-        this.statistics = {};
-      }
+      this.statistics = result.success && result.data ? this.cloneStatistics(result.data) : this.cloneStatistics();
     });
   }
 
@@ -201,5 +228,14 @@ export class DashboardComponent implements OnInit {
       [BugStatus.REOPENED]: '已重新打开',
     };
     return texts[status] || status;
+  }
+
+  private cloneStatistics(stats: BugStatisticsSnapshot = DEFAULT_STATISTICS): BugStatisticsSnapshot {
+    return {
+      total: stats.total,
+      byStatus: { ...stats.byStatus },
+      byPriority: { ...stats.byPriority },
+      byCategory: { ...stats.byCategory },
+    };
   }
 }

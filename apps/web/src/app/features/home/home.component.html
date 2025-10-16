@@ -63,7 +63,7 @@
         aria-label="屏幕控制">
         <div class="control-group">
           <button
-            *ngIf="availableScreens.length > 1"
+            *ngIf="hasMultipleScreens"
             class="control-button"
             (click)="toggleAutoPlay()"
             [attr.aria-label]="isAutoPlay ? '停止自动轮播' : '开始自动轮播'"
@@ -73,10 +73,10 @@
             <span class="ml-1.5 text-xs font-medium">{{ isAutoPlay ? '停止' : '轮播' }}</span>
           </button>
 
-          <div class="separator" *ngIf="availableScreens.length > 1"></div>
+          <div class="separator" *ngIf="hasMultipleScreens"></div>
 
           <button
-            *ngIf="availableScreens.length > 1"
+            *ngIf="hasMultipleScreens"
             class="control-button"
             (click)="previousScreen()"
             aria-label="切换到上一个屏幕"
@@ -86,7 +86,7 @@
           </button>
 
           <button
-            *ngIf="availableScreens.length > 1"
+            *ngIf="hasMultipleScreens"
             class="control-button"
             (click)="nextScreen()"
             aria-label="切换到下一个屏幕"
@@ -95,10 +95,10 @@
             <span class="ml-1 text-xs font-medium">下一个</span>
           </button>
 
-          <div class="separator" *ngIf="availableScreens.length > 1"></div>
+          <div class="separator" *ngIf="hasMultipleScreens"></div>
 
           <select
-            *ngIf="availableScreens.length > 1"
+            *ngIf="hasMultipleScreens"
             class="screen-selector"
             [value]="currentScreenIndex"
             (change)="switchToScreen($event)"
@@ -108,7 +108,7 @@
             </option>
           </select>
 
-          <div *ngIf="availableScreens.length > 1" class="screen-indicator" aria-live="polite">
+          <div *ngIf="hasMultipleScreens" class="screen-indicator" aria-live="polite">
             <span class="font-semibold">{{ currentScreenIndex + 1 }}</span>
             <span class="mx-1">/</span>
             <span>{{ availableScreens.length }}</span>

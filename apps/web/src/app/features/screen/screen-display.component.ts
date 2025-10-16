@@ -7,6 +7,7 @@ import { injectQuery } from '@tanstack/angular-query-experimental';
 import { WebSocketManager, createScreensWebSocketConfig, JwtAuthService, ComponentRegistryService, IScreenComponent } from '@pro/components';
 import { TokenStorageService } from '../../core/services/token-storage.service';
 import { ScreenService } from '../../core/services/screen.service';
+import { ScreenSignalStore } from '../../core/state/screen.signal-store';
 import { ScreenPage, ScreenComponentConfig as ScreenComponent } from '../../core/types/screen.types';
 import { environment } from '../../../environments/environment';
 
@@ -786,13 +787,16 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   private resizeDebouncer$ = new Subject<void>();
 
   // 轮播和切换功能
-  availableScreens: ScreenPage[] = [];
   currentScreenIndex = 0;
   isAutoPlay = false;
   autoPlayInterval = 30000; // 30秒切换一次
 
+  get availableScreens(): ScreenPage[] {
+    return this.screenStore.screens();
+  }
+
   get hasMultipleScreens(): boolean {
-    return this.availableScreens.length > 1;
+    return this.screenStore.hasMultipleScreens();
   }
 
   private destroy$ = new Subject<void>();
@@ -837,6 +841,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private screenService: ScreenService,
+    private screenStore: ScreenSignalStore,
     private wsManager: WebSocketManager,
     private authService: JwtAuthService,
     private componentRegistry: ComponentRegistryService,
@@ -856,6 +861,8 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       if (publishedPending && !this.screenConfig) {
         this.loading = true;
         this.error = null;
+        this.screenStore.setLoading(true);
+        this.screenStore.setError(null);
         this.cdr.markForCheck();
       }
 
@@ -867,10 +874,14 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
         this.loading = false;
         this.error = (publishedError as Error | undefined)?.message || '加载大屏列表失败';
-        this.availableScreens = [];
         this.currentScreenIndex = 0;
         this.screenConfig = null;
         this.destroyComponents();
+        this.screenStore.setScreens([]);
+        this.screenStore.setActiveScreen(null);
+        this.screenStore.setManualSelection(null);
+        this.screenStore.setLoading(false);
+        this.screenStore.setError(this.error);
         this.cdr.markForCheck();
         return;
       }
@@ -879,7 +890,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
       const publishedItems = published?.items ?? [];
       const availableScreens = [...publishedItems];
-      this.availableScreens = availableScreens;
+      this.screenStore.setScreens(availableScreens);
       this.cdr.markForCheck();
 
       const routeId = this.routeScreenId();
@@ -889,7 +900,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         target = availableScreens.find(screen => screen.id === this.manualSelectionId) ?? null;
 
         if (!target) {
-          this.manualSelectionId = null;
+          this.updateManualSelection(null);
         }
       }
 
@@ -900,6 +911,8 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
           if (this.screenQuery.isPending()) {
             this.loading = true;
             this.error = null;
+            this.screenStore.setLoading(true);
+            this.screenStore.setError(null);
             this.cdr.markForCheck();
             return;
           }
@@ -933,6 +946,8 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         if (this.defaultScreenQuery.isPending() && availableScreens.length === 0) {
           this.loading = true;
           this.error = null;
+          this.screenStore.setLoading(true);
+          this.screenStore.setError(null);
           this.cdr.markForCheck();
           return;
         }
@@ -983,6 +998,9 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       } else {
         this.loading = false;
         this.error = null;
+        this.screenStore.setLoading(false);
+        this.screenStore.setError(null);
+        this.screenStore.setActiveScreen(target);
         this.cdr.markForCheck();
       }
     });
@@ -997,7 +1015,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         const id = params.get('id');
         this.routeScreenId.set(id);
         if (id) {
-          this.manualSelectionId = null;
+          this.updateManualSelection(null);
         }
       });
 
@@ -1205,7 +1223,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async createComponentInstance(componentType: any, componentConfig: ScreenComponent): Promise<ComponentRef<any>> {
+  private async createComponentInstance(componentType: any, _componentConfig: ScreenComponent): Promise<ComponentRef<any>> {
     return new Promise((resolve, reject) => {
       try {
         const componentRef = this.componentsContainer.createComponent(componentType);
@@ -1348,7 +1366,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     }
   }
 
-  private registerComponentLifecycle(componentRef: ComponentRef<any>, componentConfig: ScreenComponent): void {
+  private registerComponentLifecycle(componentRef: ComponentRef<any>, _componentConfig: ScreenComponent): void {
     const instance = componentRef.instance as IScreenComponent;
     const callbacks: { onDestroy?: () => void; onMount?: () => void } = {};
 
@@ -1445,6 +1463,8 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     // 显示错误信息
     this.error = '组件渲染失败，请刷新页面重试';
     this.loading = false;
+    this.screenStore.setError(this.error);
+    this.screenStore.setLoading(false);
     this.cdr.markForCheck();
   }
 
@@ -1468,30 +1488,33 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   // 切换和轮播功能
   switchToScreen(event: any): void {
     const index = parseInt(event.target.value);
-    if (index >= 0 && index < this.availableScreens.length) {
+    const screens = this.availableScreens;
+    if (index >= 0 && index < screens.length) {
       this.currentScreenIndex = index;
-      const screen = this.availableScreens[index];
-      this.manualSelectionId = screen.id;
+      const screen = screens[index];
+      this.updateManualSelection(screen.id);
       void this.loadScreenConfig(screen);
     }
   }
 
   nextScreen(): void {
-    if (this.availableScreens.length > 1) {
-      this.currentScreenIndex = (this.currentScreenIndex + 1) % this.availableScreens.length;
-      const screen = this.availableScreens[this.currentScreenIndex];
-      this.manualSelectionId = screen.id;
+    const screens = this.availableScreens;
+    if (screens.length > 1) {
+      this.currentScreenIndex = (this.currentScreenIndex + 1) % screens.length;
+      const screen = screens[this.currentScreenIndex];
+      this.updateManualSelection(screen.id);
       void this.loadScreenConfig(screen);
     }
   }
 
   previousScreen(): void {
-    if (this.availableScreens.length > 1) {
+    const screens = this.availableScreens;
+    if (screens.length > 1) {
       this.currentScreenIndex = this.currentScreenIndex === 0
-        ? this.availableScreens.length - 1
+        ? screens.length - 1
         : this.currentScreenIndex - 1;
-      const screen = this.availableScreens[this.currentScreenIndex];
-      this.manualSelectionId = screen.id;
+      const screen = screens[this.currentScreenIndex];
+      this.updateManualSelection(screen.id);
       void this.loadScreenConfig(screen);
     }
   }
@@ -1504,10 +1527,16 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     }
   }
 
+  private updateManualSelection(id: string | null): void {
+    this.manualSelectionId = id;
+    this.screenStore.setManualSelection(id);
+  }
+
   private startAutoPlay(): void {
     if (this.availableScreens.length <= 1) return;
 
     this.isAutoPlay = true;
+    this.screenStore.setAutoPlay(true);
     this.autoPlaySubscription = interval(this.autoPlayInterval)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
@@ -1517,6 +1546,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
   private stopAutoPlay(): void {
     this.isAutoPlay = false;
+    this.screenStore.setAutoPlay(false);
     if (this.autoPlaySubscription) {
       this.autoPlaySubscription.unsubscribe();
       this.autoPlaySubscription = null;
@@ -1527,6 +1557,9 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
     try {
       this.loading = true;
       this.error = null;
+      this.screenStore.setLoading(true);
+      this.screenStore.setError(null);
+      this.screenStore.setActiveScreen(screen);
 
       // 智能检测是否需要重新渲染组件
       const needsRerender = this.shouldRerenderComponents(screen);
@@ -1539,17 +1572,20 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       }
 
       // 更新当前屏幕在可用列表中的索引
-      const screenIndex = this.availableScreens.findIndex(s => s.id === screen.id);
+    const screenIndex = this.availableScreens.findIndex(s => s.id === screen.id);
       if (screenIndex !== -1) {
         this.currentScreenIndex = screenIndex;
       }
 
       this.loading = false;
+      this.screenStore.setLoading(false);
       this.cdr.markForCheck();
     } catch (error) {
       console.error('[ScreenDisplay] 屏幕配置加载失败:', error);
       this.loading = false;
       this.error = '屏幕配置加载失败';
+      this.screenStore.setLoading(false);
+      this.screenStore.setError(this.error);
       this.cdr.markForCheck();
     }
   }
@@ -1643,9 +1679,10 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
   private handleNewScreenPublished(screen: ScreenPage): void {
     // 检查是否已存在
-    const existingIndex = this.availableScreens.findIndex(s => s.id === screen.id);
-    if (existingIndex === -1) {
-      this.availableScreens.push(screen);
+    const screens = this.availableScreens;
+    if (!screens.some(existing => existing.id === screen.id)) {
+      const updatedScreens = [...screens, screen];
+      this.screenStore.setScreens(updatedScreens);
       void this.publishedScreensQuery.refetch();
       void this.defaultScreenQuery.refetch();
       this.cdr.markForCheck();
@@ -1654,14 +1691,17 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   }
 
   private handleScreenUpdated(updatedScreen: ScreenPage): void {
-    const index = this.availableScreens.findIndex(s => s.id === updatedScreen.id);
+    const screens = this.availableScreens;
+    const index = screens.findIndex(s => s.id === updatedScreen.id);
     if (index !== -1) {
-      this.availableScreens[index] = updatedScreen;
+      const updatedScreens = [...screens];
+      updatedScreens[index] = updatedScreen;
+      this.screenStore.setScreens(updatedScreens);
       void this.publishedScreensQuery.refetch();
 
       // 如果更新的是当前显示的页面，重新加载
       if (this.screenConfig?.id === updatedScreen.id) {
-        this.manualSelectionId = updatedScreen.id;
+        this.updateManualSelection(updatedScreen.id);
         void this.loadScreenConfig(updatedScreen);
         this.showNotification('页面已更新', `当前页面 "${updatedScreen.name}" 已更新并重新加载`);
       }
@@ -1671,23 +1711,25 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   }
 
   private handleScreenUnpublished(screenId: string): void {
-    const index = this.availableScreens.findIndex(s => s.id === screenId);
+    const screens = this.availableScreens;
+    const index = screens.findIndex(s => s.id === screenId);
     if (index !== -1) {
-      const screenName = this.availableScreens[index].name;
-      this.availableScreens.splice(index, 1);
+      const screenName = screens[index].name;
+      const updatedScreens = screens.filter(screen => screen.id !== screenId);
       if (this.manualSelectionId === screenId) {
-        this.manualSelectionId = null;
+        this.updateManualSelection(null);
       }
+      this.screenStore.setScreens(updatedScreens);
       void this.publishedScreensQuery.refetch();
       void this.defaultScreenQuery.refetch();
 
       // 如果取消发布的是当前显示的页面
       if (this.screenConfig?.id === screenId) {
-        if (this.availableScreens.length > 0) {
+        if (updatedScreens.length > 0) {
           // 切换到第一个可用页面
           this.currentScreenIndex = 0;
-          const fallbackScreen = this.availableScreens[0];
-          this.manualSelectionId = fallbackScreen.id;
+          const fallbackScreen = updatedScreens[0];
+          this.updateManualSelection(fallbackScreen.id);
           void this.loadScreenConfig(fallbackScreen);
           this.showNotification('页面不可用', `页面 "${screenName}" 已取消发布，已切换到其他页面`);
         } else {
@@ -1696,6 +1738,8 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
           this.destroyComponents();
           this.showNotification('无可用页面', '所有页面都已取消发布');
         }
+      } else if (this.currentScreenIndex > index) {
+        this.currentScreenIndex--;
       } else {
         this.showNotification('页面已移除', `页面 "${screenName}" 已取消发布`);
       }

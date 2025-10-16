@@ -9,9 +9,10 @@ import { AuthStateService } from '../../core/state/auth-state.service';
 import { AuthQuery } from '../../core/state/auth.query';
 import { TokenStorageService } from '../../core/services/token-storage.service';
 import { ScreenService } from '../../core/services/screen.service';
+import { ScreenSignalStore } from '../../core/state/screen.signal-store';
 import { ScreenPage, ScreenComponentConfig as ScreenComponent } from '../../core/types/screen.types';
 import { ToastService } from '../../shared/services/toast.service';
-import { EmptyStateComponent, EmptyStateConfig } from '../../shared/components/empty-state/empty-state.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { logger } from '../../core/utils/logger';
 import { environment } from '../../../environments/environment';
 
@@ -40,7 +41,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private resizeDebouncer$ = new Subject<void>();
 
   // 轮播和切换功能
-  availableScreens: ScreenPage[] = [];
   currentScreenIndex = 0;
   isAutoPlay = false;
   autoPlayInterval = 30000; // 30秒切换一次
@@ -69,12 +69,24 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private hasAnnouncedEmptyState = false;
   private hasReportedListError = false;
   private hasReportedDefaultError = false;
+  get availableScreens(): ScreenPage[] {
+    return this.screenStore.screens();
+  }
+
+  private get availableScreensList(): ScreenPage[] {
+    return this.availableScreens;
+  }
+
+  get hasMultipleScreens(): boolean {
+    return this.screenStore.hasMultipleScreens();
+  }
 
   constructor(
     private authStateService: AuthStateService,
     private authQuery: AuthQuery,
     private router: Router,
     private screenService: ScreenService,
+    private screenStore: ScreenSignalStore,
     private wsManager: WebSocketManager,
     private authService: JwtAuthService,
     private componentRegistry: ComponentRegistryService,
@@ -95,15 +107,19 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       if (publishedPending) {
         this.loading = true;
         this.error = null;
+        this.screenStore.setLoading(true);
+        this.screenStore.setError(null);
         this.cdr.markForCheck();
         return;
       }
 
       if (publishedIsError) {
         this.loading = false;
-        this.availableScreens = [];
         this.screenConfig = null;
         this.clearComponents();
+        this.screenStore.setScreens([]);
+        this.screenStore.setActiveScreen(null);
+        this.screenStore.setLoading(false);
 
         if (!this.hasReportedListError) {
           this.toastService.error('加载大屏列表失败，请稍后再试');
@@ -111,6 +127,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         this.error = (publishedError as Error | undefined)?.message || '加载屏幕列表失败';
+        this.screenStore.setError(this.error);
         this.cdr.markForCheck();
         return;
       }
@@ -119,9 +136,11 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
       if (!published || published.items.length === 0) {
         this.loading = false;
-        this.availableScreens = [];
         this.screenConfig = null;
         this.clearComponents();
+        this.screenStore.setScreens([]);
+        this.screenStore.setActiveScreen(null);
+        this.screenStore.setLoading(false);
 
         if (!this.hasAnnouncedEmptyState) {
           this.toastService.info('暂无已发布的屏幕，请在管理后台创建并发布');
@@ -129,12 +148,14 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         this.error = '没有可用的屏幕';
+        this.screenStore.setError(this.error);
         this.cdr.markForCheck();
         return;
       }
 
       this.hasAnnouncedEmptyState = false;
-      this.availableScreens = published.items;
+      this.screenStore.setScreens([...published.items]);
+      const availableScreens = this.availableScreensList;
 
       const defaultData = this.defaultScreenQuery.data();
       const defaultIsError = this.defaultScreenQuery.isError();
@@ -152,13 +173,13 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
       const defaultId = defaultData?.id ?? null;
       const fallbackIndex = defaultId
-        ? this.availableScreens.findIndex(screen => screen.id === defaultId)
+        ? availableScreens.findIndex(screen => screen.id === defaultId)
         : -1;
 
       const desiredScreen =
         fallbackIndex !== -1
-          ? this.availableScreens[fallbackIndex]
-          : this.availableScreens[this.currentScreenIndex] ?? this.availableScreens[0];
+          ? availableScreens[fallbackIndex]
+          : availableScreens[this.currentScreenIndex] ?? availableScreens[0];
 
       if (!desiredScreen) {
         return;
@@ -171,6 +192,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.loading = false;
       this.error = null;
+      this.screenStore.setLoading(false);
+      this.screenStore.setError(null);
+      this.screenStore.setActiveScreen(desiredScreen);
       this.cdr.markForCheck();
     });
   }
@@ -472,27 +496,30 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   // 切换和轮播功能
   switchToScreen(event: any): void {
     const index = parseInt(event.target.value);
-    if (index >= 0 && index < this.availableScreens.length) {
+    const screens = this.availableScreensList;
+    if (index >= 0 && index < screens.length) {
       this.currentScreenIndex = index;
-      const screen = this.availableScreens[index];
+      const screen = screens[index];
       this.loadScreenConfig(screen);
     }
   }
 
   nextScreen(): void {
-    if (this.availableScreens.length > 1) {
-      this.currentScreenIndex = (this.currentScreenIndex + 1) % this.availableScreens.length;
-      const screen = this.availableScreens[this.currentScreenIndex];
+    const screens = this.availableScreensList;
+    if (screens.length > 1) {
+      this.currentScreenIndex = (this.currentScreenIndex + 1) % screens.length;
+      const screen = screens[this.currentScreenIndex];
       this.loadScreenConfig(screen);
     }
   }
 
   previousScreen(): void {
-    if (this.availableScreens.length > 1) {
+    const screens = this.availableScreensList;
+    if (screens.length > 1) {
       this.currentScreenIndex = this.currentScreenIndex === 0
-        ? this.availableScreens.length - 1
+        ? screens.length - 1
         : this.currentScreenIndex - 1;
-      const screen = this.availableScreens[this.currentScreenIndex];
+      const screen = screens[this.currentScreenIndex];
       this.loadScreenConfig(screen);
     }
   }
@@ -506,9 +533,10 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private startAutoPlay(): void {
-    if (this.availableScreens.length <= 1) return;
+    if (this.availableScreensList.length <= 1) return;
 
     this.isAutoPlay = true;
+    this.screenStore.setAutoPlay(true);
     this.autoPlaySubscription = interval(this.autoPlayInterval)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
@@ -518,6 +546,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private stopAutoPlay(): void {
     this.isAutoPlay = false;
+    this.screenStore.setAutoPlay(false);
     if (this.autoPlaySubscription) {
       this.autoPlaySubscription.unsubscribe();
       this.autoPlaySubscription = null;
@@ -530,12 +559,16 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     this.loading = false;
     this.componentCreationRetryCount = 0; // 重置重试计数
     this.error = null;
+    this.screenStore.setActiveScreen(screen);
+    this.screenStore.setLoading(false);
+    this.screenStore.setError(null);
     this.cdr.markForCheck();
 
     // 使用改进的组件创建调度
     this.scheduleComponentCreation();
 
-    const screenIndex = this.availableScreens.findIndex(s => s.id === screen.id);
+    const screens = this.availableScreensList;
+    const screenIndex = screens.findIndex(s => s.id === screen.id);
     if (screenIndex !== -1) {
       this.currentScreenIndex = screenIndex;
     }
@@ -596,14 +629,14 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private handleNewScreenPublished(screen: ScreenPage): void {
-    const existingIndex = this.availableScreens.findIndex(s => s.id === screen.id);
-    if (existingIndex === -1) {
-      this.availableScreens.push(screen);
+    const screens = this.availableScreensList;
+    if (!screens.some(existing => existing.id === screen.id)) {
+      const updatedScreens = [...screens, screen];
+      this.screenStore.setScreens(updatedScreens);
 
       // 检查新发布的屏幕是否是默认屏幕
       if (screen.isDefault) {
-        this.currentScreenIndex = this.availableScreens.length - 1;
-        // 如果是默认屏幕，立即加载配置
+        this.currentScreenIndex = updatedScreens.findIndex(s => s.id === screen.id);
         this.loadScreenConfig(screen);
       }
       this.cdr.markForCheck();
@@ -611,9 +644,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private handleScreenUpdated(updatedScreen: ScreenPage): void {
-    const index = this.availableScreens.findIndex(s => s.id === updatedScreen.id);
+    const screens = this.availableScreensList;
+    const index = screens.findIndex(s => s.id === updatedScreen.id);
     if (index !== -1) {
-      this.availableScreens[index] = updatedScreen;
+      const updatedScreens = [...screens];
+      updatedScreens[index] = updatedScreen;
+      this.screenStore.setScreens(updatedScreens);
 
       // 如果更新的屏幕成为默认屏幕，更新当前选中
       if (updatedScreen.isDefault && this.currentScreenIndex !== index) {
@@ -629,19 +665,22 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private handleScreenUnpublished(screenId: string): void {
-    const index = this.availableScreens.findIndex(s => s.id === screenId);
+    const screens = this.availableScreensList;
+    const index = screens.findIndex(s => s.id === screenId);
     if (index !== -1) {
-      this.availableScreens.splice(index, 1);
+      const updatedScreens = screens.filter(screen => screen.id !== screenId);
+      this.screenStore.setScreens(updatedScreens);
 
       if (this.screenConfig?.id === screenId) {
-        if (this.availableScreens.length > 0) {
+        if (updatedScreens.length > 0) {
           // 删除的屏幕是当前显示的屏幕，切换到第一个可用屏幕
           this.currentScreenIndex = 0;
-          this.loadScreenConfig(this.availableScreens[0]);
+          this.loadScreenConfig(updatedScreens[0]);
         } else {
           // 没有可用屏幕了
           this.screenConfig = null;
           this.clearComponents();
+          this.screenStore.setActiveScreen(null);
         }
       } else if (this.currentScreenIndex > index) {
         // 如果删除的屏幕在当前选中屏幕之前，调整索引

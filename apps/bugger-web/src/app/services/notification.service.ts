@@ -32,7 +32,7 @@ export class NotificationService {
   private notifications = new Subject<Notification>();
   private notificationQueue = new Map<string, Notification>();
 
-  readonly notifications$ = this.notifications.asObservable();
+  readonly notifications$: Observable<Notification> = this.notifications.asObservable();
 
   showSuccess(title: string, message: string, duration = 4000): string {
     return this.createNotification({
@@ -173,7 +173,7 @@ export class NotificationService {
   }
 
   private handleValidationError(bugError: BugError): void {
-    console.log('Validation error details:', bugError.details);
+    console.warn('Validation error details:', bugError.details);
   }
 
   private generateId(): string {

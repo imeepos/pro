@@ -191,7 +191,7 @@ export class BugListComponent implements OnInit {
 
   selectedStatus = '';
   selectedPriority = '';
-  sortBy = 'createdAt';
+  sortBy: BugFilters['sortBy'] = 'createdAt';
 
   BugStatus = BugStatus;
   BugPriority = BugPriority;
@@ -237,7 +237,7 @@ export class BugListComponent implements OnInit {
   }
 
   onSortChange(): void {
-    this.filters.sortBy = this.sortBy as any;
+    this.filters.sortBy = this.sortBy;
     this.loadBugs();
   }
 

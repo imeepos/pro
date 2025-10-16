@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { GraphQLClient } from 'graphql-request';
+import { ClientError, GraphQLClient } from 'graphql-request';
 import { TypedDocumentNode } from '@graphql-typed-document-node/core';
 import { Kind, OperationDefinitionNode } from 'graphql';
 import { environment } from '../../../environments/environment';
@@ -11,6 +11,7 @@ import { logger } from '../utils/logger';
 })
 export class GraphqlGateway {
   private readonly endpoint = this.resolveEndpoint();
+  private readonly maxAttempts = 3;
 
   constructor(private readonly tokenStorage: TokenStorageService) {}
 
@@ -22,19 +23,25 @@ export class GraphqlGateway {
       headers: this.buildHeaders()
     });
 
-    try {
-      return await client.request<TResult>(
-        document,
-        variables as Record<string, unknown> | undefined
-      );
-    } catch (error) {
-      logger.error('[GraphqlGateway] 请求失败', {
-        message: (error as Error).message,
-        operation: this.lookupOperation(document),
-        variables
-      });
-      throw error;
+    for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
+      try {
+        const preparedVariables = variables as Record<string, unknown> | undefined;
+        return await client.request<TResult>(document, preparedVariables as any);
+      } catch (error) {
+        const context = this.buildErrorContext(error, document, variables, attempt);
+
+        if (attempt < this.maxAttempts && this.shouldRetry(error)) {
+          logger.warn('[GraphqlGateway] 请求重试', context);
+          await this.delay(150 * attempt);
+          continue;
+        }
+
+        logger.error('[GraphqlGateway] 请求失败', context);
+        throw error;
+      }
     }
+
+    throw new Error('GraphQL 请求已耗尽重试次数');
   }
 
   private buildHeaders(): Record<string, string> {
@@ -76,5 +83,46 @@ export class GraphqlGateway {
     );
 
     return operation?.name?.value;
+  }
+
+  private shouldRetry(error: unknown): boolean {
+    if (error instanceof ClientError) {
+      return error.response.status >= 500;
+    }
+
+    return true;
+  }
+
+  private buildErrorContext<TVariables extends Record<string, unknown> | undefined>(
+    error: unknown,
+    document: TypedDocumentNode<unknown, TVariables>,
+    variables: TVariables | undefined,
+    attempt: number
+  ): Record<string, unknown> {
+    const baseContext: Record<string, unknown> = {
+      message: (error as Error).message,
+      operation: this.lookupOperation(document),
+      attempt,
+      maxAttempts: this.maxAttempts
+    };
+
+    if (variables && Object.keys(variables).length > 0) {
+      baseContext['variables'] = variables;
+    }
+
+    if (error instanceof ClientError) {
+      baseContext['status'] = error.response.status;
+      baseContext['graphQLErrors'] = error.response.errors?.map(({ message, path, extensions }) => ({
+        message,
+        path,
+        code: extensions?.['code']
+      }));
+    }
+
+    return baseContext;
+  }
+
+  private delay(duration: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, duration));
   }
 }

@@ -15,15 +15,15 @@
 
 ## 第二阶段（进行中）
 1. **GraphQL 代码生成**
-   - 落地 `@graphql-codegen`，生成强类型操作与 Hook，替换手写字符串查询。
-   - 构建共享 `schema.gql`，与 API 仓库持续同步。
+   - ✅ 落地 `@graphql-codegen`，生成强类型操作并替换手写字符串查询。
+   - ✅ 构建共享 `schema.gql`，与 API 仓库保持同步。
 2. **状态与信号改造**
    - ✅ `ScreenDisplayComponent` 与 `HomeComponent` 同步进入 TanStack Query + GraphQL Gateway 数据流，保留轮播/回退逻辑并支持实时同步。
    - ✅ 微博与事件组件改用 `WeiboDataService`、`EventDataService` 注入，统一走 GraphQL 访问层。
-   - ☐ 用 Angular Signals 重写登录状态与屏幕状态，逐步移除 Akita。
-   - ☐ 建立 `ScreenStore` Signal Facade，统一首页与大屏渲染逻辑。
+   - ✅ 用 Angular Signals 重写登录状态，`AuthSignalStore` + Signals `AuthQuery` 完成 Akita 退场。
+   - ✅ 建立 `ScreenSignalStore`，现已贯通首页与大屏展示，统一轮播、默认屏幕与加载状态。
 3. **错误与埋点统一**
-   - ☐ 在 `GraphqlGateway` 中扩展错误语义与自动重试策略。
+   - ✅ 在 `GraphqlGateway` 中扩展错误语义与自动重试策略。
    - ☐ 接入统一的结构化日志（依托 `@pro/logger`），为前后端追踪提供相同语料。
 
 ## 第三阶段（规划）
@@ -36,6 +36,7 @@
 3. **测试矩阵**
    - 添加 GraphQL 数据访问层的契约测试。
    - 为关键组件补齐 Cypress/Playwright 冒烟用例，保障动态拼装逻辑。
+   - ✅ 补齐 `ScreenSignalStore` 与 `GraphqlGateway` 的单元测试覆盖，确保状态同步与重试语义稳定。
 
 ## 净化收尾
 - 删除遗留 `sdk` 接口引用，统一类型来源。

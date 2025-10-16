@@ -6,9 +6,16 @@ import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { InMemoryCache, ApolloLink } from '@apollo/client/core';
 import { onError } from '@apollo/client/link/error';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import type { GraphQLFormattedError } from 'graphql';
+import type { Bug } from '@pro/types';
 
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
+
+type BugCollection = { bugs: Bug[]; total: number };
+
+const EMPTY_BUG_COLLECTION: BugCollection = { bugs: [], total: 0 };
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -19,16 +26,18 @@ export const appConfig: ApplicationConfig = {
       const httpLink = inject(HttpLink);
       const http = httpLink.create({ uri: environment.graphqlEndpoint });
 
-      const errorLink = onError((error: any) => {
-        if (error.graphQLErrors) {
-          error.graphQLErrors.forEach((err: any) =>
-            console.error(
-              `[GraphQL error]: Message: ${err.message}, Location: ${err.locations}, Path: ${err.path}`
-            )
-          );
-        }
-        if (error.networkError) {
-          console.error(`[Network error]: ${error.networkError}`);
+      const errorLink = onError(({ error }) => {
+        if (CombinedGraphQLErrors.is(error)) {
+          error.errors.forEach((graphError: GraphQLFormattedError) => {
+            const locations =
+              graphError.locations?.map(({ line, column }) => `${line}:${column}`).join(', ') ?? 'n/a';
+            const path = Array.isArray(graphError.path)
+              ? graphError.path.map((segment) => segment.toString()).join(' > ')
+              : 'n/a';
+            console.error(`[GraphQL error] ${graphError.message} (locations: ${locations}, path: ${path})`);
+          });
+        } else if (error) {
+          console.error('[Network error]', error);
         }
       });
 
@@ -40,8 +49,8 @@ export const appConfig: ApplicationConfig = {
               fields: {
                 bugs: {
                   keyArgs: ['filters'],
-                  merge(existing = { bugs: [], total: 0 }, incoming: any) {
-                    return incoming;
+                  merge(existing: BugCollection = EMPTY_BUG_COLLECTION, incoming?: BugCollection | null) {
+                    return incoming ?? existing;
                   },
                 },
               },

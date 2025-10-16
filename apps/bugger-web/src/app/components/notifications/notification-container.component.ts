@@ -1,7 +1,12 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { NotificationService, Notification, NotificationType } from '../../services/notification.service';
+import {
+  NotificationService,
+  Notification,
+  NotificationType,
+  NotificationAction,
+} from '../../services/notification.service';
 
 @Component({
   selector: 'app-notification-container',
@@ -36,7 +41,7 @@ import { NotificationService, Notification, NotificationType } from '../../servi
             <div *ngIf="notification.actions && notification.actions.length > 0" class="mt-3 flex space-x-2">
               <button
                 *ngFor="let action of notification.actions"
-                (click)="executeAction(action, notification.id)"
+                (click)="executeAction(action, notification)"
                 [ngClass]="action.primary ? 'btn-primary' : 'btn-secondary'"
                 class="text-xs px-3 py-1 rounded">
                 {{ action.label }}
@@ -212,10 +217,10 @@ export class NotificationContainerComponent implements OnInit, OnDestroy {
     }
   }
 
-  executeAction(action: any, notificationId: string): void {
+  executeAction(action: NotificationAction, notification: Notification): void {
     action.action();
-    if (!action.persistent) {
-      this.dismiss(notificationId);
+    if (!notification.persistent) {
+      this.dismiss(notification.id);
     }
   }
 

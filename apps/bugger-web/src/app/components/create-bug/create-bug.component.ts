@@ -25,6 +25,19 @@ enum BugCategory {
   DOCUMENTATION = 'documentation'
 }
 
+type StringEnvironmentField = Exclude<keyof BugEnvironment, 'additionalInfo'>;
+
+const STRING_ENVIRONMENT_FIELDS: readonly StringEnvironmentField[] = [
+  'os',
+  'browser',
+  'browserVersion',
+  'device',
+  'screenResolution',
+  'userAgent',
+  'appVersion',
+  'apiVersion',
+];
+
 @Component({
   selector: 'app-create-bug',
   standalone: true,
@@ -320,14 +333,23 @@ export class CreateBugComponent {
   }
 
   private cleanEnvironment(env: BugEnvironment): BugEnvironment | undefined {
-    const cleaned: any = {};
-    Object.keys(env).forEach(key => {
-      const value = env[key as keyof BugEnvironment];
-      if (value && typeof value === 'string' && value.trim()) {
-        cleaned[key] = value.trim();
+    const cleaned: Partial<BugEnvironment> = {};
+
+    for (const key of STRING_ENVIRONMENT_FIELDS) {
+      const value = env[key];
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed) {
+          cleaned[key] = trimmed;
+        }
       }
-    });
-    return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+    }
+
+    if (env.additionalInfo && Object.keys(env.additionalInfo).length > 0) {
+      cleaned.additionalInfo = env.additionalInfo;
+    }
+
+    return Object.keys(cleaned).length > 0 ? (cleaned as BugEnvironment) : undefined;
   }
 
   private handleSubmissionError(error?: BugError): void {

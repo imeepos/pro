@@ -3,11 +3,17 @@
   "version": "1.0.0",
   "description": "Unified ESLint configuration for Pro monorepo",
   "main": "index.js",
-  "type": "module",
-    "keywords": ["eslint", "config", "typescript", "nestjs", "angular"],
+  "keywords": [
+    "eslint",
+    "config",
+    "typescript",
+    "nestjs",
+    "angular"
+  ],
   "author": "Pro Team",
   "license": "MIT",
   "files": [
+    "factory.js",
     "index.js",
     "nestjs.js",
     "angular.js",
