@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
 
 // 扩展 Request 类型以包含 apiKey 属性
@@ -34,12 +33,11 @@ export interface AuthInfo {
 /**
  * 认证工具类
  */
-@Injectable()
 export class AuthUtils {
   /**
    * 从请求中提取认证信息
    */
-  extractAuthInfo(request: Request): AuthInfo | null {
+  static extractAuthInfo(request: Request): AuthInfo | null {
     const user = request.user as any;
     if (!user) {
       return null;
@@ -71,28 +69,28 @@ export class AuthUtils {
   /**
    * 检查请求是否已认证
    */
-  isAuthenticated(request: Request): boolean {
+  static isAuthenticated(request: Request): boolean {
     return !!request.user;
   }
 
   /**
    * 检查是否是 API Key 认证
    */
-  isApiKeyAuth(request: Request): boolean {
+  static isApiKeyAuth(request: Request): boolean {
     return !!(request.apiKey);
   }
 
   /**
    * 检查是否是 JWT 认证
    */
-  isJwtAuth(request: Request): boolean {
+  static isJwtAuth(request: Request): boolean {
     return this.isAuthenticated(request) && !this.isApiKeyAuth(request);
   }
 
   /**
    * 从请求头中提取 JWT Token
    */
-  extractJwtToken(request: Request): string | null {
+  static extractJwtToken(request: Request): string | null {
     const authHeader = request.headers.authorization;
     if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
       return authHeader.substring(7);
@@ -103,7 +101,7 @@ export class AuthUtils {
   /**
    * 从请求头中提取 API Key
    */
-  extractApiKey(request: Request): string | null {
+  static extractApiKey(request: Request): string | null {
     const apiKeyHeader = request.headers['x-api-key'];
     if (typeof apiKeyHeader === 'string') {
       return apiKeyHeader;
@@ -129,7 +127,7 @@ export class AuthUtils {
   /**
    * 验证 API Key 格式
    */
-  isValidApiKeyFormat(apiKey: string): boolean {
+  static isValidApiKeyFormat(apiKey: string): boolean {
     return typeof apiKey === 'string' &&
            apiKey.startsWith('ak_') &&
            apiKey.length === 35;
@@ -138,7 +136,7 @@ export class AuthUtils {
   /**
    * 获取用户 ID
    */
-  getUserId(request: Request): string | null {
+  static getUserId(request: Request): string | null {
     const user = request.user as any;
     return user?.userId || null;
   }
@@ -146,7 +144,7 @@ export class AuthUtils {
   /**
    * 获取用户权限列表
    */
-  getUserPermissions(request: Request): string[] {
+  static getUserPermissions(request: Request): string[] {
     const authInfo = this.extractAuthInfo(request);
     return authInfo?.permissions || [];
   }
@@ -154,7 +152,7 @@ export class AuthUtils {
   /**
    * 检查用户是否有特定权限
    */
-  hasPermission(request: Request, permission: string): boolean {
+  static hasPermission(request: Request, permission: string): boolean {
     const permissions = this.getUserPermissions(request);
     return permissions.includes(permission) || permissions.includes('admin:all');
   }
@@ -162,7 +160,7 @@ export class AuthUtils {
   /**
    * 获取认证类型
    */
-  getAuthType(request: Request): AuthType {
+  static getAuthType(request: Request): AuthType {
     if (!this.isAuthenticated(request)) {
       return AuthType.NONE;
     }
@@ -172,7 +170,7 @@ export class AuthUtils {
   /**
    * 创建认证上下文日志
    */
-  createAuthContext(request: Request): Record<string, any> {
+  static createAuthContext(request: Request): Record<string, any> {
     const authInfo = this.extractAuthInfo(request);
     const authType = this.getAuthType(request);
 

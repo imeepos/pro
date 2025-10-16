@@ -15,7 +15,6 @@ import { createJwtConfig } from '../config';
 import { AuthResolver } from './auth.resolver';
 import { ApiKeyResolver } from './api-key.resolver';
 import { ApiKeyLoader } from './api-key.loader';
-import { AuthUtils } from './utils/auth-utils';
 
 @Module({
   imports: [
@@ -44,7 +43,6 @@ import { AuthUtils } from './utils/auth-utils';
     JwtAuthGuard,
     ApiKeyAuthGuard,
     CompositeAuthGuard,
-    AuthUtils
   ],
 })
 export class AuthModule {}
