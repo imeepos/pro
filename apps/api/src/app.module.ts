@@ -5,6 +5,7 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'path';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
+import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { HealthResolver } from './health.resolver';
 import { AuthModule } from './auth/auth.module';
@@ -53,12 +54,13 @@ import { TagLoader } from './events/tag.loader';
           autoSchemaFile: join(process.cwd(), 'apps', 'api', 'schema.graphql'),
           sortSchema: true,
           path: '/graphql',
-          playground: !isProduction,
           introspection: !isProduction,
           subscriptions: {
             'graphql-ws': true,
           },
-          plugins: isProduction ? [ApolloServerPluginLandingPageDisabled()] : [],
+          plugins: isProduction
+            ? [ApolloServerPluginLandingPageDisabled()]
+            : [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
           context: ({ req, res }): GraphqlContext => {
             const request = req as AugmentedRequest;
 
