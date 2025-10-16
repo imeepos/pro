@@ -1,52 +1,107 @@
-import { Injectable } from '@angular/core';
-import { Observable, from, tap, catchError, throwError, finalize } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, from, tap, catchError, throwError, finalize, map } from 'rxjs';
 import { EventTypesStore } from './event-types.store';
 import { EventTypesQuery } from './event-types.query';
-import {
-  EventTypeApi,
-  EventType,
-  CreateEventTypeDto,
-  UpdateEventTypeDto
-} from '@pro/sdk';
-import { environment } from '../../environments/environment';
+import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
+import { graphql } from '../core/graphql/generated';
+import { EventType as DomainEventType } from '@pro/sdk';
+
+const EventTypesDocument = graphql(`
+  query EventTypes {
+    eventTypes {
+      id
+      eventName
+      eventCode
+      description
+      sortOrder
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`);
+
+const EventTypeDocument = graphql(`
+  query EventType($id: ID!) {
+    eventType(id: $id) {
+      id
+      eventName
+      eventCode
+      description
+      sortOrder
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`);
+
+const CreateEventTypeDocument = graphql(`
+  mutation CreateEventType($input: CreateEventTypeInput!) {
+    createEventType(input: $input) {
+      id
+      eventName
+      eventCode
+      description
+      sortOrder
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`);
+
+const UpdateEventTypeDocument = graphql(`
+  mutation UpdateEventType($id: ID!, $input: UpdateEventTypeInput!) {
+    updateEventType(id: $id, input: $input) {
+      id
+      eventName
+      eventCode
+      description
+      sortOrder
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`);
+
+const RemoveEventTypeDocument = graphql(`
+  mutation RemoveEventType($id: ID!) {
+    removeEventType(id: $id)
+  }
+`);
 
 @Injectable({ providedIn: 'root' })
 export class EventTypesService {
-  private api: EventTypeApi;
-
-  constructor(
-    private store: EventTypesStore,
-    private query: EventTypesQuery
-  ) {
-    this.api = new EventTypeApi(environment.apiUrl);
-  }
+  private gateway = inject(GraphqlGateway);
+  private store = inject(EventTypesStore);
+  private query = inject(EventTypesQuery);
 
   loadEventTypes(): Observable<void> {
     this.setLoading(true);
     this.setError(null);
 
-    return new Observable(observer => {
-      from(this.api.getEventTypes()).pipe(
-        tap(eventTypes => {
-          this.store.set(eventTypes);
-          observer.next();
-          observer.complete();
-        }),
-        catchError(error => {
-          this.setError(error.message || '加载事件类型列表失败');
-          observer.error(error);
-          return throwError(() => error);
-        }),
-        finalize(() => this.setLoading(false))
-      ).subscribe();
-    });
+    return from(this.gateway.request(EventTypesDocument)).pipe(
+      map(result => result.eventTypes.map(this.toDomainEventType)),
+      tap(eventTypes => {
+        this.store.set(eventTypes);
+      }),
+      map(() => undefined),
+      catchError(error => {
+        this.setError(error.message || '加载事件类型列表失败');
+        return throwError(() => error);
+      }),
+      finalize(() => this.setLoading(false))
+    );
   }
 
-  loadEventTypeById(id: number): Observable<EventType> {
+  loadEventTypeById(id: string): Observable<DomainEventType> {
     this.setLoading(true);
     this.setError(null);
 
-    return from(this.api.getEventTypeById(id)).pipe(
+    return from(this.gateway.request(EventTypeDocument, { id })).pipe(
+      map(result => this.toDomainEventType(result.eventType)),
       catchError(error => {
         this.setError(error.message || '加载事件类型详情失败');
         return throwError(() => error);
@@ -55,12 +110,12 @@ export class EventTypesService {
     );
   }
 
-  
-  createEventType(dto: CreateEventTypeDto): Observable<EventType> {
+  createEventType(dto: { eventName: string; eventCode: string; description?: string; sortOrder?: number; status?: number }): Observable<DomainEventType> {
     this.setLoading(true);
     this.setError(null);
 
-    return from(this.api.createEventType(dto)).pipe(
+    return from(this.gateway.request(CreateEventTypeDocument, { input: dto })).pipe(
+      map(result => this.toDomainEventType(result.createEventType)),
       tap(eventType => {
         this.store.add(eventType);
       }),
@@ -72,11 +127,12 @@ export class EventTypesService {
     );
   }
 
-  updateEventType(id: number, dto: UpdateEventTypeDto): Observable<EventType> {
+  updateEventType(id: string, dto: { eventName?: string; eventCode?: string; description?: string; sortOrder?: number; status?: number }): Observable<DomainEventType> {
     this.setLoading(true);
     this.setError(null);
 
-    return from(this.api.updateEventType(id, dto)).pipe(
+    return from(this.gateway.request(UpdateEventTypeDocument, { id, input: dto })).pipe(
+      map(result => this.toDomainEventType(result.updateEventType)),
       tap(eventType => {
         this.store.update(eventType.id, eventType);
       }),
@@ -92,16 +148,30 @@ export class EventTypesService {
     this.setLoading(true);
     this.setError(null);
 
-    return from(this.api.deleteEventType(Number(id))).pipe(
+    return from(this.gateway.request(RemoveEventTypeDocument, { id })).pipe(
       tap(() => {
         this.store.remove(id);
       }),
+      map(() => undefined),
       catchError(error => {
         this.setError(error.message || '删除事件类型失败');
         return throwError(() => error);
       }),
       finalize(() => this.setLoading(false))
     );
+  }
+
+  private toDomainEventType(gqlType: { id: string; eventName: string; eventCode: string; description?: string | null; sortOrder: number; status: number; createdAt: string; updatedAt: string }): DomainEventType {
+    return {
+      id: gqlType.id,
+      eventCode: gqlType.eventCode,
+      eventName: gqlType.eventName,
+      description: gqlType.description ?? undefined,
+      sortOrder: gqlType.sortOrder,
+      status: gqlType.status,
+      createdAt: gqlType.createdAt,
+      updatedAt: gqlType.updatedAt
+    };
   }
 
   private setLoading(loading: boolean): void {

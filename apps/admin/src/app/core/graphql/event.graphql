@@ -1,0 +1,119 @@
+query Events($filter: EventQueryInput) {
+  events(filter: $filter) {
+    edges {
+      node {
+        id
+        eventName
+        summary
+        status
+        occurTime
+        province
+        city
+        district
+        street
+        locationText
+        longitude
+        latitude
+        eventTypeId
+        industryTypeId
+        createdAt
+        updatedAt
+        eventType {
+          id
+          eventName
+        }
+        industryType {
+          id
+          industryName
+        }
+        tags {
+          id
+          tagName
+        }
+      }
+    }
+    totalCount
+  }
+}
+
+query Event($id: ID!) {
+  event(id: $id) {
+    id
+    eventName
+    summary
+    status
+    occurTime
+    province
+    city
+    district
+    street
+    locationText
+    longitude
+    latitude
+    eventTypeId
+    industryTypeId
+    createdAt
+    updatedAt
+    eventType {
+      id
+      eventName
+    }
+    industryType {
+      id
+      industryName
+    }
+    tags {
+      id
+      tagName
+    }
+    attachments {
+      id
+      fileName
+      fileUrl
+      fileType
+      fileSize
+      mimeType
+      fileMd5
+      sortOrder
+      createdAt
+    }
+  }
+}
+
+mutation CreateEvent($input: CreateEventInput!) {
+  createEvent(input: $input) {
+    id
+    eventName
+    status
+    occurTime
+    createdAt
+  }
+}
+
+mutation UpdateEvent($id: ID!, $input: UpdateEventInput!) {
+  updateEvent(id: $id, input: $input) {
+    id
+    eventName
+    status
+    occurTime
+    updatedAt
+  }
+}
+
+mutation RemoveEvent($id: ID!) {
+  removeEvent(id: $id)
+}
+
+mutation PublishEvent($id: ID!) {
+  publishEvent(id: $id) {
+    id
+    status
+  }
+}
+
+mutation ArchiveEvent($id: ID!) {
+  archiveEvent(id: $id) {
+    id
+    status
+  }
+}

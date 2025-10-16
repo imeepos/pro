@@ -26,6 +26,10 @@ out/
 !*.config.js
 !*.config.mjs
 
+# GraphQL Code Generation
+**/generated/
+**/__generated__/
+
 # Misc
 .DS_Store
 *.pem

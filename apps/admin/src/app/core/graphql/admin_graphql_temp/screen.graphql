@@ -1,0 +1,204 @@
+query Screens($page: Int, $limit: Int) {
+  screens(page: $page, limit: $limit) {
+    edges {
+      node {
+        id
+        name
+        description
+        layout {
+          width
+          height
+          background
+          cols
+          rows
+          grid {
+            size
+            enabled
+          }
+        }
+        components {
+          id
+          type
+          position {
+            x
+            y
+            width
+            height
+            zIndex
+          }
+          config
+          dataSource {
+            type
+            url
+            data
+            refreshInterval
+          }
+        }
+        status
+        isDefault
+        createdBy
+        createdAt
+        updatedAt
+      }
+    }
+    totalCount
+  }
+}
+
+query Screen($id: ID!) {
+  screen(id: $id) {
+    id
+    name
+    description
+    layout {
+      width
+      height
+      background
+      cols
+      rows
+      grid {
+        size
+        enabled
+      }
+    }
+    components {
+      id
+      type
+      position {
+        x
+        y
+        width
+        height
+        zIndex
+      }
+      config
+      dataSource {
+        type
+        url
+        data
+        refreshInterval
+      }
+    }
+    status
+    isDefault
+    createdBy
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateScreen($input: CreateScreenInput!) {
+  createScreen(input: $input) {
+    id
+    name
+    description
+    layout {
+      width
+      height
+      background
+      cols
+      rows
+      grid {
+        size
+        enabled
+      }
+    }
+    components {
+      id
+      type
+      position {
+        x
+        y
+        width
+        height
+        zIndex
+      }
+      config
+      dataSource {
+        type
+        url
+        data
+        refreshInterval
+      }
+    }
+    status
+    isDefault
+    createdBy
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateScreen($id: ID!, $input: UpdateScreenInput!) {
+  updateScreen(id: $id, input: $input) {
+    id
+    name
+    description
+    layout {
+      width
+      height
+      background
+      cols
+      rows
+      grid {
+        size
+        enabled
+      }
+    }
+    components {
+      id
+      type
+      position {
+        x
+        y
+        width
+        height
+        zIndex
+      }
+      config
+      dataSource {
+        type
+        url
+        data
+        refreshInterval
+      }
+    }
+    status
+    isDefault
+    createdBy
+    createdAt
+    updatedAt
+  }
+}
+
+mutation RemoveScreen($id: ID!) {
+  removeScreen(id: $id)
+}
+
+mutation PublishScreen($id: ID!) {
+  publishScreen(id: $id) {
+    id
+    status
+  }
+}
+
+mutation DraftScreen($id: ID!) {
+  draftScreen(id: $id) {
+    id
+    status
+  }
+}
+
+mutation CopyScreen($id: ID!) {
+  copyScreen(id: $id) {
+    id
+    name
+  }
+}
+
+mutation SetDefaultScreen($id: ID!) {
+  setDefaultScreen(id: $id) {
+    id
+    isDefault
+  }
+}

@@ -6,76 +6,21 @@ import { AuthQuery } from './auth.query';
 import { TokenStorageService } from '../core/services/token-storage.service';
 import { LoginDto, RegisterDto, AuthResponse, User, UserProfile } from '@pro/types';
 import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
-
-const LOGIN_MUTATION = /* GraphQL */ `
-  mutation Login($input: LoginDto!) {
-    login(input: $input) {
-      accessToken
-      refreshToken
-      user {
-        id
-        username
-        email
-        status
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
-
-const REGISTER_MUTATION = /* GraphQL */ `
-  mutation Register($input: RegisterDto!) {
-    register(input: $input) {
-      accessToken
-      refreshToken
-      user {
-        id
-        username
-        email
-        status
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
-
-const REFRESH_MUTATION = /* GraphQL */ `
-  mutation Refresh($input: RefreshTokenDto!) {
-    refreshToken(input: $input) {
-      accessToken
-      refreshToken
-      user {
-        id
-        username
-        email
-        status
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
-
-const LOGOUT_MUTATION = /* GraphQL */ `
-  mutation Logout {
-    logout
-  }
-`;
-
-const ME_QUERY = /* GraphQL */ `
-  query Me {
-    me {
-      id
-      username
-      email
-      status
-      createdAt
-      updatedAt
-    }
-  }
-`;
+import {
+  LoginDocument,
+  LoginMutation,
+  LoginMutationVariables,
+  RegisterDocument,
+  RegisterMutation,
+  RegisterMutationVariables,
+  LogoutDocument,
+  LogoutMutation,
+  LogoutMutationVariables,
+  MeDocument,
+  MeQuery,
+  MeQueryVariables
+} from '../core/graphql/generated/graphql';
+import { toDomainUser } from '../core/utils/user-mapper';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -90,9 +35,12 @@ export class AuthService {
     this.setError(null);
 
     return from(
-      this.gateway.request<{ login: AuthResponse }>(LOGIN_MUTATION, { input: dto })
+      this.gateway.request<LoginMutation, LoginMutationVariables>(
+        LoginDocument,
+        { input: dto }
+      )
     ).pipe(
-      map(result => result.login),
+      map(result => this.toAuthResponse(result.login)),
       tap(response => {
         this.handleAuthSuccess(response);
       }),
@@ -109,9 +57,12 @@ export class AuthService {
     this.setError(null);
 
     return from(
-      this.gateway.request<{ register: AuthResponse }>(REGISTER_MUTATION, { input: dto })
+      this.gateway.request<RegisterMutation, RegisterMutationVariables>(
+        RegisterDocument,
+        { input: dto }
+      )
     ).pipe(
-      map(result => result.register),
+      map(result => this.toAuthResponse(result.register)),
       tap(response => {
         this.handleAuthSuccess(response);
       }),
@@ -126,7 +77,9 @@ export class AuthService {
   logout(): void {
     this.setLoading(true);
 
-    from(this.gateway.request<{ logout: boolean }>(LOGOUT_MUTATION)).subscribe({
+    from(
+      this.gateway.request<LogoutMutation, LogoutMutationVariables>(LogoutDocument)
+    ).subscribe({
       complete: () => {
         this.handleLogout();
       },
@@ -151,10 +104,13 @@ export class AuthService {
     this.setLoading(true);
     this.setError(null);
 
-    return from(this.gateway.request<{ me: User }>(ME_QUERY)).pipe(
+    return from(
+      this.gateway.request<MeQuery, MeQueryVariables>(MeDocument)
+    ).pipe(
       tap(result => {
+        const domainUser = toDomainUser(result.me);
         this.store.update({
-          user: this.convertUserToProfile(result.me),
+          user: this.convertUserToProfile(domainUser),
           isAuthenticated: true,
           error: null,
           loading: false
@@ -188,6 +144,14 @@ export class AuthService {
     } catch {
       return true;
     }
+  }
+
+  private toAuthResponse(gqlResponse: { accessToken: string; refreshToken: string; user: { id: string; username: string; email: string; status: any; createdAt: string; updatedAt: string } }): AuthResponse {
+    return {
+      accessToken: gqlResponse.accessToken,
+      refreshToken: gqlResponse.refreshToken,
+      user: toDomainUser(gqlResponse.user)
+    };
   }
 
   private convertUserToProfile(user: User): UserProfile {

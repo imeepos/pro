@@ -1,0 +1,55 @@
+query IndustryTypes {
+  industryTypes {
+    id
+    industryCode
+    industryName
+    description
+    sortOrder
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+query IndustryType($id: ID!) {
+  industryType(id: $id) {
+    id
+    industryCode
+    industryName
+    description
+    sortOrder
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateIndustryType($input: CreateIndustryTypeInput!) {
+  createIndustryType(input: $input) {
+    id
+    industryCode
+    industryName
+    description
+    sortOrder
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateIndustryType($id: ID!, $input: UpdateIndustryTypeInput!) {
+  updateIndustryType(id: $id, input: $input) {
+    id
+    industryCode
+    industryName
+    description
+    sortOrder
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation RemoveIndustryType($id: ID!) {
+  removeIndustryType(id: $id)
+}

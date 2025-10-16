@@ -1,0 +1,60 @@
+query MediaTypes($filter: MediaTypeFilterInput) {
+  mediaTypes(filter: $filter) {
+    edges {
+      node {
+        id
+        typeName
+        typeCode
+        description
+        sort
+        status
+        createdAt
+        updatedAt
+      }
+    }
+    totalCount
+  }
+}
+
+query MediaType($id: Int!) {
+  mediaType(id: $id) {
+    id
+    typeName
+    typeCode
+    description
+    sort
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateMediaType($input: CreateMediaTypeInput!) {
+  createMediaType(input: $input) {
+    id
+    typeName
+    typeCode
+    description
+    sort
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateMediaType($id: Int!, $input: UpdateMediaTypeInput!) {
+  updateMediaType(id: $id, input: $input) {
+    id
+    typeName
+    typeCode
+    description
+    sort
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation RemoveMediaType($id: Int!) {
+  removeMediaType(id: $id)
+}

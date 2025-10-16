@@ -56,13 +56,24 @@
                 }
               ],
               "outputHashing": "all",
-              "optimization": false,
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": true
+                },
+                "fonts": true
+              },
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.prod.ts"
                 }
-              ]
+              ],
+              "namedChunks": false,
+              "aot": true,
+              "extractLicenses": true,
+              "buildOptimizer": true
             },
             "development": {
               "optimization": false,
@@ -72,13 +83,22 @@
                 "styles": true,
                 "hidden": false,
                 "vendor": true
-              }
+              },
+              "namedChunks": true
             }
           },
           "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "port": 4201,
+            "prebundle": {
+              "exclude": [
+                "@amap/amap-jsapi-loader"
+              ]
+            }
+          },
           "configurations": {
             "production": {
               "buildTarget": "admin:build:production"

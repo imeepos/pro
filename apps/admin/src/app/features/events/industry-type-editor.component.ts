@@ -67,7 +67,7 @@ export class IndustryTypeEditorComponent implements OnInit, OnDestroy {
     if (!this.industryTypeId) return;
 
     this.loading = true;
-    this.industryTypesService.loadIndustryTypeById(Number(this.industryTypeId)).subscribe({
+    this.industryTypesService.loadIndustryTypeById(this.industryTypeId).subscribe({
       next: (industryType) => {
         this.industryTypeForm.patchValue({
           industryCode: industryType.industryCode,
@@ -126,7 +126,7 @@ export class IndustryTypeEditorComponent implements OnInit, OnDestroy {
 
   updateIndustryType(dto: UpdateIndustryTypeDto): void {
     this.loading = true;
-    this.industryTypesService.updateIndustryType(Number(this.industryTypeId), dto).subscribe({
+    this.industryTypesService.updateIndustryType(this.industryTypeId!, dto).subscribe({
       next: () => {
         this.toastService.success('行业类型更新成功');
         this.router.navigate(['/events/industry-types']);

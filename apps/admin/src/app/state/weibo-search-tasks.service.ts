@@ -1,76 +1,225 @@
 import { Injectable } from '@angular/core';
-import { inject } from '@angular/core';
-import { Observable, tap, catchError, throwError, finalize, map } from 'rxjs';
+import { Observable, from, tap, catchError, throwError, finalize, map } from 'rxjs';
 import { WeiboSearchTasksStore } from './weibo-search-tasks.store';
 import { WeiboSearchTasksQuery } from './weibo-search-tasks.query';
-import { SkerSDK } from '@pro/sdk';
-import {
-  WeiboSearchTask,
-  CreateWeiboSearchTaskDto,
-  UpdateWeiboSearchTaskDto,
-  WeiboSearchTaskFilters,
-  WeiboSearchTaskStatus
-} from '@pro/types';
+import { WeiboSearchTask, WeiboSearchTaskFilters } from '@pro/types';
+import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
+import { graphql } from '../core/graphql/generated';
+
+const WeiboSearchTasksQueryDoc = graphql(`
+  query WeiboSearchTasks(
+    $page: Int
+    $limit: Int
+    $status: WeiboSearchTaskStatus
+    $keyword: String
+    $enabled: Boolean
+    $sortBy: String
+    $sortOrder: String
+  ) {
+    weiboSearchTasks(
+      filter: {
+        page: $page
+        limit: $limit
+        status: $status
+        keyword: $keyword
+        enabled: $enabled
+        sortBy: $sortBy
+        sortOrder: $sortOrder
+      }
+    ) {
+      edges {
+        node {
+          id
+          keyword
+          status
+          enabled
+          startDate
+          progress
+          totalSegments
+          enableAccountRotation
+          weiboAccountId
+          maxRetries
+          retryCount
+          nextRunAt
+          latestCrawlTime
+          currentCrawlTime
+          errorMessage
+          createdAt
+          updatedAt
+        }
+      }
+      totalCount
+    }
+  }
+`);
+
+const WeiboSearchTaskQueryDoc = graphql(`
+  query WeiboSearchTask($id: Int!) {
+    weiboSearchTask(id: $id) {
+      id
+      keyword
+      status
+      enabled
+      startDate
+      progress
+      totalSegments
+      enableAccountRotation
+      weiboAccountId
+      maxRetries
+      retryCount
+      nextRunAt
+      latestCrawlTime
+      currentCrawlTime
+      errorMessage
+      createdAt
+      updatedAt
+    }
+  }
+`);
+
+const WeiboSearchTaskStatsQueryDoc = graphql(`
+  query WeiboSearchTaskStats {
+    weiboSearchTaskStats {
+      total
+      enabled
+      running
+      paused
+      completed
+      failed
+    }
+  }
+`);
+
+const CreateWeiboSearchTaskMutation = graphql(`
+  mutation CreateWeiboSearchTask($input: CreateWeiboSearchTaskInput!) {
+    createWeiboSearchTask(input: $input) {
+      id
+      keyword
+      status
+      enabled
+      startDate
+      createdAt
+    }
+  }
+`);
+
+const UpdateWeiboSearchTaskMutation = graphql(`
+  mutation UpdateWeiboSearchTask($id: Int!, $input: UpdateWeiboSearchTaskInput!) {
+    updateWeiboSearchTask(id: $id, input: $input) {
+      id
+      keyword
+      status
+      enabled
+      startDate
+      progress
+      totalSegments
+      updatedAt
+    }
+  }
+`);
+
+const PauseWeiboSearchTaskMutation = graphql(`
+  mutation PauseWeiboSearchTask($id: Int!, $input: PauseWeiboTaskInput) {
+    pauseWeiboSearchTask(id: $id, input: $input) {
+      id
+      status
+      updatedAt
+    }
+  }
+`);
+
+const ResumeWeiboSearchTaskMutation = graphql(`
+  mutation ResumeWeiboSearchTask($id: Int!, $input: ResumeWeiboTaskInput) {
+    resumeWeiboSearchTask(id: $id, input: $input) {
+      id
+      status
+      updatedAt
+    }
+  }
+`);
+
+const RunWeiboSearchTaskNowMutation = graphql(`
+  mutation RunWeiboSearchTaskNow($id: Int!, $input: RunWeiboTaskNowInput) {
+    runWeiboSearchTaskNow(id: $id, input: $input) {
+      id
+      status
+      nextRunAt
+      updatedAt
+    }
+  }
+`);
+
+const RemoveWeiboSearchTaskMutation = graphql(`
+  mutation RemoveWeiboSearchTask($id: Int!) {
+    removeWeiboSearchTask(id: $id)
+  }
+`);
 
 @Injectable({ providedIn: 'root' })
 export class WeiboSearchTasksService {
-  private readonly sdk: SkerSDK;
   constructor(
     private store: WeiboSearchTasksStore,
-    private query: WeiboSearchTasksQuery
-  ) {
-    this.sdk = inject(SkerSDK);
-  }
+    private query: WeiboSearchTasksQuery,
+    private graphql: GraphqlGateway
+  ) {}
 
-  // 获取任务列表
   findAll(filters?: WeiboSearchTaskFilters): Observable<any> {
-    this.updateLoading(true);
-    this.updateError(null);
+    this.setLoading(true);
+    this.setError(null);
 
     const currentFilters = { ...this.query.filters, ...filters };
 
-    return this.sdk.weiboSearchTasks.findAll(currentFilters).pipe(
+    return from(
+      this.graphql.request(WeiboSearchTasksQueryDoc, currentFilters as any)
+    ).pipe(
       tap(response => {
+        const tasks = response.weiboSearchTasks.edges.map(edge => edge.node as unknown as WeiboSearchTask);
+        const totalCount = response.weiboSearchTasks.totalCount;
+
         this.store.update({
-          tasks: response.data,
-          total: response.total,
-          page: response.page,
-          limit: response.limit,
-          totalPages: response.totalPages,
+          tasks,
+          total: totalCount,
+          page: currentFilters.page || 1,
+          limit: currentFilters.limit || 20,
+          totalPages: Math.ceil(totalCount / (currentFilters.limit || 20)),
           filters: currentFilters
         });
       }),
       catchError(error => {
-        this.updateError(error.message || '获取任务列表失败');
+        this.setError(error.message || '获取任务列表失败');
         return throwError(() => error);
       }),
-      finalize(() => this.updateLoading(false))
+      finalize(() => this.setLoading(false))
     );
   }
 
-  // 获取单个任务
   findOne(id: number): Observable<WeiboSearchTask> {
-    this.updateLoading(true);
-    this.updateError(null);
+    this.setLoading(true);
+    this.setError(null);
 
-    return this.sdk.weiboSearchTasks.findOne(id).pipe(
+    return from(
+      this.graphql.request(WeiboSearchTaskQueryDoc, { id })
+    ).pipe(
+      map(response => response.weiboSearchTask as unknown as WeiboSearchTask),
       tap(task => {
         this.store.update({ selectedTask: task });
       }),
       catchError(error => {
-        this.updateError(error.message || '获取任务详情失败');
+        this.setError(error.message || '获取任务详情失败');
         return throwError(() => error);
       }),
-      finalize(() => this.updateLoading(false))
+      finalize(() => this.setLoading(false))
     );
   }
 
-  // 创建任务
-  create(dto: CreateWeiboSearchTaskDto): Observable<WeiboSearchTask> {
-    this.updateLoading(true);
-    this.updateError(null);
+  create(input: any): Observable<WeiboSearchTask> {
+    this.setLoading(true);
+    this.setError(null);
 
-    return this.sdk.weiboSearchTasks.create(dto).pipe(
+    return from(
+      this.graphql.request(CreateWeiboSearchTaskMutation, { input })
+    ).pipe(
+      map(response => response.createWeiboSearchTask as unknown as WeiboSearchTask),
       tap(task => {
         const currentTasks = this.query.tasks || [];
         this.store.update({
@@ -79,19 +228,21 @@ export class WeiboSearchTasksService {
         });
       }),
       catchError(error => {
-        this.updateError(error.message || '创建任务失败');
+        this.setError(error.message || '创建任务失败');
         return throwError(() => error);
       }),
-      finalize(() => this.updateLoading(false))
+      finalize(() => this.setLoading(false))
     );
   }
 
-  // 更新任务
-  update(id: number, updates: UpdateWeiboSearchTaskDto): Observable<WeiboSearchTask> {
-    this.updateLoading(true);
-    this.updateError(null);
+  update(id: number, input: any): Observable<WeiboSearchTask> {
+    this.setLoading(true);
+    this.setError(null);
 
-    return this.sdk.weiboSearchTasks.update(id, updates).pipe(
+    return from(
+      this.graphql.request(UpdateWeiboSearchTaskMutation, { id, input })
+    ).pipe(
+      map(response => response.updateWeiboSearchTask as unknown as WeiboSearchTask),
       tap(updatedTask => {
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
@@ -103,19 +254,20 @@ export class WeiboSearchTasksService {
         }));
       }),
       catchError(error => {
-        this.updateError(error.message || '更新任务失败');
+        this.setError(error.message || '更新任务失败');
         return throwError(() => error);
       }),
-      finalize(() => this.updateLoading(false))
+      finalize(() => this.setLoading(false))
     );
   }
 
-  // 删除任务
   delete(id: number): Observable<void> {
-    this.updateLoading(true);
-    this.updateError(null);
+    this.setLoading(true);
+    this.setError(null);
 
-    return this.sdk.weiboSearchTasks.delete(id).pipe(
+    return from(
+      this.graphql.request(RemoveWeiboSearchTaskMutation, { id })
+    ).pipe(
       tap(() => {
         this.store.update(state => ({
           tasks: state.tasks.filter(task => task.id !== id),
@@ -123,89 +275,106 @@ export class WeiboSearchTasksService {
         }));
       }),
       catchError(error => {
-        this.updateError(error.message || '删除任务失败');
+        this.setError(error.message || '删除任务失败');
         return throwError(() => error);
       }),
-      finalize(() => this.updateLoading(false))
+      finalize(() => this.setLoading(false)),
+      map(() => undefined)
     );
   }
 
-  // 暂停任务
-  pause(id: number): Observable<void> {
-    this.updateLoading(true);
+  pause(id: number, reason?: string): Observable<void> {
+    this.setLoading(true);
+    this.setError(null);
 
-    return this.sdk.weiboSearchTasks.pause(id).pipe(
-      tap((updatedTask) => {
+    const input = reason ? { reason } : undefined;
+
+    return from(
+      this.graphql.request(PauseWeiboSearchTaskMutation, { id, input })
+    ).pipe(
+      tap(response => {
+        const updatedTask = response.pauseWeiboSearchTask as unknown as Partial<WeiboSearchTask>;
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
-            task.id === id ? updatedTask : task
+            task.id === id ? { ...task, ...updatedTask } : task
           )
         }));
       }),
-      map(() => void 0),
       catchError(error => {
-        this.updateError(error.message || '暂停任务失败');
+        this.setError(error.message || '暂停任务失败');
         return throwError(() => error);
       }),
-      finalize(() => this.updateLoading(false))
+      finalize(() => this.setLoading(false)),
+      map(() => undefined)
     );
   }
 
-  // 恢复任务
-  resume(id: number): Observable<void> {
-    this.updateLoading(true);
+  resume(id: number, reason?: string): Observable<void> {
+    this.setLoading(true);
+    this.setError(null);
 
-    return this.sdk.weiboSearchTasks.resume(id).pipe(
-      tap((updatedTask) => {
+    const input = reason ? { reason } : undefined;
+
+    return from(
+      this.graphql.request(ResumeWeiboSearchTaskMutation, { id, input })
+    ).pipe(
+      tap(response => {
+        const updatedTask = response.resumeWeiboSearchTask as unknown as Partial<WeiboSearchTask>;
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
-            task.id === id ? updatedTask : task
+            task.id === id ? { ...task, ...updatedTask } : task
           )
         }));
       }),
-      map(() => void 0),
       catchError(error => {
-        this.updateError(error.message || '恢复任务失败');
+        this.setError(error.message || '恢复任务失败');
         return throwError(() => error);
       }),
-      finalize(() => this.updateLoading(false))
+      finalize(() => this.setLoading(false)),
+      map(() => undefined)
     );
   }
 
-  // 立即执行任务
-  runNow(id: number): Observable<void> {
-    this.updateLoading(true);
+  runNow(id: number, reason?: string): Observable<void> {
+    this.setLoading(true);
+    this.setError(null);
 
-    return this.sdk.weiboSearchTasks.runNow(id).pipe(
-      tap((updatedTask) => {
+    const input = reason ? { reason } : undefined;
+
+    return from(
+      this.graphql.request(RunWeiboSearchTaskNowMutation, { id, input })
+    ).pipe(
+      tap(response => {
+        const updatedTask = response.runWeiboSearchTaskNow as unknown as Partial<WeiboSearchTask>;
         this.store.update(state => ({
           tasks: state.tasks.map(task =>
-            task.id === id ? updatedTask : task
+            task.id === id ? { ...task, ...updatedTask } : task
           )
         }));
       }),
-      map(() => void 0),
       catchError(error => {
-        this.updateError(error.message || '执行任务失败');
+        this.setError(error.message || '执行任务失败');
         return throwError(() => error);
       }),
-      finalize(() => this.updateLoading(false))
+      finalize(() => this.setLoading(false)),
+      map(() => undefined)
     );
   }
 
-  // 获取任务统计
   getStats(): Observable<any> {
-    return this.sdk.weiboSearchTasks.getStats();
+    return from(
+      this.graphql.request(WeiboSearchTaskStatsQueryDoc)
+    ).pipe(
+      map(response => response.weiboSearchTaskStats)
+    );
   }
 
-  // 更新筛选条件
   updateFilters(filters: Partial<WeiboSearchTaskFilters>): void {
     this.store.update(state => ({
       filters: { ...state.filters, ...filters }
     }));
   }
 
-  // 重置筛选条件
   resetFilters(): void {
     this.store.update({
       filters: {
@@ -217,27 +386,23 @@ export class WeiboSearchTasksService {
     });
   }
 
-  // 选择任务
   selectTask(task: WeiboSearchTask | null): void {
     this.store.update({ selectedTask: task });
   }
 
-  // 清除错误
   clearError(): void {
-    this.updateError(null);
+    this.setError(null);
   }
 
-  // 刷新列表
   refresh(): Observable<any> {
     return this.findAll();
   }
 
-  // 私有方法
-  private updateLoading(loading: boolean): void {
+  private setLoading(loading: boolean): void {
     this.store.update({ loading });
   }
 
-  private updateError(error: string | null): void {
+  private setError(error: string | null): void {
     this.store.update({ error });
   }
 }

@@ -67,7 +67,7 @@ export class EventTypeEditorComponent implements OnInit, OnDestroy {
     if (!this.eventTypeId) return;
 
     this.loading = true;
-    this.eventTypesService.loadEventTypeById(Number(this.eventTypeId)).subscribe({
+    this.eventTypesService.loadEventTypeById(this.eventTypeId).subscribe({
       next: (eventType) => {
         this.eventTypeForm.patchValue({
           eventCode: eventType.eventCode,
@@ -127,7 +127,7 @@ export class EventTypeEditorComponent implements OnInit, OnDestroy {
 
   updateEventType(dto: UpdateEventTypeDto): void {
     this.loading = true;
-    this.eventTypesService.updateEventType(Number(this.eventTypeId), dto).subscribe({
+    this.eventTypesService.updateEventType(this.eventTypeId!, dto).subscribe({
       next: () => {
         this.toastService.success('事件类型更新成功');
         this.router.navigate(['/events/event-types']);

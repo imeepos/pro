@@ -1,0 +1,50 @@
+query Tags($page: Int, $pageSize: Int, $keyword: String) {
+  tags(page: $page, pageSize: $pageSize, keyword: $keyword) {
+    edges {
+      node {
+        id
+        tagName
+        tagColor
+        usageCount
+        createdAt
+        updatedAt
+      }
+    }
+    totalCount
+  }
+}
+
+query PopularTags($limit: Int) {
+  popularTags(limit: $limit) {
+    id
+    tagName
+    tagColor
+    usageCount
+  }
+}
+
+mutation CreateTag($input: CreateTagDto!) {
+  createTag(input: $input) {
+    id
+    tagName
+    tagColor
+    usageCount
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateTag($id: ID!, $input: UpdateTagDto!) {
+  updateTag(id: $id, input: $input) {
+    id
+    tagName
+    tagColor
+    usageCount
+    createdAt
+    updatedAt
+  }
+}
+
+mutation RemoveTag($id: ID!) {
+  removeTag(id: $id)
+}

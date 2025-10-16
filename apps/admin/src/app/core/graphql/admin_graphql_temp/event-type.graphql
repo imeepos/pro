@@ -1,0 +1,55 @@
+query EventTypes {
+  eventTypes {
+    id
+    eventName
+    eventCode
+    description
+    sortOrder
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+query EventType($id: ID!) {
+  eventType(id: $id) {
+    id
+    eventName
+    eventCode
+    description
+    sortOrder
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateEventType($input: CreateEventTypeInput!) {
+  createEventType(input: $input) {
+    id
+    eventName
+    eventCode
+    description
+    sortOrder
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateEventType($id: ID!, $input: UpdateEventTypeInput!) {
+  updateEventType(id: $id, input: $input) {
+    id
+    eventName
+    eventCode
+    description
+    sortOrder
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation RemoveEventType($id: ID!) {
+  removeEventType(id: $id)
+}

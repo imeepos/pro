@@ -1,0 +1,36 @@
+query Users {
+  users {
+    id
+    username
+    email
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+query User($id: String!) {
+  user(id: $id) {
+    id
+    username
+    email
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateUser($id: String!, $input: UpdateUserDto!) {
+  updateUser(id: $id, input: $input) {
+    id
+    username
+    email
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation RemoveUser($id: String!) {
+  removeUser(id: $id)
+}

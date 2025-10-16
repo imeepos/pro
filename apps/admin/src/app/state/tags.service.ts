@@ -1,44 +1,69 @@
-import { Injectable } from '@angular/core';
-import { Observable, from, tap, catchError, throwError, finalize } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, from, tap, catchError, throwError, finalize, map } from 'rxjs';
 import { TagsStore } from './tags.store';
 import { TagsQuery } from './tags.query';
-import { TagApi, Tag, CreateTagDto, UpdateTagDto } from '@pro/sdk';
-import { environment } from '../../environments/environment';
+import { Tag, CreateTagDto, UpdateTagDto } from '@pro/sdk';
+import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
+import {
+  TagsDocument,
+  TagsQuery as TagsGqlQuery,
+  TagsQueryVariables,
+  PopularTagsDocument,
+  PopularTagsQuery as PopularTagsGqlQuery,
+  PopularTagsQueryVariables,
+  CreateTagDocument,
+  CreateTagMutation,
+  CreateTagMutationVariables,
+  UpdateTagDocument,
+  UpdateTagMutation,
+  UpdateTagMutationVariables,
+  RemoveTagDocument,
+  RemoveTagMutation,
+  RemoveTagMutationVariables
+} from '../core/graphql/generated/graphql';
 
 @Injectable({ providedIn: 'root' })
 export class TagsService {
-  private api: TagApi;
-
-  constructor(
-    private store: TagsStore,
-    private query: TagsQuery
-  ) {
-    this.api = new TagApi(environment.apiUrl);
-  }
+  private gateway = inject(GraphqlGateway);
+  private store = inject(TagsStore);
+  private query = inject(TagsQuery);
 
   loadTags(params?: { page?: number; pageSize?: number; keyword?: string }): Observable<void> {
     this.setLoading(true);
     this.setError(null);
 
-    return from(this.api.getTags(params)).pipe(
-      tap(response => {
-        this.store.set(response.data);
-        this.store.update({ total: response.total });
+    return from(
+      this.gateway.request<TagsGqlQuery, TagsQueryVariables>(TagsDocument, {
+        page: params?.page,
+        pageSize: params?.pageSize,
+        keyword: params?.keyword
+      })
+    ).pipe(
+      map(result => this.mapTagsResult(result)),
+      tap(tags => {
+        this.store.set(tags.items);
+        this.store.update({ total: tags.total });
       }),
       catchError(error => {
         this.setError(error.message || '加载标签列表失败');
         return throwError(() => error);
       }),
       finalize(() => this.setLoading(false)),
-      tap(() => {})
-    ) as unknown as Observable<void>;
+      map(() => undefined)
+    );
   }
 
   loadPopularTags(limit = 20): Observable<Tag[]> {
     this.setLoading(true);
     this.setError(null);
 
-    return from(this.api.getPopularTags(limit)).pipe(
+    return from(
+      this.gateway.request<PopularTagsGqlQuery, PopularTagsQueryVariables>(
+        PopularTagsDocument,
+        { limit }
+      )
+    ).pipe(
+      map(result => result.popularTags.map(this.toTag)),
       tap(tags => {
         this.store.set(tags);
       }),
@@ -54,7 +79,13 @@ export class TagsService {
     this.setLoading(true);
     this.setError(null);
 
-    return from(this.api.createTag(dto)).pipe(
+    return from(
+      this.gateway.request<CreateTagMutation, CreateTagMutationVariables>(
+        CreateTagDocument,
+        { input: dto }
+      )
+    ).pipe(
+      map(result => this.toTag(result.createTag)),
       tap(tag => {
         this.store.add(tag);
       }),
@@ -66,11 +97,17 @@ export class TagsService {
     );
   }
 
-  updateTag(id: number, dto: UpdateTagDto): Observable<Tag> {
+  updateTag(id: string, dto: UpdateTagDto): Observable<Tag> {
     this.setLoading(true);
     this.setError(null);
 
-    return from(this.api.updateTag(id, dto)).pipe(
+    return from(
+      this.gateway.request<UpdateTagMutation, UpdateTagMutationVariables>(
+        UpdateTagDocument,
+        { id, input: dto }
+      )
+    ).pipe(
+      map(result => this.toTag(result.updateTag)),
       tap(tag => {
         this.store.update(id, tag);
       }),
@@ -82,11 +119,16 @@ export class TagsService {
     );
   }
 
-  deleteTag(id: number): Observable<void> {
+  deleteTag(id: string): Observable<void> {
     this.setLoading(true);
     this.setError(null);
 
-    return from(this.api.deleteTag(id)).pipe(
+    return from(
+      this.gateway.request<RemoveTagMutation, RemoveTagMutationVariables>(
+        RemoveTagDocument,
+        { id }
+      )
+    ).pipe(
       tap(() => {
         this.store.remove(id);
       }),
@@ -94,8 +136,34 @@ export class TagsService {
         this.setError(error.message || '删除标签失败');
         return throwError(() => error);
       }),
-      finalize(() => this.setLoading(false))
+      finalize(() => this.setLoading(false)),
+      map(() => undefined)
     );
+  }
+
+  private toTag(gqlTag: {
+    id: string;
+    tagName: string;
+    tagColor: string;
+    usageCount: number;
+    createdAt?: string;
+    updatedAt?: string;
+  }): Tag {
+    return {
+      id: gqlTag.id,
+      tagName: gqlTag.tagName,
+      tagColor: gqlTag.tagColor,
+      usageCount: gqlTag.usageCount,
+      createdAt: gqlTag.createdAt || new Date().toISOString(),
+      updatedAt: gqlTag.updatedAt || new Date().toISOString()
+    };
+  }
+
+  private mapTagsResult(result: TagsGqlQuery): { items: Tag[]; total: number } {
+    return {
+      items: result.tags.edges.map(edge => this.toTag(edge.node)),
+      total: result.tags.totalCount
+    };
   }
 
   private setLoading(loading: boolean): void {
