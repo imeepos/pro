@@ -29,10 +29,7 @@ Angular 20 已经内置了 Vite 支持。我们不需要创建 `vite.config.ts`�
 ```json
 "serve": {
   "options": {
-    "port": 4201,
-    "prebundle": {
-      "exclude": ["@amap/amap-jsapi-loader"]
-    }
+    "port": 4201
   }
 }
 ```
@@ -174,12 +171,12 @@ pnpm run build
 
 ### 2. 特殊依赖处理
 
-对于 `@amap/amap-jsapi-loader` 这种动态加载的外部库，使用 `prebundle.exclude` 排除预打包。
+对于运行时加载的外部库，优先通过脚本注入或懒加载避免 Vite 预打包。
 
 ```json
-"prebundle": {
-  "exclude": ["@amap/amap-jsapi-loader"]
-}
+"prebundle": {}
+
+> 更新：地图加载器已改为运行时脚本注入，无需再将 `@amap/amap-jsapi-loader` 置于 `exclude` 列表。
 ```
 
 ### 3. 命名 Chunk
@@ -298,10 +295,10 @@ import debounce from 'lodash/debounce';
 
 ```bash
 # .env.development
-VITE_API_URL=http://localhost:3000/api
+VITE_API_URL=http://localhost:3000
 
 # .env.production
-VITE_API_URL=https://api.production.com/api
+VITE_API_URL=https://api.production.com
 ```
 
 ## 文档索引

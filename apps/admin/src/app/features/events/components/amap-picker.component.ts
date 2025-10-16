@@ -1,11 +1,11 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import AMapLoader from '@amap/amap-jsapi-loader';
 import { ConfigService } from '../../../core/services/config.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment.prod';
+import { loadAmapLoader, resetAmapLoaderCache } from '@pro/components';
 
 export interface LocationData {
   longitude?: number | null;
@@ -286,8 +286,10 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
         console.log('已配置高德地图安全密钥');
       }
 
+      const loader = await loadAmapLoader();
+
       // 加载高德地图
-      this.AMap = await AMapLoader.load({
+      this.AMap = await loader.load({
         key: amapKey,
         version: '2.0',
         plugins: ['AMap.Geocoder', 'AMap.PlaceSearch', 'AMap.AutoComplete']
@@ -750,10 +752,7 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
     this.configService.clearCache();
 
     // 清除地图加载器的缓存
-    if (typeof window !== 'undefined' && (window as any).AMapLoader) {
-      console.log('清除高德地图加载器缓存...');
-      // 高德地图加载器缓存清理（如果可用）
-    }
+    resetAmapLoaderCache();
 
     await this.performRetry();
   }

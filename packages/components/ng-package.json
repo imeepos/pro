@@ -10,7 +10,6 @@
     "tailwindcss",
     "autoprefixer",
     "postcss",
-    "@amap/amap-jsapi-loader",
     "@pro/types"
   ]
 }

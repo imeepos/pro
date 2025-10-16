@@ -12,11 +12,11 @@ import {
   ViewChild
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR, FormsModule } from '@angular/forms';
-import AMapLoader from '@amap/amap-jsapi-loader';
 import { firstValueFrom, of, Subject } from 'rxjs';
 import { catchError, map, take, takeUntil } from 'rxjs/operators';
 import { ConfigService } from '../../../core/services/config.service';
 import { environment } from '../../../../environments/environment';
+import { loadAmapLoader } from '@pro/components';
 
 interface SearchResult {
   id: string;
@@ -172,7 +172,9 @@ export class MapLocationPickerComponent implements ControlValueAccessor, AfterVi
         };
       }
 
-      this.amapNamespace = await AMapLoader.load({
+      const loader = await loadAmapLoader();
+
+      this.amapNamespace = await loader.load({
         key,
         version: '2.0',
         plugins: ['AMap.Geocoder', 'AMap.PlaceSearch', 'AMap.AutoComplete']

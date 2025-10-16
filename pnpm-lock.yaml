@@ -95,9 +95,6 @@ importers:
 
   apps/admin:
     dependencies:
-      '@amap/amap-jsapi-loader':
-        specifier: ^1.0.1
-        version: 1.0.1
       '@angular/animations':
         specifier: ^20.0.0
         version: 20.3.4(@angular/core@20.3.4(@angular/compiler@20.3.4)(rxjs@7.8.1)(zone.js@0.15.1))
@@ -1279,9 +1276,6 @@ importers:
 
   packages/components:
     dependencies:
-      '@amap/amap-jsapi-loader':
-        specifier: ^1.0.1
-        version: 1.0.1
       '@pro/types':
         specifier: workspace:*
         version: link:../types
@@ -1738,9 +1732,6 @@ packages:
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
-
-  '@amap/amap-jsapi-loader@1.0.1':
-    resolution: {integrity: sha512-nPyLKt7Ow/ThHLkSvn2etQlUzqxmTVgK7bIgwdBRTg2HK5668oN7xVxkaiRe3YZEzGzfV2XgH5Jmu2T73ljejw==}
 
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
@@ -12688,8 +12679,6 @@ snapshots:
       '@algolia/client-common': 5.35.0
 
   '@alloc/quick-lru@5.2.0': {}
-
-  '@amap/amap-jsapi-loader@1.0.1': {}
 
   '@ampproject/remapping@2.3.0':
     dependencies:

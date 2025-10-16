@@ -230,7 +230,7 @@ interface EventMapDistributionConfig {
 
 #### Dependencies
 - `EVENT_DATA_SOURCE`: Event data source injection token
-- AMap loader: `@amap/amap-jsapi-loader`
+- AMap loader: 运行时从 `https://webapi.amap.com/loader.js` 动态注入
 
 #### Usage Example
 ```typescript
@@ -601,7 +601,7 @@ pnpm run lint
 - `rxjs`: ^7.8.1
 
 ### Runtime Dependencies
-- `@amap/amap-jsapi-loader`: ^1.0.1 (for map components)
+- 动态脚本：`https://webapi.amap.com/loader.js`（地图组件运行时按需加载）
 - `socket.io-client`: ^4.8.1 (for WebSocket functionality)
 - `@pro/types`: workspace:* (shared type definitions)
 

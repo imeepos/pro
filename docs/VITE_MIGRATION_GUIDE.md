@@ -68,18 +68,15 @@ Angular 16+ 的 `@angular-devkit/build-angular:application` 构建器已经在�
               "src/assets"
             ],
             "styles": ["src/styles.scss"],
-            "scripts": [],
-            "allowedCommonJsDependencies": [
-              "@amap/amap-jsapi-loader"
-            ]
+            "scripts": []
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "4mb",
-                  "maximumError": "5mb"
+                  "maximumWarning": "3mb",
+                  "maximumError": "3.5mb"
                 },
                 {
                   "type": "anyComponentStyle",
@@ -124,12 +121,7 @@ Angular 16+ 的 `@angular-devkit/build-angular:application` 构建器已经在�
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "port": 4201,
-            "prebundle": {
-              "exclude": [
-                "@amap/amap-jsapi-loader"
-              ]
-            }
+            "port": 4201
           },
           "configurations": {
             "production": {
@@ -185,12 +177,10 @@ Angular 16+ 的 `@angular-devkit/build-angular:application` 构建器已经在�
 
 2. **Prebundle 配置** - 排除外部依赖的预打包
    ```json
-   "prebundle": {
-     "exclude": ["@amap/amap-jsapi-loader"]
-   }
-   ```
+  "prebundle": {}
+  ```
 
-   原因：`@amap/amap-jsapi-loader` 是动态加载高德地图的，不应该被 Vite 预打包
+  原因：高德地图加载器改为运行时脚本注入，不需要在预打包阶段做任何排除配置
 
 3. **开发体验优化**
    ```json
@@ -481,7 +471,6 @@ export default defineConfig({
             'flowbite-angular',
             'ng-zorro-antd',
           ],
-          'map-vendor': ['@amap/amap-jsapi-loader'],
         },
       },
     },
@@ -495,7 +484,7 @@ export default defineConfig({
       'rxjs',
       'zone.js',
     ],
-    exclude: ['@amap/amap-jsapi-loader'],
+    exclude: [],
   },
 
   resolve: {
@@ -616,7 +605,7 @@ module.exports = {
 // src/environments/environment.ts
 export const environment = {
   production: false,
-  apiUrl: import.meta.env['VITE_API_URL'] || 'http://43.240.223.138:3000/api',
+  apiUrl: import.meta.env['VITE_API_URL'] || 'http://43.240.223.138:3000',
   graphqlUrl: import.meta.env['VITE_GRAPHQL_URL'] || 'http://43.240.223.138:3000/graphql',
   // ... 其他配置
 };
@@ -626,7 +615,7 @@ export const environment = {
 
 ```bash
 # .env.development
-VITE_API_URL=http://localhost:3000/api
+VITE_API_URL=http://localhost:3000
 VITE_GRAPHQL_URL=http://localhost:3000/graphql
 
 # .env.production
@@ -650,7 +639,7 @@ VITE_GRAPHQL_URL=https://api.production.com/graphql
 
 - [ ] 更新 `/home/ubuntu/worktrees/pro/apps/admin/angular.json`
   - [ ] 添加生产构建优化配置
-  - [ ] 配置 `prebundle.exclude` 排除 `@amap/amap-jsapi-loader`
+  - [ ] 移除过时的 `prebundle.exclude` 配置
   - [ ] 配置开发服务器端口 4201
 - [ ] 更新 `/home/ubuntu/worktrees/pro/apps/admin/package.json` 脚本
 
@@ -763,7 +752,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ## 故障排查
 
-### 问题 1: @amap/amap-jsapi-loader 构建警告
+### 问题 1: 高德地图加载器构建警告
 
 **症状：**
 ```
@@ -772,26 +761,9 @@ Warning: CommonJS dependency detected: @amap/amap-jsapi-loader
 
 **解决方案：**
 
-在 `angular.json` 中添加：
-
-```json
-{
-  "build": {
-    "options": {
-      "allowedCommonJsDependencies": [
-        "@amap/amap-jsapi-loader"
-      ]
-    }
-  },
-  "serve": {
-    "options": {
-      "prebundle": {
-        "exclude": ["@amap/amap-jsapi-loader"]
-      }
-    }
-  }
-}
-```
+- 移除对 `@amap/amap-jsapi-loader` 的 npm 依赖
+- 通过运行时脚本注入 `https://webapi.amap.com/loader.js`
+- 使用缓存化的注入工具函数，确保只加载一次并提供优雅的错误提示
 
 ### 问题 2: Tailwind CSS 类名被 PurgeCSS 移除
 

@@ -19,7 +19,6 @@
   },
   "private": true,
   "dependencies": {
-    "@amap/amap-jsapi-loader": "^1.0.1",
     "@angular/animations": "^20.0.0",
     "@angular/cdk": "^20.0.0",
     "@angular/common": "^20.0.0",

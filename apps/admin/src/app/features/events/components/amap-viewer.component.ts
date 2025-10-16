@@ -1,7 +1,7 @@
 import { Component, Input, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import AMapLoader from '@amap/amap-jsapi-loader';
 import { ConfigService } from '../../../core/services/config.service';
+import { loadAmapLoader } from '@pro/components';
 
 export interface EventMarker {
   id: number;
@@ -79,7 +79,9 @@ export class AmapViewerComponent implements OnInit, AfterViewInit, OnDestroy {
         plugins.push('AMap.MarkerCluster');
       }
 
-      this.AMap = await AMapLoader.load({
+      const loader = await loadAmapLoader();
+
+      this.AMap = await loader.load({
         key: amapKey,
         version: '2.0',
         plugins

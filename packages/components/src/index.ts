@@ -46,3 +46,6 @@ export {
   createScreensWebSocketConfig,
   isValidWebSocketUrl
 } from './websocket/index';
+
+// External integrations
+export { loadAmapLoader, resetAmapLoaderCache } from './utils/amap-loader';

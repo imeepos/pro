@@ -40,7 +40,6 @@
     "@types/bcryptjs": "^2.4.6"
   },
   "dependencies": {
-    "@amap/amap-jsapi-loader": "^1.0.1",
     "@pro/types": "workspace:*",
     "socket.io-client": "^4.8.1",
     "tslib": "^2.8.1"

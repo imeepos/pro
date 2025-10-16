@@ -243,7 +243,7 @@ import {
 - `@angular/core` ^17.3.0
 - `@angular/common` ^17.3.0
 - `@angular/forms` ^17.3.0
-- `@amap/amap-jsapi-loader` ^1.0.1 (地图组件)
+- 运行时代码通过 `@pro/components` 提供的加载器按需注入 `https://webapi.amap.com/loader.js`
 
 ### 样式
 - 所有组件使用 Tailwind CSS

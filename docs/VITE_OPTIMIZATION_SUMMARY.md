@@ -38,10 +38,7 @@
 ```json
 "serve": {
   "options": {
-    "port": 4201,
-    "prebundle": {
-      "exclude": ["@amap/amap-jsapi-loader"]
-    }
+    "port": 4201
   }
 }
 ```
@@ -285,12 +282,12 @@ pnpm run build:analyze
 - HTML 文件稍微变大（通常 10-20 KB）
 - 但这是值得的，因为关键 CSS 是阻塞渲染的
 
-#### 2. `prebundle.exclude: ["@amap/amap-jsapi-loader"]`
+#### 2. 移除 `prebundle.exclude`
 
 **理由：**
-- `@amap/amap-jsapi-loader` 是动态加载高德地图的
-- 预打包会破坏其动态加载机制
-- 排除预打包可以保持其原有行为
+- 高德地图加载器改为运行时脚本注入
+- 不再需要针对 `@amap/amap-jsapi-loader` 做任何 Vite 预打包处理
+- 减少额外配置，让开发体验更纯粹
 
 #### 3. `namedChunks: true`（开发模式）
 

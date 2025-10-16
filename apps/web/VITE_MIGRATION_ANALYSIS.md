@@ -448,7 +448,7 @@ interface ImportMeta {
 // src/environments/environment.ts
 export const environment = {
   production: import.meta.env.MODE === 'production',
-  apiUrl: import.meta.env.VITE_API_URL || 'http://43.240.223.138:3000/api',
+  apiUrl: import.meta.env.VITE_API_URL || 'http://43.240.223.138:3000',
   graphqlUrl: import.meta.env.VITE_GRAPHQL_URL || 'http://43.240.223.138:3000/graphql',
   tokenKey: 'access_token',
   refreshTokenKey: 'refresh_token',
@@ -460,7 +460,7 @@ export const environment = {
 
 ```bash
 # .env.development
-VITE_API_URL=http://43.240.223.138:3000/api
+VITE_API_URL=http://43.240.223.138:3000
 VITE_GRAPHQL_URL=http://43.240.223.138:3000/graphql
 VITE_WS_URL=ws://43.240.223.138:3000
 VITE_WS_NAMESPACE=screens

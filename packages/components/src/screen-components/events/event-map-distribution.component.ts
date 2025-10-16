@@ -16,6 +16,7 @@ import { Subject, interval, takeUntil } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
 import { EventStatus, EventMapQueryParams, EventMapPoint } from '@pro/types';
 import { EVENT_DATA_SOURCE, EventDataSource } from '../../data-providers/data-providers';
+import { loadAmapLoader } from '../../utils/amap-loader';
 
 type MapTheme = 'midnight' | 'ocean' | 'sunrise' | 'minimal';
 
@@ -892,7 +893,10 @@ export class EventMapDistributionComponent implements IScreenComponent, OnInit, 
   }
 
   private async fetchAmapLoader(): Promise<any> {
-    const module = await import('@amap/amap-jsapi-loader');
-    return (module as any).default ?? module;
+    try {
+      return await loadAmapLoader();
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('高德地图加载器初始化失败');
+    }
   }
 }
