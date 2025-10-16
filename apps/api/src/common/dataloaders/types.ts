@@ -1,4 +1,4 @@
-import DataLoader from 'dataloader';
+import DataLoader = require('dataloader');
 import { User } from '@pro/types';
 import { EventTypeEntity, IndustryTypeEntity, TagEntity } from '@pro/entities';
 import { ApiKeyResponseDto } from '../../auth/dto/api-key.dto';

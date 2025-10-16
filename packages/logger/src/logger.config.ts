@@ -24,6 +24,7 @@ export function createLoggerConfig(options: LoggerOptions): any {
         ignore: 'req.headers,res.headers',
         translateTime: 'yyyy-mm-dd HH:MM:ss',
         messageFormat: `[${serviceName}] {msg}`,
+        encoding: 'utf8',
       },
     });
   }
@@ -34,6 +35,7 @@ export function createLoggerConfig(options: LoggerOptions): any {
     options: {
       destination: `${logDir}/${serviceName}-error.log`,
       mkdir: true,
+      encoding: 'utf8',
     },
   });
 
@@ -44,6 +46,7 @@ export function createLoggerConfig(options: LoggerOptions): any {
       options: {
         destination: `${logDir}/${serviceName}.log`,
         mkdir: true,
+        encoding: 'utf8',
       },
     });
   }
