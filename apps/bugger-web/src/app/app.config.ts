@@ -1,11 +1,10 @@
 import { ApplicationConfig, inject } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, HttpHeaders } from '@angular/common/http';
-import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { InMemoryCache, ApolloLink } from '@apollo/client/core';
-import { onError } from '@apollo/client/link/error';
+import { ErrorLink } from '@apollo/client/link/error';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import type { GraphQLFormattedError } from 'graphql';
 import type { Bug } from '@pro/types';
@@ -21,7 +20,6 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideHttpClient(),
-    provideAnimations(),
     provideApollo(() => {
       const httpLink = inject(HttpLink);
       const http = httpLink.create({ uri: environment.graphqlEndpoint });
@@ -33,7 +31,7 @@ export const appConfig: ApplicationConfig = {
         return forward(operation);
       });
 
-      const errorLink = onError(({ error }) => {
+      const errorLink = new ErrorLink(({ error }) => {
         if (CombinedGraphQLErrors.is(error)) {
           error.errors.forEach((graphError: GraphQLFormattedError) => {
             const locations =
