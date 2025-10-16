@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, effect, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, EffectRef, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { Subject, interval } from 'rxjs';
@@ -10,11 +10,13 @@ import { ScreenService } from '../../core/services/screen.service';
 import { ScreenSignalStore } from '../../core/state/screen.signal-store';
 import { ScreenPage, ScreenComponentConfig as ScreenComponent } from '../../core/types/screen.types';
 import { environment } from '../../../environments/environment';
+import { ScreenHeaderComponent } from './components/screen-header/screen-header.component';
+import { logger } from '../../core/utils/logger';
 
 @Component({
   selector: 'app-screen-display',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ScreenHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="screen-viewport" #screenWrapper>
@@ -47,65 +49,19 @@ import { environment } from '../../../environments/environment';
       </div>
 
       @if (!loading && !error && screenConfig) {
-        <header class="screen-header" [class.screen-header--compact]="isFullscreen">
-          <div class="screen-header__meta">
-            <h1 class="screen-title">{{ screenConfig?.name || '未命名大屏' }}</h1>
-            @if (screenConfig?.description) {
-              <p class="screen-subtitle">{{ screenConfig?.description }}</p>
-            }
-          </div>
-
-          <div class="screen-header__actions">
-            @if (hasMultipleScreens) {
-              <div class="screen-toolbar">
-                <button
-                  class="toolbar-trigger"
-                  (click)="toggleAutoPlay()"
-                  [title]="isAutoPlay ? '停止轮播' : '开始轮播'"
-                  [attr.aria-label]="isAutoPlay ? '停止轮播' : '开始轮播'">
-                  {{ isAutoPlay ? '⏸️' : '▶️' }}
-                </button>
-                <button
-                  class="toolbar-trigger"
-                  (click)="previousScreen()"
-                  title="上一页"
-                  aria-label="上一页">
-                  ⬅️
-                </button>
-                <button
-                  class="toolbar-trigger"
-                  (click)="nextScreen()"
-                  title="下一页"
-                  aria-label="下一页">
-                  ➡️
-                </button>
-                <select
-                  class="toolbar-selector"
-                  [value]="currentScreenIndex"
-                  (change)="switchToScreen($event)"
-                  aria-label="选择页面">
-                  <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
-                    {{ screen.name }}
-                  </option>
-                </select>
-                <div
-                  class="toolbar-indicator"
-                  role="status"
-                  [attr.aria-label]="'当前页面 ' + (currentScreenIndex + 1) + ' / ' + availableScreens.length">
-                  {{ currentScreenIndex + 1 }} / {{ availableScreens.length }}
-                </div>
-              </div>
-            }
-
-            <button
-              class="screen-action screen-action--primary"
-              (click)="toggleFullscreen()"
-              title="全屏切换"
-              [attr.aria-label]="isFullscreen ? '退出全屏' : '全屏显示'">
-              {{ isFullscreen ? '退出全屏' : '全屏显示' }}
-            </button>
-          </div>
-        </header>
+        <app-screen-header
+          [screen]="screenConfig"
+          [isFullscreen]="isFullscreen"
+          [hasMultipleScreens]="hasMultipleScreens"
+          [isAutoPlay]="isAutoPlay"
+          [currentScreenIndex]="currentScreenIndex"
+          [availableScreens]="availableScreens"
+          (autoPlayToggle)="toggleAutoPlay()"
+          (previous)="previousScreen()"
+          (next)="nextScreen()"
+          (screenSelect)="switchToScreen($event)"
+          (fullscreenToggle)="toggleFullscreen()"
+        />
       }
 
     </div>
@@ -319,117 +275,6 @@ import { environment } from '../../../environments/environment';
       z-index: 1;
     }
 
-    .screen-header {
-      position: absolute;
-      top: var(--pro-space-6);
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(92vw, 1280px);
-      padding: var(--pro-space-4) var(--pro-space-6);
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--pro-space-6);
-      background: rgba(15, 23, 42, 0.78);
-      border: 1px solid rgba(255, 255, 255, var(--pro-opacity-glass-light));
-      border-radius: var(--pro-radius-2xl);
-      backdrop-filter: blur(20px) saturate(180%);
-      box-shadow: var(--pro-shadow-2xl);
-      color: rgba(255, 255, 255, 0.92);
-      z-index: 2;
-      transition: opacity var(--pro-transition-base),
-                  transform var(--pro-transition-base);
-      pointer-events: none;
-    }
-
-    .screen-header--compact {
-      opacity: 0;
-      pointer-events: none;
-      transform: translate(-50%, -12px);
-    }
-
-    .screen-header__meta {
-      flex: 1;
-      min-width: 0;
-      pointer-events: auto;
-    }
-
-    .screen-title {
-      margin: 0;
-      font-size: var(--pro-font-size-xl);
-      font-weight: var(--pro-font-weight-semibold);
-      letter-spacing: 0.02em;
-    }
-
-    .screen-subtitle {
-      margin: var(--pro-space-2) 0 0;
-      font-size: var(--pro-font-size-sm);
-      color: rgba(255, 255, 255, 0.68);
-      line-height: 1.5;
-    }
-
-    .screen-header__actions {
-      display: flex;
-      align-items: center;
-      gap: var(--pro-space-4);
-      pointer-events: auto;
-    }
-
-    .screen-action {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: var(--pro-space-2) var(--pro-space-5);
-      border-radius: var(--pro-radius-2xl);
-      border: 1px solid rgba(255, 255, 255, var(--pro-opacity-glass-light));
-      font-size: var(--pro-font-size-sm);
-      font-weight: var(--pro-font-weight-semibold);
-      color: rgba(255, 255, 255, 0.9);
-      background: linear-gradient(135deg,
-        rgba(255, 255, 255, calc(var(--pro-opacity-glass-medium) * 1.2)) 0%,
-        rgba(255, 255, 255, var(--pro-opacity-glass-light)) 100%
-      );
-      cursor: pointer;
-      transition: all var(--pro-transition-fast);
-      backdrop-filter: blur(8px);
-      min-width: 120px;
-      white-space: nowrap;
-      pointer-events: auto;
-    }
-
-    .screen-action:hover {
-      border-color: rgba(255, 255, 255, calc(var(--pro-opacity-glass-heavy) * 1.4));
-      box-shadow: var(--pro-shadow-md);
-      transform: translateY(-1px);
-    }
-
-    .screen-action:active {
-      transform: translateY(0);
-    }
-
-    .screen-action:focus-visible {
-      outline: 2px solid rgba(59, 130, 246, 0.5);
-      outline-offset: 2px;
-    }
-
-    .screen-action--primary {
-      background: linear-gradient(135deg,
-        var(--pro-primary-500) 0%,
-        var(--pro-primary-600) 100%
-      );
-      border: 1px solid rgba(59, 130, 246, 0.35);
-      color: white;
-      box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3),
-                  0 4px 6px -2px rgba(0, 0, 0, 0.15);
-    }
-
-    .screen-action--primary:hover {
-      background: linear-gradient(135deg,
-        var(--pro-primary-600) 0%,
-        var(--pro-primary-700) 100%
-      );
-    }
-
     /* ===== 状态显示组件 ===== */
     .status-container {
       display: flex;
@@ -520,114 +365,6 @@ import { environment } from '../../../environments/environment';
       pointer-events: auto;
     }
 
-    /* ===== 顶部工具栏 ===== */
-    .screen-toolbar {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--pro-space-3);
-      background: rgba(15, 23, 42, 0.65);
-      border-radius: var(--pro-radius-2xl);
-      padding: var(--pro-space-2) var(--pro-space-3);
-      border: 1px solid rgba(255, 255, 255, var(--pro-opacity-glass-heavy));
-      backdrop-filter: blur(12px);
-      box-shadow: var(--pro-shadow-md);
-      contain: layout style paint;
-      pointer-events: auto;
-    }
-
-    .toolbar-trigger {
-      background: linear-gradient(135deg,
-        rgba(255, 255, 255, var(--pro-opacity-glass-medium)) 0%,
-        rgba(255, 255, 255, var(--pro-opacity-glass-light)) 100%
-      );
-      color: rgba(255, 255, 255, 0.9);
-      border: 1px solid rgba(255, 255, 255, calc(var(--pro-opacity-glass-heavy) * 1.2));
-      border-radius: var(--pro-radius-lg);
-      padding: var(--pro-space-2) var(--pro-space-3);
-      cursor: pointer;
-      font-size: var(--pro-font-size-sm);
-      font-weight: var(--pro-font-weight-medium);
-      letter-spacing: 0.025em;
-      transition: all var(--pro-transition-fast);
-      backdrop-filter: blur(4px);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .toolbar-trigger::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg,
-        transparent,
-        rgba(255, 255, 255, 0.1),
-        transparent
-      );
-      transition: left var(--pro-transition-slow);
-    }
-
-    .toolbar-trigger:hover::before {
-      left: 100%;
-    }
-
-    .toolbar-trigger:hover {
-      background: linear-gradient(135deg,
-        rgba(255, 255, 255, calc(var(--pro-opacity-glass-medium) * 1.5)) 0%,
-        rgba(255, 255, 255, calc(var(--pro-opacity-glass-light) * 2)) 100%
-      );
-      border-color: rgba(255, 255, 255, calc(var(--pro-opacity-glass-heavy) * 1.6));
-      transform: translateY(-1px);
-      box-shadow: var(--pro-shadow-md);
-    }
-
-    .toolbar-trigger:active {
-      transform: translateY(0);
-    }
-
-    .toolbar-selector {
-      background: linear-gradient(135deg,
-        rgba(255, 255, 255, var(--pro-opacity-glass-medium)) 0%,
-        rgba(255, 255, 255, var(--pro-opacity-glass-light)) 100%
-      );
-      color: rgba(255, 255, 255, 0.9);
-      border: 1px solid rgba(255, 255, 255, calc(var(--pro-opacity-glass-heavy) * 1.2));
-      border-radius: var(--pro-radius-lg);
-      padding: var(--pro-space-2) var(--pro-space-3);
-      font-size: var(--pro-font-size-sm);
-      font-weight: var(--pro-font-weight-medium);
-      min-width: 160px;
-      cursor: pointer;
-      transition: all var(--pro-transition-fast);
-      backdrop-filter: blur(4px);
-    }
-
-    .toolbar-selector:hover {
-      border-color: rgba(255, 255, 255, calc(var(--pro-opacity-glass-heavy) * 1.6));
-      background: linear-gradient(135deg,
-        rgba(255, 255, 255, calc(var(--pro-opacity-glass-medium) * 1.5)) 0%,
-        rgba(255, 255, 255, calc(var(--pro-opacity-glass-light) * 2)) 100%
-      );
-    }
-
-    .toolbar-selector option {
-      background: var(--pro-slate-800);
-      color: rgba(255, 255, 255, 0.9);
-      padding: var(--pro-space-2);
-    }
-
-    .toolbar-indicator {
-      color: rgba(255, 255, 255, 0.7);
-      font-size: var(--pro-font-size-xs);
-      font-weight: var(--pro-font-weight-semibold);
-      padding: 0 var(--pro-space-3);
-      border-left: 1px solid rgba(255, 255, 255, calc(var(--pro-opacity-glass-heavy) * 1.2));
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-
     /* ===== 动画系统 ===== */
     @keyframes fadeIn {
       from {
@@ -677,61 +414,6 @@ import { environment } from '../../../environments/environment';
       }
     }
 
-    /* ===== 响应式设计系统 ===== */
-    @media (max-width: 768px) {
-      .screen-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--pro-space-3);
-        padding: var(--pro-space-3) var(--pro-space-4);
-      }
-
-      .screen-header__actions {
-        width: 100%;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        gap: var(--pro-space-3);
-      }
-
-      .screen-toolbar {
-        width: 100%;
-        justify-content: center;
-        padding: var(--pro-space-2) var(--pro-space-3);
-        border-radius: var(--pro-radius-xl);
-      }
-
-      .toolbar-trigger {
-        padding: var(--pro-space-2) var(--pro-space-3);
-        font-size: var(--pro-font-size-xs);
-      }
-
-      .toolbar-indicator {
-        font-size: 0.625rem;
-        padding: 0 var(--pro-space-2);
-      }
-
-      .screen-action {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .screen-header {
-        top: var(--pro-space-4);
-        width: min(94vw, 480px);
-      }
-
-      .toolbar-selector {
-        min-width: 140px;
-        font-size: var(--pro-font-size-xs);
-      }
-
-      .screen-toolbar {
-        flex-wrap: wrap;
-      }
-    }
-
     /* ===== 高对比度和无障碍支持 ===== */
     @media (prefers-contrast: high) {
       :host {
@@ -739,12 +421,6 @@ import { environment } from '../../../environments/environment';
         --pro-opacity-glass-light: 0.1;
         --pro-opacity-glass-medium: 0.15;
         --pro-opacity-glass-heavy: 0.2;
-      }
-
-      .toolbar-trigger,
-      .toolbar-selector,
-      .screen-action {
-        border-width: 2px;
       }
     }
 
@@ -759,16 +435,6 @@ import { environment } from '../../../environments/environment';
       }
     }
 
-    /* ===== 打印样式 ===== */
-    @media print {
-      .screen-toolbar {
-        display: none !important;
-      }
-
-      .screen-viewport {
-        background: white !important;
-      }
-    }
   `]
 })
 export class ScreenDisplayComponent implements OnInit, OnDestroy {
@@ -837,6 +503,33 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   private componentLifecycleCallbacks = new Map<ComponentRef<any>, { onDestroy?: () => void; onMount?: () => void }>();
   private componentPerformanceMetrics = new Map<string, { created: number; renderTime: number; errorCount: number }>();
   private autoPlaySubscription: any;
+  private readonly log = logger.withScope('ScreenDisplayComponent');
+  private readonly manualSelectionBridge: EffectRef = effect(() => {
+    const manualId = this.screenStore.manualSelectionId();
+    if (manualId === this.manualSelectionId) {
+      return;
+    }
+
+    this.manualSelectionId = manualId;
+
+    if (!manualId) {
+      return;
+    }
+
+    const screens = this.availableScreens;
+    const index = screens.findIndex(screen => screen.id === manualId);
+    if (index === -1) {
+      return;
+    }
+
+    this.currentScreenIndex = index;
+    const target = screens[index];
+    if (!this.screenConfig || this.screenConfig.id !== target.id) {
+      void this.loadScreenConfig(target);
+    } else {
+      this.cdr.markForCheck();
+    }
+  });
 
   constructor(
     private route: ActivatedRoute,
@@ -868,7 +561,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
       if (publishedIsError) {
         if (!this.hasReportedListError) {
-          console.error('[ScreenDisplay] 加载已发布大屏失败', publishedError);
+          this.log.error('加载已发布大屏失败', publishedError);
           this.hasReportedListError = true;
         }
 
@@ -919,7 +612,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
           if (this.screenQuery.isError()) {
             if (!this.hasReportedScreenError) {
-              console.warn('[ScreenDisplay] 指定大屏加载失败，尝试使用列表数据', this.screenQuery.error());
+              this.log.warn('指定大屏加载失败，尝试使用列表数据', this.screenQuery.error());
               this.hasReportedScreenError = true;
             }
 
@@ -954,7 +647,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
         if (this.defaultScreenQuery.isError()) {
           if (!this.hasReportedDefaultError && !routeId) {
-            console.warn('[ScreenDisplay] 获取默认大屏失败，使用第一个已发布大屏作为回退', this.defaultScreenQuery.error());
+            this.log.warn('获取默认大屏失败，使用第一个已发布大屏作为回退', this.defaultScreenQuery.error());
             this.hasReportedDefaultError = true;
           }
         } else {
@@ -974,7 +667,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
       if (!target) {
         if (!this.hasAnnouncedEmptyState) {
-          console.info('[ScreenDisplay] 暂无已发布大屏');
+          this.log.info('暂无已发布大屏');
           this.hasAnnouncedEmptyState = true;
         }
 
@@ -1034,6 +727,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.manualSelectionBridge.destroy();
     this.destroyComponents();
     this.stopAutoPlay();
     this.destroy$.next();
@@ -1091,7 +785,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       });
     } catch (error) {
-      console.error('[ScreenDisplay] 组件渲染失败:', error);
+      this.log.error('组件渲染失败', error);
       this.handleComponentRenderingError(error);
     }
   }
@@ -1112,7 +806,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
       // 添加容器尺寸检查
       if (wrapperWidth <= 0 || wrapperHeight <= 0) {
-        console.warn('[ScreenDisplay] 容器尺寸无效，跳过缩放计算');
+        this.log.warn('容器尺寸无效，跳过缩放计算', { wrapperWidth, wrapperHeight });
         return;
       }
 
@@ -1139,7 +833,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
       this.cdr.markForCheck();
     } catch (error) {
-      console.error('[ScreenDisplay] 缩放计算失败:', error);
+      this.log.error('缩放计算失败', error);
       // 设置默认缩放值，确保页面仍可显示
       this.scale = 1;
       this.scaleOffsetX = 0;
@@ -1210,7 +904,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
       return componentRef;
     } catch (error) {
-      console.error(`[ScreenDisplay] 组件创建失败 ${componentConfig.type}:`, error);
+      this.log.error('组件创建失败', { componentType: componentConfig.type, error });
 
       // 更新错误计数
       const metrics = this.componentPerformanceMetrics.get(componentId);
@@ -1274,7 +968,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
           instance.onConfigChange?.(componentConfig.config);
           componentRef.changeDetectorRef.detectChanges();
         } catch (error) {
-          console.error(`[ScreenDisplay] 组件配置应用失败:`, error);
+          this.log.error('组件配置应用失败', { componentType: componentConfig.type, error });
         }
       }, 0);
     }
@@ -1351,7 +1045,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
           ref.destroy();
         }
       } catch (error) {
-        console.error('[ScreenDisplay] 组件销毁失败:', error);
+        this.log.error('组件销毁失败', error);
       }
     });
     this.componentRefs = [];
@@ -1361,7 +1055,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       try {
         this.componentsContainer.clear();
       } catch (error) {
-        console.error('[ScreenDisplay] 容器清理失败:', error);
+        this.log.error('组件容器清理失败', error);
       }
     }
   }
@@ -1376,7 +1070,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         try {
           instance.onMount?.();
         } catch (error) {
-          console.error('[ScreenDisplay] 组件onMount回调失败:', error);
+          this.log.error('组件 onMount 回调失败', error);
         }
       };
     }
@@ -1386,7 +1080,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         try {
           instance.onDestroy?.();
         } catch (error) {
-          console.error('[ScreenDisplay] 组件onDestroy回调失败:', error);
+          this.log.error('组件 onDestroy 回调失败', error);
         }
       };
     }
@@ -1409,17 +1103,17 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       try {
         callbacks.onDestroy();
       } catch (error) {
-        console.error('[ScreenDisplay] 组件销毁回调执行失败:', error);
+        this.log.error('组件销毁回调执行失败', error);
       }
     }
   }
 
   private async handleComponentCreationError(componentConfig: ScreenComponent, error: any): Promise<void> {
     // 记录错误信息
-    console.error(`[ScreenDisplay] 组件创建失败详情:`, {
+    this.log.error('组件创建失败详情', {
       componentType: componentConfig.type,
       position: componentConfig.position,
-      error: error.message
+      message: error?.message ?? String(error)
     });
 
     // 尝试创建占位符组件
@@ -1450,12 +1144,12 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
       this.componentsContainer?.element.nativeElement.appendChild(fallbackElement);
     } catch (error) {
-      console.error('[ScreenDisplay] 占位符组件创建失败:', error);
+      this.log.error('占位符组件创建失败', error);
     }
   }
 
   private handleComponentRenderingError(error: any): void {
-    console.error('[ScreenDisplay] 批量渲染发生错误:', error);
+    this.log.error('批量渲染发生错误', error);
 
     // 清理可能部分创建的组件
     this.destroyComponents();
@@ -1469,25 +1163,33 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   }
 
   private initializeWebSocketConnection(): void {
-    console.log('WebSocket 连接检查:');
-    console.log('- wsUrl:', environment.wsUrl);
-    console.log('- namespace:', environment.wsNamespace);
+    this.log.debug('WebSocket 连接检查', {
+      wsUrl: environment.wsUrl,
+      namespace: environment.wsNamespace
+    });
 
     const existingConnection = this.wsManager.getConnection(environment.wsNamespace);
     if (existingConnection) {
-      console.log('复用现有WebSocket连接');
+      this.log.debug('复用现有WebSocket连接');
       return;
     }
 
-    console.log('创建新的WebSocket连接');
+    this.log.debug('创建新的WebSocket连接');
     const token = this.tokenStorage.getToken();
     const wsConfig = createScreensWebSocketConfig(environment.wsUrl, token ?? undefined);
     this.wsManager.connectToNamespace(wsConfig);
   }
 
   // 切换和轮播功能
-  switchToScreen(event: any): void {
-    const index = parseInt(event.target.value);
+  switchToScreen(selection: number | Event): void {
+    const index = typeof selection === 'number'
+      ? selection
+      : Number.parseInt((selection.target as HTMLSelectElement).value, 10);
+
+    if (Number.isNaN(index)) {
+      return;
+    }
+
     const screens = this.availableScreens;
     if (index >= 0 && index < screens.length) {
       this.currentScreenIndex = index;
@@ -1528,6 +1230,10 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
   }
 
   private updateManualSelection(id: string | null): void {
+    if (this.manualSelectionId === id) {
+      return;
+    }
+
     this.manualSelectionId = id;
     this.screenStore.setManualSelection(id);
   }
@@ -1572,7 +1278,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       }
 
       // 更新当前屏幕在可用列表中的索引
-    const screenIndex = this.availableScreens.findIndex(s => s.id === screen.id);
+      const screenIndex = this.availableScreens.findIndex(s => s.id === screen.id);
       if (screenIndex !== -1) {
         this.currentScreenIndex = screenIndex;
       }
@@ -1581,7 +1287,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       this.screenStore.setLoading(false);
       this.cdr.markForCheck();
     } catch (error) {
-      console.error('[ScreenDisplay] 屏幕配置加载失败:', error);
+      this.log.error('屏幕配置加载失败', error);
       this.loading = false;
       this.error = '屏幕配置加载失败';
       this.screenStore.setLoading(false);
@@ -1647,7 +1353,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       wsInstance.on('screen:published')
         .pipe(takeUntil(this.destroy$))
         .subscribe((data: any) => {
-          console.log('新页面已发布:', data);
+          this.log.info('收到屏幕发布事件', { screenId: data?.screen?.id });
           this.handleNewScreenPublished(data.screen);
         });
     }
@@ -1659,7 +1365,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       wsInstance.on('screen:updated')
         .pipe(takeUntil(this.destroy$))
         .subscribe((data: any) => {
-          console.log('页面已更新:', data);
+          this.log.info('收到屏幕更新事件', { screenId: data?.screen?.id });
           this.handleScreenUpdated(data.screen);
         });
     }
@@ -1671,7 +1377,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
       wsInstance.on('screen:unpublished')
         .pipe(takeUntil(this.destroy$))
         .subscribe((data: any) => {
-          console.log('页面已取消发布:', data);
+          this.log.info('收到屏幕取消发布事件', { screenId: data?.screenId });
           this.handleScreenUnpublished(data.screenId);
         });
     }
@@ -1756,7 +1462,7 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
         icon: '/favicon.ico'
       });
     } else {
-      console.log(`${title}: ${message}`);
+      this.log.info('屏幕通知提醒', { title, message });
     }
   }
 
@@ -1781,32 +1487,31 @@ export class ScreenDisplayComponent implements OnInit, OnDestroy {
 
   public logPerformanceReport(): void {
     const metrics = this.getComponentMetrics();
-    console.group('[ScreenDisplay] 组件性能报告');
-
     if (metrics.length === 0) {
-      console.log('暂无组件性能数据');
-    } else {
-      const totalRenderTime = metrics.reduce((sum, item) => sum + item.metrics.renderTime, 0);
-      const avgRenderTime = totalRenderTime / metrics.length;
-      const totalErrors = metrics.reduce((sum, item) => sum + item.metrics.errorCount, 0);
-
-      console.log(`总组件数: ${metrics.length}`);
-      console.log(`平均渲染时间: ${Math.round(avgRenderTime * 100) / 100}ms`);
-      console.log(`总渲染时间: ${Math.round(totalRenderTime * 100) / 100}ms`);
-      console.log(`错误总数: ${totalErrors}`);
-
-      if (metrics.length > 0) {
-        console.table(metrics.map(item => ({
-          '组件ID': item.id,
-          '创建次数': item.metrics.created,
-          '渲染时间(ms)': item.metrics.renderTime,
-          '错误次数': item.metrics.errorCount,
-          '已缓存': item.metrics.isCached
-        })));
-      }
+      this.log.debug('组件性能报告', { summary: { totalComponents: 0 } });
+      return;
     }
 
-    console.groupEnd();
+    const totalRenderTime = metrics.reduce((sum, item) => sum + item.metrics.renderTime, 0);
+    const avgRenderTime = totalRenderTime / metrics.length;
+    const totalErrors = metrics.reduce((sum, item) => sum + item.metrics.errorCount, 0);
+    const normalizedMetrics = metrics.map(item => ({
+      id: item.id,
+      created: item.metrics.created,
+      renderTimeMs: item.metrics.renderTime,
+      errorCount: item.metrics.errorCount,
+      cached: item.metrics.isCached
+    }));
+
+    this.log.debug('组件性能报告', {
+      summary: {
+        totalComponents: metrics.length,
+        averageRenderTimeMs: Math.round(avgRenderTime * 100) / 100,
+        totalRenderTimeMs: Math.round(totalRenderTime * 100) / 100,
+        totalErrors
+      },
+      metrics: normalizedMetrics
+    });
   }
 
   // 请求通知权限

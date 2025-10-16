@@ -78,16 +78,27 @@ export class ScreenSignalStore {
 
   setScreens(screens: ScreenPage[]): void {
     this.state.update(current => {
-      const activeId = current.activeScreenId;
-      const activeScreen = activeId
-        ? screens.find(screen => screen.id === activeId) ?? screens[0] ?? null
-        : screens[0] ?? null;
+      const manualSelectionId = current.manualSelectionId;
+      const resolvedManualSelection =
+        manualSelectionId && screens.some(screen => screen.id === manualSelectionId)
+          ? manualSelectionId
+          : null;
+
+      const preferredActiveId = resolvedManualSelection ?? current.activeScreenId;
+      let activeScreen = preferredActiveId
+        ? screens.find(screen => screen.id === preferredActiveId) ?? null
+        : null;
+
+      if (!activeScreen) {
+        activeScreen = screens[0] ?? null;
+      }
 
       return {
         ...current,
         screens,
         activeScreen,
-        activeScreenId: activeScreen?.id ?? null
+        activeScreenId: activeScreen?.id ?? null,
+        manualSelectionId: resolvedManualSelection
       };
     });
   }

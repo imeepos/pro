@@ -1,4 +1,5 @@
 import { firstValueFrom } from 'rxjs';
+import { TestBed } from '@angular/core/testing';
 import { ScreenSignalStore, ScreenState } from './screen.signal-store';
 import { ScreenPage } from '../types/screen.types';
 
@@ -24,7 +25,8 @@ describe('ScreenSignalStore', () => {
   let store: ScreenSignalStore;
 
   beforeEach(() => {
-    store = new ScreenSignalStore();
+    TestBed.configureTestingModule({});
+    store = TestBed.runInInjectionContext(() => new ScreenSignalStore());
   });
 
   it('should provide initial state snapshot', () => {
@@ -72,6 +74,19 @@ describe('ScreenSignalStore', () => {
     expect(manualSelectionFromStream).toBe('manual-screen');
   });
 
+  it('should reset manual selection when target screen disappears', () => {
+    const primary = createScreen({ id: 'primary' });
+    const secondary = createScreen({ id: 'secondary' });
+    store.setScreens([primary, secondary]);
+    store.setManualSelection('secondary');
+
+    store.setScreens([primary]);
+
+    expect(store.manualSelectionId()).toBeNull();
+    expect(store.activeScreen()).toBe(primary);
+    expect(store.activeScreenId()).toBe('primary');
+  });
+
   it('should toggle loading, error, and autoplay flags gracefully', () => {
     store.setLoading(true);
     store.setError('加载失败');
@@ -86,7 +101,9 @@ describe('ScreenSignalStore', () => {
     const screen = createScreen();
     store.setScreens([screen]);
 
-    const activeName$ = store.select(state => state.activeScreen?.name ?? null);
+    const activeName$ = TestBed.runInInjectionContext(() =>
+      store.select(state => state.activeScreen?.name ?? null)
+    );
     const activeName = await firstValueFrom(activeName$);
 
     expect(activeName).toBe(screen.name);

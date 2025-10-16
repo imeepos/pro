@@ -12,7 +12,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "eslint --config eslint.config.js --max-warnings=0 \"src\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test"
   },
   "private": true,
   "dependencies": {
@@ -48,6 +49,7 @@
     "@graphql-codegen/typescript": "^5.0.2",
     "@graphql-codegen/typescript-graphql-request": "^6.3.0",
     "@graphql-codegen/typescript-operations": "^5.0.2",
+    "@playwright/test": "^1.56.0",
     "@pro/eslint-config": "workspace:*",
     "@pro/prettier-config": "workspace:*",
     "@types/jasmine": "~5.1.0",
@@ -59,6 +61,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "postcss": "^8.5.6",
+    "puppeteer": "^24.25.0",
     "tailwindcss": "^3.4.1",
     "typescript": "~5.8.0"
   }

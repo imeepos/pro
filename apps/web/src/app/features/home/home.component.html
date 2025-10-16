@@ -55,75 +55,19 @@
     </div>
 
     @if (!loading && !error && screenConfig) {
-      <!-- 控制面板 -->
-      <div
-        class="control-panel"
-        [class.hidden]="isFullscreen"
-        role="toolbar"
-        aria-label="屏幕控制">
-        <div class="control-group">
-          <button
-            *ngIf="hasMultipleScreens"
-            class="control-button"
-            (click)="toggleAutoPlay()"
-            [attr.aria-label]="isAutoPlay ? '停止自动轮播' : '开始自动轮播'"
-            [attr.aria-pressed]="isAutoPlay"
-            type="button">
-            <span class="text-lg" aria-hidden="true">{{ isAutoPlay ? '⏸' : '▶' }}</span>
-            <span class="ml-1.5 text-xs font-medium">{{ isAutoPlay ? '停止' : '轮播' }}</span>
-          </button>
-
-          <div class="separator" *ngIf="hasMultipleScreens"></div>
-
-          <button
-            *ngIf="hasMultipleScreens"
-            class="control-button"
-            (click)="previousScreen()"
-            aria-label="切换到上一个屏幕"
-            type="button">
-            <span class="text-lg" aria-hidden="true">←</span>
-            <span class="ml-1 text-xs font-medium">上一个</span>
-          </button>
-
-          <button
-            *ngIf="hasMultipleScreens"
-            class="control-button"
-            (click)="nextScreen()"
-            aria-label="切换到下一个屏幕"
-            type="button">
-            <span class="text-lg" aria-hidden="true">→</span>
-            <span class="ml-1 text-xs font-medium">下一个</span>
-          </button>
-
-          <div class="separator" *ngIf="hasMultipleScreens"></div>
-
-          <select
-            *ngIf="hasMultipleScreens"
-            class="screen-selector"
-            [value]="currentScreenIndex"
-            (change)="switchToScreen($event)"
-            aria-label="选择屏幕">
-            <option *ngFor="let screen of availableScreens; let i = index" [value]="i">
-              {{ screen.name }}
-            </option>
-          </select>
-
-          <div *ngIf="hasMultipleScreens" class="screen-indicator" aria-live="polite">
-            <span class="font-semibold">{{ currentScreenIndex + 1 }}</span>
-            <span class="mx-1">/</span>
-            <span>{{ availableScreens.length }}</span>
-          </div>
-        </div>
-      </div>
-
-      <button
-        class="fullscreen-button"
-        (click)="toggleFullscreen()"
-        [attr.aria-label]="isFullscreen ? '退出全屏模式' : '进入全屏模式'"
-        type="button">
-        <span class="text-lg mr-2" aria-hidden="true">{{ isFullscreen ? '⊗' : '⛶' }}</span>
-        <span class="text-sm font-medium">{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
-      </button>
+      <app-screen-header
+        [screen]="screenConfig"
+        [isFullscreen]="isFullscreen"
+        [hasMultipleScreens]="hasMultipleScreens"
+        [isAutoPlay]="isAutoPlay"
+        [currentScreenIndex]="currentScreenIndex"
+        [availableScreens]="availableScreens"
+        (autoPlayToggle)="toggleAutoPlay()"
+        (previous)="previousScreen()"
+        (next)="nextScreen()"
+        (screenSelect)="switchToScreen($event)"
+        (fullscreenToggle)="toggleFullscreen()"
+      />
     }
   </main>
 </div>

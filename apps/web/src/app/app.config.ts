@@ -13,17 +13,20 @@ import { environment } from '../environments/environment';
 import { WeiboDataService } from './core/services/weibo-data.service';
 import { EventDataService } from './core/services/event-data.service';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { logger } from './core/utils/logger';
 
 function initializeComponentRegistry(registry: ComponentRegistryService) {
+  const log = logger.withScope('ComponentRegistryInitializer');
+
   return () => {
-    console.log('[APP_INITIALIZER] 开始注册组件');
+    log.info('开始注册组件');
 
     return new Promise<void>((resolve, reject) => {
       try {
         // 延迟一点时间确保所有模块都加载完成
         setTimeout(() => {
           try {
-            console.log('[APP_INITIALIZER] 开始注册 weibo-logged-in-users-card 组件');
+            log.info('注册组件开始', { component: 'weibo-logged-in-users-card' });
 
             registry.register(
               {
@@ -35,7 +38,7 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
               WeiboLoggedInUsersCardComponent
             );
 
-            console.log('[APP_INITIALIZER] weibo-logged-in-users-card 组件注册成功');
+            log.info('组件注册成功', { component: 'weibo-logged-in-users-card' });
 
             registry.register(
               {
@@ -47,37 +50,37 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
               EventMapDistributionComponent
             );
 
-            console.log('[APP_INITIALIZER] event-map-distribution 组件注册成功');
+            log.info('组件注册成功', { component: 'event-map-distribution' });
 
             // 验证注册是否成功
             const registeredComponent = registry.get('weibo-logged-in-users-card');
             if (!registeredComponent) {
-              console.error('[APP_INITIALIZER] 组件注册验证失败');
+              log.error('组件注册验证失败', { component: 'weibo-logged-in-users-card' });
               reject(new Error('组件注册验证失败'));
               return;
             }
 
-            console.log('[APP_INITIALIZER] 组件注册验证成功', {
+            log.info('组件注册验证成功', {
               componentType: typeof registeredComponent,
               hasComponentDef: !!(registeredComponent as any).ɵcmp
             });
 
             const eventMapComponent = registry.get('event-map-distribution');
             if (!eventMapComponent) {
-              console.error('[APP_INITIALIZER] event-map-distribution 注册验证失败');
+              log.error('组件注册验证失败', { component: 'event-map-distribution' });
               reject(new Error('event-map-distribution 组件注册验证失败'));
               return;
             }
 
-            console.log('[APP_INITIALIZER] 所有组件注册完成');
+            log.info('所有组件注册完成');
             resolve();
           } catch (error) {
-            console.error('[APP_INITIALIZER] 组件注册过程中发生错误', error);
+            log.error('组件注册过程中发生错误', error);
             reject(error);
           }
         }, 100); // 100ms 延迟确保环境准备完成
       } catch (error) {
-        console.error('[APP_INITIALIZER] 组件注册初始化失败', error);
+        log.error('组件注册初始化失败', error);
         reject(error);
       }
     });
@@ -142,9 +145,11 @@ export const appConfig: ApplicationConfig = {
     {
       provide: WebSocketManager,
       useFactory: (authService: JwtAuthService) => {
-        console.log('WebSocket Manager 初始化配置:');
-        console.log('- wsUrl:', environment.wsUrl);
-        console.log('- namespace:', environment.wsNamespace);
+        const log = logger.withScope('WebSocketManagerFactory');
+        log.debug('初始化配置', {
+          wsUrl: environment.wsUrl,
+          namespace: environment.wsNamespace
+        });
 
         const wsManager = new WebSocketManager(() => new WebSocketService(authService));
 
@@ -152,6 +157,10 @@ export const appConfig: ApplicationConfig = {
         const token = localStorage.getItem(environment.tokenKey) || undefined;
         const screensConfig = createScreensWebSocketConfig(environment.wsUrl, token);
         wsManager.connectToNamespace(screensConfig);
+        log.info('默认 screens 命名空间已连接', {
+          hasToken: !!token,
+          namespace: screensConfig.namespace
+        });
 
         return wsManager;
       },

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, AfterViewInit, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ViewContainerRef, ComponentRef, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, AfterViewInit, EffectRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subject, interval } from 'rxjs';
@@ -15,11 +15,12 @@ import { ToastService } from '../../shared/services/toast.service';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { logger } from '../../core/utils/logger';
 import { environment } from '../../../environments/environment';
+import { ScreenHeaderComponent } from '../screen/components/screen-header/screen-header.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, EmptyStateComponent],
+  imports: [CommonModule, EmptyStateComponent, ScreenHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
@@ -70,6 +71,34 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private hasAnnouncedEmptyState = false;
   private hasReportedListError = false;
   private hasReportedDefaultError = false;
+  private manualSelectionId: string | null = null;
+  private readonly manualSelectionBridge: EffectRef = effect(() => {
+    const manualId = this.screenStore.manualSelectionId();
+    if (manualId === this.manualSelectionId) {
+      return;
+    }
+
+    this.manualSelectionId = manualId;
+
+    if (!manualId) {
+      return;
+    }
+
+    const screens = this.availableScreensList;
+    const index = screens.findIndex(screen => screen.id === manualId);
+    if (index === -1) {
+      return;
+    }
+
+    if (this.currentScreenIndex !== index) {
+      this.currentScreenIndex = index;
+    }
+
+    const target = screens[index];
+    if (!this.screenConfig || this.screenConfig.id !== target.id) {
+      this.loadScreenConfig(target);
+    }
+  });
   get availableScreens(): ScreenPage[] {
     return this.screenStore.screens();
   }
@@ -121,6 +150,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         this.screenStore.setScreens([]);
         this.screenStore.setActiveScreen(null);
         this.screenStore.setLoading(false);
+        this.updateManualSelection(null);
 
         if (!this.hasReportedListError) {
           this.toastService.error('加载大屏列表失败，请稍后再试');
@@ -142,6 +172,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         this.screenStore.setScreens([]);
         this.screenStore.setActiveScreen(null);
         this.screenStore.setLoading(false);
+        this.updateManualSelection(null);
 
         if (!this.hasAnnouncedEmptyState) {
           this.toastService.info('暂无已发布的屏幕，请在管理后台创建并发布');
@@ -157,6 +188,14 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       this.hasAnnouncedEmptyState = false;
       this.screenStore.setScreens([...published.items]);
       const availableScreens = this.availableScreensList;
+      let desiredScreen: ScreenPage | null = null;
+
+      if (this.manualSelectionId) {
+        desiredScreen = availableScreens.find(screen => screen.id === this.manualSelectionId) ?? null;
+        if (!desiredScreen) {
+          this.updateManualSelection(null);
+        }
+      }
 
       const defaultData = this.defaultScreenQuery.data();
       const defaultIsError = this.defaultScreenQuery.isError();
@@ -172,18 +211,25 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         this.hasReportedDefaultError = false;
       }
 
-      const defaultId = defaultData?.id ?? null;
-      const fallbackIndex = defaultId
-        ? availableScreens.findIndex(screen => screen.id === defaultId)
-        : -1;
+      if (!desiredScreen && defaultData?.id) {
+        desiredScreen = availableScreens.find(screen => screen.id === defaultData.id) ?? null;
+      }
 
-      const desiredScreen =
-        fallbackIndex !== -1
-          ? availableScreens[fallbackIndex]
-          : availableScreens[this.currentScreenIndex] ?? availableScreens[0];
+      if (!desiredScreen) {
+        desiredScreen = availableScreens[this.currentScreenIndex] ?? null;
+      }
+
+      if (!desiredScreen) {
+        desiredScreen = availableScreens[0] ?? null;
+      }
 
       if (!desiredScreen) {
         return;
+      }
+
+      const selectedIndex = availableScreens.findIndex(screen => screen.id === desiredScreen.id);
+      if (selectedIndex !== -1) {
+        this.currentScreenIndex = selectedIndex;
       }
 
       if (!this.screenConfig || this.screenConfig.id !== desiredScreen.id) {
@@ -233,6 +279,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    this.manualSelectionBridge.destroy();
     this.clearComponents();
     this.stopAutoPlay();
     this.destroy$.next();
@@ -494,14 +541,32 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/auth/login']);
   }
 
+  private updateManualSelection(id: string | null): void {
+    if (this.manualSelectionId === id) {
+      return;
+    }
+
+    this.manualSelectionId = id;
+    this.screenStore.setManualSelection(id);
+  }
+
   // 切换和轮播功能
-  switchToScreen(event: any): void {
-    const index = parseInt(event.target.value);
+  switchToScreen(selection: number | Event): void {
+    const index = typeof selection === 'number'
+      ? selection
+      : Number.parseInt((selection.target as HTMLSelectElement).value, 10);
+
+    if (Number.isNaN(index)) {
+      return;
+    }
+
     const screens = this.availableScreensList;
     if (index >= 0 && index < screens.length) {
       this.currentScreenIndex = index;
       const screen = screens[index];
+      this.updateManualSelection(screen.id);
       this.loadScreenConfig(screen);
+      this.screenStore.setActiveScreen(screen);
     }
   }
 
@@ -510,7 +575,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     if (screens.length > 1) {
       this.currentScreenIndex = (this.currentScreenIndex + 1) % screens.length;
       const screen = screens[this.currentScreenIndex];
+      this.updateManualSelection(screen.id);
       this.loadScreenConfig(screen);
+      this.screenStore.setActiveScreen(screen);
     }
   }
 
@@ -521,7 +588,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         ? screens.length - 1
         : this.currentScreenIndex - 1;
       const screen = screens[this.currentScreenIndex];
+      this.updateManualSelection(screen.id);
       this.loadScreenConfig(screen);
+      this.screenStore.setActiveScreen(screen);
     }
   }
 
@@ -556,6 +625,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private loadScreenConfig(screen: ScreenPage): void {
     this.log.info('loadScreenConfig 开始', { screenId: screen.id, screenName: screen.name });
+    this.updateManualSelection(screen.id);
     this.screenConfig = screen;
     this.loading = false;
     this.componentCreationRetryCount = 0; // 重置重试计数
@@ -682,10 +752,18 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           this.screenConfig = null;
           this.clearComponents();
           this.screenStore.setActiveScreen(null);
+          this.updateManualSelection(null);
         }
       } else if (this.currentScreenIndex > index) {
         // 如果删除的屏幕在当前选中屏幕之前，调整索引
         this.currentScreenIndex--;
+      }
+
+      if (this.manualSelectionId === screenId && updatedScreens.length > 0) {
+        const fallback = updatedScreens[Math.min(this.currentScreenIndex, updatedScreens.length - 1)];
+        this.updateManualSelection(fallback.id);
+      } else if (this.manualSelectionId === screenId) {
+        this.updateManualSelection(null);
       }
 
       this.cdr.markForCheck();
