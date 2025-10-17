@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { ApiKey, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyRegenerationResponse } from '@pro/types';
+import { ApiKey, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyRegenerationResponse, ApiKeyStatus } from '@pro/types';
 import { ApiKeyService } from '../services/api-key.service';
 import { ApiKeyFormComponent } from './api-key-form.component';
 
@@ -18,6 +18,9 @@ export type ModalMode = 'create' | 'edit' | 'delete' | 'regenerate';
 })
 export class ApiKeyModalComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+
+  // 暴露枚举给模板使用
+  readonly ApiKeyStatus = ApiKeyStatus;
 
   @Input() visible: boolean = false;
   @Input() title: string = '';
