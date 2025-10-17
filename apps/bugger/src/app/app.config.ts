@@ -23,6 +23,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideHttpClient(),
+    HttpLink,
     provideApollo(() => {
       const httpLink = inject(HttpLink);
       const http = httpLink.create({ uri: environment.graphqlEndpoint });
