@@ -1,11 +1,13 @@
-import { Args, Mutation, Query, Resolver, ID } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver, ID, ResolveField, Parent } from '@nestjs/graphql';
 import { Logger, UseGuards } from '@nestjs/common';
 import { BugModel } from './models/bug.model';
 import { BugCommentModel } from './models/bug-comment.model';
+import { BugAttachmentModel } from './models/bug-attachment.model';
 import { BugStatisticsModel } from './models/bug-statistics.model';
 import { BugsPaginationModel } from './models/bugs-pagination.model';
 import { BugService } from './bug.service';
 import { BugCommentService } from './bug-comment.service';
+import { BugAttachmentService } from './bug-attachment.service';
 import {
   CreateBugInput,
   UpdateBugInput,
@@ -25,6 +27,7 @@ export class BugResolver {
   constructor(
     private readonly bugService: BugService,
     private readonly commentService: BugCommentService,
+    private readonly attachmentService: BugAttachmentService,
   ) {}
 
   @Mutation(() => BugModel, { name: 'createBug' })
@@ -33,7 +36,7 @@ export class BugResolver {
     @Args('input') input: CreateBugInput
   ): Promise<BugModel> {
     this.logger.log(`创建Bug: ${input.title}`);
-    return this.bugService.create(input);
+    return this.bugService.create(input) as any;
   }
 
   @Query(() => BugsPaginationModel, { name: 'bugs' })
@@ -42,7 +45,7 @@ export class BugResolver {
     @Args('filters', { nullable: true }) filters?: BugFiltersInput
   ): Promise<BugsPaginationModel> {
     this.logger.log(`查询Bug列表: ${JSON.stringify(filters)}`);
-    return this.bugService.findAll(filters || {});
+    return this.bugService.findAll(filters || {}) as any;
   }
 
   @Query(() => BugStatisticsModel, { name: 'bugStatistics' })
@@ -57,7 +60,7 @@ export class BugResolver {
     @Args('id', { type: () => ID }) id: string
   ): Promise<BugModel> {
     this.logger.log(`获取Bug详情: ${id}`);
-    return this.bugService.findOne(id);
+    return this.bugService.findOne(id) as any;
   }
 
   @Mutation(() => BugModel, { name: 'updateBug' })
@@ -67,7 +70,7 @@ export class BugResolver {
     @Args('input') input: UpdateBugInput,
   ): Promise<BugModel> {
     this.logger.log(`更新Bug: ${id}`);
-    return this.bugService.update(id, input);
+    return this.bugService.update(id, input) as any;
   }
 
   @Mutation(() => Boolean, { name: 'removeBug' })
@@ -106,7 +109,7 @@ export class BugResolver {
     @Args('input') input: UpdateBugStatusInput,
   ): Promise<BugModel> {
     this.logger.log(`更新Bug ${id} 状态为: ${input.status}`);
-    return this.bugService.updateStatus(id, input.status, input.comment);
+    return this.bugService.updateStatus(id, input.status, input.comment) as any;
   }
 
   @Mutation(() => BugModel, { name: 'assignBug' })
@@ -116,6 +119,16 @@ export class BugResolver {
     @Args('input') input: AssignBugInput,
   ): Promise<BugModel> {
     this.logger.log(`分配Bug ${id} 给用户: ${input.assigneeId}`);
-    return this.bugService.assign(id, input.assigneeId);
+    return this.bugService.assign(id, input.assigneeId) as any;
+  }
+
+  @ResolveField(() => [BugCommentModel])
+  async comments(@Parent() bug: BugModel): Promise<BugCommentModel[]> {
+    return this.commentService.findByBugId(bug.id);
+  }
+
+  @ResolveField(() => [BugAttachmentModel])
+  async attachments(@Parent() bug: BugModel): Promise<BugAttachmentModel[]> {
+    return this.attachmentService.findByBugId(bug.id);
   }
 }

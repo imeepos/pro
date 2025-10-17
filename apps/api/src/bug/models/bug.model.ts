@@ -1,5 +1,8 @@
 import { Field, ObjectType, ID, registerEnumType } from '@nestjs/graphql';
+import GraphQLJSON from 'graphql-type-json';
 import { BugStatus, BugPriority } from '@pro/types';
+import { BugCommentModel } from './bug-comment.model';
+import { BugAttachmentModel } from './bug-attachment.model';
 
 registerEnumType(BugStatus, { name: 'BugStatus' });
 registerEnumType(BugPriority, { name: 'BugPriority' });
@@ -41,6 +44,15 @@ export class BugModel {
 
   @Field({ nullable: true })
   reproductionRate?: string;
+
+  @Field(() => GraphQLJSON, { nullable: true })
+  environment?: Record<string, any>;
+
+  @Field(() => [BugCommentModel], { nullable: true })
+  comments?: BugCommentModel[];
+
+  @Field(() => [BugAttachmentModel], { nullable: true })
+  attachments?: BugAttachmentModel[];
 
   @Field()
   createdAt: Date;

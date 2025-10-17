@@ -65,9 +65,10 @@ export const GET_BUG = gql`
       attachments {
         id
         filename
-        originalFilename
-        mimetype
+        originalName
+        mimeType
         size
+        url
         uploadedBy
         uploadedAt
       }
