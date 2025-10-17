@@ -19,17 +19,25 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = '服务器内部错误';
-    let errors: any = undefined;
+    let message: string | string[] = '服务器内部错误';
+    let errors: unknown;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
 
-      if (typeof exceptionResponse === 'object') {
-        const responseObj = exceptionResponse as any;
-        message = responseObj.message || exception.message;
-        errors = responseObj.errors;
+      if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        const responseObj = exceptionResponse as Record<string, unknown>;
+        const extractedMessage = responseObj['message'];
+        if (typeof extractedMessage === 'string' || Array.isArray(extractedMessage)) {
+          message = extractedMessage;
+        } else {
+          message = exception.message;
+        }
+
+        if ('errors' in responseObj) {
+          errors = responseObj['errors'];
+        }
       } else {
         message = exceptionResponse;
       }
@@ -59,8 +67,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
    * 处理数据库错误，返回友好的错误提示
    */
   private handleDatabaseError(error: QueryFailedError): string {
-    const driverError = error.driverError || ({} as any);
-    const code = driverError.code;
+    const driverError = this.extractDriverError(error);
+    const code = driverError?.code;
 
     // PostgreSQL 错误码处理
     switch (code) {
@@ -92,5 +100,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         }
         return '数据库操作失败，请稍后重试';
     }
+  }
+
+  private extractDriverError(error: QueryFailedError): { code?: string } | null {
+    const candidate = (error as QueryFailedError & { driverError?: unknown }).driverError;
+    return typeof candidate === 'object' && candidate !== null ? (candidate as { code?: string }) : null;
   }
 }

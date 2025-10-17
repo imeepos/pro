@@ -5,9 +5,19 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ScreenPageEntity } from '@pro/entities';
-import { CreateScreenDto, UpdateScreenDto } from './dto';
+import { ScreenPageEntity, ScreenComponent } from '@pro/entities';
+import { CreateScreenDto, UpdateScreenDto, ScreenComponentDto } from './dto';
 import { ScreenDataTransformer } from './utils/screen-data-transformer';
+
+type HydratedLayout = ReturnType<typeof ScreenDataTransformer.transformLayoutConfigToFrontend>;
+type NormalizedScreenComponent = Omit<ScreenComponent, 'config'> & {
+  config: Record<string, unknown>;
+  _dto?: ScreenComponentDto;
+};
+type HydratedScreenPage = ScreenPageEntity & {
+  layout: HydratedLayout;
+  components: NormalizedScreenComponent[];
+};
 
 @Injectable()
 export class ScreensService {
@@ -81,7 +91,7 @@ export class ScreensService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<HydratedScreenPage> {
     const screen = await this.screenPageRepository.findOne({
       where: { id },
     });
@@ -94,7 +104,7 @@ export class ScreensService {
     const transformedLayout = ScreenDataTransformer.transformLayoutConfigToFrontend(screen.layout);
 
     // 转换组件配置为前端友好格式
-    const transformedComponents = screen.components.map(component => {
+    const transformedComponents: NormalizedScreenComponent[] = screen.components.map(component => {
       const transformedComponent = ScreenDataTransformer.transformScreenComponentToFrontend(component);
       return {
         ...component, // 保持原始实体结构
@@ -105,11 +115,11 @@ export class ScreensService {
     });
 
     // 返回增强的屏幕对象，保持实体类型兼容性
-    const enhancedScreen = {
+    const enhancedScreen: HydratedScreenPage = {
       ...screen,
       layout: transformedLayout,
       components: transformedComponents,
-    } as any;
+    };
 
     return enhancedScreen;
   }
