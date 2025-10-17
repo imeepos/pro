@@ -26,7 +26,7 @@ export class AuthStateService {
           loading: false,
           error: null
         });
-        this.router.navigate(['/']);
+        this.router.navigate(['/dashboard']);
       }),
       catchError(error => {
         this.authStore.patch({
@@ -51,7 +51,7 @@ export class AuthStateService {
           loading: false,
           error: null
         });
-        this.router.navigate(['/']);
+        this.router.navigate(['/dashboard']);
       }),
       catchError(error => {
         this.authStore.patch({
