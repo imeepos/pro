@@ -27,6 +27,16 @@ export const appConfig: ApplicationConfig = {
       const httpLink = inject(HttpLink);
       const http = httpLink.create({ uri: environment.graphqlEndpoint });
 
+      const debugLink = new ApolloLink((operation, forward) => {
+        console.log('🔍 [Apollo] 开始 GraphQL 请求:', {
+          operationName: operation.operationName,
+          variables: operation.variables,
+          query: operation.query.loc?.source.body
+        });
+
+        return forward(operation);
+      });
+
       const authLink = new ApolloLink((operation, forward) => {
         const tokenStorage = inject(TokenStorageService);
         const token = tokenStorage.getToken();
@@ -57,7 +67,7 @@ export const appConfig: ApplicationConfig = {
       });
 
       return {
-        link: ApolloLink.from([authLink, errorLink, http]),
+        link: ApolloLink.from([debugLink, authLink, errorLink, http]),
         cache: new InMemoryCache({
           typePolicies: {
             Query: {
