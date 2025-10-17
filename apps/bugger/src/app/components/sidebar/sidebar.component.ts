@@ -1,11 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { BugPriority, BugStatus } from '@pro/types';
+import { BugFilterStateService } from '../../services/bug-filter-state.service';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, FormsModule],
   template: `
     <aside class="w-64 bg-white shadow-sm h-screen sticky top-0">
       <nav class="p-4 space-y-2">
@@ -50,23 +54,27 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
           <div class="space-y-3">
             <div class="px-3">
               <label class="text-xs font-medium text-gray-700">状态</label>
-              <select class="mt-1 w-full text-sm border border-gray-300 rounded-md px-2 py-1">
-                <option>全部状态</option>
-                <option>待处理</option>
-                <option>进行中</option>
-                <option>已解决</option>
-                <option>已关闭</option>
+              <select
+                class="mt-1 w-full text-sm border border-gray-300 rounded-md px-2 py-1"
+                [(ngModel)]="selectedStatus"
+                (change)="onStatusChange()"
+              >
+                <option *ngFor="let option of statusOptions" [ngValue]="option.value">
+                  {{ option.label }}
+                </option>
               </select>
             </div>
 
             <div class="px-3">
               <label class="text-xs font-medium text-gray-700">优先级</label>
-              <select class="mt-1 w-full text-sm border border-gray-300 rounded-md px-2 py-1">
-                <option>全部优先级</option>
-                <option>低</option>
-                <option>中</option>
-                <option>高</option>
-                <option>紧急</option>
+              <select
+                class="mt-1 w-full text-sm border border-gray-300 rounded-md px-2 py-1"
+                [(ngModel)]="selectedPriority"
+                (change)="onPriorityChange()"
+              >
+                <option *ngFor="let option of priorityOptions" [ngValue]="option.value">
+                  {{ option.label }}
+                </option>
               </select>
             </div>
           </div>
@@ -76,6 +84,69 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
   `,
   styles: []
 })
-export class SidebarComponent {
-  constructor(private router: Router) {}
+export class SidebarComponent implements OnInit, OnDestroy {
+  readonly statusOptions: Array<{ label: string; value: '' | BugStatus }> = [
+    { label: '全部状态', value: '' },
+    { label: '待处理', value: BugStatus.OPEN },
+    { label: '进行中', value: BugStatus.IN_PROGRESS },
+    { label: '已解决', value: BugStatus.RESOLVED },
+    { label: '已关闭', value: BugStatus.CLOSED },
+    { label: '已拒绝', value: BugStatus.REJECTED },
+    { label: '已重新打开', value: BugStatus.REOPENED },
+  ];
+
+  readonly priorityOptions: Array<{ label: string; value: '' | BugPriority }> = [
+    { label: '全部优先级', value: '' },
+    { label: '低', value: BugPriority.LOW },
+    { label: '中', value: BugPriority.MEDIUM },
+    { label: '高', value: BugPriority.HIGH },
+    { label: '紧急', value: BugPriority.CRITICAL },
+  ];
+
+  selectedStatus: '' | BugStatus = '';
+  selectedPriority: '' | BugPriority = '';
+
+  private subscription?: Subscription;
+
+  constructor(
+    private router: Router,
+    private bugFilterState: BugFilterStateService
+  ) {
+    const snapshot = this.bugFilterState.snapshot;
+    this.selectedStatus = snapshot.status?.[0] ?? '';
+    this.selectedPriority = snapshot.priority?.[0] ?? '';
+  }
+
+  ngOnInit(): void {
+    this.subscription = this.bugFilterState.filters$.subscribe((filters) => {
+      this.selectedStatus = filters.status?.[0] ?? '';
+      this.selectedPriority = filters.priority?.[0] ?? '';
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
+  }
+
+  onStatusChange(): void {
+    this.bugFilterState.update({
+      status: this.selectedStatus ? [this.selectedStatus] : undefined,
+      page: 1,
+    });
+
+    if (!this.router.url.startsWith('/bugs')) {
+      this.router.navigate(['/bugs']);
+    }
+  }
+
+  onPriorityChange(): void {
+    this.bugFilterState.update({
+      priority: this.selectedPriority ? [this.selectedPriority] : undefined,
+      page: 1,
+    });
+
+    if (!this.router.url.startsWith('/bugs')) {
+      this.router.navigate(['/bugs']);
+    }
+  }
 }

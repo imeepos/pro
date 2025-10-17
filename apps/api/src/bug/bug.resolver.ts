@@ -36,7 +36,10 @@ export class BugResolver {
     @Args('input') input: CreateBugInput
   ): Promise<BugModel> {
     this.logger.log(`创建Bug: ${input.title}`);
-    return this.bugService.create(input);
+    return this.bugService.create({
+      ...input,
+      reporterId: userId,
+    });
   }
 
   @Query(() => BugsPaginationModel, { name: 'bugs' })

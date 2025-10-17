@@ -1,26 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { BugService } from '../../services/bug.service';
-import { Bug, BugFilters } from '@pro/types';
-
-// 定义枚举
-enum BugStatus {
-  OPEN = 'open',
-  IN_PROGRESS = 'in_progress',
-  RESOLVED = 'resolved',
-  CLOSED = 'closed',
-  REJECTED = 'rejected',
-  REOPENED = 'reopened'
-}
-
-enum BugPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical'
-}
+import { Bug, BugFilters, BugPriority, BugStatus } from '@pro/types';
+import { Subscription } from 'rxjs';
+import { BugFilterStateService } from '../../services/bug-filter-state.service';
 
 @Component({
   selector: 'app-bug-list',
@@ -57,22 +42,22 @@ enum BugPriority {
             <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
             <select [(ngModel)]="selectedStatus" (change)="onFilterChange()" class="form-input">
               <option value="">全部状态</option>
-              <option [value]="BugStatus.OPEN">待处理</option>
-              <option [value]="BugStatus.IN_PROGRESS">进行中</option>
-              <option [value]="BugStatus.RESOLVED">已解决</option>
-              <option [value]="BugStatus.CLOSED">已关闭</option>
-              <option [value]="BugStatus.REJECTED">已拒绝</option>
-              <option [value]="BugStatus.REOPENED">已重新打开</option>
+              <option [value]="statusEnum.OPEN">待处理</option>
+              <option [value]="statusEnum.IN_PROGRESS">进行中</option>
+              <option [value]="statusEnum.RESOLVED">已解决</option>
+              <option [value]="statusEnum.CLOSED">已关闭</option>
+              <option [value]="statusEnum.REJECTED">已拒绝</option>
+              <option [value]="statusEnum.REOPENED">已重新打开</option>
             </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">优先级</label>
             <select [(ngModel)]="selectedPriority" (change)="onFilterChange()" class="form-input">
               <option value="">全部优先级</option>
-              <option [value]="BugPriority.LOW">低</option>
-              <option [value]="BugPriority.MEDIUM">中</option>
-              <option [value]="BugPriority.HIGH">高</option>
-              <option [value]="BugPriority.CRITICAL">紧急</option>
+              <option [value]="priorityEnum.LOW">低</option>
+              <option [value]="priorityEnum.MEDIUM">中</option>
+              <option [value]="priorityEnum.HIGH">高</option>
+              <option [value]="priorityEnum.CRITICAL">紧急</option>
             </select>
           </div>
           <div>
@@ -174,7 +159,7 @@ enum BugPriority {
     }
   `]
 })
-export class BugListComponent implements OnInit {
+export class BugListComponent implements OnInit, OnDestroy {
   bugs: Bug[] = [];
   loading = true;
   total = 0;
@@ -182,32 +167,45 @@ export class BugListComponent implements OnInit {
   pageSize = 10;
   totalPages = 0;
 
-  filters: BugFilters = {
-    page: 1,
-    limit: 10,
-    sortBy: 'createdAt',
-    sortOrder: 'desc'
-  };
+  filters: BugFilters = {};
 
-  selectedStatus = '';
-  selectedPriority = '';
+  selectedStatus: BugStatus | '' = '';
+  selectedPriority: BugPriority | '' = '';
   sortBy: BugFilters['sortBy'] = 'createdAt';
 
-  BugStatus = BugStatus;
-  BugPriority = BugPriority;
+  readonly statusEnum = BugStatus;
+  readonly priorityEnum = BugPriority;
+
+  private filtersSubscription?: Subscription;
 
   constructor(
     private bugService: BugService,
-    private router: Router
+    private router: Router,
+    private bugFilterState: BugFilterStateService
   ) {}
 
   ngOnInit(): void {
-    this.loadBugs();
+    this.filtersSubscription = this.bugFilterState.filters$.subscribe((filters) => {
+      this.applyFilters(filters);
+      this.loadBugs();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.filtersSubscription?.unsubscribe();
   }
 
   loadBugs(): void {
     this.loading = true;
-    this.bugService.getBugs(this.filters).subscribe(result => {
+    const requestFilters: BugFilters = {
+      ...this.filters,
+      page: this.currentPage,
+      limit: this.pageSize,
+      sortBy: this.sortBy ?? 'createdAt',
+      sortOrder: this.filters.sortOrder ?? 'desc'
+    };
+
+    this.bugService.getBugs(requestFilters).subscribe(result => {
       if (result.success && result.data) {
         this.bugs = result.data.bugs;
         this.total = result.data.total;
@@ -222,38 +220,41 @@ export class BugListComponent implements OnInit {
   }
 
   onSearchChange(): void {
-    this.filters.search = this.filters.search || undefined;
-    this.currentPage = 1;
-    this.filters.page = 1;
-    this.loadBugs();
+    const search = this.filters.search?.trim();
+    this.bugFilterState.update({
+      search: search ? search : undefined,
+      page: 1
+    });
   }
 
   onFilterChange(): void {
-    this.filters.status = this.selectedStatus ? [this.selectedStatus as BugStatus] : undefined;
-    this.filters.priority = this.selectedPriority ? [this.selectedPriority as BugPriority] : undefined;
-    this.currentPage = 1;
-    this.filters.page = 1;
-    this.loadBugs();
+    this.bugFilterState.update({
+      status: this.selectedStatus ? [this.selectedStatus] : undefined,
+      priority: this.selectedPriority ? [this.selectedPriority] : undefined,
+      page: 1
+    });
   }
 
   onSortChange(): void {
-    this.filters.sortBy = this.sortBy;
-    this.loadBugs();
+    this.bugFilterState.update({
+      sortBy: this.sortBy,
+      page: 1
+    });
   }
 
   previousPage(): void {
     if (this.currentPage > 1) {
-      this.currentPage--;
-      this.filters.page = this.currentPage;
-      this.loadBugs();
+      this.bugFilterState.update({
+        page: this.currentPage - 1
+      });
     }
   }
 
   nextPage(): void {
     if (this.currentPage < this.totalPages) {
-      this.currentPage++;
-      this.filters.page = this.currentPage;
-      this.loadBugs();
+      this.bugFilterState.update({
+        page: this.currentPage + 1
+      });
     }
   }
 
@@ -267,45 +268,62 @@ export class BugListComponent implements OnInit {
 
   getPriorityClass(priority: BugPriority): string {
     const classes = {
-      [BugPriority.LOW]: 'bg-green-100 text-green-800',
-      [BugPriority.MEDIUM]: 'bg-yellow-100 text-yellow-800',
-      [BugPriority.HIGH]: 'bg-red-100 text-red-800',
-      [BugPriority.CRITICAL]: 'bg-red-200 text-red-900 font-bold',
+      [this.priorityEnum.LOW]: 'bg-green-100 text-green-800',
+      [this.priorityEnum.MEDIUM]: 'bg-yellow-100 text-yellow-800',
+      [this.priorityEnum.HIGH]: 'bg-red-100 text-red-800',
+      [this.priorityEnum.CRITICAL]: 'bg-red-200 text-red-900 font-bold',
     };
     return classes[priority] || 'bg-gray-100 text-gray-800';
   }
 
   getPriorityText(priority: BugPriority): string {
     const texts = {
-      [BugPriority.LOW]: '低',
-      [BugPriority.MEDIUM]: '中',
-      [BugPriority.HIGH]: '高',
-      [BugPriority.CRITICAL]: '紧急',
+      [this.priorityEnum.LOW]: '低',
+      [this.priorityEnum.MEDIUM]: '中',
+      [this.priorityEnum.HIGH]: '高',
+      [this.priorityEnum.CRITICAL]: '紧急',
     };
     return texts[priority] || priority;
   }
 
   getStatusClass(status: BugStatus): string {
     const classes = {
-      [BugStatus.OPEN]: 'bg-blue-100 text-blue-800',
-      [BugStatus.IN_PROGRESS]: 'bg-yellow-100 text-yellow-800',
-      [BugStatus.RESOLVED]: 'bg-green-100 text-green-800',
-      [BugStatus.CLOSED]: 'bg-gray-100 text-gray-800',
-      [BugStatus.REJECTED]: 'bg-red-100 text-red-800',
-      [BugStatus.REOPENED]: 'bg-purple-100 text-purple-800',
+      [this.statusEnum.OPEN]: 'bg-blue-100 text-blue-800',
+      [this.statusEnum.IN_PROGRESS]: 'bg-yellow-100 text-yellow-800',
+      [this.statusEnum.RESOLVED]: 'bg-green-100 text-green-800',
+      [this.statusEnum.CLOSED]: 'bg-gray-100 text-gray-800',
+      [this.statusEnum.REJECTED]: 'bg-red-100 text-red-800',
+      [this.statusEnum.REOPENED]: 'bg-purple-100 text-purple-800',
     };
     return classes[status] || 'bg-gray-100 text-gray-800';
   }
 
   getStatusText(status: BugStatus): string {
     const texts = {
-      [BugStatus.OPEN]: '待处理',
-      [BugStatus.IN_PROGRESS]: '进行中',
-      [BugStatus.RESOLVED]: '已解决',
-      [BugStatus.CLOSED]: '已关闭',
-      [BugStatus.REJECTED]: '已拒绝',
-      [BugStatus.REOPENED]: '已重新打开',
+      [this.statusEnum.OPEN]: '待处理',
+      [this.statusEnum.IN_PROGRESS]: '进行中',
+      [this.statusEnum.RESOLVED]: '已解决',
+      [this.statusEnum.CLOSED]: '已关闭',
+      [this.statusEnum.REJECTED]: '已拒绝',
+      [this.statusEnum.REOPENED]: '已重新打开',
     };
     return texts[status] || status;
+  }
+
+  private applyFilters(filters: BugFilters): void {
+    this.filters = {
+      ...filters,
+      status: filters.status ? [...filters.status] : undefined,
+      priority: filters.priority ? [...filters.priority] : undefined,
+      tagIds: filters.tagIds ? [...filters.tagIds] : undefined,
+      category: filters.category ? [...filters.category] : undefined,
+    };
+
+    this.currentPage = filters.page ?? 1;
+    this.pageSize = filters.limit ?? 10;
+    this.sortBy = filters.sortBy ?? 'createdAt';
+
+    this.selectedStatus = filters.status?.[0] ?? '';
+    this.selectedPriority = filters.priority?.[0] ?? '';
   }
 }

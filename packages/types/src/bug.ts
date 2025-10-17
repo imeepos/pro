@@ -101,6 +101,7 @@ export interface CreateBugDto {
   description: string;
   priority: BugPriority;
   category: BugCategory;
+  reporterId?: string;
   environment?: BugEnvironment;
   stepsToReproduce?: string;
   expectedBehavior?: string;

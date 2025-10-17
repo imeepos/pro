@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindOptionsWhere } from 'typeorm';
 import {
@@ -27,8 +27,12 @@ export class BugService {
     private readonly notificationService: BugNotificationService,
   ) {}
 
-  async create(createBugDto: CreateBugDto | any): Promise<Bug> {
+  async create(createBugDto: CreateBugDto): Promise<Bug> {
     this.logger.log(`创建Bug: ${createBugDto.title}`);
+
+    if (!createBugDto.reporterId) {
+      throw new BadRequestException('Bug缺少报告者信息');
+    }
 
     const bugEntity = this.bugRepository.create({
       ...createBugDto,
@@ -269,7 +273,7 @@ export class BugService {
       status: entity.status,
       priority: entity.priority,
       category: entity.category,
-      reporterId: entity.reporterId,
+      reporterId: this.resolveReporterId(entity),
       assigneeId: entity.assigneeId,
       environment: entity.environment,
       stepsToReproduce: entity.stepsToReproduce,
@@ -289,5 +293,18 @@ export class BugService {
       comments: [],
       tags: [],
     };
+  }
+
+  private resolveReporterId(entity: BugEntity): string {
+    if (entity.reporterId) {
+      return entity.reporterId;
+    }
+
+    if (entity.reporter?.id) {
+      return entity.reporter.id;
+    }
+
+    this.logger.warn(`Bug ${entity.id} 缺少 reporterId，将返回空字符串占位`);
+    return '';
   }
 }
