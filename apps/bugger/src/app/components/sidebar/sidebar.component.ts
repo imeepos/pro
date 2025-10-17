@@ -21,8 +21,9 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
         </a>
 
         <a
+          [routerLinkActive]="['bg-blue-50', 'text-blue-600']"
+          [routerLinkActiveOptions]="{ exact: true }"
           routerLink="/bugs"
-          routerLinkActive="bg-blue-50 text-blue-600"
           class="flex items-center space-x-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -32,8 +33,9 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
         </a>
 
         <a
+          [routerLinkActive]="['bg-blue-50', 'text-blue-600']"
+          [routerLinkActiveOptions]="{ exact: true }"
           routerLink="/bugs/new"
-          routerLinkActive="bg-blue-50 text-blue-600"
           class="flex items-center space-x-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

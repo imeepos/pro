@@ -110,6 +110,7 @@ export interface CreateBugDto {
   dueDate?: string;
   estimatedHours?: number;
   tagIds?: string[];
+  reporterId: string;
 }
 
 export interface UpdateBugDto {
