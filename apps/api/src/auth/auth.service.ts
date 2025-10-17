@@ -161,7 +161,6 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
 
-    // @ts-expect-error JwtSignOptions 类型定义不完整，但运行时支持 expiresIn
     const refreshToken = this.jwtService.sign(payload, {
       expiresIn: getRefreshTokenExpiresIn(this.configService),
     });
