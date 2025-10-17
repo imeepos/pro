@@ -56,6 +56,10 @@ export class CreateBugInput {
   @IsOptional()
   @IsNumber()
   estimatedHours?: number;
+
+  @Field()
+  @IsString()
+  reporterId: string;
 }
 
 @InputType()

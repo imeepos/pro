@@ -8,10 +8,10 @@ import { CreateBugDto, BugEnvironment, BugError, BugErrorType } from '@pro/types
 
 // 定义枚举
 enum BugPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical'
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL'
 }
 
 enum BugCategory {
@@ -247,7 +247,8 @@ export class CreateBugComponent {
     stepsToReproduce: '',
     expectedBehavior: '',
     actualBehavior: '',
-    reproductionRate: 'sometimes'
+    reproductionRate: 'sometimes',
+    reporterId: 'current-user' // 临时值，实际应用中应从认证服务获取
   };
 
   isSubmitting = false;

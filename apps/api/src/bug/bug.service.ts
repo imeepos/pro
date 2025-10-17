@@ -27,7 +27,7 @@ export class BugService {
     private readonly notificationService: BugNotificationService,
   ) {}
 
-  async create(createBugDto: CreateBugDto): Promise<Bug> {
+  async create(createBugDto: CreateBugDto | any, userId?: string): Promise<Bug> {
     this.logger.log(`创建Bug: ${createBugDto.title}`);
 
     if (!createBugDto.reporterId) {
@@ -38,6 +38,7 @@ export class BugService {
       ...createBugDto,
       status: BugStatus.OPEN,
       priority: createBugDto.priority || BugPriority.MEDIUM,
+      reporterId: userId, // Set the reporter from the authenticated user
     });
 
     const savedBugResult = await this.bugRepository.save(bugEntity);

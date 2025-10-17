@@ -8,10 +8,10 @@ export enum BugStatus {
 }
 
 export enum BugPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical'
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL'
 }
 
 export enum BugCategory {
@@ -111,6 +111,7 @@ export interface CreateBugDto {
   dueDate?: string;
   estimatedHours?: number;
   tagIds?: string[];
+  reporterId: string;
 }
 
 export interface UpdateBugDto {
