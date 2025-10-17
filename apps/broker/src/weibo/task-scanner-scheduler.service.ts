@@ -49,22 +49,33 @@ export class TaskScannerScheduler {
    */
   @Cron(CronExpression.EVERY_MINUTE)
   async scanTasks(): Promise<void> {
+    const scanStart = Date.now();
     this.logger.debug('开始扫描待执行的主任务');
 
     try {
       const now = new Date();
 
       // 查找待执行的主任务（严格限制为PENDING状态）
+      const queryConditions = {
+        enabled: true,
+        status: WeiboSearchTaskStatus.PENDING,
+        nextRunAt: LessThanOrEqual(now),
+      };
+
+      this.logger.debug('查询待执行任务条件', {
+        timestamp: now.toISOString(),
+        conditions: queryConditions
+      });
+
       const tasks = await this.taskRepository.find({
-        where: {
-          enabled: true,
-          status: WeiboSearchTaskStatus.PENDING,
-          nextRunAt: LessThanOrEqual(now),
-        },
+        where: queryConditions,
         order: {
           nextRunAt: 'ASC',
         },
       });
+
+      const scanDuration = Date.now() - scanStart;
+      this.logger.debug(`数据库查询完成，耗时 ${scanDuration}ms，找到 ${tasks.length} 个任务`);
 
       if (tasks.length === 0) {
         this.logger.debug('没有待执行的主任务');
@@ -86,12 +97,30 @@ export class TaskScannerScheduler {
 
       // 并行处理主任务（限制并发数）
       const batchSize = 5;
+      const totalBatches = Math.ceil(tasks.length / batchSize);
+
+      this.logger.debug(`开始并行处理任务，批次大小: ${batchSize}, 总批次数: ${totalBatches}`);
+
       for (let i = 0; i < tasks.length; i += batchSize) {
+        const batchIndex = Math.floor(i / batchSize) + 1;
         const batch = tasks.slice(i, i + batchSize);
+
+        this.logger.debug(`处理第 ${batchIndex}/${totalBatches} 批次，包含 ${batch.length} 个任务`, {
+          batchIndex,
+          totalBatches,
+          taskIds: batch.map(t => t.id),
+          keywords: batch.map(t => t.keyword)
+        });
+
+        const batchStart = Date.now();
         await Promise.all(batch.map(task => this.dispatchTask(task)));
+        const batchDuration = Date.now() - batchStart;
+
+        this.logger.debug(`第 ${batchIndex} 批次处理完成，耗时 ${batchDuration}ms`);
       }
 
-      this.logger.info(`已完成扫描，处理了 ${tasks.length} 个主任务`);
+      const totalScanDuration = Date.now() - scanStart;
+      this.logger.info(`已完成扫描，处理了 ${tasks.length} 个主任务，总耗时 ${totalScanDuration}ms`);
     } catch (error) {
       this.logger.error({
         message: '扫描主任务失败',
@@ -107,29 +136,61 @@ export class TaskScannerScheduler {
    * 根据任务状态生成相应的子任务
    */
   private async dispatchTask(task: WeiboSearchTaskEntity): Promise<void> {
-    this.logger.debug(`处理主任务 ${task.id}: ${task.keyword}`);
+    const dispatchStart = Date.now();
+    this.logger.debug(`开始处理主任务 ${task.id}: ${task.keyword}`, {
+      taskId: task.id,
+      keyword: task.keyword,
+      currentStatus: task.status,
+      enabled: task.enabled,
+      nextRunAt: task.nextRunAt?.toISOString(),
+      crawlInterval: task.crawlInterval
+    });
 
     try {
       // 使用乐观锁防止并发调度同一任务
+      const lockConditions = {
+        id: task.id,
+        status: task.status,
+        updatedAt: task.updatedAt, // 乐观锁条件
+      };
+
+      this.logger.debug(`尝试获取任务执行锁`, {
+        taskId: task.id,
+        lockConditions: {
+          ...lockConditions,
+          updatedAt: lockConditions.updatedAt.toISOString()
+        }
+      });
+
+      const lockStart = Date.now();
       const lockResult = await this.taskRepository.update(
-        {
-          id: task.id,
-          status: task.status,
-          updatedAt: task.updatedAt, // 乐观锁条件
-        },
+        lockConditions,
         {
           status: WeiboSearchTaskStatus.RUNNING,
           errorMessage: null,
         }
       );
+      const lockDuration = Date.now() - lockStart;
+
+      this.logger.debug(`数据库锁操作完成，耗时 ${lockDuration}ms`, {
+        taskId: task.id,
+        affectedRows: lockResult.affected
+      });
 
       // 检查是否成功获取锁（是否有记录被更新）
       if (lockResult.affected === 0) {
-        this.logger.debug(`任务 ${task.id} 已被其他实例调度或状态已变更，跳过`);
+        this.logger.debug(`任务 ${task.id} 已被其他实例调度或状态已变更，跳过`, {
+          taskId: task.id,
+          expectedStatus: task.status,
+          expectedUpdatedAt: task.updatedAt.toISOString()
+        });
         return;
       }
 
-      this.logger.debug(`任务 ${task.id} 已获取执行锁`);
+      this.logger.debug(`任务 ${task.id} 已获取执行锁`, {
+        taskId: task.id,
+        statusTransition: `${task.status} -> RUNNING`
+      });
 
       let subTask: SubTaskMessage;
       let nextRunTime: Date | null = null;
@@ -175,7 +236,25 @@ export class TaskScannerScheduler {
       // 推送子任务到 RabbitMQ，增加失败处理
       let publishSuccess = false;
       try {
+        this.logger.debug(`准备发布子任务到消息队列`, {
+          taskId: task.id,
+          subTaskDetails: {
+            keyword: subTask.keyword,
+            start: subTask.start.toISOString(),
+            end: subTask.end.toISOString(),
+            isInitialCrawl: subTask.isInitialCrawl,
+            weiboAccountId: subTask.weiboAccountId
+          }
+        });
+
+        const publishStart = Date.now();
         publishSuccess = await this.rabbitMQService.publishSubTask(subTask);
+        const publishDuration = Date.now() - publishStart;
+
+        this.logger.debug(`消息发布操作完成，耗时 ${publishDuration}ms`, {
+          taskId: task.id,
+          publishSuccess
+        });
 
         if (!publishSuccess) {
           throw new Error('消息发布返回false，可能由于队列问题');
@@ -198,22 +277,35 @@ export class TaskScannerScheduler {
           nextRunAt: new Date(Date.now() + retryDelay),
         });
 
+        this.logger.debug(`任务状态已回滚为 PENDING，${retryDelay/1000}秒后重试`, {
+          taskId: task.id,
+          retryDelaySeconds: retryDelay / 1000
+        });
+
         return; // 提前退出，不更新nextRunAt
       }
 
       // 更新任务的下次执行时间（所有任务类型都需要设置）
       if (nextRunTime) {
+        this.logger.debug(`更新任务下次执行时间`, {
+          taskId: task.id,
+          nextRunAt: nextRunTime.toISOString(),
+          intervalMinutes: (nextRunTime.getTime() - Date.now()) / 1000 / 60
+        });
+
         await this.taskRepository.update(task.id, {
           nextRunAt: nextRunTime,
         });
         this.logger.info(`任务 ${task.id} 下次执行时间已更新: ${nextRunTime.toISOString()}`);
       }
 
+      const totalDispatchDuration = Date.now() - dispatchStart;
       // 记录子任务详细信息，便于追踪时间重叠
       this.logger.info({
         message: '任务调度完成，子任务已发送',
         taskId: task.id,
         keyword: task.keyword,
+        totalDispatchTimeMs: totalDispatchDuration,
         subTask: {
           start: subTask.start.toISOString(),
           end: subTask.end.toISOString(),
@@ -222,10 +314,12 @@ export class TaskScannerScheduler {
         nextRunAt: nextRunTime?.toISOString(),
       });
     } catch (error) {
+      const totalDispatchDuration = Date.now() - dispatchStart;
       this.logger.error({
         message: `调度主任务失败`,
         taskId: task.id,
         keyword: task.keyword,
+        totalDispatchTimeMs: totalDispatchDuration,
         error: error.message,
         stack: error.stack,
         timestamp: new Date().toISOString()
@@ -233,6 +327,14 @@ export class TaskScannerScheduler {
 
       // 更新任务状态为失败，并设置重试时间
       const retryDelay = this.calculateRetryDelay(task.retryCount);
+      this.logger.debug(`设置任务重试`, {
+        taskId: task.id,
+        currentRetryCount: task.retryCount,
+        newRetryCount: task.retryCount + 1,
+        retryDelayMinutes: retryDelay / 1000 / 60,
+        nextRetryAt: new Date(Date.now() + retryDelay).toISOString()
+      });
+
       await this.taskRepository.update(task.id, {
         status: WeiboSearchTaskStatus.FAILED,
         errorMessage: error.message,

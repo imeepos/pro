@@ -8,10 +8,21 @@ import {
 } from './weibo/search-crawler.service';
 import { RabbitMQConfig } from './config/crawler.interface';
 
+interface CrawlMetrics {
+  taskId: number;
+  keyword: string;
+  startTime: number;
+  duration?: number;
+  pageCount?: number;
+  success: boolean;
+  error?: string;
+}
+
 @Injectable()
 export class CrawlQueueConsumer implements OnModuleInit {
   private readonly logger = new Logger(CrawlQueueConsumer.name);
   private rabbitMQClient: RabbitMQClient;
+  private activeTasks = new Map<number, CrawlMetrics>();
 
   constructor(
     private readonly weiboSearchCrawlerService: WeiboSearchCrawlerService,
@@ -24,16 +35,20 @@ export class CrawlQueueConsumer implements OnModuleInit {
   }
 
   private async setupConsumer(): Promise<void> {
+    const initStartTime = Date.now();
+
     try {
-      this.logger.log(`[Crawler] 🔄 正在初始化RabbitMQ消费者, URL: ${this.rabbitmqConfig.url}`);
+      this.logger.debug('初始化RabbitMQ消费者连接', {
+        queue: this.rabbitmqConfig.queues.crawlQueue,
+        url: this.rabbitmqConfig.url.replace(/\/\/.*@/, '//***:***@') // 隐藏敏感信息
+      });
 
       this.rabbitMQClient = new RabbitMQClient({
         url: this.rabbitmqConfig.url,
         queue: this.rabbitmqConfig.queues.crawlQueue,
       });
-      await this.rabbitMQClient.connect();
 
-      this.logger.log(`[Crawler] 📡 RabbitMQ连接成功, 队列: ${this.rabbitmqConfig.queues.crawlQueue}`);
+      await this.rabbitMQClient.connect();
 
       await this.rabbitMQClient.consume(
         this.rabbitmqConfig.queues.crawlQueue,
@@ -42,165 +57,255 @@ export class CrawlQueueConsumer implements OnModuleInit {
         },
       );
 
-      this.logger.log(
-        `[Crawler] ✅ 队列消费者启动成功: ${this.rabbitmqConfig.queues.crawlQueue}, 等待消息...`,
-      );
+      const initDuration = Date.now() - initStartTime;
+      this.logger.log('队列消费者就绪', {
+        queue: this.rabbitmqConfig.queues.crawlQueue,
+        initTimeMs: initDuration,
+        activeConnections: 1
+      });
+
     } catch (error) {
-      this.logger.error(`[Crawler] ❌ 设置队列消费者失败:`, error);
+      const initDuration = Date.now() - initStartTime;
+      this.logger.error('队列消费者初始化失败', {
+        queue: this.rabbitmqConfig.queues.crawlQueue,
+        initTimeMs: initDuration,
+        error: error instanceof Error ? error.message : '未知错误',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       throw error;
     }
   }
 
   private async handleMessage(message: any): Promise<void> {
     const startTime = Date.now();
-    const messageReceivedAt = new Date().toISOString();
-    let subTask: SubTaskMessage;
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // 检查消息是否为空或无效
+    // 消息验证和预处理
+    const validationResult = this.validateAndParseMessage(message);
+    if (!validationResult.isValid) {
+      this.logger.warn('消息验证失败，跳过处理', {
+        messageId,
+        reason: validationResult.error,
+        receivedAt: new Date().toISOString()
+      });
+      return;
+    }
+
+    const subTask = validationResult.data!;
+
+    // 检查任务是否已在处理中（防止重复处理）
+    if (this.activeTasks.has(subTask.taskId)) {
+      this.logger.warn('任务已在处理中，跳过重复消息', {
+        messageId,
+        taskId: subTask.taskId,
+        keyword: subTask.keyword,
+        activeDuration: Date.now() - this.activeTasks.get(subTask.taskId)!.startTime
+      });
+      return;
+    }
+
+    // 记录任务开始
+    const metrics: CrawlMetrics = {
+      taskId: subTask.taskId,
+      keyword: subTask.keyword,
+      startTime,
+      success: false
+    };
+    this.activeTasks.set(subTask.taskId, metrics);
+
+    this.logger.log('开始处理爬取任务', {
+      messageId,
+      taskId: subTask.taskId,
+      keyword: subTask.keyword,
+      timeRange: {
+        start: subTask.start.toISOString(),
+        end: subTask.end.toISOString()
+      },
+      isInitialCrawl: subTask.isInitialCrawl,
+      enableAccountRotation: subTask.enableAccountRotation,
+      activeTasksCount: this.activeTasks.size
+    });
+
+    try {
+      const result = await this.weiboSearchCrawlerService.crawl(subTask);
+      await this.handleCrawlResult(subTask, result);
+
+      // 更新任务指标
+      metrics.duration = Date.now() - startTime;
+      metrics.pageCount = result.pageCount;
+      metrics.success = result.success;
+      metrics.error = result.error;
+
+      if (result.success) {
+        this.logger.log('任务执行成功', {
+          messageId,
+          taskId: subTask.taskId,
+          keyword: subTask.keyword,
+          duration: metrics.duration,
+          pageCount: result.pageCount,
+          firstPostTime: result.firstPostTime?.toISOString(),
+          lastPostTime: result.lastPostTime?.toISOString(),
+          throughput: Math.round((result.pageCount || 0) / (metrics.duration / 1000) * 100) / 100
+        });
+      } else {
+        this.logger.error('任务执行失败', {
+          messageId,
+          taskId: subTask.taskId,
+          keyword: subTask.keyword,
+          duration: metrics.duration,
+          error: result.error,
+          errorType: this.classifyError(result.error)
+        });
+
+        // 抛出异常触发 RabbitMQ 重试机制
+        throw new Error(`爬取失败: ${result.error || '未知错误'}`);
+      }
+
+    } catch (error) {
+      metrics.duration = Date.now() - startTime;
+      metrics.success = false;
+      metrics.error = error instanceof Error ? error.message : '未知错误';
+
+      this.logger.error('任务处理异常', {
+        messageId,
+        taskId: subTask.taskId,
+        keyword: subTask.keyword,
+        duration: metrics.duration,
+        error: metrics.error,
+        errorType: this.classifyError(metrics.error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
+      throw error;
+
+    } finally {
+      // 清理活动任务记录
+      this.activeTasks.delete(subTask.taskId);
+    }
+  }
+
+  
+  private validateAndParseMessage(message: any): { isValid: boolean; data?: SubTaskMessage; error?: string } {
     if (!message) {
-      this.logger.error(`[Crawler] 收到空消息，跳过处理, 时间: ${messageReceivedAt}`);
-      return;
+      return { isValid: false, error: '消息为空' };
     }
 
-    subTask = message;
-
-    // 检查taskId是否存在
-    if (!subTask.taskId) {
-      this.logger.error(`[Crawler] 消息缺少taskId，跳过处理, 时间: ${messageReceivedAt}`, message);
-      return;
+    if (!message.taskId || typeof message.taskId !== 'number') {
+      return { isValid: false, error: '缺少有效的taskId字段' };
     }
 
-    // 确保 start 和 end 字段是 Date 对象
+    if (!message.keyword || typeof message.keyword !== 'string') {
+      return { isValid: false, error: '缺少有效的keyword字段' };
+    }
+
+    const subTask = { ...message };
+
+    // 验证并转换时间字段
     if (typeof subTask.start === 'string') {
       subTask.start = new Date(subTask.start);
       if (isNaN(subTask.start.getTime())) {
-        this.logger.error(`[Crawler] 消息包含无效的开始时间: ${message.start}，跳过处理, 时间: ${messageReceivedAt}`, message);
-        return;
+        return { isValid: false, error: `无效的开始时间: ${message.start}` };
       }
     }
 
     if (typeof subTask.end === 'string') {
       subTask.end = new Date(subTask.end);
       if (isNaN(subTask.end.getTime())) {
-        this.logger.error(`[Crawler] 消息包含无效的结束时间: ${message.end}，跳过处理, 时间: ${messageReceivedAt}`, message);
-        return;
+        return { isValid: false, error: `无效的结束时间: ${message.end}` };
       }
     }
 
-    this.logger.log(
-      `[Crawler] 🎯 收到爬取任务: taskId=${subTask.taskId}, keyword=${subTask.keyword}, ` +
-        `时间范围=${this.formatDate(subTask.start)}~${this.formatDate(subTask.end)}, ` +
-        `isInitialCrawl=${subTask.isInitialCrawl}, 接收时间: ${messageReceivedAt}`,
-    );
-
-    // 添加爬取前的状态日志
-    this.logger.log(`[Crawler] 🚀 开始爬取任务 ${subTask.taskId}, 关键词: ${subTask.keyword}`);
-
-    const result = await this.weiboSearchCrawlerService.crawl(subTask);
-
-    await this.handleCrawlResult(subTask, result);
-
-    const duration = Date.now() - startTime;
-    const completedAt = new Date().toISOString();
-
-    if (result.success) {
-      this.logger.log(
-        `[Crawler] ✅ 任务完成: taskId=${subTask.taskId}, 耗时=${duration}ms, 页数=${result.pageCount}, 完成时间: ${completedAt}`,
-      );
-    } else {
-      this.logger.error(
-        `[Crawler] ❌ 任务失败: taskId=${subTask.taskId}, 耗时=${duration}ms, 错误: ${result.error || '未知错误'}, 完成时间: ${completedAt}`,
-      );
+    // 验证时间范围的合理性
+    if (subTask.start >= subTask.end) {
+      return { isValid: false, error: '开始时间必须早于结束时间' };
     }
 
-    // 如果爬取失败，抛出异常触发 RabbitMQ 重试机制
-    if (!result.success) {
-      throw new Error(`[Crawler] 爬取失败: ${result.error || '未知错误'}`);
+    // 验证时间范围不超过合理限制（比如不超过2年）
+    const maxTimeRange = 2 * 365 * 24 * 60 * 60 * 1000; // 2年
+    if (subTask.end.getTime() - subTask.start.getTime() > maxTimeRange) {
+      return { isValid: false, error: '时间范围超过最大限制（2年）' };
     }
+
+    return { isValid: true, data: subTask };
   }
 
-  private formatDate(date: any): string {
-    if (!date) {
-      return '未知日期';
+  private classifyError(error?: string): string {
+    if (!error) return 'UNKNOWN';
+
+    const errorLower = error.toLowerCase();
+
+    if (errorLower.includes('timeout') || errorLower.includes('超时')) {
+      return 'TIMEOUT';
     }
 
-    // 如果是字符串，尝试转换为Date对象
-    if (typeof date === 'string') {
-      const parsedDate = new Date(date);
-      if (isNaN(parsedDate.getTime())) {
-        return '无效日期';
-      }
-      return parsedDate.toISOString().split('T')[0];
+    if (errorLower.includes('network') || errorLower.includes('网络') ||
+        errorLower.includes('connection') || errorLower.includes('连接')) {
+      return 'NETWORK';
     }
 
-    // 如果是Date对象，检查有效性
-    if (date instanceof Date) {
-      if (isNaN(date.getTime())) {
-        return '无效日期';
-      }
-      return date.toISOString().split('T')[0];
+    if (errorLower.includes('account') || errorLower.includes('账号') ||
+        errorLower.includes('login') || errorLower.includes('登录') ||
+        errorLower.includes('banned') || errorLower.includes('封禁')) {
+      return 'ACCOUNT';
     }
 
-    // 其他类型，尝试转换
-    try {
-      const convertedDate = new Date(date);
-      if (isNaN(convertedDate.getTime())) {
-        return '无效日期';
-      }
-      return convertedDate.toISOString().split('T')[0];
-    } catch {
-      return '无效日期';
-    }
-  }
-
-  private formatDateTime(date: any): string {
-    if (!date) {
-      return '未知时间';
+    if (errorLower.includes('robots') || errorLower.includes('403') ||
+        errorLower.includes('forbidden')) {
+      return 'ACCESS_DENIED';
     }
 
-    // 如果是字符串，尝试转换为Date对象
-    if (typeof date === 'string') {
-      const parsedDate = new Date(date);
-      if (isNaN(parsedDate.getTime())) {
-        return '无效时间';
-      }
-      return parsedDate.toISOString();
+    if (errorLower.includes('rate') || errorLower.includes('限流') ||
+        errorLower.includes('frequency')) {
+      return 'RATE_LIMIT';
     }
 
-    // 如果是Date对象，检查有效性
-    if (date instanceof Date) {
-      if (isNaN(date.getTime())) {
-        return '无效时间';
-      }
-      return date.toISOString();
+    if (errorLower.includes('parse') || errorLower.includes('解析') ||
+        errorLower.includes('selector') || errorLower.includes('element')) {
+      return 'PARSE_ERROR';
     }
 
-    // 其他类型，尝试转换
-    try {
-      const convertedDate = new Date(date);
-      if (isNaN(convertedDate.getTime())) {
-        return '无效时间';
-      }
-      return convertedDate.toISOString();
-    } catch {
-      return '无效时间';
+    if (errorLower.includes('browser') || errorLower.includes('page') ||
+        errorLower.includes('crash') || errorLower.includes('崩溃')) {
+      return 'BROWSER_ERROR';
     }
+
+    return 'UNKNOWN';
   }
 
   private async handleCrawlResult(
     subTask: SubTaskMessage,
     result: CrawlResult,
   ): Promise<void> {
-    // 安全处理日期时间显示
-    const firstPostTimeStr = this.formatDateTime(result.firstPostTime);
-    const lastPostTimeStr = this.formatDateTime(result.lastPostTime);
-
-    this.logger.log(
-      `爬取任务成功完成: taskId=${subTask.taskId}, pageCount=${result.pageCount}, ` +
-        `首条时间=${firstPostTimeStr}, 末条时间=${lastPostTimeStr}`,
-    );
-
     // 状态更新逻辑已移至 WeiboSearchCrawlerService.handleTaskResult()
-    // 这里只做日志记录
+    // 这里只做必要的日志记录和指标收集
+
+    if (result.success && result.pageCount > 0) {
+      this.logger.debug('任务结果处理完成', {
+        taskId: subTask.taskId,
+        pageCount: result.pageCount,
+        hasTimeData: !!(result.firstPostTime && result.lastPostTime),
+        timeSpanHours: result.firstPostTime && result.lastPostTime
+          ? Math.round((result.lastPostTime.getTime() - result.firstPostTime.getTime()) / (1000 * 60 * 60))
+          : null
+      });
+    }
+  }
+
+  // 获取当前活动任务统计（用于监控）
+  getActiveTasksStats(): {
+    activeCount: number;
+    tasks: Array<{ taskId: number; keyword: string; duration: number }>;
+  } {
+    const now = Date.now();
+    const tasks = Array.from(this.activeTasks.values()).map(task => ({
+      taskId: task.taskId,
+      keyword: task.keyword,
+      duration: now - task.startTime
+    }));
+
+    return {
+      activeCount: this.activeTasks.size,
+      tasks
+    };
   }
 }

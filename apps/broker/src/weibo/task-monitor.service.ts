@@ -29,23 +29,48 @@ export class TaskMonitor {
    */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async monitorTasks(): Promise<void> {
+    const monitorStart = Date.now();
     this.logger.debug('开始执行任务监控');
 
     try {
       const now = new Date();
 
       // 检查超时任务
+      this.logger.debug('开始检查超时任务');
+      const timeoutStart = Date.now();
       await this.checkTimeoutTasks(now);
+      const timeoutDuration = Date.now() - timeoutStart;
+      this.logger.debug(`超时任务检查完成，耗时 ${timeoutDuration}ms`);
 
       // 重试失败任务
+      this.logger.debug('开始重试失败任务');
+      const retryStart = Date.now();
       await this.retryFailedTasks();
+      const retryDuration = Date.now() - retryStart;
+      this.logger.debug(`失败任务重试检查完成，耗时 ${retryDuration}ms`);
 
       // 检查无数据任务
+      this.logger.debug('开始检查无数据任务');
+      const noDataStart = Date.now();
       await this.checkNoDataTasks();
+      const noDataDuration = Date.now() - noDataStart;
+      this.logger.debug(`无数据任务检查完成，耗时 ${noDataDuration}ms`);
 
-      this.logger.debug('任务监控完成');
+      const totalMonitorDuration = Date.now() - monitorStart;
+      this.logger.debug(`任务监控完成，总耗时 ${totalMonitorDuration}ms`, {
+        timeoutCheckMs: timeoutDuration,
+        retryCheckMs: retryDuration,
+        noDataCheckMs: noDataDuration,
+        totalMs: totalMonitorDuration
+      });
     } catch (error) {
-      this.logger.error('任务监控失败:', error);
+      const totalMonitorDuration = Date.now() - monitorStart;
+      this.logger.error('任务监控失败', {
+        error: error.message,
+        stack: error.stack,
+        monitorTimeMs: totalMonitorDuration,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
@@ -56,11 +81,24 @@ export class TaskMonitor {
   private async checkTimeoutTasks(now: Date): Promise<void> {
     const timeoutThreshold = new Date(now.getTime() - TASK_TIMEOUT);
 
+    this.logger.debug('查询超时任务', {
+      timeoutThreshold: timeoutThreshold.toISOString(),
+      timeoutMinutes: TASK_TIMEOUT / 1000 / 60,
+      currentTime: now.toISOString()
+    });
+
+    const queryStart = Date.now();
     const timeoutTasks = await this.taskRepository.find({
       where: {
         status: WeiboSearchTaskStatus.RUNNING,
         updatedAt: LessThan(timeoutThreshold),
       },
+    });
+    const queryDuration = Date.now() - queryStart;
+
+    this.logger.debug(`超时任务查询完成，耗时 ${queryDuration}ms`, {
+      foundCount: timeoutTasks.length,
+      timeoutThreshold: timeoutThreshold.toISOString()
     });
 
     if (timeoutTasks.length === 0) {
@@ -68,19 +106,40 @@ export class TaskMonitor {
       return;
     }
 
-    this.logger.warn(`发现 ${timeoutTasks.length} 个超时任务`);
+    this.logger.warn(`发现 ${timeoutTasks.length} 个超时任务`, {
+      timeoutTaskIds: timeoutTasks.map(t => t.id),
+      timeoutKeywords: timeoutTasks.map(t => t.keyword)
+    });
 
     for (const task of timeoutTasks) {
       try {
         const runningTime = Math.round((now.getTime() - new Date(task.updatedAt).getTime()) / 1000 / 60);
-        this.logger.warn(`任务 ${task.id} (${task.keyword}) 执行超时 - 运行时间: ${runningTime}分钟, 最后更新: ${task.updatedAt.toISOString()}`);
+        this.logger.warn(`任务 ${task.id} (${task.keyword}) 执行超时`, {
+          taskId: task.id,
+          keyword: task.keyword,
+          runningTimeMinutes: runningTime,
+          lastUpdate: task.updatedAt.toISOString(),
+          retryCount: task.retryCount,
+          maxRetries: task.maxRetries,
+          canRetry: task.canRetry
+        });
 
         if (task.canRetry) {
           // 可以重试，重新调度
           const retryDelay = this.calculateRetryInterval(task.retryCount);
+          const nextRetryAt = new Date(now.getTime() + retryDelay);
+
+          this.logger.debug(`安排超时任务重试`, {
+            taskId: task.id,
+            currentRetryCount: task.retryCount,
+            newRetryCount: task.retryCount + 1,
+            retryDelayMinutes: retryDelay / 1000 / 60,
+            nextRetryAt: nextRetryAt.toISOString()
+          });
+
           await this.taskRepository.update(task.id, {
             status: WeiboSearchTaskStatus.PENDING,
-            nextRunAt: new Date(now.getTime() + retryDelay),
+            nextRunAt: nextRetryAt,
             errorMessage: `任务执行超时，已重试 (${task.retryCount + 1}/${task.maxRetries})`,
             retryCount: task.retryCount + 1,
           });
@@ -88,6 +147,13 @@ export class TaskMonitor {
           this.logger.info(`超时任务 ${task.id} 已安排重试，延迟 ${retryDelay / 1000 / 60} 分钟, 状态: RUNNING -> PENDING`);
         } else {
           // 超过最大重试次数，标记为失败
+          this.logger.debug(`超时任务达到最大重试次数，标记为超时`, {
+            taskId: task.id,
+            retryCount: task.retryCount,
+            maxRetries: task.maxRetries,
+            enabled: task.enabled
+          });
+
           await this.taskRepository.update(task.id, {
             status: WeiboSearchTaskStatus.TIMEOUT,
             errorMessage: `任务执行超时，已达到最大重试次数 (${task.maxRetries})`,
@@ -98,7 +164,11 @@ export class TaskMonitor {
           this.logger.error(`超时任务 ${task.id} 已标记为超时并禁用, 状态: RUNNING -> TIMEOUT, enabled: true -> false`);
         }
       } catch (error) {
-        this.logger.error(`处理超时任务 ${task.id} 失败:`, error);
+        this.logger.error(`处理超时任务 ${task.id} 失败`, {
+          taskId: task.id,
+          error: error.message,
+          stack: error.stack
+        });
       }
     }
   }

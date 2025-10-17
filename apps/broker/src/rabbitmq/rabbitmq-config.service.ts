@@ -23,27 +23,99 @@ export class RabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
       queue: WEIBO_CRAWL_QUEUE,
     };
 
-    this.client = new RabbitMQClient(rabbitmqConfig);
-    await this.client.connect();
+    this.logger.debug('初始化 RabbitMQ 连接', {
+      url: rabbitmqConfig.url.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@'), // 隐藏密码
+      queue: rabbitmqConfig.queue
+    });
 
-    this.logger.info('RabbitMQ 连接已建立，队列已初始化', 'RabbitMQConfigService');
+    const connectStart = Date.now();
+    this.client = new RabbitMQClient(rabbitmqConfig);
+
+    try {
+      await this.client.connect();
+      const connectDuration = Date.now() - connectStart;
+
+      this.logger.info(`RabbitMQ 连接已建立，队列已初始化，耗时 ${connectDuration}ms`, 'RabbitMQConfigService');
+      this.logger.debug('RabbitMQ 连接详情', {
+        queue: WEIBO_CRAWL_QUEUE,
+        connectionTimeMs: connectDuration
+      });
+    } catch (error) {
+      const connectDuration = Date.now() - connectStart;
+      this.logger.error('RabbitMQ 连接失败', {
+        error: error.message,
+        connectionTimeMs: connectDuration,
+        queue: WEIBO_CRAWL_QUEUE
+      });
+      throw error;
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.client.close();
-    this.logger.info('RabbitMQ 连接已关闭', 'RabbitMQConfigService');
+    this.logger.debug('开始关闭 RabbitMQ 连接');
+    const closeStart = Date.now();
+
+    try {
+      await this.client.close();
+      const closeDuration = Date.now() - closeStart;
+      this.logger.info(`RabbitMQ 连接已关闭，耗时 ${closeDuration}ms`, 'RabbitMQConfigService');
+    } catch (error) {
+      const closeDuration = Date.now() - closeStart;
+      this.logger.error('关闭 RabbitMQ 连接时发生错误', {
+        error: error.message,
+        closeTimeMs: closeDuration
+      });
+    }
   }
 
   /**
    * 发布微博搜索子任务
    */
   async publishSubTask(message: SubTaskMessage): Promise<boolean> {
+    const publishStart = Date.now();
+    const messageSize = JSON.stringify(message).length;
+
+    this.logger.debug('开始发布子任务消息', {
+      taskId: message.taskId,
+      keyword: message.keyword,
+      queue: WEIBO_CRAWL_QUEUE,
+      messageSizeBytes: messageSize,
+      timeRange: {
+        start: message.start.toISOString(),
+        end: message.end.toISOString(),
+        durationHours: (message.end.getTime() - message.start.getTime()) / 1000 / 60 / 60
+      },
+      isInitialCrawl: message.isInitialCrawl
+    });
+
     try {
       const success = await this.client.publish(WEIBO_CRAWL_QUEUE, message);
-      this.logger.info(`已发布子任务: 任务ID=${message.taskId}, 关键词=${message.keyword}, 时间范围=${message.start.toISOString()} ~ ${message.end.toISOString()}`, 'RabbitMQConfigService');
+      const publishDuration = Date.now() - publishStart;
+
+      this.logger.debug(`消息发布操作完成`, {
+        taskId: message.taskId,
+        success,
+        publishTimeMs: publishDuration,
+        queue: WEIBO_CRAWL_QUEUE
+      });
+
+      if (success) {
+        this.logger.info(`已发布子任务: 任务ID=${message.taskId}, 关键词=${message.keyword}, 时间范围=${message.start.toISOString()} ~ ${message.end.toISOString()}, 耗时 ${publishDuration}ms`, 'RabbitMQConfigService');
+      } else {
+        this.logger.warn(`消息发布失败: 任务ID=${message.taskId}, 返回false`, 'RabbitMQConfigService');
+      }
+
       return success;
     } catch (error) {
-      this.logger.error('发布子任务失败:', error, 'RabbitMQConfigService');
+      const publishDuration = Date.now() - publishStart;
+      this.logger.error('发布子任务失败', {
+        taskId: message.taskId,
+        keyword: message.keyword,
+        queue: WEIBO_CRAWL_QUEUE,
+        error: error.message,
+        publishTimeMs: publishDuration,
+        messageSizeBytes: messageSize
+      }, 'RabbitMQConfigService');
       throw error;
     }
   }

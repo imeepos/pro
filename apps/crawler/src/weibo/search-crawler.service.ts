@@ -62,35 +62,92 @@ export class WeiboSearchCrawlerService {
 
   async crawl(message: SubTaskMessage): Promise<CrawlResult> {
     const { taskId, keyword, start, end, isInitialCrawl, weiboAccountId, enableAccountRotation } = message;
+    const crawlStartTime = Date.now();
 
-    this.logger.log(`开始爬取任务: taskId=${taskId}, keyword=${keyword}, 时间范围=${this.formatDate(start)}~${this.formatDate(end)}`);
+    this.logger.debug('开始执行爬取任务', {
+      taskId,
+      keyword,
+      timeRange: { start: start.toISOString(), end: end.toISOString() },
+      isInitialCrawl,
+      enableAccountRotation,
+      specifiedAccountId: weiboAccountId
+    });
+
+    let account: WeiboAccount | null = null;
+    let page: Page | null = null;
+    const crawlMetrics = {
+      totalPages: 0,
+      skippedPages: 0,
+      successfulPages: 0,
+      failedPages: 0,
+      totalRequests: 0,
+      averagePageLoadTime: 0,
+      totalDataSize: 0
+    };
 
     try {
-      const account = await this.accountService.getAvailableAccount(weiboAccountId);
+      // 获取可用账号
+      account = await this.accountService.getAvailableAccount(weiboAccountId);
       if (!account) {
         throw new Error('无可用微博账号');
       }
 
-      const page = await this.browserService.createPage(account.id, account.cookies);
+      this.logger.debug('账号获取成功', {
+        taskId,
+        accountId: account.id,
+        accountNickname: account.nickname,
+        usageCount: account.usageCount
+      });
+
+      // 创建页面实例
+      page = await this.browserService.createPage(account.id, account.cookies);
 
       let firstPostTime: Date | null = null;
       let lastPostTime: Date | null = null;
-      let pageCount = 0;
+      const pageLoadTimes: number[] = [];
 
+      // 逐页处理
       for (let currentPage = 1; currentPage <= this.crawlerConfig.maxPages; currentPage++) {
         const url = this.buildSearchUrl(keyword, start, end, currentPage);
+        const pageStartTime = Date.now();
 
         try {
-          // 检查URL是否已存在
+          crawlMetrics.totalPages++;
+          crawlMetrics.totalRequests++;
+
+          // 检查URL是否已存在（去重）
           const existingRecord = await this.rawDataService.findBySourceUrl(url);
           if (existingRecord) {
-            this.logger.log(`页面已存在，跳过抓取: 第${currentPage}页 [taskId=${taskId}] [created=${existingRecord.createdAt?.toISOString()}]`);
-            pageCount = currentPage;
+            this.logger.debug('页面已存在，跳过抓取', {
+              taskId,
+              page: currentPage,
+              url,
+              existingCreatedAt: existingRecord.createdAt?.toISOString(),
+              skipReason: 'already_exists'
+            });
+            crawlMetrics.skippedPages++;
             continue;
           }
 
+          // 获取页面HTML
           const html = await this.getPageHtml(page, url);
+          const pageLoadTime = Date.now() - pageStartTime;
+          pageLoadTimes.push(pageLoadTime);
 
+          // 计算数据大小
+          const dataSize = new Blob([html]).size;
+          crawlMetrics.totalDataSize += dataSize;
+
+          this.logger.debug('页面抓取成功', {
+            taskId,
+            page: currentPage,
+            url,
+            loadTimeMs: pageLoadTime,
+            dataSizeBytes: dataSize,
+            htmlLength: html.length
+          });
+
+          // 保存原始数据
           await this.rawDataService.create({
             sourceType: 'weibo_keyword_search',
             sourceUrl: url,
@@ -102,41 +159,89 @@ export class WeiboSearchCrawlerService {
               timeRangeStart: this.formatDateForWeibo(start),
               timeRangeEnd: this.formatDateForWeibo(end),
               accountId: account.id,
-              crawledAt: new Date()
+              crawledAt: new Date(),
+              loadTimeMs: pageLoadTime,
+              dataSizeBytes: dataSize
             }
           });
 
-          pageCount = currentPage;
+          crawlMetrics.successfulPages++;
 
+          // 提取时间信息
           if (currentPage === 1) {
             firstPostTime = this.extractFirstPostTime(html);
+            if (firstPostTime) {
+              this.logger.debug('首条微博时间提取成功', {
+                taskId,
+                firstPostTime: firstPostTime.toISOString()
+              });
+            }
           }
 
           lastPostTime = this.extractLastPostTime(html);
 
+          // 检查是否到最后一页
           if (this.isLastPage(html)) {
-            this.logger.log(`第${currentPage}页已到最后一页，停止抓取`);
+            this.logger.debug('检测到最后一页，停止抓取', {
+              taskId,
+              finalPage: currentPage
+            });
             break;
           }
 
+          // 应用延迟
           await this.randomDelay(this.crawlerConfig.requestDelay.min, this.crawlerConfig.requestDelay.max);
 
         } catch (error) {
-          this.logger.error(`抓取第${currentPage}页失败:`, error);
+          const pageLoadTime = Date.now() - pageStartTime;
+          crawlMetrics.failedPages++;
+
+          this.logger.warn('页面抓取失败', {
+            taskId,
+            page: currentPage,
+            url,
+            loadTimeMs: pageLoadTime,
+            error: error instanceof Error ? error.message : '未知错误',
+            errorType: this.classifyPageError(error)
+          });
+
+          // 第一页失败则整个任务失败
           if (currentPage === 1) {
             throw error;
           }
-          break;
+
+          // 其他页面失败则继续处理下一页
+          continue;
         }
       }
 
+      // 计算平均页面加载时间
+      crawlMetrics.averagePageLoadTime = pageLoadTimes.length > 0
+        ? Math.round(pageLoadTimes.reduce((a, b) => a + b, 0) / pageLoadTimes.length)
+        : 0;
+
+      // 关闭浏览器上下文
       await this.browserService.closeContext(account.id);
 
-      this.logger.log(`任务完成: 抓取${pageCount}页, 首条时间=${firstPostTime}, 末条时间=${lastPostTime}`);
+      const totalDuration = Date.now() - crawlStartTime;
+
+      this.logger.log('爬取任务完成', {
+        taskId,
+        keyword,
+        duration: totalDuration,
+        metrics: crawlMetrics,
+        firstPostTime: firstPostTime?.toISOString(),
+        lastPostTime: lastPostTime?.toISOString(),
+        throughput: Math.round((crawlMetrics.totalDataSize / 1024 / 1024) / (totalDuration / 1000) * 100) / 100, // MB/s
+        accountUsed: {
+          id: account.id,
+          nickname: account.nickname
+        }
+      });
 
       const result: CrawlResult = {
         success: true,
-        pageCount,
+        pageCount: crawlMetrics.successfulPages,
         firstPostTime: firstPostTime || undefined,
         lastPostTime: lastPostTime || undefined
       };
@@ -147,10 +252,35 @@ export class WeiboSearchCrawlerService {
       return result;
 
     } catch (error) {
-      this.logger.error('爬取任务失败:', error);
+      const totalDuration = Date.now() - crawlStartTime;
+
+      this.logger.error('爬取任务失败', {
+        taskId,
+        keyword,
+        duration: totalDuration,
+        metrics: crawlMetrics,
+        error: error instanceof Error ? error.message : '未知错误',
+        errorType: this.classifyCrawlError(error),
+        accountUsed: account ? { id: account.id, nickname: account.nickname } : null,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
+      // 确保清理资源
+      if (page && account) {
+        try {
+          await this.browserService.closeContext(account.id);
+        } catch (cleanupError) {
+          this.logger.warn('清理浏览器资源失败', {
+            taskId,
+            accountId: account.id,
+            error: cleanupError instanceof Error ? cleanupError.message : '未知错误'
+          });
+        }
+      }
+
       return {
         success: false,
-        pageCount: 0,
+        pageCount: crawlMetrics.successfulPages,
         error: error instanceof Error ? error.message : '未知错误'
       };
     }
@@ -531,5 +661,63 @@ export class WeiboSearchCrawlerService {
     this.requestMonitorService.reset();
     this.robotsService.clearCache();
     this.logger.log('请求监控和 robots.txt 缓存已重置');
+  }
+
+  private classifyPageError(error: any): string {
+    if (!error) return 'UNKNOWN';
+
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+    if (errorMessage.includes('timeout') || errorMessage.includes('超时')) {
+      return 'PAGE_TIMEOUT';
+    }
+
+    if (errorMessage.includes('selector') || errorMessage.includes('element') ||
+        errorMessage.includes('find') || errorMessage.includes('locate')) {
+      return 'ELEMENT_NOT_FOUND';
+    }
+
+    if (errorMessage.includes('network') || errorMessage.includes('connection') ||
+        errorMessage.includes('net::')) {
+      return 'NETWORK_ERROR';
+    }
+
+    if (errorMessage.includes('403') || errorMessage.includes('forbidden') ||
+        errorMessage.includes('blocked')) {
+      return 'ACCESS_DENIED';
+    }
+
+    return 'UNKNOWN_PAGE_ERROR';
+  }
+
+  private classifyCrawlError(error: any): string {
+    if (!error) return 'UNKNOWN';
+
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+    if (errorMessage.includes('account') || errorMessage.includes('账号') ||
+        errorMessage.includes('login') || errorMessage.includes('auth')) {
+      return 'ACCOUNT_ERROR';
+    }
+
+    if (errorMessage.includes('browser') || errorMessage.includes('page') ||
+        errorMessage.includes('context') || errorMessage.includes('crash')) {
+      return 'BROWSER_ERROR';
+    }
+
+    if (errorMessage.includes('timeout') || errorMessage.includes('超时')) {
+      return 'TIMEOUT_ERROR';
+    }
+
+    if (errorMessage.includes('robots') || errorMessage.includes('403')) {
+      return 'ROBOTS_ERROR';
+    }
+
+    if (errorMessage.includes('rate') || errorMessage.includes('limit') ||
+        errorMessage.includes('frequency')) {
+      return 'RATE_LIMIT_ERROR';
+    }
+
+    return 'UNKNOWN_CRAWL_ERROR';
   }
 }

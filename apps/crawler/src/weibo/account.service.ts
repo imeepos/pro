@@ -34,22 +34,62 @@ export class WeiboAccountService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    this.logger.log('微博账号服务初始化中...');
-    await this.loadAccountsFromDatabase();
-    this.logger.log(`微博账号服务初始化完成，加载了 ${this.accounts.size} 个账号`);
+    const initStartTime = Date.now();
+
+    this.logger.debug('微博账号服务开始初始化');
+
+    try {
+      await this.loadAccountsFromDatabase();
+
+      const initDuration = Date.now() - initStartTime;
+      const stats = await this.getAccountStats();
+
+      this.logger.log('微博账号服务初始化完成', {
+        initTimeMs: initDuration,
+        stats,
+        hasActiveAccounts: stats.active > 0
+      });
+
+      if (stats.active === 0) {
+        this.logger.warn('警告：没有可用的微博账号', {
+          totalAccounts: stats.total,
+          bannedAccounts: stats.banned,
+          expiredAccounts: stats.expired
+        });
+      }
+
+    } catch (error) {
+      const initDuration = Date.now() - initStartTime;
+      this.logger.error('微博账号服务初始化失败', {
+        initTimeMs: initDuration,
+        error: error instanceof Error ? error.message : '未知错误',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
+    }
   }
 
   /**
    * 从数据库加载微博账号
    */
   private async loadAccountsFromDatabase(): Promise<void> {
+    const loadStartTime = Date.now();
+    let loadedAccounts = 0;
+    let skippedAccounts = 0;
+    let invalidCookiesAccounts = 0;
+
     try {
-      this.logger.debug('从数据库获取微博账号列表');
+      this.logger.debug('开始从数据库加载微博账号');
 
       // 查询所有active状态的微博账号
       const dbAccounts = await this.weiboAccountRepo.find({
         where: { status: WeiboAccountStatus.ACTIVE },
         order: { lastCheckAt: 'ASC' }, // 优先使用最近检查过的账号
+      });
+
+      this.logger.debug('数据库查询完成', {
+        totalDbAccounts: dbAccounts.length,
+        activeStatus: WeiboAccountStatus.ACTIVE
       });
 
       this.accounts.clear();
@@ -58,8 +98,29 @@ export class WeiboAccountService implements OnModuleInit {
         let cookies = [];
         try {
           cookies = JSON.parse(dbAccount.cookies);
+
+          // 验证cookies的基本结构
+          if (!Array.isArray(cookies) || cookies.length === 0) {
+            this.logger.warn('账号cookies格式无效', {
+              accountId: dbAccount.id,
+              nickname: dbAccount.weiboNickname,
+              cookiesType: typeof cookies,
+              cookiesLength: Array.isArray(cookies) ? cookies.length : 0
+            });
+            invalidCookiesAccounts++;
+            skippedAccounts++;
+            continue;
+          }
+
         } catch (error) {
-          this.logger.warn(`解析账号 ${dbAccount.id} 的cookies失败:`, error.message);
+          this.logger.warn('解析账号cookies失败', {
+            accountId: dbAccount.id,
+            nickname: dbAccount.weiboNickname,
+            error: error instanceof Error ? error.message : '未知错误',
+            cookiesPreview: dbAccount.cookies?.substring(0, 100)
+          });
+          invalidCookiesAccounts++;
+          skippedAccounts++;
           continue;
         }
 
@@ -71,14 +132,39 @@ export class WeiboAccountService implements OnModuleInit {
           usageCount: 0,
           lastUsedAt: undefined
         });
+
+        loadedAccounts++;
+
+        this.logger.debug('账号加载成功', {
+          accountId: dbAccount.id,
+          nickname: dbAccount.weiboNickname,
+          cookiesCount: cookies.length,
+          lastCheckAt: dbAccount.lastCheckAt?.toISOString()
+        });
       }
 
-      this.logger.log(`成功从数据库加载 ${this.accounts.size} 个active状态的微博账号`);
+      const loadDuration = Date.now() - loadStartTime;
+
+      this.logger.log('数据库账号加载完成', {
+        loadTimeMs: loadDuration,
+        totalDbAccounts: dbAccounts.length,
+        loadedAccounts,
+        skippedAccounts,
+        invalidCookiesAccounts,
+        successRate: dbAccounts.length > 0 ? Math.round((loadedAccounts / dbAccounts.length) * 100) : 0
+      });
+
     } catch (error) {
-      this.logger.error('从数据库加载微博账号失败:', error.message);
-      this.logger.error('数据库连接错误:', error.stack);
+      const loadDuration = Date.now() - loadStartTime;
+      this.logger.error('从数据库加载微博账号失败', {
+        loadTimeMs: loadDuration,
+        error: error instanceof Error ? error.message : '未知错误',
+        stack: error instanceof Error ? error.stack : undefined,
+        errorCode: this.classifyDatabaseError(error)
+      });
 
       // 如果数据库连接失败，尝试从环境变量加载（fallback）
+      this.logger.warn('启用环境变量fallback机制');
       this.loadAccountsFromEnv();
     }
   }
@@ -87,33 +173,109 @@ export class WeiboAccountService implements OnModuleInit {
    * 从环境变量加载账号（fallback机制）
    */
   private loadAccountsFromEnv(): void {
-    this.logger.warn('API加载失败，尝试从环境变量加载账号');
+    const envLoadStartTime = Date.now();
 
-    const accounts = this.configService.get<string>('WEIBO_ACCOUNTS');
-    if (accounts) {
+    this.logger.warn('使用环境变量fallback机制加载账号');
+
+    try {
+      const accountsEnv = this.configService.get<string>('WEIBO_ACCOUNTS');
+
+      if (!accountsEnv) {
+        this.logger.error('环境变量 WEIBO_ACCOUNTS 未配置', {
+          envVarName: 'WEIBO_ACCOUNTS',
+          configured: false
+        });
+        return;
+      }
+
+      let parsedAccounts: any[];
       try {
-        const parsedAccounts = JSON.parse(accounts);
-        this.accounts.clear();
+        parsedAccounts = JSON.parse(accountsEnv);
+      } catch (parseError) {
+        this.logger.error('解析环境变量中的微博账号配置失败', {
+          envVarLength: accountsEnv.length,
+          envVarPreview: accountsEnv.substring(0, 200),
+          error: parseError instanceof Error ? parseError.message : '未知错误'
+        });
+        return;
+      }
 
-        for (const acc of parsedAccounts) {
-          if (acc.status === 'active') {
-            this.accounts.set(acc.id, {
-              id: acc.id,
-              nickname: acc.nickname || `Account${acc.id}`,
-              cookies: acc.cookies || [],
-              status: acc.status || 'active',
-              usageCount: acc.usageCount || 0,
-              lastUsedAt: acc.lastUsedAt ? new Date(acc.lastUsedAt) : undefined
-            });
-          }
+      if (!Array.isArray(parsedAccounts)) {
+        this.logger.error('环境变量配置格式错误，应该是数组', {
+          actualType: typeof parsedAccounts,
+          expectedType: 'array'
+        });
+        return;
+      }
+
+      this.accounts.clear();
+      let loadedAccounts = 0;
+      let skippedAccounts = 0;
+
+      for (const acc of parsedAccounts) {
+        // 验证账号对象的基本结构
+        if (!acc || typeof acc !== 'object' || !acc.id) {
+          this.logger.warn('跳过无效的账号配置', {
+            accountData: acc,
+            reason: 'missing_id_or_invalid_object'
+          });
+          skippedAccounts++;
+          continue;
         }
 
-        this.logger.log(`从环境变量加载了 ${this.accounts.size} 个账号`);
-      } catch (error) {
-        this.logger.error('解析微博账号配置失败:', error.message);
+        // 只加载active状态的账号
+        if (acc.status === 'active') {
+          this.accounts.set(acc.id, {
+            id: acc.id,
+            nickname: acc.nickname || `Account${acc.id}`,
+            cookies: acc.cookies || [],
+            status: acc.status || 'active',
+            usageCount: acc.usageCount || 0,
+            lastUsedAt: acc.lastUsedAt ? new Date(acc.lastUsedAt) : undefined
+          });
+
+          loadedAccounts++;
+
+          this.logger.debug('从环境变量加载账号成功', {
+            accountId: acc.id,
+            nickname: acc.nickname,
+            hasCookies: !!(acc.cookies && acc.cookies.length > 0),
+            cookiesCount: acc.cookies?.length || 0
+          });
+
+        } else {
+          this.logger.debug('跳过非active状态的账号', {
+            accountId: acc.id,
+            status: acc.status
+          });
+          skippedAccounts++;
+        }
       }
-    } else {
-      this.logger.error('环境变量 WEIBO_ACCOUNTS 未配置');
+
+      const envLoadDuration = Date.now() - envLoadStartTime;
+
+      this.logger.log('环境变量账号加载完成', {
+        loadTimeMs: envLoadDuration,
+        totalEnvAccounts: parsedAccounts.length,
+        loadedAccounts,
+        skippedAccounts,
+        finalAccountsCount: this.accounts.size
+      });
+
+      if (this.accounts.size === 0) {
+        this.logger.error('环境变量中也没有可用的active账号', {
+          totalEnvAccounts: parsedAccounts.length,
+          activeAccountsCount: loadedAccounts
+        });
+      }
+
+    } catch (error) {
+      const envLoadDuration = Date.now() - envLoadStartTime;
+      this.logger.error('环境变量加载过程发生异常', {
+        loadTimeMs: envLoadDuration,
+        error: error instanceof Error ? error.message : '未知错误',
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   }
 
@@ -202,9 +364,126 @@ export class WeiboAccountService implements OnModuleInit {
   }
 
   async resetUsageCount(): Promise<void> {
+    const resetStartTime = Date.now();
+    const totalAccounts = this.accounts.size;
+
     this.accounts.forEach(account => {
       account.usageCount = 0;
     });
-    this.logger.debug('已重置所有账号的使用计数');
+
+    const resetDuration = Date.now() - resetStartTime;
+
+    this.logger.debug('账号使用计数重置完成', {
+      resetTimeMs: resetDuration,
+      totalAccounts
+    });
+  }
+
+  private classifyDatabaseError(error: any): string {
+    if (!error) return 'UNKNOWN_DB_ERROR';
+
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+    if (errorMessage.includes('econnrefused') || errorMessage.includes('connection')) {
+      return 'DB_CONNECTION_ERROR';
+    }
+
+    if (errorMessage.includes('timeout') || errorMessage.includes('etimedout')) {
+      return 'DB_TIMEOUT_ERROR';
+    }
+
+    if (errorMessage.includes('enotfound') || errorMessage.includes('dns')) {
+      return 'DB_DNS_ERROR';
+    }
+
+    if (errorMessage.includes('login') || errorMessage.includes('authentication') ||
+        errorMessage.includes('password') || errorMessage.includes('auth')) {
+      return 'DB_AUTH_ERROR';
+    }
+
+    if (errorMessage.includes('table') || errorMessage.includes('column') ||
+        errorMessage.includes('sql') || errorMessage.includes('query')) {
+      return 'DB_QUERY_ERROR';
+    }
+
+    return 'UNKNOWN_DB_ERROR';
+  }
+
+  // 获取账号使用的详细统计信息
+  getAccountUsageStats(): Array<{
+    accountId: number;
+    nickname: string;
+    usageCount: number;
+    lastUsedAt?: Date;
+    status: string;
+    hasCookies: boolean;
+    cookiesCount: number;
+  }> {
+    return Array.from(this.accounts.values()).map(account => ({
+      accountId: account.id,
+      nickname: account.nickname,
+      usageCount: account.usageCount,
+      lastUsedAt: account.lastUsedAt,
+      status: account.status,
+      hasCookies: !!(account.cookies && account.cookies.length > 0),
+      cookiesCount: account.cookies?.length || 0
+    })).sort((a, b) => b.usageCount - a.usageCount); // 按使用次数降序排列
+  }
+
+  // 检查账号健康状况
+  async checkAccountsHealth(): Promise<{
+    totalAccounts: number;
+    healthyAccounts: number;
+    unhealthyAccounts: number;
+    healthDetails: Array<{
+      accountId: number;
+      nickname: string;
+      isHealthy: boolean;
+      issues: string[];
+    }>;
+  }> {
+    const accounts = Array.from(this.accounts.values());
+    let healthyAccounts = 0;
+
+    const healthDetails = accounts.map(account => {
+      const issues: string[] = [];
+
+      // 检查cookies
+      if (!account.cookies || account.cookies.length === 0) {
+        issues.push('no_cookies');
+      }
+
+      // 检查使用频率
+      if (account.usageCount > 100) {
+        issues.push('high_usage');
+      }
+
+      // 检查最后使用时间
+      if (account.lastUsedAt) {
+        const daysSinceLastUse = (Date.now() - account.lastUsedAt.getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceLastUse > 7) {
+          issues.push('not_used_recently');
+        }
+      }
+
+      const isHealthy = issues.length === 0;
+      if (isHealthy) {
+        healthyAccounts++;
+      }
+
+      return {
+        accountId: account.id,
+        nickname: account.nickname,
+        isHealthy,
+        issues
+      };
+    });
+
+    return {
+      totalAccounts: accounts.length,
+      healthyAccounts,
+      unhealthyAccounts: accounts.length - healthyAccounts,
+      healthDetails
+    };
   }
 }
