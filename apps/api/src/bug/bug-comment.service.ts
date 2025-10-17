@@ -25,9 +25,20 @@ export class BugCommentService {
       throw new NotFoundException('Bug不存在');
     }
 
+    const authorId = createCommentDto.authorId;
+    let authorName = 'System';
+
+    if (authorId) {
+      const author = await this.userRepository.findOne({ where: { id: authorId } });
+      if (author) {
+        authorName = author.username;
+      }
+    }
+
     const commentEntity = this.commentRepository.create({
       content: createCommentDto.content,
-      authorName: 'System',
+      authorId: authorId || null,
+      authorName,
       bugId,
     });
 

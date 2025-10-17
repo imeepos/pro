@@ -93,7 +93,7 @@ export class BugResolver {
     @Args('input') input: CreateBugCommentInput,
   ): Promise<BugCommentModel> {
     this.logger.log(`为Bug ${bugId} 添加评论`);
-    return this.commentService.create(bugId, input);
+    return this.commentService.create(bugId, { ...input, authorId: userId });
   }
 
   @Query(() => [BugCommentModel], { name: 'bugComments' })
