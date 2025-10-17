@@ -1,5 +1,8 @@
 export const environment = {
   production: true,
-  graphqlEndpoint: 'http://localhost:3000/graphql',
-  apiKey: `ak_21e04cb9c23b1256dc2debf99c211c4b`
+  apiUrl: 'http://localhost:3000',
+  graphqlUrl: 'http://localhost:3000/graphql',
+  tokenKey: 'access_token',
+  refreshTokenKey: 'refresh_token',
+  timeout: 30000
 };
