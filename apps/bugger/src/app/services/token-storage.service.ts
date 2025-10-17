@@ -5,8 +5,8 @@ import { TokenStorage } from '@pro/types';
   providedIn: 'root'
 })
 export class TokenStorageService implements TokenStorage {
-  private readonly tokenKey = 'bugger_access_token';
-  private readonly refreshTokenKey = 'bugger_refresh_token';
+  private readonly tokenKey = 'access_token';
+  private readonly refreshTokenKey = 'refresh_token';
 
   getToken(): string | null {
     return localStorage.getItem(this.tokenKey);

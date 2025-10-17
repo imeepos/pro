@@ -5,26 +5,8 @@ import { Router } from '@angular/router';
 import { BugService } from '../../services/bug.service';
 import { NotificationService } from '../../services/notification.service';
 import { AuthStateService } from '../../state/auth-state.service';
-import { CreateBugDto, BugEnvironment, BugError, BugErrorType } from '@pro/types';
+import { CreateBugDto, BugEnvironment, BugError, BugErrorType, BugPriority, BugCategory } from '@pro/types';
 
-// 定义枚举
-enum BugPriority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL'
-}
-
-enum BugCategory {
-  FUNCTIONAL = 'functional',
-  PERFORMANCE = 'performance',
-  SECURITY = 'security',
-  UI_UX = 'ui_ux',
-  INTEGRATION = 'integration',
-  DATA = 'data',
-  CONFIGURATION = 'configuration',
-  DOCUMENTATION = 'documentation'
-}
 
 type StringEnvironmentField = Exclude<keyof BugEnvironment, 'additionalInfo'>;
 

@@ -10,7 +10,7 @@ import { logger } from '../utils/logger';
   providedIn: 'root'
 })
 export class GraphqlGateway {
-  private readonly endpoint = environment.graphqlEndpoint;
+  private readonly endpoint = environment.graphqlUrl;
   private readonly maxAttempts = 3;
   private readonly log = logger.withScope('GraphqlGateway', {
     endpoint: this.endpoint

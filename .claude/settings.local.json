@@ -60,7 +60,8 @@
       "Bash(pnpm add:*)",
       "Bash(psql:*)",
       "Bash(timeout 300 pnpm run:*)",
-      "Bash(timeout 60 pnpm run typecheck:*)"
+      "Bash(timeout 60 pnpm run typecheck:*)",
+      "Bash(pnpm run)"
     ],
     "deny": [],
     "ask": []

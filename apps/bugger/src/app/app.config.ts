@@ -26,7 +26,7 @@ export const appConfig: ApplicationConfig = {
     HttpLink,
     provideApollo(() => {
       const httpLink = inject(HttpLink);
-      const http = httpLink.create({ uri: environment.graphqlEndpoint });
+      const http = httpLink.create({ uri: environment.graphqlUrl });
 
       const debugLink = new ApolloLink((operation, forward) => {
         console.log('🔍 [Apollo] 开始 GraphQL 请求:', {
@@ -34,21 +34,27 @@ export const appConfig: ApplicationConfig = {
           variables: operation.variables,
           query: operation.query.loc?.source.body
         });
+        console.log('🌐 [Apollo] 请求上下文:', operation.getContext());
 
         return forward(operation);
       });
 
       const authLink = new ApolloLink((operation, forward) => {
-        const tokenStorage = inject(TokenStorageService);
-        const token = tokenStorage.getToken();
+        // 直接从 localStorage 获取 token，使用正确的 key
+        const token = localStorage.getItem('access_token');
 
-        let headers = new HttpHeaders().set('X-API-Key', environment.apiKey);
+        console.log('🔐 [Apollo AuthLink] 设置请求头:', {
+          hasToken: !!token,
+          tokenKey: 'access_token'
+        });
 
         if (token) {
-          headers = headers.set('Authorization', `Bearer ${token}`);
+          const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+          operation.setContext(({ headers: existingHeaders = new HttpHeaders() }) => ({
+            headers: existingHeaders.set('Authorization', `Bearer ${token}`)
+          }));
         }
 
-        operation.setContext({ headers });
         return forward(operation);
       });
 
