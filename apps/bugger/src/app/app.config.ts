@@ -51,7 +51,15 @@ export const appConfig: ApplicationConfig = {
         return forward(operation);
       });
 
-      const errorLink = new ErrorLink(({ error }) => {
+      const errorLink = new ErrorLink(({ error, operation }) => {
+        console.error('🔍 [Apollo ErrorLink] 错误详情:', {
+          operationName: operation?.operationName,
+          errorType: error?.constructor?.name,
+          errorMessage: error?.message,
+          networkError: (error as any)?.networkError,
+          graphQLErrors: (error as any)?.graphQLErrors
+        });
+
         if (CombinedGraphQLErrors.is(error)) {
           error.errors.forEach((graphError: GraphQLFormattedError) => {
             const locations =
