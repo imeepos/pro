@@ -161,9 +161,9 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
 
-    const refreshToken = this.jwtService.sign(payload, {
+    const refreshToken = this.jwtService.sign(payload as any, {
       expiresIn: getRefreshTokenExpiresIn(this.configService),
-    });
+    } as any);
 
     const refreshTokenTTL = this.parseExpiration(getRefreshTokenExpiresIn(this.configService));
     await this.redisClient.set(

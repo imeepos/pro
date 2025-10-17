@@ -101,7 +101,7 @@ export interface CreateBugDto {
   description: string;
   priority: BugPriority;
   category: BugCategory;
-  reporterId?: string;
+  reporterId: string;
   environment?: BugEnvironment;
   stepsToReproduce?: string;
   expectedBehavior?: string;
@@ -111,7 +111,6 @@ export interface CreateBugDto {
   dueDate?: string;
   estimatedHours?: number;
   tagIds?: string[];
-  reporterId: string;
 }
 
 export interface UpdateBugDto {
