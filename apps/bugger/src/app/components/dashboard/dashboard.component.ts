@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { BugService } from '../../services/bug.service';
+import { BugFilterStateService } from '../../services/bug-filter-state.service';
 import { Bug } from '@pro/types';
 
 // 定义枚举
@@ -64,7 +66,7 @@ const DEFAULT_STATISTICS: BugStatisticsSnapshot = {
 
       <!-- 统计卡片 -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div (click)="navigateToBugs()" class="stat-card">
           <div class="flex items-center">
             <div class="p-3 bg-blue-100 rounded-lg">
               <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,7 +80,7 @@ const DEFAULT_STATISTICS: BugStatisticsSnapshot = {
           </div>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div (click)="navigateToBugs('open')" class="stat-card">
           <div class="flex items-center">
             <div class="p-3 bg-yellow-100 rounded-lg">
               <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,7 +94,7 @@ const DEFAULT_STATISTICS: BugStatisticsSnapshot = {
           </div>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div (click)="navigateToBugs('in_progress')" class="stat-card">
           <div class="flex items-center">
             <div class="p-3 bg-blue-100 rounded-lg">
               <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,7 +108,7 @@ const DEFAULT_STATISTICS: BugStatisticsSnapshot = {
           </div>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div (click)="navigateToBugs('resolved')" class="stat-card">
           <div class="flex items-center">
             <div class="p-3 bg-green-100 rounded-lg">
               <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,13 +179,24 @@ const DEFAULT_STATISTICS: BugStatisticsSnapshot = {
       </div>
     </div>
   `,
-  styles: []
+  styles: [`
+    .stat-card {
+      @apply bg-white p-6 rounded-lg shadow-sm border border-gray-200 cursor-pointer transition-all duration-200;
+    }
+    .stat-card:hover {
+      @apply shadow-md border-blue-300 transform -translate-y-0.5;
+    }
+  `]
 })
 export class DashboardComponent implements OnInit {
   statistics: BugStatisticsSnapshot = this.cloneStatistics();
   recentBugs: Bug[] = [];
 
-  constructor(private bugService: BugService) {}
+  constructor(
+    private bugService: BugService,
+    private router: Router,
+    private filterState: BugFilterStateService
+  ) {}
 
   ngOnInit(): void {
     this.loadStatistics();
@@ -228,6 +241,13 @@ export class DashboardComponent implements OnInit {
       [BugStatus.REOPENED]: '已重新打开',
     };
     return texts[status] || status;
+  }
+
+  navigateToBugs(status?: StatusKey): void {
+    this.filterState.reset(
+      status ? { status: [status as any] } : undefined
+    );
+    this.router.navigate(['/bugs']);
   }
 
   private cloneStatistics(stats: BugStatisticsSnapshot = DEFAULT_STATISTICS): BugStatisticsSnapshot {
