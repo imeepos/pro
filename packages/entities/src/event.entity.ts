@@ -9,16 +9,11 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
+import { EventStatus } from '@pro/types';
 import { EventTypeEntity } from './event-type.entity.js';
 import { IndustryTypeEntity } from './industry-type.entity.js';
 import { EventAttachmentEntity } from './event-attachment.entity.js';
 import { EventTagEntity } from './event-tag.entity.js';
-
-export enum EventStatus {
-  DRAFT = 0,
-  PUBLISHED = 1,
-  ARCHIVED = 2,
-}
 
 @Entity('event')
 export class EventEntity {
@@ -69,7 +64,8 @@ export class EventEntity {
 
   @Index()
   @Column({
-    type: 'smallint',
+    type: 'enum',
+    enum: EventStatus,
     default: EventStatus.DRAFT,
   })
   status: EventStatus;

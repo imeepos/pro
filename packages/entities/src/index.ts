@@ -22,6 +22,8 @@ export * from './bug-activity.entity.js';
 export * from './bug-time-tracking.entity.js';
 export * from './bug-notification.entity.js';
 
+export { EventStatus } from '@pro/types';
+
 import { DataSourceOptions } from 'typeorm';
 import { UserEntity } from './user.entity.js';
 import { ApiKeyEntity } from './api-key.entity.js';

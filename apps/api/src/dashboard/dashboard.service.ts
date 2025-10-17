@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ScreenPageEntity, EventEntity, WeiboAccountEntity, WeiboSearchTaskEntity } from '@pro/entities';
+import { ScreenPageEntity, EventEntity, WeiboAccountEntity, WeiboSearchTaskEntity, EventStatus } from '@pro/entities';
 import { DashboardStats, RecentActivity } from './dto/dashboard.dto';
 
 @Injectable()
@@ -71,7 +71,7 @@ export class DashboardService {
     recentEvents.forEach(event => {
       activities.push({
         type: 'event',
-        message: `${event.status === 1 ? '发布了' : '更新了'}事件 "${event.eventName}"`,
+        message: `${event.status === EventStatus.PUBLISHED ? '发布了' : '更新了'}事件 "${event.eventName}"`,
         time: this.formatTime(event.updatedAt),
         entityId: event.id,
       });
