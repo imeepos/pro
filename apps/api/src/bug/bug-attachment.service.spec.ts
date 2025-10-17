@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BugAttachmentService } from './bug-attachment.service';
 import { BugAttachmentEntity, BugEntity, UserEntity } from '@pro/entities';
-import { BugAttachment } from '@pro/types';
+import { BugAttachment, BugStatus, BugPriority, BugCategory } from '@pro/types';
 
 describe('BugAttachmentService', () => {
   let service: BugAttachmentService;
@@ -16,9 +16,9 @@ describe('BugAttachmentService', () => {
     id: '550e8400-e29b-41d4-a716-446655440000',
     title: 'Test Bug',
     description: 'Test Description',
-    status: 'open',
-    priority: 'medium',
-    category: 'functional',
+    status: BugStatus.OPEN,
+    priority: BugPriority.MEDIUM,
+    category: BugCategory.FUNCTIONAL,
     reporterId: 'user-123',
     assigneeId: null,
     environment: null,

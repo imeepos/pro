@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BugNotificationService } from './bug-notification.service';
 import { BugEntity } from '@pro/entities';
-import { Bug } from '@pro/types';
+import { Bug, BugStatus, BugPriority, BugCategory } from '@pro/types';
 
 describe('BugNotificationService', () => {
   let service: BugNotificationService;
@@ -11,9 +11,9 @@ describe('BugNotificationService', () => {
     id: '550e8400-e29b-41d4-a716-446655440000',
     title: 'Test Bug',
     description: 'Test Description',
-    status: 'open',
-    priority: 'medium',
-    category: 'functional',
+    status: BugStatus.OPEN,
+    priority: BugPriority.MEDIUM,
+    category: BugCategory.FUNCTIONAL,
     reporterId: 'user-123',
     assigneeId: 'user-456',
     environment: null,
@@ -47,9 +47,9 @@ describe('BugNotificationService', () => {
     id: '550e8400-e29b-41d4-a716-446655440000',
     title: 'Test Bug',
     description: 'Test Description',
-    status: 'open',
-    priority: 'medium',
-    category: 'functional',
+    status: BugStatus.OPEN,
+    priority: BugPriority.MEDIUM,
+    category: BugCategory.FUNCTIONAL,
     reporterId: 'user-123',
     assigneeId: 'user-456',
     environment: null,
@@ -101,7 +101,7 @@ describe('BugNotificationService', () => {
 
       expect(consoleSpy).toHaveBeenCalledWith('🐛 新Bug创建通知:');
       expect(consoleSpy).toHaveBeenCalledWith('   标题: Critical Bug');
-      expect(consoleSpy).toHaveBeenCalledWith('   优先级: high');
+      expect(consoleSpy).toHaveBeenCalledWith('   优先级: HIGH');
       expect(consoleSpy).toHaveBeenCalledWith('   报告者: user-123');
       expect(consoleSpy).toHaveBeenCalledWith(`   时间: ${new Date().toLocaleString()}`);
       expect(consoleSpy).toHaveBeenCalledWith('📧 通知发送:');
@@ -172,19 +172,19 @@ describe('BugNotificationService', () => {
         reporterId: 'user-123',
         assigneeId: 'user-456',
       });
-      const oldStatus = 'open';
-      const newStatus = 'in_progress';
+      const oldStatus = BugStatus.OPEN;
+      const newStatus = BugStatus.IN_PROGRESS;
 
       await service.notifyStatusChange(bug, oldStatus, newStatus);
 
       expect(consoleSpy).toHaveBeenCalledWith('🔄 Bug状态变更通知:');
       expect(consoleSpy).toHaveBeenCalledWith('   Bug: Status Change Bug');
-      expect(consoleSpy).toHaveBeenCalledWith('   状态: open -> in_progress');
+      expect(consoleSpy).toHaveBeenCalledWith('   状态: OPEN -> IN_PROGRESS');
       expect(consoleSpy).toHaveBeenCalledWith(`   时间: ${new Date().toLocaleString()}`);
       expect(consoleSpy).toHaveBeenCalledWith('📧 通知发送:');
       expect(consoleSpy).toHaveBeenCalledWith('   类型: BUG_STATUS_CHANGED');
       expect(consoleSpy).toHaveBeenCalledWith('   标题: Bug状态更新');
-      expect(consoleSpy).toHaveBeenCalledWith('   消息: Bug "Status Change Bug" 状态从 open 变更为 in_progress');
+      expect(consoleSpy).toHaveBeenCalledWith('   消息: Bug "Status Change Bug" 状态从 OPEN 变更为 IN_PROGRESS');
       expect(consoleSpy).toHaveBeenCalledWith('   接收者: user-123, user-456');
     });
 
@@ -195,8 +195,8 @@ describe('BugNotificationService', () => {
         reporterId: 'user-123',
         assigneeId: null,
       });
-      const oldStatus = 'open';
-      const newStatus = 'resolved';
+      const oldStatus = BugStatus.OPEN;
+      const newStatus = BugStatus.RESOLVED;
 
       await service.notifyStatusChange(bug, oldStatus, newStatus);
 
@@ -210,12 +210,12 @@ describe('BugNotificationService', () => {
         assigneeId: 'user-456',
       });
 
-      const statusTransitions = [
-        ['open', 'in_progress'],
-        ['in_progress', 'resolved'],
-        ['resolved', 'closed'],
-        ['closed', 'reopened'],
-        ['open', 'resolved'],
+      const statusTransitions: Array<[BugStatus, BugStatus]> = [
+        [BugStatus.OPEN, BugStatus.IN_PROGRESS],
+        [BugStatus.IN_PROGRESS, BugStatus.RESOLVED],
+        [BugStatus.RESOLVED, BugStatus.CLOSED],
+        [BugStatus.CLOSED, BugStatus.REOPENED],
+        [BugStatus.OPEN, BugStatus.RESOLVED],
       ];
 
       for (const [oldStatus, newStatus] of statusTransitions) {
@@ -233,12 +233,12 @@ describe('BugNotificationService', () => {
         title: 'No Change Bug',
         reporterId: 'user-123',
       });
-      const status = 'open';
+      const status = BugStatus.OPEN;
 
       await service.notifyStatusChange(bug, status, status);
 
-      expect(consoleSpy).toHaveBeenCalledWith('   状态: open -> open');
-      expect(consoleSpy).toHaveBeenCalledWith('   消息: Bug "No Change Bug" 状态从 open 变更为 open');
+      expect(consoleSpy).toHaveBeenCalledWith('   状态: OPEN -> OPEN');
+      expect(consoleSpy).toHaveBeenCalledWith('   消息: Bug "No Change Bug" 状态从 OPEN 变更为 OPEN');
     });
   });
 
@@ -414,7 +414,7 @@ describe('BugNotificationService', () => {
       jest.clearAllMocks();
 
       // Test BUG_STATUS_CHANGED notification
-      await service.notifyStatusChange(bug, 'open', 'in_progress');
+      await service.notifyStatusChange(bug, BugStatus.OPEN, BugStatus.IN_PROGRESS);
       expect(consoleSpy).toHaveBeenCalledWith('   类型: BUG_STATUS_CHANGED');
 
       jest.clearAllMocks();
@@ -463,7 +463,7 @@ describe('BugNotificationService', () => {
 
       const notifications = [
         service.notifyBugCreated(bug),
-        service.notifyStatusChange(bug, 'open', 'in_progress'),
+        service.notifyStatusChange(bug, BugStatus.OPEN, BugStatus.IN_PROGRESS),
         service.notifyBugAssigned(mockBugDto(), 'user-789'),
         service.notifyCommentAdded('bug-123', 'user-456', 'Test Bug'),
       ];

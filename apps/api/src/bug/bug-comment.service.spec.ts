@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BugCommentService } from './bug-comment.service';
 import { BugCommentEntity, BugEntity, UserEntity } from '@pro/entities';
-import { BugComment, CreateBugCommentDto } from '@pro/types';
+import { BugComment, CreateBugCommentDto, BugStatus, BugPriority, BugCategory } from '@pro/types';
 
 describe('BugCommentService', () => {
   let service: BugCommentService;
@@ -16,9 +16,9 @@ describe('BugCommentService', () => {
     id: '550e8400-e29b-41d4-a716-446655440000',
     title: 'Test Bug',
     description: 'Test Description',
-    status: 'open',
-    priority: 'medium',
-    category: 'functional',
+    status: BugStatus.OPEN,
+    priority: BugPriority.MEDIUM,
+    category: BugCategory.FUNCTIONAL,
     reporterId: 'user-123',
     assigneeId: null,
     environment: null,
