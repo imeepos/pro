@@ -593,9 +593,23 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
 
     // 尝试从页面提取用户信息
     const userInfo = await page.evaluate(() => {
+      type JdUserSnapshot = {
+        id?: string;
+        pin?: string;
+        nickname?: string;
+        avatar?: string;
+        headPic?: string;
+      };
+
+      type JdWindow = typeof window & {
+        jdUserInfo?: JdUserSnapshot;
+      };
+
+      const globalWindow = window as JdWindow;
+
       // 方式1: 从页面全局变量获取
-      if ((window as any).jdUserInfo) {
-        const info = (window as any).jdUserInfo;
+      if (globalWindow.jdUserInfo) {
+        const info = globalWindow.jdUserInfo;
         return {
           uid: info.id || info.pin,
           nickname: info.nickname || info.pin,

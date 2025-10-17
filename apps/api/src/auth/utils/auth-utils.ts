@@ -1,10 +1,18 @@
 import { Request } from 'express';
+import type { ApiKeyEntity } from '@pro/entities';
 
 // 扩展 Request 类型以包含 apiKey 属性
 declare global {
   namespace Express {
+    interface User {
+      userId?: string;
+      username?: string;
+      email?: string;
+      permissions?: string[];
+    }
+
     interface Request {
-      apiKey?: any;
+      apiKey?: string | ApiKeyEntity;
     }
   }
 }
@@ -38,21 +46,22 @@ export class AuthUtils {
    * 从请求中提取认证信息
    */
   static extractAuthInfo(request: Request): AuthInfo | null {
-    const user = request.user as any;
-    if (!user) {
+    const user = request.user;
+    if (!user || !user.userId) {
       return null;
     }
 
     // 检查是否是 API Key 认证
     const apiKey = request.apiKey;
     if (apiKey) {
+      const permissions = AuthUtils.resolvePermissions(apiKey);
       return {
         type: AuthType.API_KEY,
         userId: user.userId,
         username: user.username,
         email: user.email,
         authMethod: 'api_key',
-        permissions: apiKey.permissions || [],
+        permissions,
       };
     }
 
@@ -112,16 +121,10 @@ export class AuthUtils {
       return typeof apiKeyHeader[0] === 'string' ? apiKeyHeader[0] : null;
     }
 
-    // 从查询参数中提取
-    const query = request.query as any;
-    if (typeof query.apiKey === 'string') {
-      return query.apiKey;
-    }
-    if (typeof query.api_key === 'string') {
-      return query.api_key;
-    }
+    const queryApiKey = this.readQueryValue(request.query, 'apiKey')
+      ?? this.readQueryValue(request.query, 'api_key');
 
-    return null;
+    return queryApiKey;
   }
 
   /**
@@ -137,8 +140,8 @@ export class AuthUtils {
    * 获取用户 ID
    */
   static getUserId(request: Request): string | null {
-    const user = request.user as any;
-    return user?.userId || null;
+    const user = request.user;
+    return user?.userId ?? null;
   }
 
   /**
@@ -170,7 +173,7 @@ export class AuthUtils {
   /**
    * 创建认证上下文日志
    */
-  static createAuthContext(request: Request): Record<string, any> {
+  static createAuthContext(request: Request): Record<string, unknown> {
     const authInfo = this.extractAuthInfo(request);
     const authType = this.getAuthType(request);
 
@@ -183,5 +186,28 @@ export class AuthUtils {
       hasApiKey: this.isApiKeyAuth(request),
       permissions: authInfo?.permissions || [],
     };
+  }
+
+  private static resolvePermissions(apiKey: string | ApiKeyEntity): string[] {
+    if (typeof apiKey === 'string') {
+      return [];
+    }
+
+    return apiKey.permissions ?? [];
+  }
+
+  private static readQueryValue(query: Request['query'], key: string): string | null {
+    const value = (query as Record<string, unknown>)[key];
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (Array.isArray(value)) {
+      const [first] = value;
+      return typeof first === 'string' ? first : null;
+    }
+
+    return null;
   }
 }

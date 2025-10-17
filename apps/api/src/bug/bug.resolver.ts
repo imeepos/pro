@@ -36,7 +36,7 @@ export class BugResolver {
     @Args('input') input: CreateBugInput
   ): Promise<BugModel> {
     this.logger.log(`创建Bug: ${input.title}`);
-    return this.bugService.create(input) as any;
+    return this.bugService.create(input);
   }
 
   @Query(() => BugsPaginationModel, { name: 'bugs' })
@@ -45,7 +45,7 @@ export class BugResolver {
     @Args('filters', { nullable: true }) filters?: BugFiltersInput
   ): Promise<BugsPaginationModel> {
     this.logger.log(`查询Bug列表: ${JSON.stringify(filters)}`);
-    return this.bugService.findAll(filters || {}) as any;
+    return this.bugService.findAll(filters || {});
   }
 
   @Query(() => BugStatisticsModel, { name: 'bugStatistics' })
@@ -60,7 +60,7 @@ export class BugResolver {
     @Args('id', { type: () => ID }) id: string
   ): Promise<BugModel> {
     this.logger.log(`获取Bug详情: ${id}`);
-    return this.bugService.findOne(id) as any;
+    return this.bugService.findOne(id);
   }
 
   @Mutation(() => BugModel, { name: 'updateBug' })
@@ -70,7 +70,7 @@ export class BugResolver {
     @Args('input') input: UpdateBugInput,
   ): Promise<BugModel> {
     this.logger.log(`更新Bug: ${id}`);
-    return this.bugService.update(id, input) as any;
+    return this.bugService.update(id, input);
   }
 
   @Mutation(() => Boolean, { name: 'removeBug' })
@@ -109,7 +109,7 @@ export class BugResolver {
     @Args('input') input: UpdateBugStatusInput,
   ): Promise<BugModel> {
     this.logger.log(`更新Bug ${id} 状态为: ${input.status}`);
-    return this.bugService.updateStatus(id, input.status, input.comment) as any;
+    return this.bugService.updateStatus(id, input.status, input.comment);
   }
 
   @Mutation(() => BugModel, { name: 'assignBug' })
@@ -119,7 +119,7 @@ export class BugResolver {
     @Args('input') input: AssignBugInput,
   ): Promise<BugModel> {
     this.logger.log(`分配Bug ${id} 给用户: ${input.assigneeId}`);
-    return this.bugService.assign(id, input.assigneeId) as any;
+    return this.bugService.assign(id, input.assigneeId);
   }
 
   @ResolveField(() => [BugCommentModel])

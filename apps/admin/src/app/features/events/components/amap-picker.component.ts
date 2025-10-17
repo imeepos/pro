@@ -7,6 +7,14 @@ import { takeUntil } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment.prod';
 import { loadAmapLoader, resetAmapLoaderCache } from '@pro/components';
 
+declare global {
+  interface Window {
+    _AMapSecurityConfig?: {
+      securityJsCode: string;
+    };
+  }
+}
+
 export interface LocationData {
   longitude?: number | null;
   latitude?: number | null;
@@ -280,7 +288,7 @@ export class AmapPickerComponent implements OnInit, AfterViewInit, OnDestroy {
 
       // 配置安全密钥（如果环境中有配置）
       if (environment.amapSecurityCode) {
-        (window as any)._AMapSecurityConfig = {
+        window._AMapSecurityConfig = {
           securityJsCode: environment.amapSecurityCode,
         };
         console.log('已配置高德地图安全密钥');

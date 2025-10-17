@@ -62,7 +62,7 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
 
             log.info('组件注册验证成功', {
               componentType: typeof registeredComponent,
-              hasComponentDef: !!(registeredComponent as any).ɵcmp
+              hasComponentDef: typeof registeredComponent === 'function' && 'ɵcmp' in registeredComponent
             });
 
             const eventMapComponent = registry.get('event-map-distribution');

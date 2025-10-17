@@ -1,7 +1,7 @@
 import { Event, EventStatus } from '@pro/sdk';
 import { EventStatus as GqlEventStatus } from '../graphql/generated/graphql';
 
-interface GraphqlEvent {
+export interface GraphqlEvent {
   id: string;
   eventName: string;
   summary?: string | null;

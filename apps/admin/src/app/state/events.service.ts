@@ -7,7 +7,8 @@ import {
   CreateEventDto,
   UpdateEventDto,
   EventQueryParams,
-  EventDetail
+  EventDetail,
+  FileType,
 } from '@pro/sdk';
 import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
 import {
@@ -32,9 +33,10 @@ import {
   ArchiveEventDocument,
   ArchiveEventMutation,
   ArchiveEventMutationVariables,
-  EventStatus as GqlEventStatus
+  EventStatus as GqlEventStatus,
+  EventAttachmentFileType,
 } from '../core/graphql/generated/graphql';
-import { toDomainEvent, toDomainEventStatus } from '../core/utils/event-mapper';
+import { toDomainEvent, toDomainEventStatus, GraphqlEvent } from '../core/utils/event-mapper';
 
 @Injectable({ providedIn: 'root' })
 export class EventsService {
@@ -226,7 +228,7 @@ export class EventsService {
     pageSize: number;
   } {
     return {
-      data: result.events.edges.map(edge => toDomainEvent(edge.node as any)),
+      data: result.events.edges.map(edge => toDomainEvent(edge.node as GraphqlEvent)),
       total: result.events.totalCount,
       page: 1,
       pageSize: result.events.edges.length
@@ -265,7 +267,7 @@ export class EventsService {
 
   private toEventDetail(gqlEvent: EventGqlQuery['event']): EventDetail {
     return {
-      ...toDomainEvent(gqlEvent as any),
+      ...toDomainEvent(gqlEvent as GraphqlEvent),
       eventType: gqlEvent.eventType ? {
         id: gqlEvent.eventType.id,
         eventName: gqlEvent.eventType.eventName,
@@ -299,7 +301,7 @@ export class EventsService {
         fileUrl: attachment.fileUrl,
         bucketName: '',
         objectName: '',
-        fileType: attachment.fileType as any,
+        fileType: this.toFileType(attachment.fileType),
         fileSize: attachment.fileSize ?? 0,
         mimeType: attachment.mimeType ?? '',
         sortOrder: attachment.sortOrder,
@@ -322,6 +324,18 @@ export class EventsService {
         return GqlEventStatus.Archived;
       default:
         return undefined;
+    }
+  }
+
+  private toFileType(fileType: EventAttachmentFileType): FileType {
+    switch (fileType) {
+      case EventAttachmentFileType.Image:
+        return FileType.IMAGE;
+      case EventAttachmentFileType.Video:
+        return FileType.VIDEO;
+      case EventAttachmentFileType.Document:
+      default:
+        return FileType.DOCUMENT;
     }
   }
 

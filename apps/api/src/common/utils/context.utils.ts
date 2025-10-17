@@ -1,10 +1,11 @@
 import { ExecutionContext } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { Request, Response } from 'express';
+import type { ApiKeyEntity } from '@pro/entities';
 import { GraphqlLoaders } from '../dataloaders/types';
 
 export type AugmentedRequest = Request & {
-  apiKey?: unknown;
+  apiKey?: string | ApiKeyEntity;
 };
 
 export interface GraphqlContext {

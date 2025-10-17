@@ -1,6 +1,7 @@
 import { NotFoundException, UseGuards } from '@nestjs/common';
 import { Args, Context, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { ApiKeyService } from './api-key.service';
+import type { ApiKeyEntity } from '@pro/entities';
 import {
   ApiKeyConnection,
   ApiKeyQueryDto,
@@ -44,8 +45,8 @@ export class ApiKeyResolver {
     @Context('req') req: AugmentedRequest,
     @Context('loaders') loaders: GraphqlLoaders,
   ) {
-    if (req.apiKey) {
-      return this.apiKeyService.toResponse(req.apiKey as any);
+    if (req.apiKey && this.isApiKeyEntity(req.apiKey)) {
+      return this.apiKeyService.toResponse(req.apiKey);
     }
 
     const apiKey = await loaders.apiKeyById.load(id);
@@ -128,12 +129,21 @@ export class ApiKeyResolver {
     @Args('id', { type: () => Int }) id: number,
     @Context('req') req: AugmentedRequest,
   ) {
-    const clientIp = req.ip as string | undefined;
+    const clientIp = req.ip;
     const newKey = await this.apiKeyService.regenerateApiKey(userId, id, clientIp);
 
     return {
       key: newKey,
       warning: '请立即保存此API Key，页面刷新后将无法再次查看完整密钥',
     } satisfies RegenerateApiKeyDto;
+  }
+
+  private isApiKeyEntity(value: unknown): value is ApiKeyEntity {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+
+    const candidate = value as Partial<ApiKeyEntity>;
+    return typeof candidate.id === 'number' && typeof candidate.key === 'string';
   }
 }

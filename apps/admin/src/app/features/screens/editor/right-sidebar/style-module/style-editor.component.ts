@@ -550,7 +550,21 @@ export class StyleEditorComponent implements OnInit, OnDestroy {
     const { keys, value } = event;
     const property = keys[0] as keyof ComponentStyle;
     const styleUpdates: Partial<ComponentStyle> = {};
-    styleUpdates[property] = value as any;
+    switch (property) {
+      case 'borderRadius':
+      case 'borderWidth':
+        styleUpdates[property] = Number(value);
+        break;
+      case 'borderStyle':
+        styleUpdates.borderStyle = value as ComponentStyle['borderStyle'];
+        break;
+      case 'borderColor':
+      case 'boxShadow':
+        styleUpdates[property] = value;
+        break;
+      default:
+        styleUpdates[property] = value;
+    }
     this.canvasService.updateComponentStyle(this.component.id, styleUpdates);
   }
 

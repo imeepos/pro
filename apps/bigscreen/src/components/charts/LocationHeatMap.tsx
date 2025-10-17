@@ -6,6 +6,7 @@ import { cn, formatNumber } from '@/utils';
 import { createLogger } from '@/utils/logger';
 import { useTheme } from '@/hooks/useTheme';
 import * as echarts from 'echarts';
+import type { FeatureCollection } from 'geojson';
 
 interface LocationHeatMapProps {
   data: LocationData[];
@@ -92,14 +93,14 @@ const LocationHeatMap: React.FC<LocationHeatMapProps> = ({
           }
 
           // 最终备用方案：使用内置的基础地图数据
-          const fallbackGeoJson = {
-            type: 'FeatureCollection' as const,
+          const fallbackGeoJson: FeatureCollection = {
+            type: 'FeatureCollection',
             features: [
               {
-                type: 'Feature' as const,
+                type: 'Feature',
                 properties: { name: '中国' },
                 geometry: {
-                  type: 'Polygon' as const,
+                  type: 'Polygon',
                   coordinates: [
                     [
                       [73.66, 53.56],
@@ -114,7 +115,7 @@ const LocationHeatMap: React.FC<LocationHeatMapProps> = ({
             ],
           };
           if (cancelled) return;
-          echarts.registerMap('china', fallbackGeoJson as any);
+          echarts.registerMap('china', fallbackGeoJson);
           // Using built-in simplified map data
           setMapReady(true);
         }

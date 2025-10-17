@@ -2,13 +2,13 @@ import { Injectable, Type } from '@angular/core';
 import { ComponentMetadata } from './component-metadata.interface';
 
 interface RegisteredComponent {
-  component: Type<any>;
+  component: Type<unknown>;
   metadata: ComponentMetadata;
 }
 
 interface ComponentValidationResult {
   isValid: boolean;
-  component?: Type<any>;
+  component?: Type<unknown>;
   error?: string;
 }
 
@@ -19,7 +19,7 @@ export class ComponentRegistryService {
   private components = new Map<string, RegisteredComponent>();
   private readonly logPrefix = '[ComponentRegistry]';
 
-  register(metadata: ComponentMetadata, component: Type<any>): void {
+  register(metadata: ComponentMetadata, component: Type<unknown>): void {
     const validationResult = this.validateComponent(component, metadata.type);
 
     if (!validationResult.isValid) {
@@ -31,7 +31,7 @@ export class ComponentRegistryService {
     this.logInfo(`Component '${metadata.type}' registered successfully`);
   }
 
-  get(type: string): Type<any> | undefined {
+  get(type: string): Type<unknown> | undefined {
     const registered = this.components.get(type);
     if (!registered) {
       this.logWarn(`Component '${type}' not found in registry`);
@@ -51,7 +51,7 @@ export class ComponentRegistryService {
     return this.components.get(type)?.metadata;
   }
 
-  getAll(): Array<{ type: string; component: Type<any>; metadata: ComponentMetadata }> {
+  getAll(): Array<{ type: string; component: Type<unknown>; metadata: ComponentMetadata }> {
     return Array.from(this.components.entries()).map(([type, registered]) => ({
       type,
       component: registered.component,
@@ -59,7 +59,7 @@ export class ComponentRegistryService {
     }));
   }
 
-  getAllByCategory(category: string): Array<{ type: string; component: Type<any>; metadata: ComponentMetadata }> {
+  getAllByCategory(category: string): Array<{ type: string; component: Type<unknown>; metadata: ComponentMetadata }> {
     return this.getAll().filter(item => item.metadata.category === category);
   }
 
@@ -75,7 +75,7 @@ export class ComponentRegistryService {
     return this.validateComponent(registered.component, type);
   }
 
-  private validateComponent(component: Type<any>, type: string): ComponentValidationResult {
+  private validateComponent(component: Type<unknown>, type: string): ComponentValidationResult {
     if (!component) {
       return {
         isValid: false,
@@ -91,7 +91,8 @@ export class ComponentRegistryService {
     }
 
     // 检查Angular组件元数据 (ɵcmp)
-    const componentDef = (component as any).ɵcmp;
+    const angularComponent = component as Type<unknown> & { ɵcmp?: unknown; ɵfac?: unknown };
+    const componentDef = angularComponent.ɵcmp;
     if (!componentDef) {
       return {
         isValid: false,

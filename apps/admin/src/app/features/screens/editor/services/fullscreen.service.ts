@@ -1,6 +1,24 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, fromEvent } from 'rxjs';
 
+type VendorFullscreenDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  mozFullScreenElement?: Element | null;
+  msFullscreenElement?: Element | null;
+  webkitFullscreenEnabled?: boolean;
+  mozFullScreenEnabled?: boolean;
+  msFullscreenEnabled?: boolean;
+  webkitExitFullscreen?: () => Promise<void> | void;
+  mozCancelFullScreen?: () => Promise<void> | void;
+  msExitFullscreen?: () => Promise<void> | void;
+};
+
+type VendorFullscreenElement = Element & {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+  mozRequestFullScreen?: () => Promise<void> | void;
+  msRequestFullscreen?: () => Promise<void> | void;
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -19,20 +37,22 @@ export class FullscreenService {
   }
 
   private isFullscreenActive(): boolean {
-    return !!(
+    const vendorDocument = document as VendorFullscreenDocument;
+    return Boolean(
       document.fullscreenElement ||
-      (document as any).webkitFullscreenElement ||
-      (document as any).mozFullScreenElement ||
-      (document as any).msFullscreenElement
+      vendorDocument.webkitFullscreenElement ||
+      vendorDocument.mozFullScreenElement ||
+      vendorDocument.msFullscreenElement
     );
   }
 
   isFullscreenSupported(): boolean {
-    return !!(
+    const vendorDocument = document as VendorFullscreenDocument;
+    return Boolean(
       document.fullscreenEnabled ||
-      (document as any).webkitFullscreenEnabled ||
-      (document as any).mozFullScreenEnabled ||
-      (document as any).msFullscreenEnabled
+      vendorDocument.webkitFullscreenEnabled ||
+      vendorDocument.mozFullScreenEnabled ||
+      vendorDocument.msFullscreenEnabled
     );
   }
 
@@ -46,12 +66,15 @@ export class FullscreenService {
     try {
       if (targetElement.requestFullscreen) {
         await targetElement.requestFullscreen();
-      } else if ((targetElement as any).webkitRequestFullscreen) {
-        await (targetElement as any).webkitRequestFullscreen();
-      } else if ((targetElement as any).mozRequestFullScreen) {
-        await (targetElement as any).mozRequestFullScreen();
-      } else if ((targetElement as any).msRequestFullscreen) {
-        await (targetElement as any).msRequestFullscreen();
+      } else {
+        const vendorTarget = targetElement as VendorFullscreenElement;
+        if (vendorTarget.webkitRequestFullscreen) {
+          await vendorTarget.webkitRequestFullscreen();
+        } else if (vendorTarget.mozRequestFullScreen) {
+          await vendorTarget.mozRequestFullScreen();
+        } else if (vendorTarget.msRequestFullscreen) {
+          await vendorTarget.msRequestFullscreen();
+        }
       }
       this.isFullscreenSubject.next(true);
     } catch (error) {
@@ -64,12 +87,15 @@ export class FullscreenService {
     try {
       if (document.exitFullscreen) {
         await document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        await (document as any).webkitExitFullscreen();
-      } else if ((document as any).mozCancelFullScreen) {
-        await (document as any).mozCancelFullScreen();
-      } else if ((document as any).msExitFullscreen) {
-        await (document as any).msExitFullscreen();
+      } else {
+        const vendorDocument = document as VendorFullscreenDocument;
+        if (vendorDocument.webkitExitFullscreen) {
+          await vendorDocument.webkitExitFullscreen();
+        } else if (vendorDocument.mozCancelFullScreen) {
+          await vendorDocument.mozCancelFullScreen();
+        } else if (vendorDocument.msExitFullscreen) {
+          await vendorDocument.msExitFullscreen();
+        }
       }
       this.isFullscreenSubject.next(false);
     } catch (error) {

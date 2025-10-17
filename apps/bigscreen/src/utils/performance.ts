@@ -6,6 +6,14 @@
 import { createLogger } from './logger';
 import { errorHandler, ErrorCode, ErrorSeverity } from './errorHandler';
 
+type PerformanceMemoryInfo = {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+};
+
+type PerformanceWithMemory = Performance & { memory?: PerformanceMemoryInfo };
+
 const logger = createLogger('Performance');
 
 // ================== 类型定义 ==================
@@ -393,13 +401,15 @@ class PerformanceMonitor {
    */
   getMemoryUsage(): Record<string, number> {
     if ('memory' in performance) {
-      const {memory} = (performance as any);
-      return {
-        used: memory.usedJSHeapSize,
-        total: memory.totalJSHeapSize,
-        limit: memory.jsHeapSizeLimit,
-        percentage: Math.round((memory.usedJSHeapSize / memory.totalJSHeapSize) * 100),
-      };
+      const memory = (performance as PerformanceWithMemory).memory;
+      if (memory) {
+        return {
+          used: memory.usedJSHeapSize,
+          total: memory.totalJSHeapSize,
+          limit: memory.jsHeapSizeLimit,
+          percentage: Math.round((memory.usedJSHeapSize / memory.totalJSHeapSize) * 100),
+        };
+      }
     }
     return {};
   }
