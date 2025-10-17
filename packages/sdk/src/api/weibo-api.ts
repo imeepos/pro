@@ -247,8 +247,16 @@ export class WeiboApi {
   }
 
   private parseLoginStatus(status: string): WeiboLoginSession['status'] {
-    const validStatuses = ['pending', 'scanned', 'confirmed', 'expired', 'failed'] as const;
-    return validStatuses.includes(status as any) ? (status as any) : 'pending';
+    const validStatuses: ReadonlySet<WeiboLoginSession['status']> = new Set([
+      'pending',
+      'scanned',
+      'confirmed',
+      'expired',
+      'failed',
+    ]);
+
+    const candidate = status as WeiboLoginSession['status'];
+    return validStatuses.has(candidate) ? candidate : 'pending';
   }
 
   private buildFilterInput(filters: WeiboAccountFilters): Record<string, unknown> {

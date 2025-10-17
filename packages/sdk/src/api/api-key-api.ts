@@ -75,11 +75,16 @@ interface ApiKeySummaryStatsPayload {
 export class ApiKeyApi {
   private readonly client: GraphQLClient;
 
-  constructor(baseUrl?: string, tokenKey?: string, authMode?: AuthMode) {
+  constructor(
+    baseUrl?: string,
+    tokenKey?: string,
+    authMode?: AuthMode,
+    client?: GraphQLClient,
+  ) {
     if (!baseUrl) {
       throw new Error(`ApiKeyApi missing base url!`);
     }
-    this.client = new GraphQLClient(baseUrl, tokenKey, authMode);
+    this.client = client ?? new GraphQLClient(baseUrl, tokenKey, authMode);
   }
 
   /**
@@ -108,9 +113,7 @@ export class ApiKeyApi {
    */
   static withConfig(baseUrl: string, config: AuthConfig): ApiKeyApi {
     const client = GraphQLClient.withConfig(baseUrl, config);
-    const apiKeyApi = new ApiKeyApi(baseUrl, config.tokenKey, config.mode);
-    (apiKeyApi as any).client = client;
-    return apiKeyApi;
+    return new ApiKeyApi(baseUrl, config.tokenKey, config.mode, client);
   }
 
   /**

@@ -8,6 +8,11 @@
 - Node.js >= 20.0.0
 - pnpm >= 9.0.0
 
+### 地图配置
+
+`src/environments/environment*.ts` 中提供了 `amapApiKey`、`amapSecurityCode` 与 `amapLoaderSource`。
+通过调整 `amapLoaderSource` 可以将加载脚本指向自建 CDN，系统启动时会在 `main.ts` 中统一调用 `configureAmapLoader` 完成注入。
+
 ### 开发命令
 
 ```bash

@@ -762,7 +762,7 @@ Warning: CommonJS dependency detected: @amap/amap-jsapi-loader
 **解决方案：**
 
 - 移除对 `@amap/amap-jsapi-loader` 的 npm 依赖
-- 通过运行时脚本注入 `https://webapi.amap.com/loader.js`
+- 通过 `@pro/components` 中的 `loadAmapLoader`/`configureAmapLoader` 注入 `https://webapi.amap.com/loader.js`
 - 使用缓存化的注入工具函数，确保只加载一次并提供优雅的错误提示
 
 ### 问题 2: Tailwind CSS 类名被 PurgeCSS 移除

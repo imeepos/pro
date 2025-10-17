@@ -22,9 +22,14 @@ export class GraphQLClient {
   private readonly endpoint: string;
   private readonly config: AuthConfig;
 
-  constructor(baseUrl: string, tokenKey: string = 'access_token', authMode: AuthMode = AuthMode.JWT) {
+  constructor(
+    baseUrl: string,
+    tokenKey: string = 'access_token',
+    authMode: AuthMode = AuthMode.JWT,
+    configOverride?: AuthConfig,
+  ) {
     this.endpoint = `${baseUrl}/graphql`;
-    this.config = {
+    this.config = configOverride ?? {
       ...DEFAULT_AUTH_CONFIG,
       tokenKey,
       mode: authMode,
@@ -57,10 +62,7 @@ export class GraphQLClient {
    */
   static withConfig(baseUrl: string, config: AuthConfig): GraphQLClient {
     const mergedConfig = { ...DEFAULT_AUTH_CONFIG, ...config };
-    const client = new GraphQLClient(baseUrl, mergedConfig.tokenKey, mergedConfig.mode);
-    // 通过类型断言来设置合并后的配置
-    (client as any).config = mergedConfig;
-    return client;
+    return new GraphQLClient(baseUrl, mergedConfig.tokenKey, mergedConfig.mode, mergedConfig);
   }
 
   async request<T>(options: GraphQLRequestOptions): Promise<T> {

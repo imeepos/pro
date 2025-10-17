@@ -285,7 +285,7 @@ pnpm run build:analyze
 #### 2. 移除 `prebundle.exclude`
 
 **理由：**
-- 高德地图加载器改为运行时脚本注入
+- 高德地图加载器改为运行时脚本注入，可通过 `@pro/components` 的 `configureAmapLoader` 调整脚本源
 - 不再需要针对 `@amap/amap-jsapi-loader` 做任何 Vite 预打包处理
 - 减少额外配置，让开发体验更纯粹
 

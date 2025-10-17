@@ -3,8 +3,15 @@ import { registerLocaleData } from '@angular/common';
 import localeZhHans from '@angular/common/locales/zh-Hans';
 import { appConfig } from './app/app.config';
 import { AppComponent } from './app/app.component';
+import { configureAmapLoader } from '@pro/components';
+import { environment } from './environments/environment';
 
 registerLocaleData(localeZhHans, 'zh-CN');
+
+const loaderSource = environment.amapLoaderSource?.trim();
+if (loaderSource) {
+  configureAmapLoader({ source: loaderSource });
+}
 
 bootstrapApplication(AppComponent, appConfig)
   .catch((err) => console.error(err));

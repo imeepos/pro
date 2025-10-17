@@ -243,7 +243,17 @@ import {
 - `@angular/core` ^17.3.0
 - `@angular/common` ^17.3.0
 - `@angular/forms` ^17.3.0
-- 运行时代码通过 `@pro/components` 提供的加载器按需注入 `https://webapi.amap.com/loader.js`
+- 运行时代码通过 `@pro/components` 暴露的 `loadAmapLoader`/`configureAmapLoader` 按需注入 `https://webapi.amap.com/loader.js`
+
+```ts
+import { configureAmapLoader } from '@pro/components';
+
+configureAmapLoader({
+  source: environment.amapLoaderSource,
+});
+
+// 生产环境可通过环境文件覆盖 `amapLoaderSource`
+```
 
 ### 样式
 - 所有组件使用 Tailwind CSS

@@ -48,4 +48,4 @@ export {
 } from './websocket/index';
 
 // External integrations
-export { loadAmapLoader, resetAmapLoaderCache } from './utils/amap-loader';
+export { loadAmapLoader, resetAmapLoaderCache, configureAmapLoader } from './utils/amap-loader';

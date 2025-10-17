@@ -176,7 +176,7 @@ pnpm run build
 ```json
 "prebundle": {}
 
-> 更新：地图加载器已改为运行时脚本注入，无需再将 `@amap/amap-jsapi-loader` 置于 `exclude` 列表。
+> 更新：地图加载器已改为由 `@pro/components` 运行时注入，无需再将 `@amap/amap-jsapi-loader` 置于 `exclude` 列表。
 ```
 
 ### 3. 命名 Chunk
