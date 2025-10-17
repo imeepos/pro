@@ -141,13 +141,23 @@ export class BugService {
         refetchQueries: ['GetBugs', 'GetBugStatistics'],
       })
       .pipe(
-        map(({ data }) => {
-          const createdBug = data?.createBug;
+        map((result) => {
+          console.log('🔍 [BugService] Apollo 响应:', {
+            data: result.data,
+            errors: (result as any).errors,
+            networkError: (result as any).networkError
+          });
+
+          const createdBug = result.data?.createBug;
           if (createdBug) {
             console.log('✅ [BugService] Bug创建成功:', createdBug);
             return { success: true, data: createdBug };
           } else {
-            console.log('❌ [BugService] Bug创建失败: 服务器返回空数据');
+            console.log('❌ [BugService] Bug创建失败: 服务器返回空数据', {
+              data: result.data,
+              hasData: !!result.data,
+              hasCreateBug: !!result.data?.createBug
+            });
             return {
               success: false,
               error: BugError.create('创建 Bug 失败，请稍后重试', BugErrorType.SERVER_ERROR)
@@ -155,7 +165,12 @@ export class BugService {
           }
         }),
         catchError((error) => {
-          console.error('❌ [BugService] Bug创建失败:', error);
+          console.error('❌ [BugService] Bug创建失败:', {
+            error,
+            networkError: error?.networkError,
+            graphQLErrors: error?.graphQLErrors,
+            message: error?.message
+          });
           return this.handleError<Bug>(error);
         })
       );
