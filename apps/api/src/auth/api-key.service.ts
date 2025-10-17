@@ -101,7 +101,7 @@ export class ApiKeyService {
       throw new UnauthorizedException('API Key 已过期');
     }
 
-    if (apiKeyEntity.user.status !== 'active') {
+    if (apiKeyEntity.user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException('用户账户已被禁用');
     }
 

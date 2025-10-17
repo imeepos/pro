@@ -1,8 +1,8 @@
 export enum ApiKeyStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  EXPIRED = 'expired',
-  REVOKED = 'revoked'
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  EXPIRED = 'EXPIRED',
+  REVOKED = 'REVOKED'
 }
 
 export enum ApiKeyType {

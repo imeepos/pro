@@ -37,10 +37,10 @@ registerEnumType(ApiKeyType, {
  * API Key状态枚举
  */
 export enum ApiKeyStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  EXPIRED = 'expired',
-  ALL = 'all'
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  EXPIRED = 'EXPIRED',
+  ALL = 'ALL'
 }
 
 registerEnumType(ApiKeyStatus, {
