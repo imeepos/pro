@@ -8,10 +8,10 @@ import { CreateBugDto, BugEnvironment, BugError, BugErrorType } from '@pro/types
 
 // 定义枚举
 enum BugPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical'
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL'
 }
 
 enum BugCategory {
