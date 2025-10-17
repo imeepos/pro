@@ -292,6 +292,84 @@ export class BugService {
       );
   }
 
+  // 健康检查：测试 GraphQL 服务器连接
+  healthCheck(): Observable<BugOperationResult<{ status: string; timestamp: Date }>> {
+    console.log('🏥 [BugService] 开始 GraphQL 健康检查');
+
+    const HEALTH_CHECK_QUERY = `
+      query HealthCheck {
+        __schema {
+          types {
+            name
+          }
+        }
+      }
+    `;
+
+    return this.apollo
+      .query<{ __schema: { types: { name: string }[] } }>({
+        query: this.parseGraphQL(HEALTH_CHECK_QUERY),
+      })
+      .pipe(
+        map(({ data }) => {
+          console.log('✅ [BugService] GraphQL 健康检查成功:', {
+            hasSchema: !!data?.__schema,
+            typeCount: data?.__schema?.types?.length
+          });
+          return {
+            success: true,
+            data: { status: 'healthy', timestamp: new Date() }
+          };
+        }),
+        catchError((error) => {
+          console.error('❌ [BugService] GraphQL 健康检查失败:', error);
+          return this.handleError<{ status: string; timestamp: Date }>(error);
+        })
+      );
+  }
+
+  private parseGraphQL(source: string): any {
+    // 简单的 GraphQL 查询解析器
+    return {
+      kind: 'Document',
+      definitions: [
+        {
+          kind: 'OperationDefinition',
+          operation: 'query',
+          name: { kind: 'Name', value: 'HealthCheck' },
+          selectionSet: {
+            kind: 'SelectionSet',
+            selections: [
+              {
+                kind: 'Field',
+                name: { kind: 'Name', value: '__schema' },
+                selectionSet: {
+                  kind: 'SelectionSet',
+                  selections: [
+                    {
+                      kind: 'Field',
+                      name: { kind: 'Name', value: 'types' },
+                      selectionSet: {
+                        kind: 'SelectionSet',
+                        selections: [
+                          {
+                            kind: 'Field',
+                            name: { kind: 'Name', value: 'name' }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      loc: { source: { body: source } }
+    };
+  }
+
   private normaliseBugList(payload: BugListPayload): { bugs: Bug[]; total: number } {
     if (!payload) {
       return { bugs: [], total: 0 };
