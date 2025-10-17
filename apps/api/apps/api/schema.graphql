@@ -229,6 +229,17 @@ type BugStatusStatistics {
   resolved: Int!
 }
 
+enum BugCategory {
+  FUNCTIONAL
+  PERFORMANCE
+  SECURITY
+  UI_UX
+  INTEGRATION
+  DATA
+  CONFIGURATION
+  DOCUMENTATION
+}
+
 type BugsPaginationModel {
   bugs: [BugModel!]!
   total: Int!
