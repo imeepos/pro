@@ -339,7 +339,30 @@ export class BugError extends Error {
       return new BugError(BugErrorType.UNKNOWN_ERROR, '未知错误');
     }
 
+    console.log('🔍 [BugError] 分析GraphQL错误:', {
+      errorType: error?.constructor?.name,
+      message: error?.message,
+      hasNetworkError: !!error?.networkError,
+      hasGraphQLErrors: !!(error?.graphQLErrors && error.graphQLErrors.length > 0)
+    });
+
     if (error.networkError) {
+      console.log('🌐 [BugError] 检测到网络错误:', {
+        status: error.networkError.status,
+        statusText: error.networkError.statusText,
+        message: error.networkError.message
+      });
+
+      // 更详细的网络错误分类
+      if (error.networkError.status === 0) {
+        return new BugError(
+          BugErrorType.NETWORK_ERROR,
+          '无法连接到服务器，请检查网络连接',
+          'CONNECTION_FAILED',
+          { originalError: error.networkError.message }
+        );
+      }
+
       return new BugError(
         BugErrorType.NETWORK_ERROR,
         '网络连接失败，请检查网络连接后重试',
