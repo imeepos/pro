@@ -7,6 +7,15 @@ import { createLogger } from './logger';
 
 const logger = createLogger('LoadingOptimization');
 
+// Network Information API types
+interface NetworkInformation extends EventTarget {
+  type: 'bluetooth' | 'cellular' | 'ethernet' | 'none' | 'wifi' | 'wimax' | 'other' | 'unknown';
+  effectiveType: 'slow-2g' | '2g' | '3g' | '4g';
+  downlink: number;
+  rtt: number;
+  saveData: boolean;
+}
+
 // ================== 资源预加载 ==================
 
 /**

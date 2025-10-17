@@ -264,6 +264,18 @@ class APIClient {
   }
 
   /**
+   * 检查是否为业务失败响应
+   */
+  private isBusinessFailure(payload: unknown): payload is { success: false; message?: string; code?: string } {
+    return Boolean(
+      payload &&
+      typeof payload === 'object' &&
+      'success' in payload &&
+      (payload as { success?: unknown }).success === false,
+    );
+  }
+
+  /**
    * GET请求
    */
   async get<T = any>(url: string, config?: RequestConfig): Promise<APIResponse<T>> {
@@ -372,11 +384,3 @@ export const apiClient = new APIClient();
 // 导出类型和工具
 export { APIClient };
 export type { APIResponse as APIResponseType, APIError as APIErrorType, RequestConfig as RequestConfigType };
-  private isBusinessFailure(payload: unknown): payload is { success: false; message?: string; code?: string } {
-    return Boolean(
-      payload &&
-      typeof payload === 'object' &&
-      'success' in payload &&
-      (payload as { success?: unknown }).success === false,
-    );
-  }

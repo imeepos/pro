@@ -10,12 +10,12 @@ const allowedFinishReasons: ReadonlySet<Exclude<FinishReason, null>> = new Set([
   'function_call',
 ]);
 
-const normalizeFinishReason = (reason: FinishReason | undefined): FinishReason => {
+const normalizeFinishReason = (reason: FinishReason | undefined | null): FinishReason => {
   if (reason === null || reason === undefined) {
-    return null;
+    return 'stop';
   }
 
-  return allowedFinishReasons.has(reason) ? reason : null;
+  return allowedFinishReasons.has(reason) ? reason : 'stop';
 };
 
 export class ChatService {

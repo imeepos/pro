@@ -101,7 +101,8 @@ export class ComponentRegistryService {
     }
 
     // 验证组件定义的基本结构
-    if (!componentDef.type || componentDef.type !== component) {
+    const typedComponentDef = componentDef as { type?: unknown };
+    if (!typedComponentDef.type || typedComponentDef.type !== component) {
       return {
         isValid: false,
         error: 'Component metadata is corrupted or mismatched'

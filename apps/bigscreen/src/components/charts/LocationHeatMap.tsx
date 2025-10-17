@@ -6,7 +6,6 @@ import { cn, formatNumber } from '@/utils';
 import { createLogger } from '@/utils/logger';
 import { useTheme } from '@/hooks/useTheme';
 import * as echarts from 'echarts';
-import type { FeatureCollection } from 'geojson';
 
 interface LocationHeatMapProps {
   data: LocationData[];
@@ -93,14 +92,14 @@ const LocationHeatMap: React.FC<LocationHeatMapProps> = ({
           }
 
           // 最终备用方案：使用内置的基础地图数据
-          const fallbackGeoJson: FeatureCollection = {
-            type: 'FeatureCollection',
+          const fallbackGeoJson = {
+            type: 'FeatureCollection' as const,
             features: [
               {
-                type: 'Feature',
+                type: 'Feature' as const,
                 properties: { name: '中国' },
                 geometry: {
-                  type: 'Polygon',
+                  type: 'Polygon' as const,
                   coordinates: [
                     [
                       [73.66, 53.56],

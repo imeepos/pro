@@ -48,12 +48,6 @@ function MetricCard({ title, value, unit, icon, status, description, trend }: Me
     stable: <div className="w-3 h-0.5 bg-gray-400" />,
   };
 
-  const tabs: ReadonlyArray<{ key: 'overview' | 'details' | 'resources'; label: string; icon: React.ReactNode }> = [
-    { key: 'overview', label: '概览', icon: <Monitor className="w-4 h-4" /> },
-    { key: 'details', label: '详细指标', icon: <Activity className="w-4 h-4" /> },
-    { key: 'resources', label: '资源加载', icon: <Database className="w-4 h-4" /> },
-  ];
-
   return (
     <div className={cn('p-4 rounded-lg border', statusColors[status])}>
       <div className="flex items-center justify-between">
@@ -212,6 +206,12 @@ export function PerformanceDashboard({ className, compact = false }: Performance
   const loadMetrics = usePageLoadPerformance();
   const resourceStats = useResourcePerformance();
   const [activeTab, setActiveTab] = useState<'overview' | 'details' | 'resources'>('overview');
+
+  const tabs: ReadonlyArray<{ key: 'overview' | 'details' | 'resources'; label: string; icon: React.ReactNode }> = [
+    { key: 'overview', label: '概览', icon: <Monitor className="w-4 h-4" /> },
+    { key: 'details', label: '详细指标', icon: <Activity className="w-4 h-4" /> },
+    { key: 'resources', label: '资源加载', icon: <Database className="w-4 h-4" /> },
+  ];
 
   if (!report) {
     return (

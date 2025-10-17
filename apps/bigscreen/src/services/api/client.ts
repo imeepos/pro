@@ -40,10 +40,7 @@ function requestInterceptor(config: InternalAxiosRequestConfig): InternalAxiosRe
   }
 
   // 添加请求头
-  config.headers = {
-    'Content-Type': 'application/json',
-    ...config.headers,
-  };
+  config.headers.set('Content-Type', 'application/json');
 
   return config;
 }
