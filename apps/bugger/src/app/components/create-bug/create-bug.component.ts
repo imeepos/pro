@@ -247,7 +247,8 @@ export class CreateBugComponent {
     stepsToReproduce: '',
     expectedBehavior: '',
     actualBehavior: '',
-    reproductionRate: 'sometimes'
+    reproductionRate: 'sometimes',
+    reporterId: 'current-user' // 临时值，实际应用中应从认证服务获取
   };
 
   isSubmitting = false;
