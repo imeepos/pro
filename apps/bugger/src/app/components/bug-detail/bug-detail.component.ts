@@ -7,12 +7,12 @@ import { Bug, CreateBugCommentDto } from '@pro/types';
 
 // 定义枚举
 enum BugStatus {
-  OPEN = 'open',
-  IN_PROGRESS = 'in_progress',
-  RESOLVED = 'resolved',
-  CLOSED = 'closed',
-  REJECTED = 'rejected',
-  REOPENED = 'reopened'
+  OPEN = 'OPEN',
+  IN_PROGRESS = 'IN_PROGRESS',
+  RESOLVED = 'RESOLVED',
+  CLOSED = 'CLOSED',
+  REJECTED = 'REJECTED',
+  REOPENED = 'REOPENED'
 }
 
 enum BugPriority {

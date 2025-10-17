@@ -2,6 +2,7 @@ import { ApplicationConfig, inject } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, HttpHeaders } from '@angular/common/http';
 import { provideApollo } from 'apollo-angular';
+import { APP_INITIALIZER } from '@angular/core';
 import { HttpLink } from 'apollo-angular/http';
 import { InMemoryCache, ApolloLink } from '@apollo/client/core';
 import { ErrorLink } from '@apollo/client/link/error';
@@ -11,6 +12,8 @@ import type { Bug } from '@pro/types';
 
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
+import { TokenStorageService } from './services/token-storage.service';
+import { AuthInitService } from './core/services/auth-init.service';
 
 type BugCollection = { bugs: Bug[]; total: number };
 
@@ -25,9 +28,16 @@ export const appConfig: ApplicationConfig = {
       const http = httpLink.create({ uri: environment.graphqlEndpoint });
 
       const authLink = new ApolloLink((operation, forward) => {
-        operation.setContext({
-          headers: new HttpHeaders().set('X-API-Key', environment.apiKey),
-        });
+        const tokenStorage = inject(TokenStorageService);
+        const token = tokenStorage.getToken();
+
+        let headers = new HttpHeaders().set('X-API-Key', environment.apiKey);
+
+        if (token) {
+          headers = headers.set('Authorization', `Bearer ${token}`);
+        }
+
+        operation.setContext({ headers });
         return forward(operation);
       });
 
@@ -77,5 +87,11 @@ export const appConfig: ApplicationConfig = {
         },
       };
     }),
+    {
+      provide: APP_INITIALIZER,
+      useFactory: (authInitService: AuthInitService) => () => authInitService.initializeAuth(),
+      deps: [AuthInitService],
+      multi: true
+    }
   ]
 };

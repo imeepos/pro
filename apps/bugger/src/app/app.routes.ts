@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -18,6 +19,7 @@ export const routes: Routes = [
       import('./components/dashboard/dashboard.component').then(
         (m) => m.DashboardComponent
       ),
+    canActivate: [authGuard]
   },
   {
     path: 'bugs',
@@ -25,6 +27,7 @@ export const routes: Routes = [
       import('./components/bug-list/bug-list.component').then(
         (m) => m.BugListComponent
       ),
+    canActivate: [authGuard]
   },
   {
     path: 'bugs/new',
@@ -32,6 +35,7 @@ export const routes: Routes = [
       import('./components/create-bug/create-bug.component').then(
         (m) => m.CreateBugComponent
       ),
+    canActivate: [authGuard]
   },
   {
     path: 'bugs/:id/edit',
@@ -39,6 +43,7 @@ export const routes: Routes = [
       import('./components/bug-edit/bug-edit.component').then(
         (m) => m.BugEditComponent
       ),
+    canActivate: [authGuard]
   },
   {
     path: 'bugs/:id',
@@ -46,5 +51,6 @@ export const routes: Routes = [
       import('./components/bug-detail/bug-detail.component').then(
         (m) => m.BugDetailComponent
       ),
+    canActivate: [authGuard]
   },
 ];

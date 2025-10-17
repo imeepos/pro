@@ -12,9 +12,9 @@ import {
   MeDocument,
   MeQuery,
   MeQueryVariables,
-  RefreshTokenDocument,
-  RefreshTokenMutation,
-  RefreshTokenMutationVariables,
+  RefreshDocument,
+  RefreshMutation,
+  RefreshMutationVariables,
   RegisterDocument,
   RegisterMutation,
   RegisterMutationVariables
@@ -54,7 +54,7 @@ export class AuthService {
 
   refreshToken(refreshToken: string): Observable<AuthResponse> {
     return from(
-      this.gateway.request<RefreshTokenMutation, RefreshTokenMutationVariables>(RefreshTokenDocument, {
+      this.gateway.request<RefreshMutation, RefreshMutationVariables>(RefreshDocument, {
         input: { refreshToken }
       })
     ).pipe(map(result => this.toAuthResponse(result.refreshToken)));
