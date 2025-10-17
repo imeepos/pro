@@ -3,17 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { BugService } from '../../services/bug.service';
 import { BugFilterStateService } from '../../services/bug-filter-state.service';
-import { Bug } from '@pro/types';
-
-// 定义枚举
-enum BugStatus {
-  OPEN = 'OPEN',
-  IN_PROGRESS = 'IN_PROGRESS',
-  RESOLVED = 'RESOLVED',
-  CLOSED = 'CLOSED',
-  REJECTED = 'REJECTED',
-  REOPENED = 'REOPENED'
-}
+import { Bug, BugStatus } from '@pro/types';
 
 type StatusKey = 'open' | 'in_progress' | 'resolved' | 'closed' | 'rejected' | 'reopened';
 type PriorityKey = 'low' | 'medium' | 'high' | 'critical';
