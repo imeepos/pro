@@ -126,6 +126,14 @@ export class BugService {
   }
 
   createBug(bug: CreateBugDto): Observable<BugOperationResult<Bug>> {
+    console.log('🚀 [BugService] 开始创建Bug:', {
+      title: bug.title,
+      description: bug.description?.substring(0, 100) + '...',
+      priority: bug.priority,
+      category: bug.category,
+      reporterId: bug.reporterId
+    });
+
     return this.apollo
       .mutate<CreateBugMutationResult>({
         mutation: CREATE_BUG,
@@ -133,8 +141,23 @@ export class BugService {
         refetchQueries: ['GetBugs', 'GetBugStatistics'],
       })
       .pipe(
-        map(({ data }) => this.wrapResult(data?.createBug ?? null, '创建 Bug 失败，请稍后重试', BugErrorType.SERVER_ERROR)),
-        catchError((error) => this.handleError<Bug>(error))
+        map(({ data }) => {
+          const createdBug = data?.createBug;
+          if (createdBug) {
+            console.log('✅ [BugService] Bug创建成功:', createdBug);
+            return { success: true, data: createdBug };
+          } else {
+            console.log('❌ [BugService] Bug创建失败: 服务器返回空数据');
+            return {
+              success: false,
+              error: BugError.create('创建 Bug 失败，请稍后重试', BugErrorType.SERVER_ERROR)
+            };
+          }
+        }),
+        catchError((error) => {
+          console.error('❌ [BugService] Bug创建失败:', error);
+          return this.handleError<Bug>(error);
+        })
       );
   }
 
@@ -300,8 +323,22 @@ export class BugService {
     };
   }
 
-  private handleError<T>(error: unknown): Observable<BugOperationResult<T>> {
+  private handleError<T>(error: any): Observable<BugOperationResult<T>> {
+    console.log('🛠️ [BugService] 处理错误:', {
+      errorType: error?.constructor?.name,
+      message: error?.message,
+      networkError: error?.networkError,
+      graphQLErrors: error?.graphQLErrors
+    });
+
     const bugError = BugError.fromGraphQLError(error);
+
+    console.log('🛠️ [BugService] 转换后的BugError:', {
+      type: bugError.type,
+      message: bugError.message,
+      code: bugError.code
+    });
+
     return of({
       success: false,
       error: bugError,

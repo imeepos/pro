@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { BugService } from '../../services/bug.service';
 import { NotificationService } from '../../services/notification.service';
+import { AuthStateService } from '../../state/auth-state.service';
 import { CreateBugDto, BugEnvironment, BugError, BugErrorType } from '@pro/types';
 
 // 定义枚举
@@ -248,21 +249,28 @@ export class CreateBugComponent {
     expectedBehavior: '',
     actualBehavior: '',
     reproductionRate: 'sometimes',
-    reporterId: 'current-user' // 临时值，实际应用中应从认证服务获取
+    reporterId: '' // 将在组件初始化时从认证服务获取
   };
 
   isSubmitting = false;
   BugPriority = BugPriority;
   BugCategory = BugCategory;
 
+  private authStateService = inject(AuthStateService);
+
   constructor(
     private bugService: BugService,
     private router: Router,
     private notificationService: NotificationService
-  ) {}
+  ) {
+    this.initializeReporterId();
+  }
 
   onSubmit(): void {
+    console.log('📝 [CreateBug] 开始提交Bug表单');
+
     if (!this.validateForm()) {
+      console.log('❌ [CreateBug] 表单验证失败');
       return;
     }
 
@@ -273,22 +281,31 @@ export class CreateBugComponent {
       environment: this.cleanEnvironment(this.bug.environment || {})
     };
 
+    console.log('📤 [CreateBug] 准备发送Bug数据:', {
+      title: cleanedBug.title,
+      reporterId: cleanedBug.reporterId,
+      hasEnvironment: !!cleanedBug.environment
+    });
+
     this.bugService.createBug(cleanedBug).subscribe({
       next: (result) => {
         this.isSubmitting = false;
 
         if (result.success && result.data) {
+          console.log('✅ [CreateBug] Bug提交成功:', result.data.id);
           this.notificationService.showSuccess(
             'Bug提交成功',
             `Bug "${result.data.title}" 已成功创建，ID: ${result.data.id}`
           );
           this.router.navigate(['/bugs', result.data.id]);
         } else {
+          console.log('❌ [CreateBug] Bug提交失败:', result.error);
           this.handleSubmissionError(result.error);
         }
       },
       error: (error) => {
         this.isSubmitting = false;
+        console.error('💥 [CreateBug] Bug提交发生错误:', error);
         const bugError = BugError.fromHttpError(error);
         this.handleSubmissionError(bugError);
       }
@@ -353,6 +370,32 @@ export class CreateBugComponent {
     return Object.keys(cleaned).length > 0 ? (cleaned as BugEnvironment) : undefined;
   }
 
+  private initializeReporterId(): void {
+    // 从认证状态服务获取当前用户ID
+    const authStore = (this.authStateService as any).authStore;
+    if (authStore && authStore.user()) {
+      const currentUser = authStore.user();
+      if (currentUser && currentUser.id) {
+        this.bug.reporterId = currentUser.id;
+      } else {
+        this.handleUserNotLoggedIn();
+      }
+    } else {
+      this.handleUserNotLoggedIn();
+    }
+  }
+
+  private handleUserNotLoggedIn(): void {
+    // 如果用户未登录，显示错误并重定向到登录页
+    this.notificationService.showError(
+      '未登录',
+      '请先登录后再提交Bug'
+    );
+    setTimeout(() => {
+      this.router.navigate(['/login']);
+    }, 2000);
+  }
+
   private handleSubmissionError(error?: BugError): void {
     if (!error) {
       this.notificationService.showError(
@@ -366,7 +409,7 @@ export class CreateBugComponent {
 
     if (error.type === BugErrorType.AUTHENTICATION_ERROR) {
       setTimeout(() => {
-        this.router.navigate(['/auth/login']);
+        this.router.navigate(['/login']);
       }, 2000);
     }
   }
