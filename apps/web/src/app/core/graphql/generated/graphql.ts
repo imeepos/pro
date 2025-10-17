@@ -16,6 +16,8 @@ export type Scalars = {
   Float: { input: number; output: number; }
   /** A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format. */
   DateTime: { input: string; output: string; }
+  /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
+  JSON: { input: any; output: any; }
   /** The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSONObject: { input: Record<string, unknown>; output: Record<string, unknown>; }
 };
@@ -119,6 +121,10 @@ export enum ApiKeyType {
   ReadWrite = 'READ_WRITE'
 }
 
+export type AssignBugInput = {
+  assigneeId: Scalars['String']['input'];
+};
+
 export type AttachmentUploadCredential = {
   __typename?: 'AttachmentUploadCredential';
   bucketName: Scalars['String']['output'];
@@ -134,6 +140,133 @@ export type AuthPayload = {
   accessToken: Scalars['String']['output'];
   refreshToken: Scalars['String']['output'];
   user: User;
+};
+
+export type BatchHourlyStatsRecordDto = {
+  records: Array<HourlyStatsRecordDto>;
+};
+
+export type BugAttachmentModel = {
+  __typename?: 'BugAttachmentModel';
+  filename: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  mimeType: Scalars['String']['output'];
+  originalName: Scalars['String']['output'];
+  size: Scalars['Float']['output'];
+  uploadedAt: Scalars['DateTime']['output'];
+  uploadedBy: Scalars['String']['output'];
+  url: Scalars['String']['output'];
+};
+
+export type BugCategoryStatistics = {
+  __typename?: 'BugCategoryStatistics';
+  configuration: Scalars['Int']['output'];
+  data: Scalars['Int']['output'];
+  documentation: Scalars['Int']['output'];
+  functional: Scalars['Int']['output'];
+  integration: Scalars['Int']['output'];
+  performance: Scalars['Int']['output'];
+  security: Scalars['Int']['output'];
+  ui_ux: Scalars['Int']['output'];
+};
+
+export type BugCommentModel = {
+  __typename?: 'BugCommentModel';
+  authorId?: Maybe<Scalars['String']['output']>;
+  authorName: Scalars['String']['output'];
+  bugId: Scalars['String']['output'];
+  content: Scalars['String']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type BugFiltersInput = {
+  assigneeId?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Float']['input']>;
+  page?: InputMaybe<Scalars['Float']['input']>;
+  priority?: InputMaybe<Array<BugPriority>>;
+  reporterId?: InputMaybe<Scalars['String']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  sortBy?: InputMaybe<Scalars['String']['input']>;
+  sortOrder?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Array<BugStatus>>;
+};
+
+export type BugModel = {
+  __typename?: 'BugModel';
+  actualBehavior?: Maybe<Scalars['String']['output']>;
+  actualHours?: Maybe<Scalars['Float']['output']>;
+  assigneeId?: Maybe<Scalars['String']['output']>;
+  attachments?: Maybe<Array<BugAttachmentModel>>;
+  category?: Maybe<Scalars['String']['output']>;
+  closedAt?: Maybe<Scalars['DateTime']['output']>;
+  closedBy?: Maybe<Scalars['String']['output']>;
+  comments?: Maybe<Array<BugCommentModel>>;
+  createdAt: Scalars['DateTime']['output'];
+  description?: Maybe<Scalars['String']['output']>;
+  dueDate?: Maybe<Scalars['DateTime']['output']>;
+  environment?: Maybe<Scalars['JSON']['output']>;
+  estimatedHours?: Maybe<Scalars['Float']['output']>;
+  expectedBehavior?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  priority: BugPriority;
+  reporterId: Scalars['String']['output'];
+  reproductionRate?: Maybe<Scalars['String']['output']>;
+  resolvedAt?: Maybe<Scalars['DateTime']['output']>;
+  resolvedBy?: Maybe<Scalars['String']['output']>;
+  status: BugStatus;
+  stepsToReproduce?: Maybe<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export enum BugPriority {
+  Critical = 'CRITICAL',
+  High = 'HIGH',
+  Low = 'LOW',
+  Medium = 'MEDIUM'
+}
+
+export type BugPriorityStatistics = {
+  __typename?: 'BugPriorityStatistics';
+  critical: Scalars['Int']['output'];
+  high: Scalars['Int']['output'];
+  low: Scalars['Int']['output'];
+  medium: Scalars['Int']['output'];
+};
+
+export type BugStatisticsModel = {
+  __typename?: 'BugStatisticsModel';
+  byCategory: BugCategoryStatistics;
+  byPriority: BugPriorityStatistics;
+  byStatus: BugStatusStatistics;
+  total: Scalars['Int']['output'];
+};
+
+export enum BugStatus {
+  Closed = 'CLOSED',
+  InProgress = 'IN_PROGRESS',
+  Open = 'OPEN',
+  Rejected = 'REJECTED',
+  Reopened = 'REOPENED',
+  Resolved = 'RESOLVED'
+}
+
+export type BugStatusStatistics = {
+  __typename?: 'BugStatusStatistics';
+  closed: Scalars['Int']['output'];
+  in_progress: Scalars['Int']['output'];
+  open: Scalars['Int']['output'];
+  rejected: Scalars['Int']['output'];
+  reopened: Scalars['Int']['output'];
+  resolved: Scalars['Int']['output'];
+};
+
+export type BugsPaginationModel = {
+  __typename?: 'BugsPaginationModel';
+  bugs: Array<BugModel>;
+  total: Scalars['Int']['output'];
 };
 
 export type ConfigCacheStats = {
@@ -157,12 +290,48 @@ export type ConfirmAttachmentUploadInput = {
   token: Scalars['String']['input'];
 };
 
+export type ConsumerStats = {
+  __typename?: 'ConsumerStats';
+  /** 平均处理时间（毫秒） */
+  avgProcessingTime: Scalars['Float']['output'];
+  /** 失败处理数 */
+  failureCount: Scalars['Int']['output'];
+  /** 最后处理时间 */
+  lastProcessedAt?: Maybe<Scalars['DateTime']['output']>;
+  /** 重试处理数 */
+  retryCount: Scalars['Int']['output'];
+  /** 成功处理数 */
+  successCount: Scalars['Int']['output'];
+  /** 总处理消息数 */
+  totalMessages: Scalars['Int']['output'];
+};
+
 export type CreateApiKeyDto = {
   description?: InputMaybe<Scalars['String']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   permissions?: InputMaybe<Array<Scalars['String']['input']>>;
   type: ApiKeyType;
+};
+
+export type CreateBugCommentInput = {
+  authorId?: InputMaybe<Scalars['String']['input']>;
+  content: Scalars['String']['input'];
+};
+
+export type CreateBugInput = {
+  actualBehavior?: InputMaybe<Scalars['String']['input']>;
+  assigneeId?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  dueDate?: InputMaybe<Scalars['DateTime']['input']>;
+  estimatedHours?: InputMaybe<Scalars['Float']['input']>;
+  expectedBehavior?: InputMaybe<Scalars['String']['input']>;
+  priority?: InputMaybe<BugPriority>;
+  reporterId: Scalars['String']['input'];
+  reproductionRate?: InputMaybe<Scalars['String']['input']>;
+  stepsToReproduce?: InputMaybe<Scalars['String']['input']>;
+  title: Scalars['String']['input'];
 };
 
 export type CreateEventInput = {
@@ -387,6 +556,85 @@ export type HealthStatus = {
   timestamp: Scalars['DateTime']['output'];
 };
 
+export type HourlyStatsPeak = {
+  __typename?: 'HourlyStatsPeak';
+  /** 峰值数量 */
+  count: Scalars['Int']['output'];
+  /** 峰值时间 */
+  hour: Scalars['String']['output'];
+};
+
+export type HourlyStatsPoint = {
+  __typename?: 'HourlyStatsPoint';
+  /** 统计数量 */
+  count: Scalars['Int']['output'];
+  /** 时间点 (ISO 8601格式) */
+  hour: Scalars['String']['output'];
+  /** 占比 (可选) */
+  percentage?: Maybe<Scalars['Float']['output']>;
+  /** 趋势 (可选) */
+  trend?: Maybe<Scalars['String']['output']>;
+};
+
+export type HourlyStatsQueryDto = {
+  endDate: Scalars['DateTime']['input'];
+  interval?: InputMaybe<Scalars['String']['input']>;
+  startDate: Scalars['DateTime']['input'];
+  timezone?: InputMaybe<Scalars['String']['input']>;
+  type: HourlyStatsType;
+};
+
+export type HourlyStatsRecordDto = {
+  count: Scalars['Int']['input'];
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  timestamp: Scalars['DateTime']['input'];
+  type: HourlyStatsType;
+};
+
+export type HourlyStatsResponse = {
+  __typename?: 'HourlyStatsResponse';
+  /** 统计数据点 */
+  data: Array<HourlyStatsPoint>;
+  /** 汇总信息 */
+  summary: HourlyStatsSummary;
+  /** 时间范围 */
+  timeRange: HourlyStatsTimeRange;
+};
+
+export type HourlyStatsSummary = {
+  __typename?: 'HourlyStatsSummary';
+  /** 平均值 */
+  average: Scalars['Float']['output'];
+  /** 增长率 (可选) */
+  growth?: Maybe<Scalars['Float']['output']>;
+  /** 峰值 */
+  peak: HourlyStatsPeak;
+  /** 总数 */
+  total: Scalars['Int']['output'];
+};
+
+export type HourlyStatsTimeRange = {
+  __typename?: 'HourlyStatsTimeRange';
+  /** 结束时间 */
+  end: Scalars['String']['output'];
+  /** 开始时间 */
+  start: Scalars['String']['output'];
+  /** 时区 */
+  timezone: Scalars['String']['output'];
+};
+
+/** 小时统计类型 */
+export enum HourlyStatsType {
+  /** 消息处理统计 */
+  MessageProcessing = 'MESSAGE_PROCESSING',
+  /** 性能统计 */
+  Performance = 'PERFORMANCE',
+  /** 任务执行统计 */
+  TaskExecution = 'TASK_EXECUTION',
+  /** 用户活跃度 */
+  UserActivity = 'USER_ACTIVITY'
+}
+
 export type IndustryType = {
   __typename?: 'IndustryType';
   createdAt: Scalars['DateTime']['output'];
@@ -528,18 +776,41 @@ export enum MediaTypeStatus {
   Inactive = 'INACTIVE'
 }
 
+export type MultiTypeHourlyStats = {
+  __typename?: 'MultiTypeHourlyStats';
+  /** 消息处理统计 */
+  message_processing?: Maybe<HourlyStatsResponse>;
+  /** 性能统计 */
+  performance?: Maybe<HourlyStatsResponse>;
+  /** 任务执行统计 */
+  task_execution?: Maybe<HourlyStatsResponse>;
+  /** 用户活跃度 */
+  user_activity?: Maybe<HourlyStatsResponse>;
+};
+
+export type MultiTypeStatsQueryDto = {
+  endDate: Scalars['DateTime']['input'];
+  startDate: Scalars['DateTime']['input'];
+  timezone?: InputMaybe<Scalars['String']['input']>;
+  types: Array<HourlyStatsType>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
+  addBugComment: BugCommentModel;
   addTagsToEvent: Event;
   archiveEvent: Event;
+  assignBug: BugModel;
   checkAllJdAccounts: JdAccountCheckSummary;
   checkAllWeiboAccounts: Scalars['Boolean']['output'];
   checkJdAccount: JdAccountCheckResult;
   checkWeiboAccount: Scalars['Boolean']['output'];
+  cleanupExpiredStats: Scalars['Int']['output'];
   clearConfigCache: Scalars['Boolean']['output'];
   confirmEventAttachmentUpload: EventAttachment;
   copyScreen: Screen;
   createApiKey: ApiKeyResponseDto;
+  createBug: BugModel;
   createEvent: Event;
   createEventType: EventType;
   createIndustryType: IndustryType;
@@ -558,10 +829,12 @@ export type Mutation = {
   pauseWeiboSearchTask: WeiboSearchTask;
   publishEvent: Event;
   publishScreen: Screen;
+  recordBatchHourlyStats: Scalars['Boolean']['output'];
   refreshToken: AuthPayload;
   regenerateApiKey: RegenerateApiKeyDto;
   register: AuthPayload;
   removeApiKey: Scalars['Boolean']['output'];
+  removeBug: Scalars['Boolean']['output'];
   removeEvent: Scalars['Boolean']['output'];
   removeEventType: Scalars['Boolean']['output'];
   removeIndustryType: Scalars['Boolean']['output'];
@@ -574,6 +847,7 @@ export type Mutation = {
   removeWeiboAccount: Scalars['Boolean']['output'];
   removeWeiboSearchTask: Scalars['Boolean']['output'];
   requestEventAttachmentUpload: AttachmentUploadCredential;
+  resetWeiboTaskStatusConsumerStats: Scalars['Boolean']['output'];
   resumeAllWeiboSearchTasks: Scalars['Int']['output'];
   resumeWeiboSearchTask: WeiboSearchTask;
   runWeiboSearchTaskNow: WeiboSearchTask;
@@ -581,6 +855,8 @@ export type Mutation = {
   startJdLogin: JdLoginSession;
   startWeiboLogin: WeiboLoginSession;
   updateApiKey: ApiKeyResponseDto;
+  updateBug: BugModel;
+  updateBugStatus: BugModel;
   updateEvent: Event;
   updateEventType: EventType;
   updateIndustryType: IndustryType;
@@ -592,6 +868,12 @@ export type Mutation = {
 };
 
 
+export type MutationAddBugCommentArgs = {
+  bugId: Scalars['ID']['input'];
+  input: CreateBugCommentInput;
+};
+
+
 export type MutationAddTagsToEventArgs = {
   eventId: Scalars['ID']['input'];
   tagIds: Array<Scalars['ID']['input']>;
@@ -600,6 +882,12 @@ export type MutationAddTagsToEventArgs = {
 
 export type MutationArchiveEventArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationAssignBugArgs = {
+  id: Scalars['ID']['input'];
+  input: AssignBugInput;
 };
 
 
@@ -630,6 +918,11 @@ export type MutationCopyScreenArgs = {
 
 export type MutationCreateApiKeyArgs = {
   input: CreateApiKeyDto;
+};
+
+
+export type MutationCreateBugArgs = {
+  input: CreateBugInput;
 };
 
 
@@ -715,6 +1008,11 @@ export type MutationPublishScreenArgs = {
 };
 
 
+export type MutationRecordBatchHourlyStatsArgs = {
+  input: BatchHourlyStatsRecordDto;
+};
+
+
 export type MutationRefreshTokenArgs = {
   input: RefreshTokenDto;
 };
@@ -732,6 +1030,11 @@ export type MutationRegisterArgs = {
 
 export type MutationRemoveApiKeyArgs = {
   id: Scalars['Int']['input'];
+};
+
+
+export type MutationRemoveBugArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -819,6 +1122,18 @@ export type MutationUpdateApiKeyArgs = {
 };
 
 
+export type MutationUpdateBugArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateBugInput;
+};
+
+
+export type MutationUpdateBugStatusArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateBugStatusInput;
+};
+
+
 export type MutationUpdateEventArgs = {
   id: Scalars['ID']['input'];
   input: UpdateEventInput;
@@ -901,6 +1216,10 @@ export type Query = {
   apiKeyStats: ApiKeyStatsDto;
   apiKeySummary: ApiKeySummaryStatsDto;
   apiKeys: ApiKeyConnection;
+  bug: BugModel;
+  bugComments: Array<BugCommentModel>;
+  bugStatistics: BugStatisticsModel;
+  bugs: BugsPaginationModel;
   configCacheStats: ConfigCacheStats;
   configValue: ConfigValue;
   dashboardRecentActivities: Array<DashboardActivity>;
@@ -934,10 +1253,14 @@ export type Query = {
   weiboAccountStats: WeiboAccountStats;
   weiboAccounts: WeiboAccountConnection;
   weiboAccountsWithCookies: Array<WeiboAccountWithCookies>;
+  weiboAggregatedStats: HourlyStatsResponse;
+  weiboHourlyStats: HourlyStatsResponse;
   weiboLoginSession: WeiboLoginSession;
+  weiboMultiTypeHourlyStats: MultiTypeHourlyStats;
   weiboSearchTask: WeiboSearchTask;
   weiboSearchTaskStats: WeiboSearchTaskStats;
   weiboSearchTasks: WeiboSearchTaskConnection;
+  weiboTaskStatusConsumerStats: ConsumerStats;
 };
 
 
@@ -953,6 +1276,21 @@ export type QueryApiKeyStatsArgs = {
 
 export type QueryApiKeysArgs = {
   filter?: InputMaybe<ApiKeyQueryDto>;
+};
+
+
+export type QueryBugArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryBugCommentsArgs = {
+  bugId: Scalars['ID']['input'];
+};
+
+
+export type QueryBugsArgs = {
+  filters?: InputMaybe<BugFiltersInput>;
 };
 
 
@@ -1072,8 +1410,23 @@ export type QueryWeiboAccountsWithCookiesArgs = {
 };
 
 
+export type QueryWeiboAggregatedStatsArgs = {
+  query: StatsAggregationQueryDto;
+};
+
+
+export type QueryWeiboHourlyStatsArgs = {
+  query: HourlyStatsQueryDto;
+};
+
+
 export type QueryWeiboLoginSessionArgs = {
   sessionId: Scalars['String']['input'];
+};
+
+
+export type QueryWeiboMultiTypeHourlyStatsArgs = {
+  query: MultiTypeStatsQueryDto;
 };
 
 
@@ -1245,6 +1598,14 @@ export enum ScreenStatus {
   Published = 'Published'
 }
 
+export type StatsAggregationQueryDto = {
+  endDate: Scalars['DateTime']['input'];
+  interval: Scalars['String']['input'];
+  startDate: Scalars['DateTime']['input'];
+  timezone?: InputMaybe<Scalars['String']['input']>;
+  type: HourlyStatsType;
+};
+
 export type Subscription = {
   __typename?: 'Subscription';
   jdLoginEvents: JdLoginEvent;
@@ -1291,6 +1652,27 @@ export type UpdateApiKeyDto = {
   name?: InputMaybe<Scalars['String']['input']>;
   permissions?: InputMaybe<Array<Scalars['String']['input']>>;
   type?: InputMaybe<ApiKeyType>;
+};
+
+export type UpdateBugInput = {
+  actualBehavior?: InputMaybe<Scalars['String']['input']>;
+  actualHours?: InputMaybe<Scalars['Float']['input']>;
+  assigneeId?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  dueDate?: InputMaybe<Scalars['DateTime']['input']>;
+  estimatedHours?: InputMaybe<Scalars['Float']['input']>;
+  expectedBehavior?: InputMaybe<Scalars['String']['input']>;
+  priority?: InputMaybe<BugPriority>;
+  reproductionRate?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<BugStatus>;
+  stepsToReproduce?: InputMaybe<Scalars['String']['input']>;
+  title?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateBugStatusInput = {
+  comment?: InputMaybe<Scalars['String']['input']>;
+  status: BugStatus;
 };
 
 export type UpdateEventInput = {
