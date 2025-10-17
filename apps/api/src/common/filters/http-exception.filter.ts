@@ -38,8 +38,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         if ('errors' in responseObj) {
           errors = responseObj['errors'];
         }
-      } else {
+      } else if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
+      } else {
+        message = '未知错误';
       }
     } else if (exception instanceof QueryFailedError) {
       // 数据库查询错误

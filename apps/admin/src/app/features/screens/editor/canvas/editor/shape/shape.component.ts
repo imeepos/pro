@@ -14,6 +14,11 @@ import { throttleFrame } from '../../../utils/throttle.util';
 import { GeometryUtil } from '../../../utils/geometry.util';
 import { ContextMenuComponent, MenuItem } from '../context-menu/context-menu.component';
 
+type AngularComponentType = Type<unknown> & {
+  ɵcmp?: { standalone?: boolean };
+  ɵfac?: unknown;
+};
+
 @Component({
   selector: 'app-shape',
   standalone: true,
@@ -274,12 +279,14 @@ export class ShapeComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     // 验证组件类的完整性
+    const angularComponent = componentClass as AngularComponentType;
+
     if (!this.validateComponentClass(componentClass)) {
       console.error('[ShapeComponent] 组件类验证失败', {
         componentType: this.component.type,
         componentClass: componentClass?.name,
-        isStandalone: (componentClass as any)?.ɵcmp?.standalone,
-        hasFactory: !!(componentClass as any)?.ɵfac
+        isStandalone: angularComponent.ɵcmp?.standalone,
+        hasFactory: Boolean(angularComponent.ɵfac)
       });
       this.setRenderError(`组件类 "${this.component.type}" 不是有效的 Angular 组件`, 'render');
       return;

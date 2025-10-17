@@ -7,7 +7,7 @@ import { ComponentItem } from '../models/component.model';
 import { DataSlotterService } from '../data-slotter/data-slotter.service';
 import { DataSlotterQuery } from '../data-slotter/data-slotter.query';
 import { DataSourceType, DataMode } from '../models/data-source.enum';
-import { DataSlot, DataPlugin } from '../models/data-source.model';
+import { DataSlot, DataPlugin, AnyDataConfig, DataConfig } from '../models/data-source.model';
 
 @Component({
   selector: 'app-data-module',
@@ -250,26 +250,35 @@ export class DataModuleComponent implements OnInit, OnDestroy {
     if (!plugin) return;
 
     if (this.currentSlot) {
-      const defaultConfig = plugin.getDefaultConfig?.() || {
-        type: this.selectedDataType,
-        mode: DataMode.SELF,
-        options: {}
-      };
-
-      this.dataSlotterService.updateDataConfig(this.currentSlot.id, defaultConfig as any);
+      const defaultConfig = this.buildDefaultConfig(plugin);
+      this.dataSlotterService.updateDataConfig(this.currentSlot.id, defaultConfig);
     } else {
-      const defaultConfig = plugin.getDefaultConfig?.() || {
-        type: this.selectedDataType,
-        mode: DataMode.SELF,
-        options: {}
-      };
+      const defaultConfig = this.buildDefaultConfig(plugin);
 
-      const slotId = this.dataSlotterService.createDataSlot(this.component.id, defaultConfig as any);
+      const slotId = this.dataSlotterService.createDataSlot(this.component.id, defaultConfig);
       this.currentSlot = this.dataSlotterQuery.getEntity(slotId);
     }
 
     this.loadConfigComponent();
     this.subscribeToSlotData();
+  }
+
+  private buildDefaultConfig(plugin: DataPlugin): AnyDataConfig {
+    const base: DataConfig = {
+      type: plugin.type,
+      mode: DataMode.SELF,
+      options: {},
+    };
+
+    const partialConfig = plugin.getDefaultConfig?.() ?? {};
+
+    return {
+      ...base,
+      ...partialConfig,
+      type: plugin.type,
+      mode: partialConfig.mode ?? base.mode,
+      options: partialConfig.options ?? base.options,
+    } as AnyDataConfig;
   }
 
   private loadConfigComponent(): void {

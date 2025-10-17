@@ -1,4 +1,4 @@
-import { Injectable, ExecutionContext, Logger } from '@nestjs/common';
+import { Injectable, ExecutionContext, Logger, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ApiKeyAuthGuard } from './api-key-auth.guard';
@@ -47,7 +47,7 @@ export class CompositeAuthGuard extends AuthGuard('jwt') {
     }
 
     // 两种认证方式都失败
-    return false;
+    throw new UnauthorizedException('未授权访问，请提供有效的 JWT Token 或 API Key');
   }
 
   getRequest(context: ExecutionContext) {

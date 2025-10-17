@@ -119,6 +119,28 @@ input BatchHourlyStatsRecordDto {
   records: [HourlyStatsRecordDto!]!
 }
 
+type BugAttachmentModel {
+  filename: String!
+  id: ID!
+  mimeType: String!
+  originalName: String!
+  size: Float!
+  uploadedAt: DateTime!
+  uploadedBy: String!
+  url: String!
+}
+
+type BugCategoryStatistics {
+  configuration: Int!
+  data: Int!
+  documentation: Int!
+  functional: Int!
+  integration: Int!
+  performance: Int!
+  security: Int!
+  ui_ux: Int!
+}
+
 type BugCommentModel {
   authorId: String
   authorName: String!
@@ -145,12 +167,15 @@ type BugModel {
   actualBehavior: String
   actualHours: Float
   assigneeId: String
+  attachments: [BugAttachmentModel!]
   category: String
   closedAt: DateTime
   closedBy: String
+  comments: [BugCommentModel!]
   createdAt: DateTime!
   description: String
   dueDate: DateTime
+  environment: JSON
   estimatedHours: Float
   expectedBehavior: String
   id: ID!
@@ -180,6 +205,7 @@ type BugPriorityStatistics {
 }
 
 type BugStatisticsModel {
+  byCategory: BugCategoryStatistics!
   byPriority: BugPriorityStatistics!
   byStatus: BugStatusStatistics!
   total: Int!
@@ -196,8 +222,10 @@ enum BugStatus {
 
 type BugStatusStatistics {
   closed: Int!
-  inProgress: Int!
+  in_progress: Int!
   open: Int!
+  rejected: Int!
+  reopened: Int!
   resolved: Int!
 }
 

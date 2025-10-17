@@ -10,6 +10,23 @@ import { ValidationService } from '../../services/validation.service';
 import { CanvasService } from '../../canvas/services/canvas.service';
 import { ComponentRegistryService } from '@pro/components';
 
+interface ConfigSchemaField {
+  label?: string;
+  description?: string;
+  type: 'string' | 'number' | 'boolean' | 'color' | 'select' | 'slider' | 'url' | 'email';
+  placeholder?: string;
+  multiline?: boolean;
+  required?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  patternMessage?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  options?: Array<{ label: string; value: unknown }>;
+}
+
 @Component({
   selector: 'app-attr-editor',
   standalone: true,
@@ -59,7 +76,7 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
   }
 
   private buildAttrConfig(): void {
-    const componentMeta = this.componentRegistry.get(this.component.type);
+    const componentMeta = this.componentRegistry.getMetadata(this.component.type);
 
     this.attrConfig = [
       {
@@ -100,7 +117,7 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
       }
     ];
 
-    const configSchema = (componentMeta as any)?.metadata?.configSchema;
+    const configSchema = componentMeta?.configSchema;
     if (configSchema) {
       this.attrConfig.push({
         type: 'group',
@@ -111,11 +128,11 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  private buildConfigSchema(schema: any): FormMetadata[] {
+  private buildConfigSchema(schema: Record<string, ConfigSchemaField>): FormMetadata[] {
     const formItems: FormMetadata[] = [];
 
     for (const [key, value] of Object.entries(schema)) {
-      const config = value as any;
+      const config = value;
 
       let formType: FormMetadata['type'] = 'input';
       const formItem: FormMetadata = {
@@ -194,7 +211,7 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
     return formItems;
   }
 
-  private buildStringValidationRules(config: any): any[] {
+  private buildStringValidationRules(config: ConfigSchemaField): any[] {
     const rules: any[] = [];
 
     if (config.required) {
@@ -216,7 +233,7 @@ export class AttrEditorComponent implements OnInit, OnDestroy {
     return rules;
   }
 
-  private buildNumberValidationRules(config: any): any[] {
+  private buildNumberValidationRules(config: ConfigSchemaField): any[] {
     const rules: any[] = [];
 
     if (config.required) {

@@ -2,9 +2,11 @@ import { Injectable } from '@angular/core';
 import { Observable, from, tap, catchError, throwError, finalize, map } from 'rxjs';
 import { WeiboSearchTasksStore } from './weibo-search-tasks.store';
 import { WeiboSearchTasksQuery } from './weibo-search-tasks.query';
-import { WeiboSearchTask, WeiboSearchTaskFilters } from '@pro/types';
+import { WeiboSearchTask, WeiboSearchTaskFilters, WeiboSearchTaskStatus } from '@pro/types';
 import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
 import { graphql } from '../core/graphql/generated';
+import type { WeiboSearchTasksQueryVariables } from '../core/graphql/generated/graphql';
+import { WeiboSearchTaskStatus as GqlWeiboSearchTaskStatus } from '../core/graphql/generated/graphql';
 
 const WeiboSearchTasksQueryDoc = graphql(`
   query WeiboSearchTasks(
@@ -170,7 +172,7 @@ export class WeiboSearchTasksService {
     const currentFilters = { ...this.query.filters, ...filters };
 
     return from(
-      this.graphql.request(WeiboSearchTasksQueryDoc, currentFilters as any)
+      this.graphql.request(WeiboSearchTasksQueryDoc, this.buildQueryVariables(currentFilters))
     ).pipe(
       tap(response => {
         const tasks = response.weiboSearchTasks.edges.map(edge => edge.node as unknown as WeiboSearchTask);
@@ -396,6 +398,39 @@ export class WeiboSearchTasksService {
 
   refresh(): Observable<any> {
     return this.findAll();
+  }
+
+  private buildQueryVariables(filters: WeiboSearchTaskFilters): WeiboSearchTasksQueryVariables {
+    return {
+      page: filters.page ?? undefined,
+      limit: filters.limit ?? undefined,
+      status: this.toGraphqlStatus(filters.status),
+      keyword: filters.keyword ?? undefined,
+      enabled: filters.enabled ?? undefined,
+      sortBy: filters.sortBy ?? undefined,
+      sortOrder: this.toGraphqlSortOrder(filters.sortOrder),
+    };
+  }
+
+  private toGraphqlStatus(status?: WeiboSearchTaskStatus): GqlWeiboSearchTaskStatus | undefined {
+    switch (status) {
+      case WeiboSearchTaskStatus.PENDING:
+        return GqlWeiboSearchTaskStatus.Pending;
+      case WeiboSearchTaskStatus.RUNNING:
+        return GqlWeiboSearchTaskStatus.Running;
+      case WeiboSearchTaskStatus.PAUSED:
+        return GqlWeiboSearchTaskStatus.Paused;
+      case WeiboSearchTaskStatus.FAILED:
+        return GqlWeiboSearchTaskStatus.Failed;
+      case WeiboSearchTaskStatus.TIMEOUT:
+        return GqlWeiboSearchTaskStatus.Timeout;
+      default:
+        return undefined;
+    }
+  }
+
+  private toGraphqlSortOrder(order?: WeiboSearchTaskFilters['sortOrder']): string | undefined {
+    return order ? order.toUpperCase() : undefined;
   }
 
   private setLoading(loading: boolean): void {

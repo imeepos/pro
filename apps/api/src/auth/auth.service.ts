@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
-import { JwtService, JwtSignOptions } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -161,10 +161,11 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
 
+    const refreshTokenExpiration = getRefreshTokenExpiresIn(this.configService);
     const refreshOptions: JwtSignOptions = {
-      expiresIn: getRefreshTokenExpiresIn(this.configService),
+      expiresIn: refreshTokenExpiration,
     };
-    const refreshToken = this.jwtService.sign(payload, refreshOptions);
+    const refreshToken = this.jwtService.sign({ ...payload }, refreshOptions);
 
     const refreshTokenTTL = this.parseExpiration(getRefreshTokenExpiresIn(this.configService));
     await this.redisClient.set(
