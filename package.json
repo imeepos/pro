@@ -15,6 +15,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "clean": "turbo clean && rm -rf node_modules",
     "claude": "claude --dangerously-skip-permissions",
+    "codegen": "turbo codegen",
     "check-deps": "node scripts/check-dependencies.js",
     "deps:check": "node scripts/check-dependencies.js",
     "deps:audit": "pnpm audit --audit-level moderate",

@@ -37,6 +37,9 @@
       "outputs": [],
       "cache": true
     },
+    "codegen": {
+      "cache": false
+    },
     "clean": {
       "cache": false
     }

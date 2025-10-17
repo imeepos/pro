@@ -1,5 +1,6 @@
 step01: Pull the latest code from git
-step02: Run pnpm install
+step02: Run pnpm install 
+step03: pnpm run codegen
 step03: Run pnpm run build to collect error information
 step04: Analyze errors and create parallel work plan
 step05: Run pm2 restart all to restart all services
