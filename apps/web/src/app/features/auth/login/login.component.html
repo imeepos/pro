@@ -1,67 +1,113 @@
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-6">
-  <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm p-10 shadow-lg">
-    <div class="text-center space-y-3 mb-8">
-      <div class="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-2">
-        <span class="text-3xl" aria-hidden="true">📊</span>
+  <div class="w-full max-w-md">
+    <!-- 现代化卡片容器 -->
+    <div class="relative">
+      <!-- 背景装饰 -->
+      <div class="absolute -inset-1 bg-gradient-to-r from-primary/20 to-blue-500/20 rounded-3xl blur-lg opacity-30"></div>
+
+      <!-- 主卡片 -->
+      <div class="relative bg-white/90 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-8 md:p-10">
+        <div class="text-center space-y-4 mb-8">
+          <!-- 图标容器 -->
+          <div class="relative inline-flex items-center justify-center">
+            <div class="absolute inset-0 bg-gradient-to-r from-primary/10 to-blue-500/10 rounded-2xl blur-xl"></div>
+            <div class="relative bg-gradient-to-r from-primary to-blue-500 rounded-2xl p-4 shadow-lg">
+              <pro-svg-icon icon="chart" [size]="32" className="text-white" />
+            </div>
+          </div>
+
+          <!-- 标题区域 -->
+          <div class="space-y-2">
+            <h1 class="text-3xl font-bold text-slate-900 tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+              欢迎回来
+            </h1>
+            <p class="text-slate-600 leading-relaxed">登录访问数据大屏系统</p>
+          </div>
+        </div>
+
+        <!-- 表单区域 -->
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+          <!-- 用户名输入 -->
+          <div class="space-y-2">
+            <label for="usernameOrEmail" class="block text-sm font-medium text-slate-700 mb-2">
+              用户名或邮箱
+            </label>
+            <div class="relative">
+              <input
+                type="text"
+                id="usernameOrEmail"
+                formControlName="usernameOrEmail"
+                class="w-full rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm px-4 py-4 text-base text-slate-900 outline-none transition-all duration-200 focus:border-primary/50 focus:ring-4 focus:ring-primary/20 focus:bg-white placeholder:text-slate-400"
+                placeholder="请输入用户名或邮箱"
+                [class.border-red-500]="usernameOrEmail?.invalid && usernameOrEmail?.touched"
+                [class.focus:border-red-500]="usernameOrEmail?.invalid && usernameOrEmail?.touched"
+              />
+            </div>
+            <div class="text-xs text-red-500 mt-1" *ngIf="usernameOrEmail?.invalid && usernameOrEmail?.touched">
+              <span *ngIf="usernameOrEmail?.errors?.['required']">请输入用户名或邮箱</span>
+            </div>
+          </div>
+
+          <!-- 密码输入 -->
+          <div class="space-y-2">
+            <label for="password" class="block text-sm font-medium text-slate-700 mb-2">
+              密码
+            </label>
+            <div class="relative">
+              <input
+                type="password"
+                id="password"
+                formControlName="password"
+                class="w-full rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm px-4 py-4 text-base text-slate-900 outline-none transition-all duration-200 focus:border-primary/50 focus:ring-4 focus:ring-primary/20 focus:bg-white placeholder:text-slate-400"
+                placeholder="请输入密码"
+                [class.border-red-500]="password?.invalid && password?.touched"
+                [class.focus:border-red-500]="password?.invalid && password?.touched"
+              />
+            </div>
+            <div class="text-xs text-red-500 space-y-1" *ngIf="password?.invalid && password?.touched">
+              <div *ngIf="password?.errors?.['required']">请输入密码</div>
+              <div *ngIf="password?.errors?.['minlength']">密码至少6位</div>
+            </div>
+          </div>
+
+          <!-- 错误提示 -->
+          <div
+            *ngIf="error$ | async as error"
+            class="rounded-2xl border border-red-200 bg-red-50/80 backdrop-blur-sm px-4 py-4 text-sm text-red-600 flex items-center gap-3"
+            role="alert">
+            <pro-svg-icon icon="error" [size]="16" />
+            <span>{{ error }}</span>
+          </div>
+
+          <!-- 登录按钮 -->
+          <button
+            type="submit"
+            class="w-full rounded-2xl bg-gradient-to-r from-primary to-blue-500 px-6 py-4 text-base font-semibold text-white transition-all duration-200 hover:from-primary/90 hover:to-blue-500/90 focus:outline-none focus:ring-4 focus:ring-primary/30 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-400 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            [disabled]="loginForm.invalid || (loading$ | async)"
+          >
+            <span *ngIf="!(loading$ | async)" class="flex items-center justify-center gap-2">
+              登录
+              <pro-svg-icon icon="next" [size]="16" className="text-white/70" />
+            </span>
+            <span *ngIf="loading$ | async" class="flex items-center justify-center gap-2">
+              <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
+              登录中...
+            </span>
+          </button>
+
+          <!-- 注册链接 -->
+          <div class="text-center pt-4">
+            <p class="text-sm text-slate-600">
+              还没有账号？
+              <a
+                routerLink="/register"
+                class="font-medium text-primary hover:text-primary/80 transition-colors duration-200 underline underline-offset-4 hover:underline-offset-2">
+                立即注册
+              </a>
+            </p>
+          </div>
+        </form>
       </div>
-      <h1 class="text-2xl font-semibold text-slate-900 tracking-tight">欢迎回来</h1>
-      <p class="text-sm text-slate-600">登录访问数据大屏系统</p>
     </div>
-
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="mt-8 space-y-6">
-      <div class="space-y-2">
-        <label for="usernameOrEmail" class="block text-sm font-medium text-slate-700">
-          用户名或邮箱
-        </label>
-        <input
-          type="text"
-          id="usernameOrEmail"
-          formControlName="usernameOrEmail"
-          class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          placeholder="请输入用户名或邮箱"
-          [class.border-red-500]="usernameOrEmail?.invalid && usernameOrEmail?.touched"
-        />
-        <div class="text-xs text-red-500" *ngIf="usernameOrEmail?.invalid && usernameOrEmail?.touched">
-          <span *ngIf="usernameOrEmail?.errors?.['required']">请输入用户名或邮箱</span>
-        </div>
-      </div>
-
-      <div class="space-y-2">
-        <label for="password" class="block text-sm font-medium text-slate-700">
-          密码
-        </label>
-        <input
-          type="password"
-          id="password"
-          formControlName="password"
-          class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          placeholder="请输入密码"
-          [class.border-red-500]="password?.invalid && password?.touched"
-        />
-        <div class="text-xs text-red-500 space-y-1" *ngIf="password?.invalid && password?.touched">
-          <div *ngIf="password?.errors?.['required']">请输入密码</div>
-          <div *ngIf="password?.errors?.['minlength']">密码至少6位</div>
-        </div>
-      </div>
-
-      <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" *ngIf="error$ | async as error">
-        {{ error }}
-      </div>
-
-      <button
-        type="submit"
-        class="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-slate-300"
-        [disabled]="loginForm.invalid || (loading$ | async)"
-      >
-        <span *ngIf="!(loading$ | async)">登录</span>
-        <span *ngIf="loading$ | async" class="flex items-center justify-center gap-2">
-          <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> 登录中...
-        </span>
-      </button>
-
-      <div class="text-center">
-        <p class="text-xs text-slate-500">还没有账号？ <a routerLink="/register" class="font-medium text-primary no-underline transition hover:text-primary-dark">立即注册</a></p>
-      </div>
-    </form>
   </div>
 </div>

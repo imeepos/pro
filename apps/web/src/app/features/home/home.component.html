@@ -1,12 +1,47 @@
 <div class="w-screen h-screen flex flex-col bg-black overflow-hidden">
-  <!-- 标题栏 -->
-  <header *ngIf="currentUser$ | async as user" class="bg-black/80 backdrop-blur-lg border-b border-white/10 p-4 lg:px-8 z-[1000]">
-    <div class="flex justify-between items-center w-full">
-      <h1 class="text-white text-xl lg:text-2xl font-semibold m-0">数据大屏</h1>
+  <!-- 现代化标题栏 -->
+  <header *ngIf="currentUser$ | async as user" class="relative bg-black/90 backdrop-blur-xl border-b border-white/10 px-6 lg:px-10 py-4 z-[1000]">
+    <!-- 背景装饰 -->
+    <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/80 to-black/90"></div>
+
+    <div class="relative flex justify-between items-center w-full">
+      <!-- 左侧标题区域 -->
       <div class="flex items-center gap-4">
-        <span class="text-white/80 text-sm">{{ user.username || user.id }}</span>
-        <button (click)="logout()" class="px-4 py-2 bg-white/10 text-white border border-white/20 rounded-lg cursor-pointer text-sm transition-all duration-200 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-0">
-          退出登录
+        <!-- Logo区域 -->
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <div class="absolute inset-0 bg-gradient-to-r from-primary/20 to-blue-500/20 rounded-xl blur-md"></div>
+            <div class="relative bg-gradient-to-r from-primary to-blue-500 rounded-xl p-2">
+              <pro-svg-icon icon="chart" [size]="24" className="text-white" />
+            </div>
+          </div>
+          <div class="flex flex-col">
+            <h1 class="text-white text-xl lg:text-2xl font-bold m-0 tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              数据大屏
+            </h1>
+            <p class="text-gray-400 text-xs lg:text-sm hidden md:block">实时数据监控平台</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧用户区域 -->
+      <div class="flex items-center gap-4">
+        <!-- 用户信息 -->
+        <div class="flex items-center gap-3 px-4 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span class="text-white/90 text-sm font-medium">{{ user.username || user.id }}</span>
+          </div>
+        </div>
+
+        <!-- 退出登录按钮 -->
+        <button
+          (click)="logout()"
+          class="group relative px-5 py-2.5 bg-white/10 text-white rounded-2xl border border-white/20 cursor-pointer text-sm font-medium transition-all duration-300 hover:bg-white/15 hover:border-white/30 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-black backdrop-blur-sm">
+          <span class="flex items-center gap-2">
+            <pro-svg-icon icon="close" [size]="16" className="text-white/80 group-hover:text-white transition-colors" />
+            退出登录
+          </span>
         </button>
       </div>
     </div>
@@ -23,13 +58,17 @@
       @if (loading) {
         <div class="loading-container" role="status" aria-live="polite">
           <div class="loading-spinner" aria-hidden="true"></div>
-          <p class="text-white text-lg">正在加载屏幕配置...</p>
+          <div class="mt-6 text-center">
+            <pro-svg-icon icon="refresh" [size]="32" className="text-white/60 animate-spin mb-4" />
+            <p class="text-white text-lg font-medium">正在加载屏幕配置...</p>
+            <p class="text-white/60 text-sm mt-2">请稍候，正在获取最新数据</p>
+          </div>
         </div>
       } @else if (error) {
         <div class="error-container" role="alert">
           <app-empty-state
             [config]="{
-              icon: '⚠️',
+              icon: 'warning',
               title: error,
               description: '请检查网络连接或联系管理员',
               actionLabel: '刷新页面',
@@ -40,7 +79,7 @@
         <div class="error-container">
           <app-empty-state
             [config]="{
-              icon: '📺',
+              icon: 'screen',
               title: '暂无可用的屏幕',
               description: '请在管理后台创建并发布屏幕后刷新页面',
               actionLabel: '前往管理后台',
