@@ -4,34 +4,34 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BugService } from '../../services/bug.service';
 import { NotificationService } from '../../services/notification.service';
-import { Bug, UpdateBugDto, BugEnvironment, BugError, BugErrorType } from '@pro/types';
+import { Bug, UpdateBugDto, BugEnvironment, BugError, BugErrorType, BugStatus, BugPriority, BugCategory } from '@pro/types';
 
-enum BugStatus {
-  OPEN = 'OPEN',
-  IN_PROGRESS = 'IN_PROGRESS',
-  RESOLVED = 'RESOLVED',
-  CLOSED = 'CLOSED',
-  REJECTED = 'REJECTED',
-  REOPENED = 'REOPENED'
-}
+const BugStatusDisplay = {
+  [BugStatus.OPEN]: '待处理',
+  [BugStatus.IN_PROGRESS]: '进行中',
+  [BugStatus.RESOLVED]: '已解决',
+  [BugStatus.CLOSED]: '已关闭',
+  [BugStatus.REJECTED]: '已拒绝',
+  [BugStatus.REOPENED]: '已重新打开'
+} as const;
 
-enum BugPriority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL'
-}
+const BugPriorityDisplay = {
+  [BugPriority.LOW]: '低',
+  [BugPriority.MEDIUM]: '中',
+  [BugPriority.HIGH]: '高',
+  [BugPriority.CRITICAL]: '紧急'
+} as const;
 
-enum BugCategory {
-  FUNCTIONAL = 'functional',
-  PERFORMANCE = 'performance',
-  SECURITY = 'security',
-  UI_UX = 'ui_ux',
-  INTEGRATION = 'integration',
-  DATA = 'data',
-  CONFIGURATION = 'configuration',
-  DOCUMENTATION = 'documentation'
-}
+const BugCategoryDisplay = {
+  [BugCategory.FUNCTIONAL]: '功能',
+  [BugCategory.PERFORMANCE]: '性能',
+  [BugCategory.SECURITY]: '安全',
+  [BugCategory.UI_UX]: '界面/交互',
+  [BugCategory.INTEGRATION]: '集成',
+  [BugCategory.DATA]: '数据',
+  [BugCategory.CONFIGURATION]: '配置',
+  [BugCategory.DOCUMENTATION]: '文档'
+} as const;
 
 type StringEnvironmentField = Exclude<keyof BugEnvironment, 'additionalInfo'>;
 

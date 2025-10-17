@@ -1,10 +1,10 @@
 export enum BugStatus {
-  OPEN = 'OPEN',
-  IN_PROGRESS = 'IN_PROGRESS',
-  RESOLVED = 'RESOLVED',
-  CLOSED = 'CLOSED',
-  REJECTED = 'REJECTED',
-  REOPENED = 'REOPENED'
+  OPEN = 'open',
+  IN_PROGRESS = 'in_progress',
+  RESOLVED = 'resolved',
+  CLOSED = 'closed',
+  REJECTED = 'rejected',
+  REOPENED = 'reopened'
 }
 
 export enum BugPriority {

@@ -3,24 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { BugService } from '../../services/bug.service';
-import { Bug, CreateBugCommentDto } from '@pro/types';
-
-// 定义枚举
-enum BugStatus {
-  OPEN = 'OPEN',
-  IN_PROGRESS = 'IN_PROGRESS',
-  RESOLVED = 'RESOLVED',
-  CLOSED = 'CLOSED',
-  REJECTED = 'REJECTED',
-  REOPENED = 'REOPENED'
-}
-
-enum BugPriority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL'
-}
+import { Bug, CreateBugCommentDto, BugStatus, BugPriority } from '@pro/types';
 
 @Component({
   selector: 'app-bug-detail',
