@@ -1,6 +1,22 @@
 import OpenAI from 'openai';
-import type { ChatMessage, ChatOptions, ChatResponse, StreamChunk } from '../types';
+import type { ChatMessage, ChatOptions, ChatResponse, StreamChunk, FinishReason } from '../types';
 import { LLMError } from '../errors/llm.error';
+
+const allowedFinishReasons: ReadonlySet<Exclude<FinishReason, null>> = new Set([
+  'stop',
+  'length',
+  'content_filter',
+  'tool_calls',
+  'function_call',
+]);
+
+const normalizeFinishReason = (reason: FinishReason | undefined): FinishReason => {
+  if (reason === null || reason === undefined) {
+    return null;
+  }
+
+  return allowedFinishReasons.has(reason) ? reason : null;
+};
 
 export class ChatService {
   constructor(
@@ -33,7 +49,7 @@ export class ChatService {
       return {
         content: choice.message.content,
         role: 'assistant',
-        finishReason: choice.finish_reason as any,
+        finishReason: normalizeFinishReason(choice.finish_reason ?? null),
         usage: response.usage
           ? {
               promptTokens: response.usage.prompt_tokens,
@@ -73,7 +89,7 @@ export class ChatService {
         yield {
           content: fullContent,
           delta,
-          finishReason: chunk.choices[0]?.finish_reason as any,
+          finishReason: normalizeFinishReason(chunk.choices[0]?.finish_reason ?? null),
         };
       }
     } catch (error: any) {

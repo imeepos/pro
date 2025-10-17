@@ -1,5 +1,20 @@
 import { JdAuthSDK, JdLoginEventHandler, JdAccount, JdAccountCheckResult } from './jd.interface.js';
 
+type Envelope<T> = {
+  success?: boolean;
+  data?: T;
+};
+
+const unwrapEnvelope = <T>(payload: unknown): T => {
+  if (typeof payload === 'object' && payload !== null) {
+    const envelope = payload as Envelope<T>;
+    if (envelope.data !== undefined) {
+      return envelope.data;
+    }
+  }
+  return payload as T;
+};
+
 /**
  * 京东认证 SDK 实现
  */
@@ -52,9 +67,9 @@ export class JdAuthSDKImpl implements JdAuthSDK {
       throw new Error('Failed to fetch accounts');
     }
 
-    const result = await response.json() as any;
+    const result = await response.json() as unknown;
     // 后端返回 {success: true, data: {accounts: []}} 格式，需要解包
-    return result.data || result;
+    return unwrapEnvelope<{ accounts: JdAccount[] }>(result);
   }
 
   /**
@@ -92,9 +107,9 @@ export class JdAuthSDKImpl implements JdAuthSDK {
       throw new Error('检查账号失败');
     }
 
-    const result = await response.json() as any;
+    const result = await response.json() as unknown;
     // 后端返回 {success: true, data: {...}} 格式，需要解包
-    return result.data || result;
+    return unwrapEnvelope<JdAccountCheckResult>(result);
   }
 }
 

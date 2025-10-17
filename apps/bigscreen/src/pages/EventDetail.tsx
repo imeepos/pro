@@ -137,7 +137,21 @@ const EventDetail: React.FC = () => {
   const [trendData, setTrendData] = useState<TrendChartData | null>(null);
   const [influenceUsers, setInfluenceUsers] = useState<InfluenceUser[]>([]);
   const [geographicData, setGeographicData] = useState<GeographicDataPoint[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'propagation' | 'analysis' | 'development'>('overview');
+  type EventTab = 'overview' | 'timeline' | 'propagation' | 'analysis' | 'development';
+  const [activeTab, setActiveTab] = useState<EventTab>('overview');
+  const sentimentLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+  const toSentimentLevel = (value: number) => {
+    const normalized = Math.round(value / 10);
+    const index = Math.min(sentimentLevels.length - 1, Math.max(0, normalized - 1));
+    return sentimentLevels[index];
+  };
+  const tabs: ReadonlyArray<{ id: EventTab; label: string; icon: typeof BarChart3 }> = [
+    { id: 'overview', label: '概览分析', icon: BarChart3 },
+    { id: 'timeline', label: '发展时间线', icon: Clock },
+    { id: 'propagation', label: '传播路径', icon: Network },
+    { id: 'development', label: '发展路径', icon: Activity },
+    { id: 'analysis', label: '深度分析', icon: Target }
+  ];
 
   useEffect(() => {
     const fetchEventData = async () => {
@@ -366,7 +380,7 @@ const EventDetail: React.FC = () => {
           showChart={true}
           sentiment={{
             type: 'positive',
-            level: Math.round(eventData.sentiment.positive / 10)
+            level: toSentimentLevel(eventData.sentiment.positive)
           }}
           chartComponent={<MiniTrendChart data={sentimentData.map((v: number) => v * 100)} color="#10b981" type="line" />}
         />
@@ -376,16 +390,10 @@ const EventDetail: React.FC = () => {
       <div className="glass-card sentiment-overview-card">
         <div className="border-b border-border">
           <nav className="flex space-x-8 px-6">
-            {[
-              { id: 'overview', label: '概览分析', icon: BarChart3 },
-              { id: 'timeline', label: '发展时间线', icon: Clock },
-              { id: 'propagation', label: '传播路径', icon: Network },
-              { id: 'development', label: '发展路径', icon: Activity },
-              { id: 'analysis', label: '深度分析', icon: Target }
-            ].map(tab => (
+            {tabs.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={cn(
                   'flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors',
                   activeTab === tab.id

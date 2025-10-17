@@ -9,10 +9,10 @@ import {
 } from '@nestjs/common';
 import { PinoLogger } from '@pro/logger';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
 import { Subject, Observable, Subscription } from 'rxjs';
-import { WeiboAccountEntity } from '@pro/entities';
+import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
 import { ScreensGateway } from '../screens/screens.gateway';
 
 /**
@@ -406,8 +406,22 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
 
     // 尝试多种方式获取用户信息
     const userInfo = await page.evaluate(() => {
+      type WeiboUserSnapshot = {
+        id?: number;
+        idstr?: string;
+        screen_name?: string;
+        avatar_hd?: string;
+      };
+
+      type WeiboGlobal = typeof window & {
+        $CONFIG?: { user?: WeiboUserSnapshot };
+        $render_data?: { user?: WeiboUserSnapshot };
+      };
+
+      const globalWindow = window as WeiboGlobal;
+
       // 方式1: window.$CONFIG
-      const config = (window as any).$CONFIG;
+      const config = globalWindow.$CONFIG;
       if (config?.user?.id) {
         return {
           id: config.user.id,
@@ -419,7 +433,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       }
 
       // 方式2: window.$render_data
-      const renderData = (window as any).$render_data;
+      const renderData = globalWindow.$render_data;
       if (renderData?.user?.id) {
         return {
           id: renderData.user.id,
@@ -458,10 +472,10 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
         avatar_hd: avatarImg?.src || null,
         source: 'dom',
         debug: {
-          hasConfig: !!(window as any).$CONFIG,
-          hasRenderData: !!(window as any).$render_data,
-          configKeys: (window as any).$CONFIG ? Object.keys((window as any).$CONFIG) : [],
-          renderDataKeys: (window as any).$render_data ? Object.keys((window as any).$render_data) : []
+          hasConfig: Boolean(globalWindow.$CONFIG),
+          hasRenderData: Boolean(globalWindow.$render_data),
+          configKeys: globalWindow.$CONFIG ? Object.keys(globalWindow.$CONFIG) : [],
+          renderDataKeys: globalWindow.$render_data ? Object.keys(globalWindow.$render_data) : []
         }
       };
     });
@@ -504,7 +518,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       existing.weiboNickname = userInfo.nickname;
       existing.weiboAvatar = userInfo.avatar;
       existing.cookies = JSON.stringify(cookies);
-      existing.status = 'active' as any;
+      existing.status = WeiboAccountStatus.ACTIVE;
       existing.lastCheckAt = new Date();
 
       savedAccount = await this.weiboAccountRepo.save(existing);
@@ -516,7 +530,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
         weiboNickname: userInfo.nickname,
         weiboAvatar: userInfo.avatar,
         cookies: JSON.stringify(cookies),
-        status: 'active' as any,
+        status: WeiboAccountStatus.ACTIVE,
         lastCheckAt: new Date(),
       });
 
@@ -573,15 +587,13 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
 
       const todayNew = await this.weiboAccountRepo.count({
         where: {
-          createdAt: {
-            $gte: today,
-          } as any,
+          createdAt: MoreThanOrEqual(today),
         },
       });
 
       const online = await this.weiboAccountRepo.count({
         where: {
-          status: 'active' as any,
+          status: WeiboAccountStatus.ACTIVE,
         },
       });
 

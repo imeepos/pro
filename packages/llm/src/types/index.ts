@@ -1,6 +1,11 @@
-import type { ChatCompletionMessageParam, ChatCompletionCreateParamsStreaming } from 'openai/resources/chat/completions';
+import type {
+  ChatCompletion,
+  ChatCompletionMessageParam,
+  ChatCompletionCreateParamsStreaming,
+} from 'openai/resources/chat/completions';
 
 export type ChatMessage = ChatCompletionMessageParam;
+export type FinishReason = ChatCompletion.Choice['finish_reason'];
 
 export interface LLMConfig {
   apiKey: string;
@@ -25,7 +30,7 @@ export interface ChatOptions {
 export interface ChatResponse {
   content: string;
   role: 'assistant';
-  finishReason: 'stop' | 'length' | 'content_filter' | 'tool_calls' | null;
+  finishReason: FinishReason;
   usage?: {
     promptTokens: number;
     completionTokens: number;
@@ -36,7 +41,7 @@ export interface ChatResponse {
 export interface StreamChunk {
   content: string;
   delta: string;
-  finishReason: 'stop' | 'length' | 'content_filter' | 'tool_calls' | null;
+  finishReason: FinishReason;
 }
 
 export interface EmbeddingOptions {

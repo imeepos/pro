@@ -118,10 +118,14 @@ class APIClient {
     const { data } = response;
 
     // 检查业务层面的错误
-    if (data && typeof data === 'object' && data.success === false) {
-      const businessError = new Error(data.message || 'Business logic error');
-      (businessError as any).code = data.code || 'BUSINESS_ERROR';
-      (businessError as any).details = data;
+    if (this.isBusinessFailure(data)) {
+      const businessError = Object.assign(
+        new Error(data.message ?? 'Business logic error'),
+        {
+          code: data.code ?? 'BUSINESS_ERROR',
+          details: data as Record<string, unknown>,
+        },
+      );
       throw businessError;
     }
 
@@ -368,3 +372,11 @@ export const apiClient = new APIClient();
 // 导出类型和工具
 export { APIClient };
 export type { APIResponse as APIResponseType, APIError as APIErrorType, RequestConfig as RequestConfigType };
+  private isBusinessFailure(payload: unknown): payload is { success: false; message?: string; code?: string } {
+    return Boolean(
+      payload &&
+      typeof payload === 'object' &&
+      'success' in payload &&
+      (payload as { success?: unknown }).success === false,
+    );
+  }

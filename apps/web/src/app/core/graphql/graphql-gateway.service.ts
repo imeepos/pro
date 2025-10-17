@@ -28,8 +28,8 @@ export class GraphqlGateway {
 
     for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
       try {
-        const preparedVariables = variables as Record<string, unknown> | undefined;
-        return await client.request<TResult>(document, preparedVariables as any);
+        const preparedVariables = variables ? { ...variables } : undefined;
+        return await client.request<TResult, TVariables>(document, preparedVariables);
       } catch (error) {
         const context = this.buildErrorContext(error, document, variables, attempt);
 

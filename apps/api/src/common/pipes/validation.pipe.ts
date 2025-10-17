@@ -9,7 +9,12 @@ import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class ValidationPipe implements PipeTransform<any> {
-  async transform(value: any, { metatype }: ArgumentMetadata) {
+  async transform(value: any, { metatype, type }: ArgumentMetadata) {
+    // 跳过 GraphQL Parent 和 Context 参数的验证
+    if (type === 'custom') {
+      return value;
+    }
+
     // 更严格的验证条件
     if (!metatype || !this.toValidate(metatype)) {
       return value;

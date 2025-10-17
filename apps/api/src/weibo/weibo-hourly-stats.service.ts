@@ -158,7 +158,7 @@ export class WeiboHourlyStatsService implements OnModuleInit {
     timezone?: string
   ): Promise<Record<HourlyStatsType, HourlyStatsResponse>> {
     try {
-      const results: Record<HourlyStatsType, HourlyStatsResponse> = {} as any;
+      const results = new Map<HourlyStatsType, HourlyStatsResponse>();
 
       const promises = types.map(type =>
         this.getHourlyStats({
@@ -173,17 +173,49 @@ export class WeiboHourlyStatsService implements OnModuleInit {
 
       for (const settled of settledResults) {
         if (settled.status === 'fulfilled') {
-          results[settled.value.type] = settled.value.result;
+          results.set(settled.value.type, settled.value.result);
         } else {
           this.logger.error('获取多类型统计数据失败', { error: settled.reason });
         }
       }
 
-      return results;
+      return types.reduce<Record<HourlyStatsType, HourlyStatsResponse>>((acc, type) => {
+        const result = results.get(type) ?? this.createEmptyStats(type, startDate, endDate, timezone);
+        acc[type] = result;
+        return acc;
+      }, {} as Record<HourlyStatsType, HourlyStatsResponse>);
     } catch (error) {
       this.logger.error('获取多类型统计数据失败', { types, error });
       throw error;
     }
+  }
+
+  private createEmptyStats(
+    type: HourlyStatsType,
+    startDate: Date,
+    endDate: Date,
+    timezone?: string,
+  ): HourlyStatsResponse {
+    const tz = timezone ?? this.DEFAULT_TIMEZONE;
+    const startIso = startDate.toISOString();
+    const endIso = endDate.toISOString();
+
+    return {
+      timeRange: {
+        start: startIso,
+        end: endIso,
+        timezone: tz,
+      },
+      data: [],
+      summary: {
+        total: 0,
+        average: 0,
+        peak: {
+          hour: endIso,
+          count: 0,
+        },
+      },
+    } satisfies HourlyStatsResponse;
   }
 
   /**

@@ -3,7 +3,13 @@
  * 统一的HTTP请求配置和错误处理
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import axios, {
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  AxiosError,
+  InternalAxiosRequestConfig,
+} from 'axios';
 import { createLogger } from '@/utils/logger';
 
 // API错误类型
@@ -20,8 +26,11 @@ export interface ExtendedAxiosError extends AxiosError {
 
 const logger = createLogger('ApiClient');
 
+const isApiErrorEnvelope = (value: unknown): value is { error: ApiError } =>
+  typeof value === 'object' && value !== null && 'error' in value;
+
 // 请求拦截器 - 添加通用配置
-function requestInterceptor(config: any): any {
+function requestInterceptor(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
   // 添加时间戳防止缓存
   if (config.method === 'get') {
     config.params = {
@@ -44,10 +53,24 @@ function responseInterceptor(response: AxiosResponse): AxiosResponse {
   // 检查业务状态码
   if (response.data && !response.data.success) {
     const errorMessage = response.data.error?.message || '请求失败';
-    const error: ExtendedAxiosError = new Error(errorMessage) as any;
-    error.apiError = response.data.error;
-    error.response = response;
-    throw error;
+    const apiError = isApiErrorEnvelope(response.data) ? response.data.error : undefined;
+    const enhancedError: ExtendedAxiosError = Object.assign(
+      new AxiosError(
+        errorMessage,
+        undefined,
+        response.config,
+        response.request,
+        response,
+      ),
+      {
+        apiError: apiError ?? {
+          code: 'BUSINESS_ERROR',
+          message: errorMessage,
+          details: response.data,
+        },
+      },
+    );
+    throw enhancedError;
   }
 
   return response;
@@ -70,9 +93,9 @@ function errorInterceptor(error: ExtendedAxiosError): Promise<never> {
   
   let apiError: ApiError;
   
-  if (data && typeof data === 'object' && 'error' in data) {
+  if (isApiErrorEnvelope(data)) {
     // 服务器返回的错误信息
-    apiError = (data as any).error;
+    apiError = data.error;
   } else {
     // 根据HTTP状态码生成错误信息
     switch (status) {

@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { performanceMonitor, PerformanceReport } from '@/utils/performance';
+import { performanceMonitor, PerformanceReport, PerformanceMetric } from '@/utils/performance';
 import { createLogger } from '@/utils/logger';
 
 const logger = createLogger('usePerformance');
@@ -309,8 +309,8 @@ export function useGlobalPerformance() {
     return () => clearInterval(interval);
   }, []);
 
-  const getMetricsByCategory = useCallback((category: string) => {
-    return performanceMonitor.getMetricsByCategory(category as any);
+  const getMetricsByCategory = useCallback((category: PerformanceMetric['category']) => {
+    return performanceMonitor.getMetricsByCategory(category);
   }, []);
 
   const clearHistory = useCallback(() => {

@@ -18,6 +18,8 @@ import { cn } from '@/utils';
 import CountUp from './CountUp';
 import SentimentIndicator from './SentimentIndicator';
 
+type SentimentLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+
 interface MetricCardProps {
   title: string;
   value: number;
@@ -32,7 +34,7 @@ interface MetricCardProps {
   animated?: boolean;
   sentiment?: {
     type: 'positive' | 'negative' | 'neutral';
-    level: number;
+    level: SentimentLevel;
   };
 }
 
@@ -239,7 +241,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
               <div className="flex items-center space-x-2 mt-2">
                 <SentimentIndicator
                   type={sentiment.type}
-                  level={sentiment.level as any}
+                  level={sentiment.level}
                   size={size === 'xlarge' ? 'lg' : size === 'small' ? 'sm' : 'md'}
                   showLabel={size !== 'normal' && size !== 'small'}
                 />

@@ -70,6 +70,11 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
     { value: 'all', label: '所有' },
   ] as const;
 
+  type TimeRangeValue = typeof timeRangeOptions[number]['value'];
+
+  const isTimeRangeValue = (value: string): value is TimeRangeValue =>
+    timeRangeOptions.some(option => option.value === value);
+
   // 主题切换函数已在useTheme hook中提供
 
   return (
@@ -107,7 +112,12 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
         <div className="relative">
           <select
             value={selectedTimeRange}
-            onChange={(e) => setSelectedTimeRange(e.target.value as any)}
+            onChange={(e) => {
+              const { value } = e.target;
+              if (isTimeRangeValue(value)) {
+                setSelectedTimeRange(value);
+              }
+            }}
             className={cn(
               'bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground',
               'focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',

@@ -399,31 +399,41 @@ export class NetworkOptimizer {
    * 检测网络连接
    */
   private detectConnection(): void {
-    if ('connection' in navigator) {
-      const connection = (navigator)[`connection`] as any;
-      this.connectionType = connection.type || 'unknown';
-      this.effectiveType = connection.effectiveType || 'unknown';
-      
-      logger.debug('Network connection detected', {
-        type: this.connectionType,
-        effectiveType: this.effectiveType,
-        downlink: connection.downlink,
-        rtt: connection.rtt,
-      });
+    const connection = this.getConnection();
+    if (!connection) {
+      return;
     }
+
+    this.connectionType = connection.type ?? 'unknown';
+    this.effectiveType = connection.effectiveType ?? 'unknown';
+    
+    logger.debug('Network connection detected', {
+      type: this.connectionType,
+      effectiveType: this.effectiveType,
+      downlink: connection.downlink,
+      rtt: connection.rtt,
+    });
   }
 
   /**
    * 监听连接变化
    */
   private setupConnectionListener(): void {
-    if ('connection' in navigator) {
-      const connection = navigator[`connection`] as any;
+    const connection = this.getConnection();
+    if (connection) {
       connection.addEventListener('change', () => {
         this.detectConnection();
         this.adjustOptimizations();
       });
     }
+  }
+
+  private getConnection(): NetworkInformation | null {
+    if ('connection' in navigator) {
+      const candidate = (navigator as Navigator & { connection?: NetworkInformation }).connection;
+      return candidate ?? null;
+    }
+    return null;
   }
 
   /**
