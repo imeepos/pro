@@ -54,10 +54,10 @@ services:
     image: nginx:alpine
     container_name: pro-bugger-dev
     ports:
-      - "${BUGGER_PORT:-4200}:80"
+      - "${BUGGER_PORT:-8083}:80"
     volumes:
       # 挂载构建后的静态文件（需要先构建）
-      - ./apps/bugger/dist/bugger/browser:/usr/share/nginx/html:ro
+      - ./apps/bugger/dist/bugger:/usr/share/nginx/html:ro
       # 挂载 nginx 配置
       - ./nginx/bugger.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
