@@ -1,9 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { createWeiboAuthSDK, WeiboAccount, WeiboAuthSDK } from '@pro/sdk';
-import { environment } from '../../../environments/environment';
-import { TokenStorageService } from '../../core/services/token-storage.service';
+import { WeiboAccountService, WeiboAccount } from '../../core/services/weibo-account.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { WeiboLoginComponent } from './weibo-login.component';
 
@@ -27,45 +25,25 @@ export class WeiboAccountsComponent implements OnInit {
   isLoading = false;
   showLoginDialog = false;
   error: string | null = null;
-  checkingAccounts = new Set<number>(); // 正在检查的账号 ID
-
-  private weiboSDK: WeiboAuthSDK;
+  checkingAccounts = new Set<string>();
 
   constructor(
-    private tokenStorage: TokenStorageService,
+    private weiboAccountService: WeiboAccountService,
     private router: Router,
     private toastService: ToastService
-  ) {
-    this.weiboSDK = createWeiboAuthSDK(this.getBaseUrl(), environment.tokenKey);
-  }
+  ) {}
 
   ngOnInit(): void {
     this.loadAccounts();
   }
 
-  /**
-   * 获取 API 基础地址
-   */
-  private getBaseUrl(): string {
-    return environment.apiUrl.replace('/api', '');
-  }
-
-  /**
-   * 加载账号列表
-   */
   async loadAccounts(): Promise<void> {
     this.isLoading = true;
     this.error = null;
 
     try {
-      const token = this.tokenStorage.getToken();
-      if (!token) {
-        this.router.navigate(['/login']);
-        return;
-      }
-
-      const result = await this.weiboSDK.getAccounts(token);
-      this.accounts = result.accounts;
+      const result = await this.weiboAccountService.getAccounts().toPromise();
+      this.accounts = result?.accounts || [];
     } catch (error: any) {
       this.error = error.message || '加载账号列表失败';
       console.error('加载微博账号列表失败:', error);
@@ -74,24 +52,15 @@ export class WeiboAccountsComponent implements OnInit {
     }
   }
 
-  /**
-   * 删除账号
-   */
   async deleteAccount(account: WeiboAccount): Promise<void> {
-    if (!confirm(`确定要删除微博账号 "${account.weiboNickname}" 吗?`)) {
+    if (!confirm(`确定要删除微博账号 "${account.nickname}" 吗?`)) {
       return;
     }
 
     try {
-      const token = this.tokenStorage.getToken();
-      if (!token) {
-        this.router.navigate(['/login']);
-        return;
-      }
-
-      await this.weiboSDK.deleteAccount(token, account.id);
+      await this.weiboAccountService.deleteAccount(Number(account.id));
       await this.loadAccounts();
-      this.toastService.success(`微博账号 "${account.weiboNickname}" 已删除`);
+      this.toastService.success(`微博账号 "${account.nickname}" 已删除`);
     } catch (error: any) {
       this.toastService.error(`删除失败: ${error.message}`);
       console.error('删除微博账号失败:', error);
@@ -113,49 +82,17 @@ export class WeiboAccountsComponent implements OnInit {
     this.loadAccounts();
   }
 
-  /**
-   * 检查账号健康状态
-   */
   async checkAccount(account: WeiboAccount): Promise<void> {
     if (this.checkingAccounts.has(account.id)) {
-      return; // 防止重复检查
+      return;
     }
 
     this.checkingAccounts.add(account.id);
 
     try {
-      const token = this.tokenStorage.getToken();
-      if (!token) {
-        this.router.navigate(['/login']);
-        return;
-      }
-
-      const result = await this.weiboSDK.checkAccount(token, account.id);
-
-      // 更新账号状态
-      const index = this.accounts.findIndex(a => a.id === account.id);
-      if (index !== -1) {
-        this.accounts[index].status = result.newStatus as any;
-        this.accounts[index].lastCheckAt = result.checkedAt;
-      }
-
-      // 显示结果消息
-      if (result.statusChanged) {
-        const message = `账号状态已更新: ${this.getStatusText(result.oldStatus)} → ${this.getStatusText(result.newStatus)}`;
-        if (result.newStatus === 'active') {
-          this.toastService.success(message);
-        } else if (result.newStatus === 'expired' || result.newStatus === 'banned') {
-          this.toastService.error(message);
-        } else {
-          this.toastService.warning(message);
-        }
-      } else {
-        if (result.newStatus === 'active') {
-          this.toastService.success(`账号状态正常: ${result.message}`);
-        } else {
-          this.toastService.info(`账号状态: ${result.message}`);
-        }
-      }
+      await this.weiboAccountService.checkAccount(Number(account.id));
+      await this.loadAccounts();
+      this.toastService.success(`账号 "${account.nickname}" 检查完成`);
     } catch (error: any) {
       this.toastService.error(`检查失败: ${error.message}`);
       console.error('检查账号失败:', error);
@@ -164,10 +101,7 @@ export class WeiboAccountsComponent implements OnInit {
     }
   }
 
-  /**
-   * 判断账号是否正在检查中
-   */
-  isChecking(accountId: number): boolean {
+  isChecking(accountId: string): boolean {
     return this.checkingAccounts.has(accountId);
   }
 

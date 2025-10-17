@@ -1,9 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { createJdAuthSDK, JdAccount, JdAuthSDK } from '@pro/sdk';
-import { environment } from '../../../environments/environment';
-import { TokenStorageService } from '../../core/services/token-storage.service';
+import { JdAccountService, JdAccount } from '../../core/services/jd-account.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { JdLoginComponent } from './jd-login.component';
 
@@ -27,45 +25,25 @@ export class JdAccountsComponent implements OnInit {
   isLoading = false;
   showLoginDialog = false;
   error: string | null = null;
-  checkingAccounts = new Set<number>(); // 正在检查的账号 ID
-
-  private jdSDK: JdAuthSDK;
+  checkingAccounts = new Set<number>();
 
   constructor(
-    private tokenStorage: TokenStorageService,
+    private jdAccountService: JdAccountService,
     private router: Router,
     private toastService: ToastService
-  ) {
-    this.jdSDK = createJdAuthSDK(this.getBaseUrl(), environment.tokenKey);
-  }
+  ) {}
 
   ngOnInit(): void {
     this.loadAccounts();
   }
 
-  /**
-   * 获取 API 基础地址
-   */
-  private getBaseUrl(): string {
-    return environment.apiUrl.replace('/api', '');
-  }
-
-  /**
-   * 加载账号列表
-   */
   async loadAccounts(): Promise<void> {
     this.isLoading = true;
     this.error = null;
 
     try {
-      const token = this.tokenStorage.getToken();
-      if (!token) {
-        this.router.navigate(['/login']);
-        return;
-      }
-
-      const result = await this.jdSDK.getAccounts(token);
-      this.accounts = result.accounts;
+      const result = await this.jdAccountService.getAccounts().toPromise();
+      this.accounts = result?.accounts || [];
     } catch (error: any) {
       this.error = error.message || '加载账号列表失败';
       console.error('加载京东账号列表失败:', error);
@@ -74,24 +52,16 @@ export class JdAccountsComponent implements OnInit {
     }
   }
 
-  /**
-   * 删除账号
-   */
   async deleteAccount(account: JdAccount): Promise<void> {
-    if (!confirm(`确定要删除京东账号 "${account.jdNickname}" 吗?`)) {
+    const nickname = account.jdNickname || account.jdUid;
+    if (!confirm(`确定要删除京东账号 "${nickname}" 吗?`)) {
       return;
     }
 
     try {
-      const token = this.tokenStorage.getToken();
-      if (!token) {
-        this.router.navigate(['/login']);
-        return;
-      }
-
-      await this.jdSDK.deleteAccount(token, account.id);
+      await this.jdAccountService.deleteAccount(account.id);
       await this.loadAccounts();
-      this.toastService.success(`京东账号 "${account.jdNickname}" 已删除`);
+      this.toastService.success(`京东账号 "${nickname}" 已删除`);
     } catch (error: any) {
       this.toastService.error(`删除失败: ${error.message}`);
       console.error('删除京东账号失败:', error);
@@ -113,48 +83,31 @@ export class JdAccountsComponent implements OnInit {
     this.loadAccounts();
   }
 
-  /**
-   * 检查账号健康状态
-   */
   async checkAccount(account: JdAccount): Promise<void> {
     if (this.checkingAccounts.has(account.id)) {
-      return; // 防止重复检查
+      return;
     }
 
     this.checkingAccounts.add(account.id);
 
     try {
-      const token = this.tokenStorage.getToken();
-      if (!token) {
-        this.router.navigate(['/login']);
-        return;
-      }
+      const result = await this.jdAccountService.checkAccount(account.id);
 
-      const result = await this.jdSDK.checkAccount(token, account.id);
-
-      // 更新账号状态
       const index = this.accounts.findIndex(a => a.id === account.id);
       if (index !== -1) {
-        this.accounts[index].status = result.newStatus as any;
+        this.accounts[index].status = result.newStatus;
         this.accounts[index].lastCheckAt = result.checkedAt;
       }
 
-      // 显示结果消息
       if (result.statusChanged) {
         const message = `账号状态已更新: ${this.getStatusText(result.oldStatus)} → ${this.getStatusText(result.newStatus)}`;
-        if (result.newStatus === 'active') {
+        if (result.newStatus === 'ACTIVE') {
           this.toastService.success(message);
-        } else if (result.newStatus === 'expired' || result.newStatus === 'banned') {
-          this.toastService.error(message);
         } else {
           this.toastService.warning(message);
         }
       } else {
-        if (result.newStatus === 'active') {
-          this.toastService.success(`账号状态正常: ${result.message}`);
-        } else {
-          this.toastService.info(`账号状态: ${result.message}`);
-        }
+        this.toastService.success(`账号状态正常: ${result.message}`);
       }
     } catch (error: any) {
       this.toastService.error(`检查失败: ${error.message}`);
@@ -164,42 +117,30 @@ export class JdAccountsComponent implements OnInit {
     }
   }
 
-  /**
-   * 判断账号是否正在检查中
-   */
   isChecking(accountId: number): boolean {
     return this.checkingAccounts.has(accountId);
   }
 
-  /**
-   * 获取状态显示文本
-   */
   getStatusText(status: string): string {
     const statusMap: Record<string, string> = {
-      'active': '正常',
-      'expired': '已过期',
-      'restricted': '风控受限',
-      'banned': '已封禁'
+      'ACTIVE': '正常',
+      'EXPIRED': '已过期',
+      'RESTRICTED': '风控受限',
+      'BANNED': '已封禁'
     };
     return statusMap[status] || status;
   }
 
-  /**
-   * 获取状态对应的CSS类
-   */
   getStatusClass(status: string): { [key: string]: boolean } {
     const classMap: Record<string, { [key: string]: boolean }> = {
-      'active': { 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': true },
-      'expired': { 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': true },
-      'restricted': { 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': true },
-      'banned': { 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': true }
+      'ACTIVE': { 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': true },
+      'EXPIRED': { 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': true },
+      'RESTRICTED': { 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': true },
+      'BANNED': { 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': true }
     };
     return classMap[status] || { 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': true };
   }
 
-  /**
-   * 格式化日期
-   */
   formatDate(dateStr: string): string {
     if (!dateStr) return '-';
     const date = new Date(dateStr);

@@ -17,6 +17,7 @@ const unwrapEnvelope = <T>(payload: unknown): T => {
 
 /**
  * 京东认证 SDK 实现
+ * @deprecated 使用 GraphQL Subscription 代替。参考 apps/admin/src/app/core/services/jd-login.service.ts
  */
 export class JdAuthSDKImpl implements JdAuthSDK {
   constructor(private baseUrl: string) {}
@@ -115,6 +116,7 @@ export class JdAuthSDKImpl implements JdAuthSDK {
 
 /**
  * 创建京东认证 SDK 实例
+ * @deprecated 使用 GraphQL Subscription 代替。参考 apps/admin/src/app/core/services/jd-login.service.ts
  */
 export function createJdAuthSDK(baseUrl: string, _tokenKey?: string): JdAuthSDK {
   return new JdAuthSDKImpl(baseUrl);

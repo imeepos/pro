@@ -17,6 +17,7 @@ const unwrapEnvelope = <T>(payload: unknown): T => {
 
 /**
  * 微博认证 SDK 实现
+ * @deprecated 使用 GraphQL Subscription 代替。参考 apps/admin/src/app/core/services/weibo-login.service.ts
  */
 export class WeiboAuthSDKImpl implements WeiboAuthSDK {
   constructor(private baseUrl: string) {}
@@ -115,6 +116,7 @@ export class WeiboAuthSDKImpl implements WeiboAuthSDK {
 
 /**
  * 创建微博认证 SDK 实例
+ * @deprecated 使用 GraphQL Subscription 代替。参考 apps/admin/src/app/core/services/weibo-login.service.ts
  */
 export function createWeiboAuthSDK(baseUrl: string, _tokenKey?: string): WeiboAuthSDK {
   return new WeiboAuthSDKImpl(baseUrl);

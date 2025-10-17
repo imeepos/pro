@@ -28,8 +28,9 @@ export class GraphqlGateway {
 
     for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
       try {
-        const preparedVariables = variables ? { ...variables } : undefined;
-        return await client.request<TResult, TVariables>(document, preparedVariables);
+        const vars = variables ?? ({} as TVariables);
+        // @ts-expect-error - graphql-request type inference issue with optional variables
+        return await client.request(document, vars);
       } catch (error) {
         const context = this.buildErrorContext(error, document, variables, attempt);
 

@@ -1,18 +1,8 @@
 import { Component, OnDestroy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { createJdAuthSDK, JdLoginEvent, JdAuthSDK, JdErrorEventData } from '@pro/sdk';
-import { environment } from '../../../environments/environment';
-import { TokenStorageService } from '../../core/services/token-storage.service';
+import { Subscription } from 'rxjs';
+import { JdLoginService, JdLoginEvent } from '../../core/services/jd-login.service';
 
-/**
- * 京东登录组件
- *
- * 核心职责:
- * 1. 启动京东扫码登录流程
- * 2. 展示二维码供用户扫描
- * 3. 处理 SSE 推送的登录状态变化
- * 4. 处理登录成功/失败/过期等各种状态
- */
 @Component({
   selector: 'app-jd-login',
   standalone: true,
@@ -30,31 +20,18 @@ export class JdLoginComponent implements OnDestroy {
   currentAttempt = 0;
   maxRetries = 3;
 
-  private jdSDK: JdAuthSDK;
-  private eventSource?: EventSource;
+  private subscription?: Subscription;
 
   constructor(
-    private tokenStorage: TokenStorageService,
-    private ngZone: NgZone
-  ) {
-    this.jdSDK = createJdAuthSDK(this.getBaseUrl(), environment.tokenKey);
-  }
+    private readonly jdLogin: JdLoginService,
+    private readonly ngZone: NgZone
+  ) {}
 
   ngOnDestroy(): void {
-    this.closeConnection();
+    this.unsubscribe();
   }
 
-  /**
-   * 获取 API 基础地址
-   */
-  private getBaseUrl(): string {
-    return environment.apiUrl.replace('/api', '');
-  }
-
-  /**
-   * 启动京东登录流程
-   */
-  startJdLogin(): void {
+  async startJdLogin(): Promise<void> {
     this.isLoading = true;
     this.showSuccess = false;
     this.qrcodeUrl = '';
@@ -63,21 +40,35 @@ export class JdLoginComponent implements OnDestroy {
     this.canRetry = false;
     this.currentAttempt = 0;
 
-    const token = this.tokenStorage.getToken();
-    if (!token) {
-      this.status = '未登录,请先登录系统';
+    try {
+      const session = await this.jdLogin.startLogin();
+      this.observeLoginEvents(session.sessionId);
+    } catch (error) {
+      this.status = `初始化失败: ${error}`;
       this.isLoading = false;
-      return;
     }
+  }
 
-    this.eventSource = this.jdSDK.startLogin(token, (event: JdLoginEvent) => {
-      this.handleLoginEvent(event);
+  private observeLoginEvents(sessionId: string): void {
+    this.subscription = this.jdLogin.observeLoginEvents(sessionId).subscribe({
+      next: (event: JdLoginEvent) => this.handleLoginEvent(event),
+      error: (error: Error) => {
+        this.ngZone.run(() => {
+          this.status = `连接错误: ${error.message}`;
+          this.isLoading = false;
+        });
+      },
+      complete: () => {
+        this.ngZone.run(() => {
+          if (!this.showSuccess) {
+            this.status = '连接已关闭';
+            this.isLoading = false;
+          }
+        });
+      }
     });
   }
 
-  /**
-   * 处理登录事件
-   */
   private handleLoginEvent(event: JdLoginEvent): void {
     this.ngZone.run(() => {
       switch (event.type) {
@@ -95,7 +86,6 @@ export class JdLoginComponent implements OnDestroy {
           this.showSuccess = true;
           this.accountInfo = event.data;
           this.isLoading = false;
-          this.onLoginSuccess(event.data);
           break;
 
         case 'expired':
@@ -104,61 +94,43 @@ export class JdLoginComponent implements OnDestroy {
           break;
 
         case 'error':
-          this.handleErrorEvent(event.data as JdErrorEventData);
+          this.handleErrorEvent(event.data);
           break;
       }
     });
   }
 
-  /**
-   * 处理错误事件
-   */
-  private handleErrorEvent(errorData: JdErrorEventData): void {
-    this.currentAttempt = errorData.attempt;
-    this.canRetry = errorData.canRetry;
+  private handleErrorEvent(errorData: any): void {
+    this.currentAttempt = errorData.attempt || 0;
+    this.canRetry = errorData.canRetry || false;
     this.isLoading = false;
 
-    // 根据重试状态和次数显示不同的错误信息
-    if (errorData.canRetry && errorData.attempt < this.maxRetries) {
-      this.status = `${errorData.message} (尝试 ${errorData.attempt}/${this.maxRetries})`;
-    } else if (errorData.canRetry && errorData.attempt >= this.maxRetries) {
+    if (this.canRetry && this.currentAttempt < this.maxRetries) {
+      this.status = `${errorData.message} (尝试 ${this.currentAttempt}/${this.maxRetries})`;
+    } else if (this.canRetry && this.currentAttempt >= this.maxRetries) {
       this.status = `${errorData.message} (已达到最大重试次数)`;
     } else {
       this.status = `${errorData.message} (无法重试)`;
     }
   }
 
-  private onLoginSuccess(data: any): void {
-    // 登录成功处理
-    console.log('京东登录成功:', data);
-  }
-
-  /**
-   * 关闭 SSE 连接
-   */
-  private closeConnection(): void {
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = undefined;
+  private unsubscribe(): void {
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+      this.subscription = undefined;
     }
   }
 
-  /**
-   * 手动重试登录
-   */
   manualRetry(): void {
     if (!this.canRetry) {
       return;
     }
 
-    this.closeConnection();
+    this.unsubscribe();
     this.canRetry = false;
     this.startJdLogin();
   }
 
-  /**
-   * 获取重试按钮的提示文本
-   */
   getRetryButtonText(): string {
     if (!this.canRetry) {
       return '无法重试';
@@ -171,9 +143,6 @@ export class JdLoginComponent implements OnDestroy {
     return `重试 (${this.currentAttempt + 1}/${this.maxRetries})`;
   }
 
-  /**
-   * 获取错误状态的详细描述
-   */
   getErrorStatusDescription(): string {
     if (!this.isLoading && this.canRetry) {
       if (this.currentAttempt >= this.maxRetries) {
@@ -185,11 +154,8 @@ export class JdLoginComponent implements OnDestroy {
     return this.status;
   }
 
-  /**
-   * 重置状态,开始新的登录
-   */
   resetAndStartNew(): void {
-    this.closeConnection();
+    this.unsubscribe();
     this.canRetry = false;
     this.currentAttempt = 0;
     this.startJdLogin();

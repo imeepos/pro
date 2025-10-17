@@ -43,12 +43,12 @@
       <!-- 账号头部 -->
       <div class="p-4">
         <div class="flex items-center space-x-4 mb-4">
-          <img [src]="account.weiboAvatar"
-               [alt]="account.weiboNickname"
+          <img [src]="account.avatar"
+               [alt]="account.nickname"
                class="w-16 h-16 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700">
           <div class="flex-1 min-w-0">
-            <h3 class="font-semibold text-gray-900 dark:text-white truncate">{{ account.weiboNickname }}</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">UID: {{ account.weiboUid }}</p>
+            <h3 class="font-semibold text-gray-900 dark:text-white truncate">{{ account.nickname }}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">UID: {{ account.uid }}</p>
           </div>
         </div>
 

@@ -1,18 +1,8 @@
 import { Component, OnDestroy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { createWeiboAuthSDK, WeiboLoginEvent, WeiboAuthSDK } from '@pro/sdk';
-import { environment } from '../../../environments/environment';
-import { TokenStorageService } from '../../core/services/token-storage.service';
+import { Subscription } from 'rxjs';
+import { WeiboLoginService, WeiboLoginEvent } from '../../core/services/weibo-login.service';
 
-/**
- * 微博登录组件
- *
- * 核心职责:
- * 1. 启动微博扫码登录流程
- * 2. 展示二维码供用户扫描
- * 3. 处理 SSE 推送的登录状态变化
- * 4. 处理登录成功/失败/过期等各种状态
- */
 @Component({
   selector: 'app-weibo-login',
   standalone: true,
@@ -26,52 +16,53 @@ export class WeiboLoginComponent implements OnDestroy {
   showSuccess = false;
   accountInfo: any = null;
 
-  private weiboSDK: WeiboAuthSDK;
-  private eventSource?: EventSource;
+  private subscription?: Subscription;
 
   constructor(
-    private tokenStorage: TokenStorageService,
-    private ngZone: NgZone
-  ) {
-    this.weiboSDK = createWeiboAuthSDK(this.getBaseUrl(), environment.tokenKey);
-  }
+    private readonly weiboLogin: WeiboLoginService,
+    private readonly ngZone: NgZone
+  ) {}
 
   ngOnDestroy(): void {
-    this.closeConnection();
+    this.unsubscribe();
   }
 
-  /**
-   * 获取 API 基础地址
-   */
-  private getBaseUrl(): string {
-    return environment.apiUrl.replace('/api', '');
-  }
-
-  /**
-   * 启动微博登录流程
-   */
-  startWeiboLogin(): void {
+  async startWeiboLogin(): Promise<void> {
     this.isLoading = true;
     this.showSuccess = false;
     this.qrcodeUrl = '';
     this.status = '正在初始化...';
     this.accountInfo = null;
 
-    const token = this.tokenStorage.getToken();
-    if (!token) {
-      this.status = '未登录,请先登录系统';
+    try {
+      const session = await this.weiboLogin.startLogin();
+      this.observeLoginEvents(session.sessionId);
+    } catch (error) {
+      this.status = `初始化失败: ${error}`;
       this.isLoading = false;
-      return;
     }
+  }
 
-    this.eventSource = this.weiboSDK.startLogin(token, (event: WeiboLoginEvent) => {
-      this.handleLoginEvent(event);
+  private observeLoginEvents(sessionId: string): void {
+    this.subscription = this.weiboLogin.observeLoginEvents(sessionId).subscribe({
+      next: (event: WeiboLoginEvent) => this.handleLoginEvent(event),
+      error: (error: Error) => {
+        this.ngZone.run(() => {
+          this.status = `连接错误: ${error.message}`;
+          this.isLoading = false;
+        });
+      },
+      complete: () => {
+        this.ngZone.run(() => {
+          if (!this.showSuccess) {
+            this.status = '连接已关闭';
+            this.isLoading = false;
+          }
+        });
+      }
     });
   }
 
-  /**
-   * 处理登录事件
-   */
   private handleLoginEvent(event: WeiboLoginEvent): void {
     this.ngZone.run(() => {
       switch (event.type) {
@@ -89,7 +80,6 @@ export class WeiboLoginComponent implements OnDestroy {
           this.showSuccess = true;
           this.accountInfo = event.data;
           this.isLoading = false;
-          this.onLoginSuccess(event.data);
           break;
 
         case 'expired':
@@ -105,25 +95,15 @@ export class WeiboLoginComponent implements OnDestroy {
     });
   }
 
-  private onLoginSuccess(data: any): void {
-    // 登录成功处理
-  }
-
-  /**
-   * 关闭 SSE 连接
-   */
-  private closeConnection(): void {
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = undefined;
+  private unsubscribe(): void {
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+      this.subscription = undefined;
     }
   }
 
-  /**
-   * 重置状态,开始新的登录
-   */
   resetAndStartNew(): void {
-    this.closeConnection();
+    this.unsubscribe();
     this.startWeiboLogin();
   }
 }
