@@ -196,7 +196,7 @@ export class BrowserService implements OnModuleDestroy {
         );
 
         // 伪装Chrome对象
-        window.chrome = {
+        (window as any).chrome = {
           runtime: {},
           loadTimes: function() {},
           csi: function() {},
