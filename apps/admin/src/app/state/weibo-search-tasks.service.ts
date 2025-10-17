@@ -198,7 +198,7 @@ export class WeiboSearchTasksService {
     this.setError(null);
 
     return from(
-      this.graphql.request(WeiboSearchTaskQueryDoc, { id })
+      this.graphql.request(WeiboSearchTaskQueryDoc, { id: Number(id) })
     ).pipe(
       map(response => response.weiboSearchTask as unknown as WeiboSearchTask),
       tap(task => {
@@ -240,7 +240,7 @@ export class WeiboSearchTasksService {
     this.setError(null);
 
     return from(
-      this.graphql.request(UpdateWeiboSearchTaskMutation, { id, input })
+      this.graphql.request(UpdateWeiboSearchTaskMutation, { id: Number(id), input })
     ).pipe(
       map(response => response.updateWeiboSearchTask as unknown as WeiboSearchTask),
       tap(updatedTask => {
@@ -266,7 +266,7 @@ export class WeiboSearchTasksService {
     this.setError(null);
 
     return from(
-      this.graphql.request(RemoveWeiboSearchTaskMutation, { id })
+      this.graphql.request(RemoveWeiboSearchTaskMutation, { id: Number(id) })
     ).pipe(
       tap(() => {
         this.store.update(state => ({
@@ -290,7 +290,7 @@ export class WeiboSearchTasksService {
     const input = reason ? { reason } : undefined;
 
     return from(
-      this.graphql.request(PauseWeiboSearchTaskMutation, { id, input })
+      this.graphql.request(PauseWeiboSearchTaskMutation, { id: Number(id), input })
     ).pipe(
       tap(response => {
         const updatedTask = response.pauseWeiboSearchTask as unknown as Partial<WeiboSearchTask>;
@@ -316,7 +316,7 @@ export class WeiboSearchTasksService {
     const input = reason ? { reason } : undefined;
 
     return from(
-      this.graphql.request(ResumeWeiboSearchTaskMutation, { id, input })
+      this.graphql.request(ResumeWeiboSearchTaskMutation, { id: Number(id), input })
     ).pipe(
       tap(response => {
         const updatedTask = response.resumeWeiboSearchTask as unknown as Partial<WeiboSearchTask>;
@@ -342,7 +342,7 @@ export class WeiboSearchTasksService {
     const input = reason ? { reason } : undefined;
 
     return from(
-      this.graphql.request(RunWeiboSearchTaskNowMutation, { id, input })
+      this.graphql.request(RunWeiboSearchTaskNowMutation, { id: Number(id), input })
     ).pipe(
       tap(response => {
         const updatedTask = response.runWeiboSearchTaskNow as unknown as Partial<WeiboSearchTask>;
