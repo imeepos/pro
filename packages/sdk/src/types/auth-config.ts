@@ -3,8 +3,8 @@
  */
 export enum AuthMode {
   JWT = 'jwt',
-  API_KEY = 'apiKey',
-  AUTO = 'auto' // 自动选择，优先 JWT
+  API_KEY = 'api_key',
+  AUTO = 'auto'
 }
 
 /**

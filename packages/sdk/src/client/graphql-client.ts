@@ -1,4 +1,4 @@
-import { AuthConfig, AuthMode, DEFAULT_AUTH_CONFIG } from '../types/auth-config';
+import { AuthConfig, AuthMode, DEFAULT_AUTH_CONFIG } from '../types/auth-config.js';
 
 interface GraphQLError {
   message: string;
