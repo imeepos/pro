@@ -161,11 +161,10 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
 
-    const refreshTokenExpiration = getRefreshTokenExpiresIn(this.configService);
-    const refreshOptions: JwtSignOptions = {
-      expiresIn: refreshTokenExpiration,
-    };
-    const refreshToken = this.jwtService.sign({ ...payload }, refreshOptions);
+    // @ts-expect-error JwtSignOptions 类型定义不完整，但运行时支持 expiresIn
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: getRefreshTokenExpiresIn(this.configService),
+    });
 
     const refreshTokenTTL = this.parseExpiration(getRefreshTokenExpiresIn(this.configService));
     await this.redisClient.set(
