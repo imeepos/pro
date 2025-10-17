@@ -167,3 +167,74 @@ export const ADD_BUG_COMMENT = gql`
     }
   }
 `;
+
+// Auth operations
+export const LOGIN = gql`
+  mutation Login($input: LoginDto!) {
+    login(input: $input) {
+      accessToken
+      refreshToken
+      user {
+        id
+        username
+        email
+        status
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const REGISTER = gql`
+  mutation Register($input: RegisterDto!) {
+    register(input: $input) {
+      accessToken
+      refreshToken
+      user {
+        id
+        username
+        email
+        status
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const LOGOUT = gql`
+  mutation Logout {
+    logout
+  }
+`;
+
+export const REFRESH_TOKEN = gql`
+  mutation RefreshToken($input: RefreshTokenDto!) {
+    refreshToken(input: $input) {
+      accessToken
+      refreshToken
+      user {
+        id
+        username
+        email
+        status
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const ME = gql`
+  query Me {
+    me {
+      id
+      username
+      email
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`;

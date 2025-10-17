@@ -56,7 +56,8 @@
       "Bash(npx graphql-codegen:*)",
       "Bash(npx @graphql-codegen/cli:*)",
       "Bash(./node_modules/.bin/graphql-codegen:*)",
-      "Bash(timeout 120 pnpm run:*)"
+      "Bash(timeout 120 pnpm run:*)",
+      "Bash(pnpm add:*)"
     ],
     "deny": [],
     "ask": []

@@ -295,6 +295,7 @@ input CreateBugInput {
   estimatedHours: Float
   expectedBehavior: String
   priority: BugPriority
+  reporterId: String!
   reproductionRate: String
   stepsToReproduce: String
   title: String!

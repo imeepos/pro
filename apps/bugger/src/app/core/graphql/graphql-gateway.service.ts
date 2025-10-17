@@ -29,8 +29,7 @@ export class GraphqlGateway {
     for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
       try {
         const vars = variables ?? ({} as TVariables);
-        // @ts-expect-error - graphql-request type inference issue with optional variables
-        return await client.request(document, vars);
+        return await client.request<TResult>(document, vars);
       } catch (error) {
         const context = this.buildErrorContext(error, document, variables, attempt);
 
@@ -64,7 +63,7 @@ export class GraphqlGateway {
 
   private lookupOperation(document: TypedDocumentNode<unknown, any>): string | undefined {
     const operation = document.definitions.find(
-      (definition): definition is OperationDefinitionNode =>
+      (definition: any): definition is OperationDefinitionNode =>
         definition.kind === Kind.OPERATION_DEFINITION && Boolean(definition.name)
     );
 
@@ -73,7 +72,7 @@ export class GraphqlGateway {
 
   private shouldRetry(error: unknown): boolean {
     if (error instanceof ClientError) {
-      return error.response.status >= 500;
+      return (error as ClientError).response.status >= 500;
     }
 
     return true;
@@ -86,7 +85,7 @@ export class GraphqlGateway {
     attempt: number
   ): Record<string, unknown> {
     const baseContext: Record<string, unknown> = {
-      message: (error as Error).message,
+      message: error instanceof Error ? error.message : String(error),
       operation: this.lookupOperation(document),
       attempt,
       maxAttempts: this.maxAttempts
@@ -97,11 +96,11 @@ export class GraphqlGateway {
     }
 
     if (error instanceof ClientError) {
-      baseContext['status'] = error.response.status;
-      baseContext['graphQLErrors'] = error.response.errors?.map(({ message, path, extensions }) => ({
+      baseContext['status'] = (error as ClientError).response.status;
+      baseContext['graphQLErrors'] = (error as ClientError).response.errors?.map(({ message, path, extensions }: { message: string; path?: readonly (string | number)[]; extensions?: Record<string, unknown> }) => ({
         message,
         path,
-        code: extensions?.['code']
+        code: extensions?.['code'] as string | undefined
       }));
     }
 
