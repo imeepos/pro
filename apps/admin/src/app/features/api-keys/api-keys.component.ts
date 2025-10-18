@@ -24,6 +24,10 @@ import { ApiKeyService } from './services';
 export class ApiKeysComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
+  // 枚举常量，供模板使用
+  ApiKeyStatus = ApiKeyStatus;
+  ApiKeyType = ApiKeyType;
+
   // 数据状态
   apiKeys: ApiKey[] = [];
   selectedApiKey: ApiKey | null = null;
