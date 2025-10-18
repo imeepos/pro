@@ -14,7 +14,7 @@ import {
   PaginationConfig,
   FilterConfig,
   SortConfig
-} from '../types/data.types';
+} from '../../types/data.types';
 
 @Component({
   selector: 'app-data-table',

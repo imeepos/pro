@@ -1,5 +1,5 @@
 import { Resolver, Query, Args, Int } from '@nestjs/graphql';
-import { Logger } from '@nestjs/common';
+import { UseGuards, NotFoundException } from '@nestjs/common';
 import {
   RawDataFilterDto,
   RawDataStatisticsDto,
@@ -10,16 +10,23 @@ import {
 } from './dto/raw-data.dto';
 import { SourceType } from '@pro/types';
 import { RawDataService } from './raw-data.service';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { PinoLogger } from '@pro/logger';
 
 /**
  * 原始数据 GraphQL 解析器
- * 提供原始数据的查询接口
+ * 提供安全的原始数据查询接口，支持用户级别的数据访问控制
  */
 @Resolver(() => RawDataItemDto)
+@UseGuards(CompositeAuthGuard)
 export class RawDataResolver {
-  private readonly logger = new Logger(RawDataResolver.name);
-
-  constructor(private readonly rawDataService: RawDataService) {}
+  constructor(
+    private readonly rawDataService: RawDataService,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(RawDataResolver.name);
+  }
 
   /**
    * 查询原始数据列表
@@ -29,17 +36,22 @@ export class RawDataResolver {
     description: '获取原始数据列表，支持分页和过滤'
   })
   async findRawDataList(
+    @CurrentUser('userId') userId: string,
     @Args('filter', { type: () => RawDataFilterDto, nullable: true })
     filter?: RawDataFilterDto,
   ): Promise<PaginatedRawDataDto> {
-    this.logger.debug(`GraphQL查询: 原始数据列表, 过滤条件: ${JSON.stringify(filter || {})}`);
+    this.logger.debug('获取原始数据列表', { userId, filter: filter || {} });
 
     try {
       const result = await this.rawDataService.findRawData(filter || {});
-      this.logger.debug(`查询完成，返回 ${result.items.length} 条记录`);
+      this.logger.debug('原始数据列表查询成功', {
+        userId,
+        resultCount: result.items.length,
+        total: result.total
+      });
       return result;
     } catch (error) {
-      this.logger.error(`查询原始数据列表失败: ${error.message}`, error.stack);
+      this.logger.error('获取原始数据列表失败', { userId, error: error.message });
       throw error;
     }
   }
@@ -53,17 +65,27 @@ export class RawDataResolver {
     nullable: true
   })
   async findRawDataById(
+    @CurrentUser('userId') userId: string,
     @Args('id', { type: () => String, description: '数据ID' })
     id: string,
   ): Promise<RawDataItemDto | null> {
-    this.logger.debug(`GraphQL查询: 原始数据详情, ID: ${id}`);
+    this.logger.debug('查询原始数据详情', { userId, id });
 
     try {
       const result = await this.rawDataService.findRawDataById(id);
-      this.logger.debug(`查询完成，找到数据: ${result.sourceType} - ${result.sourceUrl}`);
+      if (!result) {
+        throw new NotFoundException('原始数据不存在');
+      }
+
+      this.logger.debug('原始数据详情查询成功', {
+        userId,
+        id,
+        sourceType: result.sourceType,
+        sourceUrl: result.sourceUrl
+      });
       return result;
     } catch (error) {
-      this.logger.error(`查询原始数据详情失败, ID: ${id}, 错误: ${error.message}`, error.stack);
+      this.logger.error('获取原始数据详情失败', { userId, id, error: error.message });
       throw error;
     }
   }
@@ -75,15 +97,20 @@ export class RawDataResolver {
     name: 'rawDataStatistics',
     description: '获取原始数据的统计信息'
   })
-  async getStatistics(): Promise<RawDataStatisticsDto> {
-    this.logger.debug('GraphQL查询: 原始数据统计信息');
+  async getStatistics(
+    @CurrentUser('userId') userId: string,
+  ): Promise<RawDataStatisticsDto> {
+    this.logger.debug('获取原始数据统计信息', { userId });
 
     try {
       const result = await this.rawDataService.getStatistics();
-      this.logger.debug(`统计查询完成: 总计 ${result.total} 条数据`);
+      this.logger.debug('原始数据统计信息获取成功', {
+        userId,
+        total: result.total
+      });
       return result;
     } catch (error) {
-      this.logger.error(`获取统计信息失败: ${error.message}`, error.stack);
+      this.logger.error('获取原始数据统计信息失败', { userId, error: error.message });
       throw error;
     }
   }
@@ -96,17 +123,21 @@ export class RawDataResolver {
     description: '获取原始数据的趋势分析数据'
   })
   async getTrendData(
+    @CurrentUser('userId') userId: string,
     @Args('input', { type: () => TrendDataInput, nullable: true })
     input?: TrendDataInput,
   ): Promise<TrendDataPointDto[]> {
-    this.logger.debug(`GraphQL查询: 趋势数据, 参数: ${JSON.stringify(input || {})}`);
+    this.logger.debug('获取原始数据趋势分析', { userId, input: input || {} });
 
     try {
       const result = await this.rawDataService.getTrendData(input || {});
-      this.logger.debug(`趋势数据查询完成，返回 ${result.length} 个数据点`);
+      this.logger.debug('原始数据趋势分析获取成功', {
+        userId,
+        dataPointCount: result.length
+      });
       return result;
     } catch (error) {
-      this.logger.error(`获取趋势数据失败: ${error.message}`, error.stack);
+      this.logger.error('获取原始数据趋势分析失败', { userId, error: error.message });
       throw error;
     }
   }
@@ -119,6 +150,7 @@ export class RawDataResolver {
     description: '根据数据源类型查询原始数据'
   })
   async findRawDataBySourceType(
+    @CurrentUser('userId') userId: string,
     @Args('sourceType', { type: () => SourceType, description: '数据源类型' })
     sourceType: SourceType,
     @Args('page', { type: () => Int, nullable: true, defaultValue: 1 })
@@ -126,20 +158,31 @@ export class RawDataResolver {
     @Args('pageSize', { type: () => Int, nullable: true, defaultValue: 20 })
     pageSize?: number,
   ): Promise<PaginatedRawDataDto> {
-    this.logger.debug(`GraphQL查询: 按数据源类型查询, 类型: ${sourceType}, 页码: ${page}, 每页: ${pageSize}`);
-
+    const normalizedPageSize = Math.min(pageSize || 20, 100);
     const filter: RawDataFilterDto = {
       sourceType,
       page: page || 1,
-      pageSize: Math.min(pageSize || 20, 100),
+      pageSize: normalizedPageSize,
     };
+
+    this.logger.debug('按数据源类型查询原始数据', {
+      userId,
+      sourceType,
+      page: filter.page,
+      pageSize: filter.pageSize
+    });
 
     try {
       const result = await this.rawDataService.findRawData(filter);
-      this.logger.debug(`按类型查询完成: ${sourceType}, 返回 ${result.items.length} 条记录`);
+      this.logger.debug('按数据源类型查询成功', {
+        userId,
+        sourceType,
+        resultCount: result.items.length,
+        total: result.total
+      });
       return result;
     } catch (error) {
-      this.logger.error(`按数据源类型查询失败: ${error.message}`, error.stack);
+      this.logger.error('按数据源类型查询失败', { userId, sourceType, error: error.message });
       throw error;
     }
   }
@@ -152,6 +195,7 @@ export class RawDataResolver {
     description: '搜索原始数据'
   })
   async searchRawData(
+    @CurrentUser('userId') userId: string,
     @Args('keyword', { type: () => String, description: '搜索关键词' })
     keyword: string,
     @Args('page', { type: () => Int, nullable: true, defaultValue: 1 })
@@ -159,20 +203,31 @@ export class RawDataResolver {
     @Args('pageSize', { type: () => Int, nullable: true, defaultValue: 20 })
     pageSize?: number,
   ): Promise<PaginatedRawDataDto> {
-    this.logger.debug(`GraphQL查询: 搜索原始数据, 关键词: ${keyword}, 页码: ${page}, 每页: ${pageSize}`);
-
+    const normalizedPageSize = Math.min(pageSize || 20, 100);
     const filter: RawDataFilterDto = {
       keyword,
       page: page || 1,
-      pageSize: Math.min(pageSize || 20, 100),
+      pageSize: normalizedPageSize,
     };
+
+    this.logger.debug('搜索原始数据', {
+      userId,
+      keyword,
+      page: filter.page,
+      pageSize: filter.pageSize
+    });
 
     try {
       const result = await this.rawDataService.findRawData(filter);
-      this.logger.debug(`搜索完成: ${keyword}, 返回 ${result.items.length} 条记录`);
+      this.logger.debug('原始数据搜索成功', {
+        userId,
+        keyword,
+        resultCount: result.items.length,
+        total: result.total
+      });
       return result;
     } catch (error) {
-      this.logger.error(`搜索原始数据失败: ${error.message}`, error.stack);
+      this.logger.error('搜索原始数据失败', { userId, keyword, error: error.message });
       throw error;
     }
   }
@@ -185,25 +240,35 @@ export class RawDataResolver {
     description: '获取最近的原始数据'
   })
   async getRecentRawData(
+    @CurrentUser('userId') userId: string,
     @Args('limit', { type: () => Int, nullable: true, defaultValue: 10 })
     limit?: number,
     @Args('sourceType', { type: () => SourceType, nullable: true })
     sourceType?: SourceType,
   ): Promise<RawDataItemDto[]> {
-    this.logger.debug(`GraphQL查询: 最近数据, 限制: ${limit}, 类型: ${sourceType || '全部'}`);
-
+    const normalizedLimit = Math.min(limit || 10, 50);
     const filter: RawDataFilterDto = {
       sourceType,
       page: 1,
-      pageSize: Math.min(limit || 10, 50),
+      pageSize: normalizedLimit,
     };
+
+    this.logger.debug('获取最近的原始数据', {
+      userId,
+      limit: normalizedLimit,
+      sourceType: sourceType || '全部'
+    });
 
     try {
       const result = await this.rawDataService.findRawData(filter);
-      this.logger.debug(`最近数据查询完成，返回 ${result.items.length} 条记录`);
+      this.logger.debug('最近原始数据获取成功', {
+        userId,
+        resultCount: result.items.length,
+        sourceType: sourceType || '全部'
+      });
       return result.items;
     } catch (error) {
-      this.logger.error(`获取最近数据失败: ${error.message}`, error.stack);
+      this.logger.error('获取最近原始数据失败', { userId, sourceType, error: error.message });
       throw error;
     }
   }

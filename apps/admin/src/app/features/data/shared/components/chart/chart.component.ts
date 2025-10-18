@@ -274,7 +274,7 @@ export interface ChartConfig {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChartComponent implements OnChanges, AfterViewInit {
-  @Input() data: ChartData;
+  @Input() data!: ChartData;
   @Input() config: ChartConfig = {
     type: 'bar',
     showLegend: true,
@@ -285,9 +285,9 @@ export class ChartComponent implements OnChanges, AfterViewInit {
     height: 300
   };
   @Input() loading = false;
-  @Input() error: string;
+  @Input() error?: string;
 
-  @ViewChild('chartCanvas') chartCanvas: ElementRef<SVGElement>;
+  @ViewChild('chartCanvas') chartCanvas!: ElementRef<SVGElement>;
 
   // 默认颜色配置
   private defaultColors = [

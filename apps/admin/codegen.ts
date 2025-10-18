@@ -12,6 +12,7 @@ const config: CodegenConfig = {
     'src/app/core/graphql/tag.graphql',
     'src/app/core/graphql/screen.graphql',
     'src/app/core/graphql/weibo-search-task.graphql',
+    'src/app/core/graphql/raw-data.graphql',
     'src/app/**/*.ts'
   ],
   ignoreNoDocuments: false,
@@ -19,10 +20,16 @@ const config: CodegenConfig = {
     'src/app/core/graphql/generated/': {
       preset: 'client',
       config: {
+        strictScalars: true,
         scalars: {
           DateTime: 'string',
-          JSONObject: 'Record<string, unknown>'
-        }
+          JSONObject: 'Record<string, unknown>',
+          JSON: 'unknown'
+        },
+        useTypeImports: true,
+        dedupeFragments: true,
+        skipTypename: false,
+        documentMode: 'documentNode'
       }
     }
   }

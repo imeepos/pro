@@ -8,7 +8,6 @@ export type { GraphQLResponse, GraphQLQueryOptions, QueryBuilder } from './graph
 // WebSocket types
 export type {
   WebSocketMessage,
-  RealTimeUpdate,
   ConnectionStatus,
   WebSocketConfig
 } from './websocket.service';

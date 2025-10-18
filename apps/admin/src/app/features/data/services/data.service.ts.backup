@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable, of, from } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 
-import { GraphQLDataAdapter } from './graphql-data.adapter';
+import { SkerSDK } from '@pro/sdk';
 import {
   RawData,
   RawDataFilters,
@@ -14,11 +14,14 @@ import {
   SourceType,
   SourcePlatform
 } from '@pro/types';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DataService {
+  private sdk: SkerSDK;
+
   private dataListSubject = new BehaviorSubject<RawData[]>([]);
   private selectedDataSubject = new BehaviorSubject<RawData | null>(null);
   private statsSubject = new BehaviorSubject<RawDataStats | null>(null);
@@ -47,13 +50,15 @@ export class DataService {
   SourceType = SourceType;
   SourcePlatform = SourcePlatform;
 
-  constructor(private graphqlAdapter: GraphQLDataAdapter) {}
+  constructor() {
+    this.sdk = new SkerSDK(environment.apiUrl);
+  }
 
   loadDataList(filters?: RawDataFilters): void {
     this.setLoading(true);
     this.clearError();
 
-    this.graphqlAdapter.findAll(filters)
+    from(this.sdk.rawData.findAll(filters))
       .pipe(
         tap((response: RawDataListResponse) => {
           this.dataListSubject.next(response.data);
@@ -74,7 +79,7 @@ export class DataService {
   }
 
   loadStats(): void {
-    this.graphqlAdapter.getStats()
+    from(this.sdk.rawData.getStats())
       .pipe(
         tap((stats: RawDataStats) => {
           this.statsSubject.next(stats);
@@ -91,53 +96,80 @@ export class DataService {
     this.setLoading(true);
     this.clearError();
 
-    // Note: GraphQL mutations for CRUD operations would need to be implemented
-    // For now, return a placeholder that triggers data refresh
-    console.warn('createData: GraphQL mutations not yet implemented');
-    this.setLoading(false);
-    this.loadDataList();
-    this.loadStats();
-    return of({} as RawData);
+    return from(this.sdk.rawData.create(dto)).pipe(
+      tap((data: RawData) => {
+        this.setLoading(false);
+        this.loadDataList();
+        this.loadStats();
+      }),
+      catchError((error) => {
+        this.handleError('创建数据失败', error);
+        return of();
+      })
+    );
   }
 
   updateData(id: number, updates: UpdateRawDataDto): Observable<RawData> {
     this.setLoading(true);
     this.clearError();
 
-    // Note: GraphQL mutations for CRUD operations would need to be implemented
-    console.warn('updateData: GraphQL mutations not yet implemented');
-    this.setLoading(false);
-    return of({} as RawData);
+    return from(this.sdk.rawData.update(id, updates)).pipe(
+      tap((data: RawData) => {
+        this.setLoading(false);
+        this.updateDataInList(data);
+      }),
+      catchError((error) => {
+        this.handleError('更新数据失败', error);
+        return of();
+      })
+    );
   }
 
   deleteData(id: number): Observable<void> {
     this.setLoading(true);
     this.clearError();
 
-    // Note: GraphQL mutations for CRUD operations would need to be implemented
-    console.warn('deleteData: GraphQL mutations not yet implemented');
-    this.setLoading(false);
-    this.removeDataFromList(id);
-    this.loadStats();
-    return of();
+    return from(this.sdk.rawData.delete(id)).pipe(
+      tap(() => {
+        this.setLoading(false);
+        this.removeDataFromList(id);
+        this.loadStats();
+      }),
+      catchError((error) => {
+        this.handleError('删除数据失败', error);
+        return of();
+      })
+    );
   }
 
   processData(id: number): Observable<RawData> {
     this.setLoading(true);
 
-    // Note: GraphQL mutations for processing operations would need to be implemented
-    console.warn('processData: GraphQL mutations not yet implemented');
-    this.setLoading(false);
-    return of({} as RawData);
+    return from(this.sdk.rawData.process(id)).pipe(
+      tap((data: RawData) => {
+        this.setLoading(false);
+        this.updateDataInList(data);
+      }),
+      catchError((error) => {
+        this.handleError('处理数据失败', error);
+        return of();
+      })
+    );
   }
 
   reprocessData(id: number): Observable<RawData> {
     this.setLoading(true);
 
-    // Note: GraphQL mutations for reprocessing operations would need to be implemented
-    console.warn('reprocessData: GraphQL mutations not yet implemented');
-    this.setLoading(false);
-    return of({} as RawData);
+    return from(this.sdk.rawData.reprocess(id)).pipe(
+      tap((data: RawData) => {
+        this.setLoading(false);
+        this.updateDataInList(data);
+      }),
+      catchError((error) => {
+        this.handleError('重新处理数据失败', error);
+        return of();
+      })
+    );
   }
 
   selectData(data: RawData): void {
@@ -149,37 +181,59 @@ export class DataService {
   }
 
   getData(id: number): Observable<RawData | null> {
-    return this.graphqlAdapter.findOne(id.toString()).pipe(
+    return from(this.sdk.rawData.findOne(id)).pipe(
       catchError(() => of(null))
     );
   }
 
   searchData(query: string): Observable<RawData[]> {
-    return this.graphqlAdapter.search(query, 1, 50).pipe(
+    const filters: RawDataFilters = {
+      search: query,
+      limit: 50
+    };
+
+    return from(this.sdk.rawData.findAll(filters)).pipe(
+      map((response) => response.data),
       catchError(() => of([]))
     );
   }
 
   getDataByStatus(status: ProcessingStatus): Observable<RawData[]> {
-    return this.graphqlAdapter.findByStatus(status, 100).pipe(
+    const filters: RawDataFilters = {
+      processingStatus: status,
+      limit: 100
+    };
+
+    return from(this.sdk.rawData.findAll(filters)).pipe(
+      map((response) => response.data),
       catchError(() => of([]))
     );
   }
 
   bulkDeleteData(ids: number[]): Observable<void> {
-    // Note: GraphQL mutations for bulk operations would need to be implemented
-    console.warn('bulkDeleteData: GraphQL mutations not yet implemented');
-    this.loadDataList();
-    this.loadStats();
-    return of();
+    return from(this.sdk.rawData.bulkDelete(ids)).pipe(
+      tap(() => {
+        this.loadDataList();
+        this.loadStats();
+      }),
+      catchError((error) => {
+        this.handleError('批量删除失败', error);
+        return of();
+      })
+    );
   }
 
   bulkProcessData(ids: number[]): Observable<void> {
-    // Note: GraphQL mutations for bulk processing would need to be implemented
-    console.warn('bulkProcessData: GraphQL mutations not yet implemented');
-    this.loadDataList();
-    this.loadStats();
-    return of();
+    return from(this.sdk.rawData.bulkProcess(ids)).pipe(
+      tap(() => {
+        this.loadDataList();
+        this.loadStats();
+      }),
+      catchError((error) => {
+        this.handleError('批量处理失败', error);
+        return of();
+      })
+    );
   }
 
   private setLoading(loading: boolean): void {
@@ -196,7 +250,7 @@ export class DataService {
 
   private handleError(message: string, error: any): void {
     console.error(message, error);
-    const errorMessage = error?.message || message;
+    const errorMessage = error?.error?.message || error?.message || message;
     this.setError(errorMessage);
     this.setLoading(false);
   }

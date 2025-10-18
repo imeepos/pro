@@ -216,11 +216,8 @@ export class RawDataService {
     if (filter.status) parts.push(`状态:${filter.status}`);
     if (filter.sourceType) parts.push(`类型:${filter.sourceType}`);
     if (filter.sourcePlatform) parts.push(`平台:${filter.sourcePlatform}`);
-    if (filter.keyword) parts.push(`关键词:${filter.keyword}`);
     if (filter.timeRange?.startDate) parts.push(`起始:${filter.timeRange.startDate}`);
     if (filter.timeRange?.endDate) parts.push(`终止:${filter.timeRange.endDate}`);
-    if (filter.page) parts.push(`页码:${filter.page}`);
-    if (filter.pageSize) parts.push(`页数:${filter.pageSize}`);
 
     return parts.length > 0 ? parts.join(', ') : '无条件查询';
   }
@@ -229,63 +226,29 @@ export class RawDataService {
    * 构建查询选项 - 将用户意图转化为数据库语言
    */
   private buildQueryOptions(filter: RawDataFilterDto) {
-    const options: any = {
+    return {
+      status: filter.status,
+      sourceType: this.mapSourcePlatformToType(filter.sourcePlatform),
+      keyword: filter.keyword,
+      startDate: filter.timeRange?.startDate ? new Date(filter.timeRange.startDate) : undefined,
+      endDate: filter.timeRange?.endDate ? new Date(filter.timeRange.endDate) : undefined,
       page: filter.page || 1,
       pageSize: Math.min(filter.pageSize || 20, 100),
     };
-
-    if (filter.status) {
-      options.status = filter.status;
-    }
-
-    // 优先使用 sourceType，其次才映射 sourcePlatform
-    if (filter.sourceType) {
-      options.sourceType = filter.sourceType;
-    } else if (filter.sourcePlatform) {
-      const mappedType = this.mapSourcePlatformToType(filter.sourcePlatform);
-      if (mappedType) {
-        options.sourceType = mappedType;
-      }
-    }
-
-    if (filter.keyword) {
-      options.keyword = filter.keyword;
-    }
-
-    if (filter.timeRange?.startDate) {
-      options.startDate = new Date(filter.timeRange.startDate);
-    }
-
-    if (filter.timeRange?.endDate) {
-      options.endDate = new Date(filter.timeRange.endDate);
-    }
-
-    return options;
   }
 
   /**
-   * 构建趋势查询选项 - 时光织梦者的参数设计
+   * 构建趋势查询选项
    */
-  private buildTrendQueryOptions(input: TrendDataInput) {
-    const options: {
-      granularity: 'hour' | 'day' | 'week' | 'month';
-      status?: ProcessingStatus;
-      startDate?: Date;
-      endDate?: Date;
-    } = {
-      granularity: input.granularity || 'day',
+  private buildTrendQueryOptions(input: TrendDataInput): any {
+    const options: any = {
+      granularity: input.granularity,
+      startDate: input.timeRange?.startDate ? new Date(input.timeRange.startDate) : undefined,
+      endDate: input.timeRange?.endDate ? new Date(input.timeRange.endDate) : undefined,
     };
 
     if (input.status) {
       options.status = input.status;
-    }
-
-    if (input.timeRange?.startDate) {
-      options.startDate = new Date(input.timeRange.startDate);
-    }
-
-    if (input.timeRange?.endDate) {
-      options.endDate = new Date(input.timeRange.endDate);
     }
 
     return options;
@@ -367,9 +330,7 @@ export class RawDataService {
    * 创建业务错误 - 优雅的错误表达
    */
   private createBusinessError(message: string): Error {
-    const error = new Error(message);
-    error.name = 'BusinessError';
-    return error;
+    return new Error(message);
   }
 
 }

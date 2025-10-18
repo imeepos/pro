@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { RawDataSource, RawDataSourceDoc } from '../schemas/raw-data-source.schema.js';
-import { CreateRawDataSourceDto, ProcessingStatus } from '@pro/types';
+import { CreateRawDataSourceDto, ProcessingStatus, SourceType } from '@pro/types';
 import { calculateContentHash } from '../utils/hash.util.js';
 
 /**
@@ -140,5 +140,190 @@ export class RawDataSourceService {
       acc[item._id] = item.count;
       return acc;
     }, {} as Record<string, number>);
+  }
+
+  /**
+   * 复杂查询：支持多种过滤条件和分页
+   */
+  async findWithFilters(options: {
+    status?: ProcessingStatus;
+    sourceType?: SourceType;
+    keyword?: string;
+    startDate?: Date;
+    endDate?: Date;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const {
+      status,
+      sourceType,
+      keyword,
+      startDate,
+      endDate,
+      page = 1,
+      pageSize = 20
+    } = options;
+
+    const query: any = {};
+
+    if (status) {
+      query.status = status;
+    }
+
+    if (sourceType) {
+      query.sourceType = sourceType;
+    }
+
+    if (keyword) {
+      query.$or = [
+        { sourceUrl: { $regex: keyword, $options: 'i' } },
+        { rawContent: { $regex: keyword, $options: 'i' } },
+        { 'metadata.title': { $regex: keyword, $options: 'i' } }
+      ];
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        query.createdAt.$gte = startDate;
+      }
+      if (endDate) {
+        query.createdAt.$lte = endDate;
+      }
+    }
+
+    const skip = (page - 1) * pageSize;
+    const [items, total] = await Promise.all([
+      this.rawDataSourceModel
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .exec(),
+      this.rawDataSourceModel.countDocuments(query).exec()
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+      hasNext: page * pageSize < total,
+      hasPrevious: page > 1
+    };
+  }
+
+  /**
+   * 获取数据源类型统计
+   */
+  async getSourceTypeStatistics(): Promise<Record<string, number>> {
+    const result = await this.rawDataSourceModel.aggregate([
+      {
+        $group: {
+          _id: '$sourceType',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    return result.reduce((acc, item) => {
+      acc[item._id] = item.count;
+      return acc;
+    }, {} as Record<string, number>);
+  }
+
+  /**
+   * 获取趋势数据
+   */
+  async getTrendData(options: {
+    granularity: 'hour' | 'day' | 'week' | 'month';
+    status?: ProcessingStatus;
+    startDate?: Date;
+    endDate?: Date;
+  }) {
+    const { granularity, status, startDate, endDate } = options;
+
+    const matchStage: any = {};
+    if (status) {
+      matchStage.status = status;
+    }
+    if (startDate || endDate) {
+      matchStage.createdAt = {};
+      if (startDate) {
+        matchStage.createdAt.$gte = startDate;
+      }
+      if (endDate) {
+        matchStage.createdAt.$lte = endDate;
+      }
+    }
+
+    const groupFormat = this.getDateFormat(granularity);
+    const pipeline = [];
+
+    if (Object.keys(matchStage).length > 0) {
+      pipeline.push({ $match: matchStage });
+    }
+
+    pipeline.push(
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: groupFormat,
+              date: '$createdAt'
+            }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id': 1 as 1 }
+      },
+      {
+        $project: {
+          _id: 0,
+          timestamp: '$_id',
+          count: 1
+        }
+      }
+    );
+
+    return this.rawDataSourceModel.aggregate(pipeline);
+  }
+
+  /**
+   * 批量重试失败的数据
+   */
+  async retryFailedData(limit: number = 50): Promise<number> {
+    const result = await this.rawDataSourceModel.updateMany(
+      { status: ProcessingStatus.FAILED },
+      {
+        status: ProcessingStatus.PENDING,
+        $unset: { errorMessage: 1, processedAt: 1 }
+      },
+      { limit }
+    );
+
+    this.logger.log(`Reset ${result.modifiedCount} failed records to pending`);
+    return result.modifiedCount || 0;
+  }
+
+  /**
+   * 获取日期格式字符串
+   */
+  private getDateFormat(granularity: string): string {
+    switch (granularity) {
+      case 'hour':
+        return '%Y-%m-%d %H:00:00';
+      case 'day':
+        return '%Y-%m-%d';
+      case 'week':
+        return '%Y-%U';
+      case 'month':
+        return '%Y-%m';
+      default:
+        return '%Y-%m-%d';
+    }
   }
 }

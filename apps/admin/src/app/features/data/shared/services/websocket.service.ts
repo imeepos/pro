@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable, Subject, timer, of } from 'rxjs';
 import { filter, map, switchMap, tap, catchError, share } from 'rxjs/operators';
 import { JwtAuthService } from '@pro/components';
 import { environment } from '../../../../../environments/environment';
+import { RealTimeUpdate } from '../types/data.types';
 
 export interface WebSocketMessage<T = any> {
   id: string;
@@ -13,13 +14,6 @@ export interface WebSocketMessage<T = any> {
   metadata?: Record<string, any>;
 }
 
-export interface RealTimeUpdate {
-  id: string;
-  type: 'create' | 'update' | 'delete';
-  entity: string;
-  data: any;
-  timestamp: string;
-}
 
 export interface ConnectionStatus {
   connected: boolean;
