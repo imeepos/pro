@@ -1,9 +1,9 @@
 export enum WeiboSearchTaskStatus {
-  PENDING = 'pending',
-  RUNNING = 'running',
-  PAUSED = 'paused',
-  FAILED = 'failed',
-  TIMEOUT = 'timeout'
+  PENDING = 'PENDING',
+  RUNNING = 'RUNNING',
+  PAUSED = 'PAUSED',
+  FAILED = 'FAILED',
+  TIMEOUT = 'TIMEOUT'
 }
 
 export interface WeiboSearchTask {
