@@ -38,15 +38,21 @@ interface ApiKeyRecord {
 }
 
 interface PageInfo {
-  total: number;
-  pageSize: number;
-  page: number;
-  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  startCursor?: string;
+  endCursor?: string;
+}
+
+interface ApiKeyEdge {
+  cursor: string;
+  node: ApiKeyRecord;
 }
 
 interface ApiKeyConnection {
-  nodes: ApiKeyRecord[];
+  edges: ApiKeyEdge[];
   pageInfo: PageInfo;
+  totalCount: number;
 }
 
 interface ApiKeyStatsPayload {
@@ -335,14 +341,18 @@ export class ApiKeyApi {
     const query = `
       query GetApiKeys($filter: ApiKeyQueryDto) {
         apiKeys(filter: $filter) {
-          nodes {
-            id key name description type permissions
-            isActive lastUsedAt usageCount expiresAt createdIp
-            createdAt updatedAt isExpired isValid
+          edges {
+            node {
+              id key name description type permissions
+              isActive lastUsedAt usageCount expiresAt createdIp
+              createdAt updatedAt isExpired isValid
+            }
           }
           pageInfo {
-            total page pageSize totalPages
+            hasNextPage
+            hasPreviousPage
           }
+          totalCount
         }
       }
     `;
@@ -350,14 +360,19 @@ export class ApiKeyApi {
     const filter = this.buildFilterInput(filters);
     const response = await this.client.query<{ apiKeys: ApiKeyConnection }>(query, { filter });
 
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 10;
+    const totalCount = response.apiKeys.totalCount ?? 0;
+    const totalPages = Math.ceil(totalCount / limit);
+
     return {
-      data: response.apiKeys.nodes.map(node => adaptApiKey(node)),
-      total: response.apiKeys.pageInfo.total,
-      page: response.apiKeys.pageInfo.page,
-      limit: response.apiKeys.pageInfo.pageSize,
-      totalPages: response.apiKeys.pageInfo.totalPages,
-      hasNext: response.apiKeys.pageInfo.page < response.apiKeys.pageInfo.totalPages,
-      hasPrev: response.apiKeys.pageInfo.page > 1,
+      data: response.apiKeys.edges.map(edge => adaptApiKey(edge.node)),
+      total: totalCount,
+      page,
+      limit,
+      totalPages,
+      hasNext: response.apiKeys.pageInfo.hasNextPage,
+      hasPrev: response.apiKeys.pageInfo.hasPreviousPage,
     };
   }
 
