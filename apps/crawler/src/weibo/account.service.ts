@@ -36,34 +36,58 @@ export class WeiboAccountService implements OnModuleInit {
   async onModuleInit() {
     const initStartTime = Date.now();
 
-    this.logger.debug('微博账号服务开始初始化');
+    this.logger.log('👤 微博账号服务开始初始化', {
+      startTime: new Date(initStartTime).toISOString(),
+      nodeVersion: process.version,
+      environment: this.configService.get('NODE_ENV', 'development')
+    });
 
     try {
       await this.loadAccountsFromDatabase();
 
       const initDuration = Date.now() - initStartTime;
       const stats = await this.getAccountStats();
+      const healthStatus = await this.checkAccountsHealth();
 
-      this.logger.log('微博账号服务初始化完成', {
+      this.logger.log('✅ 微博账号服务初始化完成', {
         initTimeMs: initDuration,
+        initTimeFormatted: this.formatDuration(initDuration),
         stats,
-        hasActiveAccounts: stats.active > 0
+        health: {
+          healthyAccounts: healthStatus.healthyAccounts,
+          unhealthyAccounts: healthStatus.unhealthyAccounts,
+          healthRate: Math.round((healthStatus.healthyAccounts / stats.total) * 100)
+        },
+        hasActiveAccounts: stats.active > 0,
+        loadStrategy: this.accounts.size > 0 ? 'database' : 'fallback'
       });
 
       if (stats.active === 0) {
-        this.logger.warn('警告：没有可用的微博账号', {
+        this.logger.error('❌ 严重警告：没有可用的微博账号', {
           totalAccounts: stats.total,
           bannedAccounts: stats.banned,
-          expiredAccounts: stats.expired
+          expiredAccounts: stats.expired,
+          inactiveAccounts: stats.total - stats.active - stats.banned - stats.expired,
+          recommendation: '请检查数据库中的账号状态或配置环境变量'
+        });
+      } else if (healthStatus.unhealthyAccounts > 0) {
+        this.logger.warn('⚠️ 账号健康检查发现问题', {
+          unhealthyAccounts: healthStatus.unhealthyAccounts,
+          healthIssues: healthStatus.healthDetails
+            .filter(detail => !detail.isHealthy)
+            .map(detail => ({ accountId: detail.accountId, issues: detail.issues }))
         });
       }
 
     } catch (error) {
       const initDuration = Date.now() - initStartTime;
-      this.logger.error('微博账号服务初始化失败', {
+      this.logger.error('💥 微博账号服务初始化失败', {
         initTimeMs: initDuration,
+        initTimeFormatted: this.formatDuration(initDuration),
         error: error instanceof Error ? error.message : '未知错误',
-        stack: error instanceof Error ? error.stack : undefined
+        errorType: this.classifyInitError(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        fallbackAvailable: !!this.configService.get('WEIBO_ACCOUNTS')
       });
       throw error;
     }
@@ -288,28 +312,81 @@ export class WeiboAccountService implements OnModuleInit {
   }
 
   async getAvailableAccount(accountId?: number): Promise<WeiboAccount | null> {
+    const requestStartTime = Date.now();
+
+    this.logger.debug('🔍 开始获取可用账号', {
+      requestedAccountId: accountId,
+      totalAccounts: this.accounts.size,
+      currentIndex: this.currentIndex,
+      timestamp: new Date().toISOString()
+    });
+
     if (accountId) {
       const account = this.accounts.get(accountId);
-      return (account && account.status === 'active') ? account : null;
+      const isAvailable = account && account.status === 'active';
+
+      this.logger.debug(`${isAvailable ? '✅' : '❌'} 指定账号可用性检查`, {
+        accountId,
+        nickname: account?.nickname,
+        status: account?.status,
+        usageCount: account?.usageCount || 0,
+        isAvailable
+      });
+
+      return isAvailable ? account : null;
     }
 
     const activeAccounts = Array.from(this.accounts.values()).filter(acc => acc.status === 'active');
+
     if (activeAccounts.length === 0) {
-      this.logger.warn('没有可用的微博账号，尝试刷新账号列表...');
+      this.logger.warn('⚠️ 没有可用的微博账号，尝试刷新账号列表...', {
+        totalAccounts: this.accounts.size,
+        accountStatuses: Array.from(this.accounts.values()).map(acc => ({
+          id: acc.id,
+          nickname: acc.nickname,
+          status: acc.status,
+          usageCount: acc.usageCount
+        }))
+      });
+
+      const refreshStartTime = Date.now();
       await this.refreshAccounts();
+      const refreshDuration = Date.now() - refreshStartTime;
 
       // 刷新后再次检查
       const refreshedAccounts = Array.from(this.accounts.values()).filter(acc => acc.status === 'active');
       if (refreshedAccounts.length === 0) {
-        this.logger.error('刷新后仍然没有可用的微博账号');
+        this.logger.error('❌ 刷新后仍然没有可用的微博账号', {
+          refreshDuration,
+          accountsAfterRefresh: this.accounts.size,
+          accountStatusesAfterRefresh: Array.from(this.accounts.values()).map(acc => ({
+            id: acc.id,
+            nickname: acc.nickname,
+            status: acc.status
+          }))
+        });
         return null;
       }
+
+      this.logger.log('✅ 账号刷新成功，继续获取可用账号', {
+        refreshDuration,
+        newActiveAccountsCount: refreshedAccounts.length
+      });
 
       const account = refreshedAccounts[this.currentIndex % refreshedAccounts.length];
       this.currentIndex = (this.currentIndex + 1) % refreshedAccounts.length;
 
       account.usageCount += 1;
       account.lastUsedAt = new Date();
+
+      this.logger.debug('🎯 账号分配完成（刷新后）', {
+        accountId: account.id,
+        nickname: account.nickname,
+        usageCount: account.usageCount,
+        lastUsedAt: account.lastUsedAt?.toISOString(),
+        rotationIndex: this.currentIndex - 1,
+        requestDuration: Date.now() - requestStartTime
+      });
 
       return account;
     }
@@ -320,25 +397,78 @@ export class WeiboAccountService implements OnModuleInit {
     account.usageCount += 1;
     account.lastUsedAt = new Date();
 
-    this.logger.debug(`选择微博账号: ${account.nickname} (ID: ${account.id}), 使用次数: ${account.usageCount}`);
+    this.logger.debug('🎯 账号分配完成', {
+      accountId: account.id,
+      nickname: account.nickname,
+      usageCount: account.usageCount,
+      lastUsedAt: account.lastUsedAt?.toISOString(),
+      rotationIndex: this.currentIndex - 1,
+      activeAccountsCount: activeAccounts.length,
+      requestDuration: Date.now() - requestStartTime,
+      usageBalance: this.calculateUsageBalance(activeAccounts)
+    });
+
     return account;
   }
 
   async markAccountBanned(accountId: number): Promise<void> {
+    const banStartTime = Date.now();
     const account = this.accounts.get(accountId);
+
     if (account) {
+      const previousStatus = account.status;
       account.status = WeiboAccountStatus.BANNED;
-      this.logger.warn(`标记账号 ${account.nickname} (ID: ${accountId}) 为banned状态`);
+
+      this.logger.warn('🚫 标记账号为banned状态', {
+        accountId,
+        nickname: account.nickname,
+        previousStatus,
+        newStatus: WeiboAccountStatus.BANNED,
+        usageCount: account.usageCount,
+        lastUsedAt: account.lastUsedAt?.toISOString(),
+        banTime: new Date().toISOString(),
+        banReason: 'detected_by_crawler'
+      });
 
       // 直接更新数据库
       try {
+        const dbUpdateStart = Date.now();
         await this.weiboAccountRepo.update(accountId, {
           status: WeiboAccountStatus.BANNED
         });
-        this.logger.debug(`已更新数据库中账号 ${accountId} 为banned状态`);
+        const dbUpdateDuration = Date.now() - dbUpdateStart;
+
+        this.logger.log('✅ 数据库更新成功', {
+          accountId,
+          updateDuration: dbUpdateDuration,
+          totalBanDuration: Date.now() - banStartTime
+        });
+
+        // 更新统计信息
+        const stats = await this.getAccountStats();
+        this.logger.log('📊 账号状态统计更新', {
+          stats,
+          bannedRate: Math.round((stats.banned / stats.total) * 100),
+          activeRate: Math.round((stats.active / stats.total) * 100)
+        });
+
       } catch (error) {
-        this.logger.error(`更新数据库标记账号 ${accountId} 失败:`, error.message);
+        const dbUpdateDuration = Date.now() - banStartTime;
+        this.logger.error('❌ 数据库更新失败', {
+          accountId,
+          updateDuration: dbUpdateDuration,
+          error: error instanceof Error ? error.message : '未知错误',
+          errorType: this.classifyDatabaseError(error),
+          accountStatusInMemory: account.status,
+          needsManualSync: true
+        });
       }
+    } else {
+      this.logger.warn('⚠️ 尝试标记不存在的账号为banned', {
+        accountId,
+        availableAccountIds: Array.from(this.accounts.keys()),
+        totalAccounts: this.accounts.size
+      });
     }
   }
 
@@ -484,6 +614,201 @@ export class WeiboAccountService implements OnModuleInit {
       healthyAccounts,
       unhealthyAccounts: accounts.length - healthyAccounts,
       healthDetails
+    };
+  }
+
+  /**
+   * 格式化持续时间
+   */
+  private formatDuration(milliseconds: number): string {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
+
+  /**
+   * 计算使用平衡度
+   */
+  private calculateUsageBalance(activeAccounts: WeiboAccount[]): {
+    minUsage: number;
+    maxUsage: number;
+    averageUsage: number;
+    balanceScore: number; // 0-100, 100表示完全平衡
+  } {
+    if (activeAccounts.length === 0) {
+      return { minUsage: 0, maxUsage: 0, averageUsage: 0, balanceScore: 100 };
+    }
+
+    const usages = activeAccounts.map(acc => acc.usageCount);
+    const minUsage = Math.min(...usages);
+    const maxUsage = Math.max(...usages);
+    const averageUsage = usages.reduce((sum, usage) => sum + usage, 0) / usages.length;
+
+    // 计算平衡度：最大值和最小值的差异越小，平衡度越高
+    const balanceScore = maxUsage > minUsage
+      ? Math.round(((1 - (maxUsage - minUsage) / maxUsage) * 100))
+      : 100;
+
+    return {
+      minUsage,
+      maxUsage,
+      averageUsage: Math.round(averageUsage),
+      balanceScore
+    };
+  }
+
+  /**
+   * 分类初始化错误
+   */
+  private classifyInitError(error: any): string {
+    if (!error) return 'UNKNOWN_INIT_ERROR';
+
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+    if (errorMessage.includes('database') || errorMessage.includes('connection') ||
+        errorMessage.includes('econnrefused')) {
+      return 'DATABASE_CONNECTION_ERROR';
+    }
+
+    if (errorMessage.includes('timeout') || errorMessage.includes('etimedout')) {
+      return 'DATABASE_TIMEOUT_ERROR';
+    }
+
+    if (errorMessage.includes('authentication') || errorMessage.includes('password') ||
+        errorMessage.includes('login')) {
+      return 'DATABASE_AUTH_ERROR';
+    }
+
+    if (errorMessage.includes('parse') || errorMessage.includes('json')) {
+      return 'ACCOUNT_PARSE_ERROR';
+    }
+
+    return 'UNKNOWN_INIT_ERROR';
+  }
+
+  /**
+   * 获取账号使用报告
+   */
+  async getAccountUsageReport(): Promise<{
+    summary: {
+      totalAccounts: number;
+      activeAccounts: number;
+      totalUsage: number;
+      averageUsage: number;
+      healthRate: number;
+    };
+    usageDistribution: Array<{
+      accountId: number;
+      nickname: string;
+      usageCount: number;
+      usagePercentage: number;
+      lastUsedAt?: Date;
+      healthScore: number;
+    }>;
+    trends: {
+      mostUsed: Array<{ accountId: number; nickname: string; usageCount: number }>;
+      leastUsed: Array<{ accountId: number; nickname: string; usageCount: number }>;
+      recentlyActive: Array<{ accountId: number; nickname: string; lastUsedAt: Date }>;
+      inactive: Array<{ accountId: number; nickname: string; daysSinceLastUse: number }>;
+    };
+    recommendations: string[];
+  }> {
+    const accounts = Array.from(this.accounts.values());
+    const stats = await this.getAccountStats();
+    const healthStatus = await this.checkAccountsHealth();
+
+    const totalUsage = accounts.reduce((sum, acc) => sum + acc.usageCount, 0);
+    const averageUsage = accounts.length > 0 ? totalUsage / accounts.length : 0;
+
+    // 使用分布
+    const usageDistribution = accounts.map(account => {
+      const healthDetail = healthStatus.healthDetails.find(detail => detail.accountId === account.id);
+      return {
+        accountId: account.id,
+        nickname: account.nickname,
+        usageCount: account.usageCount,
+        usagePercentage: totalUsage > 0 ? Math.round((account.usageCount / totalUsage) * 100) : 0,
+        lastUsedAt: account.lastUsedAt,
+        healthScore: healthDetail?.isHealthy ? 100 : Math.max(0, 100 - (healthDetail?.issues.length || 0) * 25)
+      };
+    }).sort((a, b) => b.usageCount - a.usageCount);
+
+    // 趋势分析
+    const mostUsed = usageDistribution.slice(0, 5);
+    const leastUsed = usageDistribution.slice(-5).reverse();
+
+    const recentlyActive = accounts
+      .filter(acc => acc.lastUsedAt)
+      .sort((a, b) => (b.lastUsedAt?.getTime() || 0) - (a.lastUsedAt?.getTime() || 0))
+      .slice(0, 5)
+      .map(acc => ({
+        accountId: acc.id,
+        nickname: acc.nickname,
+        lastUsedAt: acc.lastUsedAt!
+      }));
+
+    const now = Date.now();
+    const inactive = accounts
+      .filter(acc => !acc.lastUsedAt || (now - acc.lastUsedAt.getTime()) > 7 * 24 * 60 * 60 * 1000) // 7天未使用
+      .map(acc => ({
+        accountId: acc.id,
+        nickname: acc.nickname,
+        daysSinceLastUse: acc.lastUsedAt ? Math.floor((now - acc.lastUsedAt.getTime()) / (1000 * 60 * 60 * 24)) : 999
+      }))
+      .sort((a, b) => b.daysSinceLastUse - a.daysSinceLastUse)
+      .slice(0, 5);
+
+    // 生成建议
+    const recommendations: string[] = [];
+
+    if (stats.active === 0) {
+      recommendations.push('严重：没有可用账号，请立即检查账号配置');
+    } else if (stats.active < 3) {
+      recommendations.push('可用账号数量较少，建议增加更多账号以提高稳定性');
+    }
+
+    const balance = this.calculateUsageBalance(accounts.filter(acc => acc.status === 'active'));
+    if (balance.balanceScore < 50) {
+      recommendations.push('账号使用不均衡，建议调整轮换策略');
+    }
+
+    if (inactive.length > 0) {
+      recommendations.push(`发现 ${inactive.length} 个长期未使用的账号，建议检查或清理`);
+    }
+
+    if (healthStatus.unhealthyAccounts > healthStatus.healthyAccounts) {
+      recommendations.push('不健康的账号数量较多，建议检查账号状态和配置');
+    }
+
+    const maxUsage = Math.max(...accounts.map(acc => acc.usageCount));
+    if (maxUsage > 200) {
+      recommendations.push('部分账号使用次数过多，建议增加更多账号进行负载均衡');
+    }
+
+    return {
+      summary: {
+        totalAccounts: accounts.length,
+        activeAccounts: stats.active,
+        totalUsage,
+        averageUsage: Math.round(averageUsage),
+        healthRate: Math.round((healthStatus.healthyAccounts / accounts.length) * 100)
+      },
+      usageDistribution,
+      trends: {
+        mostUsed,
+        leastUsed,
+        recentlyActive,
+        inactive
+      },
+      recommendations
     };
   }
 }

@@ -1,9 +1,10 @@
 import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { WebSocketManager, createNotificationWebSocketConfig } from '@pro/components';
-import { Subscription } from 'rxjs';
-import { environment } from '../../../../../environments/environment';
+import { print } from 'graphql';
+import { SubscriptionClient } from '../../../graphql/subscription-client.service';
+import { NotificationReceivedSubscription } from '../../../graphql/notifications.documents';
+import { TokenStorageService } from '../../../services/token-storage.service';
 
 interface Notification {
   id: string;
@@ -22,11 +23,12 @@ interface Notification {
 export class NotificationComponent implements OnInit, OnDestroy {
   isDropdownOpen = false;
   notifications: Notification[] = [];
-  private subscription?: Subscription;
+  private unsubscribe?: () => void;
 
   constructor(
-    private wsManager: WebSocketManager,
-    private router: Router
+    private readonly subscriptionClient: SubscriptionClient,
+    private readonly tokenStorage: TokenStorageService,
+    private readonly router: Router
   ) {}
 
   ngOnInit(): void {
@@ -34,7 +36,7 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
+    this.unsubscribe?.();
   }
 
   get unreadCount(): number {
@@ -47,7 +49,6 @@ export class NotificationComponent implements OnInit, OnDestroy {
 
   toggleDropdown(): void {
     this.isDropdownOpen = !this.isDropdownOpen;
-    console.log('Notification dropdown toggled. New state:', this.isDropdownOpen);
   }
 
   closeDropdown(): void {
@@ -55,15 +56,11 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   markAsRead(notification: Notification): void {
-    if (!notification.read) {
-      notification.read = true;
-    }
+    notification.read = true;
   }
 
   markAllAsRead(): void {
-    this.notifications.forEach(notification => {
-      notification.read = true;
-    });
+    this.notifications.forEach(n => n.read = true);
   }
 
   trackById(_index: number, notification: Notification): string {
@@ -71,10 +68,8 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   getTimeAgo(timestamp: Date): string {
-    const now = new Date();
-    const diff = now.getTime() - new Date(timestamp).getTime();
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
+    const diff = Date.now() - new Date(timestamp).getTime();
+    const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
@@ -85,83 +80,56 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   private subscribeToNotifications(): void {
-    const notificationWs = this.wsManager.getConnection('notifications');
+    const client = this.subscriptionClient.getClient();
 
-    if (!notificationWs) {
-      console.warn('通知WebSocket连接未找到，将创建新连接');
-      const token = localStorage.getItem(environment.tokenKey);
-      const config = createNotificationWebSocketConfig(environment.wsUrl, token || undefined);
-      const ws = this.wsManager.connectToNamespace(config);
-
-      this.subscription = ws.on('notification')
-        .subscribe((data: any) => {
-          this.handleNotification(data);
-        });
-
-      // 监听认证失败事件
-      ws.on('auth:token-expired')
-        .subscribe(() => {
-          console.log('[NotificationComponent] Token 过期，跳转登录页');
-          this.handleTokenExpired();
-        });
-
-      ws.on('auth:authentication-failed')
-        .subscribe((error: any) => {
-          console.log('[NotificationComponent] 认证失败，跳转登录页', error);
-          this.handleTokenExpired();
-        });
-    } else {
-      this.subscription = notificationWs.on('notification')
-        .subscribe((data: any) => {
-          this.handleNotification(data);
-        });
-
-      // 监听认证失败事件
-      notificationWs.on('auth:token-expired')
-        .subscribe(() => {
-          console.log('[NotificationComponent] Token 过期，跳转登录页');
-          this.handleTokenExpired();
-        });
-
-      notificationWs.on('auth:authentication-failed')
-        .subscribe((error: any) => {
-          console.log('[NotificationComponent] 认证失败，跳转登录页', error);
-          this.handleTokenExpired();
-        });
-    }
+    this.unsubscribe = client.subscribe(
+      { query: print(NotificationReceivedSubscription) },
+      {
+        next: ({ data }: any) => {
+          if (data?.notificationReceived) {
+            this.receiveNotification(data.notificationReceived);
+          }
+        },
+        error: (error: any) => {
+          if (this.isAuthenticationError(error)) {
+            this.handleAuthenticationFailure();
+          }
+        },
+        complete: () => {}
+      }
+    );
   }
 
-  private handleNotification(data: any): void {
-    const notification: Notification = {
-      id: data.id || Date.now().toString(),
-      title: data.title || '新通知',
+  private receiveNotification(data: any): void {
+    this.notifications.unshift({
+      id: data.id,
+      title: data.title,
       message: data.message,
-      timestamp: new Date(data.timestamp || Date.now()),
+      timestamp: new Date(data.timestamp),
       read: false
-    };
-
-    this.notifications.unshift(notification);
+    });
 
     if (this.notifications.length > 50) {
-      this.notifications = this.notifications.slice(0, 50);
+      this.notifications.length = 50;
     }
   }
 
-  private handleTokenExpired(): void {
-    // 清除本地存储的认证信息
-    localStorage.removeItem(environment.tokenKey);
-    localStorage.removeItem(environment.refreshTokenKey);
+  private isAuthenticationError(error: any): boolean {
+    const message = error?.message?.toLowerCase() || '';
+    return message.includes('unauthorized') ||
+           message.includes('unauthenticated') ||
+           message.includes('token');
+  }
 
-    // 跳转到登录页
+  private handleAuthenticationFailure(): void {
+    this.tokenStorage.clearTokens();
     this.router.navigate(['/auth/login']);
   }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
-    const clickedInside = target.closest('.notification-container');
-
-    if (!clickedInside && this.isDropdownOpen) {
+    if (!target.closest('.notification-container') && this.isDropdownOpen) {
       this.closeDropdown();
     }
   }

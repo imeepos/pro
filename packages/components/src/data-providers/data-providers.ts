@@ -19,8 +19,17 @@ export interface EventDataSource {
   fetchAmapApiKey(): Promise<string | null>;
 }
 
+export interface SubscriptionClient {
+  subscribe<TData = any>(
+    query: any,
+    variables?: Record<string, any>
+  ): Observable<TData>;
+}
+
 export const WEIBO_STATS_DATA_SOURCE = new InjectionToken<WeiboStatsDataSource>('WEIBO_STATS_DATA_SOURCE');
 
 export const EVENT_DATA_SOURCE = new InjectionToken<EventDataSource>('EVENT_DATA_SOURCE');
 
 export const TOKEN_STORAGE = new InjectionToken<TokenStorage>('TOKEN_STORAGE');
+
+export const SUBSCRIPTION_CLIENT = new InjectionToken<SubscriptionClient>('SUBSCRIPTION_CLIENT');

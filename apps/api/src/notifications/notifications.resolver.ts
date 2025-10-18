@@ -1,16 +1,21 @@
 import { UseGuards } from '@nestjs/common';
-import { Mutation, Resolver, Args } from '@nestjs/graphql';
+import { Mutation, Resolver, Args, Subscription } from '@nestjs/graphql';
 import { randomUUID } from 'crypto';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationInput } from './dto/notification.dto';
 import { NotificationModel } from './models/notification.model';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
+import { PubSubService } from '../common/pubsub/pubsub.service';
+import { NOTIFICATION_EVENTS } from './constants/notification-events';
 
 @Resolver(() => NotificationModel)
 @UseGuards(CompositeAuthGuard)
 export class NotificationsResolver {
-  constructor(private readonly notificationsGateway: NotificationsGateway) {}
+  constructor(
+    private readonly notificationsGateway: NotificationsGateway,
+    private readonly pubSub: PubSubService,
+  ) {}
 
   @Mutation(() => NotificationModel, { name: 'dispatchNotification' })
   async dispatchNotification(
@@ -35,5 +40,17 @@ export class NotificationsResolver {
       ...payload,
       userId: payload.userId ?? undefined,
     };
+  }
+
+  @Subscription(() => NotificationModel, {
+    name: 'notificationReceived',
+    filter: (payload: NotificationModel, _variables, context) => {
+      const userId = context.req?.user?.userId;
+      if (!userId) return false;
+      return !payload.userId || payload.userId === userId;
+    },
+  })
+  notificationReceived(@CurrentUser('userId') _userId: string) {
+    return this.pubSub.asyncIterator(NOTIFICATION_EVENTS.RECEIVED);
   }
 }

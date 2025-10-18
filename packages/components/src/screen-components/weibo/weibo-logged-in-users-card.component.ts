@@ -1,10 +1,9 @@
 import { Component, OnInit, OnDestroy, Input, Inject, Optional, ViewEncapsulation, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil, interval, Observable, combineLatest, filter, switchMap } from 'rxjs';
+import { Subject, takeUntil, interval } from 'rxjs';
 import { IScreenComponent } from '../base/screen-component.interface';
-import { WebSocketManager, WebSocketService, ConnectionState, createScreensWebSocketConfig, JwtAuthService } from '../../websocket';
-import { LoggedInUsersStats, TokenStorage } from '@pro/types';
-import { WEIBO_STATS_DATA_SOURCE, TOKEN_STORAGE, WeiboStatsDataSource } from '../../data-providers/data-providers';
+import { LoggedInUsersStats } from '@pro/types';
+import { WEIBO_STATS_DATA_SOURCE, SUBSCRIPTION_CLIENT, WeiboStatsDataSource, SubscriptionClient } from '../../data-providers/data-providers';
 
 export interface WeiboUsersCardConfig {
   mode?: 'edit' | 'display';
@@ -316,36 +315,31 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   lastUpdateTime: Date = new Date();
   isLoading = false;
   errorMessage = '';
-  connectionState: ConnectionState = ConnectionState.Disconnected;
+  isConnected = false;
 
   private readonly destroy$ = new Subject<void>();
   private readonly refreshTimer$ = new Subject<void>();
-  private wsService!: WebSocketService;
 
   constructor(
-    @Optional() private wsManager: WebSocketManager | null,
     @Optional() @Inject(WEIBO_STATS_DATA_SOURCE) private weiboDataSource: WeiboStatsDataSource | null,
-    @Optional() @Inject(TOKEN_STORAGE) private tokenStorage: TokenStorage | null,
+    @Optional() @Inject(SUBSCRIPTION_CLIENT) private subscriptionClient: SubscriptionClient | null,
     private cdr: ChangeDetectorRef
   ) {
-    console.log('[WeiboLoggedInUsersCardComponent] 构造函数调用 - 可选依赖模式', {
+    console.log('[WeiboLoggedInUsersCardComponent] 构造函数调用', {
       componentName: 'weibo-logged-in-users-card',
-      wsManager: !!this.wsManager,
       weiboDataSource: !!this.weiboDataSource,
-      tokenStorage: !!this.tokenStorage,
-      wsManagerType: this.wsManager?.constructor?.name,
+      subscriptionClient: !!this.subscriptionClient,
       dataSourceType: this.weiboDataSource?.constructor?.name,
-      tokenStorageType: this.tokenStorage?.constructor?.name
+      subscriptionClientType: this.subscriptionClient?.constructor?.name
     });
   }
 
   ngOnInit(): void {
-    console.log('[WeiboLoggedInUsersCardComponent] ngOnInit 开始 - 可选依赖模式', {
+    console.log('[WeiboLoggedInUsersCardComponent] ngOnInit 开始', {
       componentId: 'weibo-logged-in-users-card',
       config: this.config,
-      hasWsManager: !!this.wsManager,
       hasDataSource: !!this.weiboDataSource,
-      hasTokenStorage: !!this.tokenStorage
+      hasSubscriptionClient: !!this.subscriptionClient
     });
 
     try {
@@ -391,8 +385,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     if (!hasRequiredServices) {
       console.warn('[WeiboLoggedInUsersCardComponent] 关键服务不可用，进入降级模式', {
         hasDataSource: !!this.weiboDataSource,
-        hasWSManager: !!this.wsManager,
-        hasTokenStorage: !!this.tokenStorage
+        hasSubscriptionClient: !!this.subscriptionClient
       });
       this.enterDegradedMode();
       return;
@@ -400,8 +393,7 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
 
     console.log('[WeiboLoggedInUsersCardComponent] 服务验证通过，启动完整功能', {
       hasDataSource: !!this.weiboDataSource,
-      hasWSManager: !!this.wsManager,
-      hasTokenStorage: !!this.tokenStorage
+      hasSubscriptionClient: !!this.subscriptionClient
     });
 
     this.initializeFullFeatures();
@@ -412,15 +404,15 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
       this.loadData();
       console.log('[WeiboLoggedInUsersCardComponent] 数据加载启动');
 
-      if (this.wsManager && this.tokenStorage) {
-        this.initializeWebSocketConnection();
-        console.log('[WeiboLoggedInUsersCardComponent] WebSocket连接初始化');
+      if (this.subscriptionClient) {
+        this.initializeSubscription();
+        console.log('[WeiboLoggedInUsersCardComponent] GraphQL subscription 初始化');
       } else {
-        console.warn('[WeiboLoggedInUsersCardComponent] WebSocket服务不可用，跳过实时连接');
+        console.warn('[WeiboLoggedInUsersCardComponent] Subscription client 不可用，跳过实时更新');
+        this.setupRefreshTimer();
       }
 
-      this.setupRefreshTimer();
-      console.log('[WeiboLoggedInUsersCardComponent] 刷新定时器设置完成');
+      console.log('[WeiboLoggedInUsersCardComponent] 完整功能初始化完成');
     } catch (error) {
       console.error('[WeiboLoggedInUsersCardComponent] 完整功能初始化失败，降级到基础模式', error);
       this.enterDegradedMode();
@@ -532,98 +524,65 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
     }
   }
 
-  private initializeWebSocketConnection(): void {
-    console.log('[WeiboLoggedInUsersCardComponent] WebSocket连接初始化开始');
+  private initializeSubscription(): void {
+    console.log('[WeiboLoggedInUsersCardComponent] GraphQL subscription 初始化开始');
 
-    if (!this.wsManager) {
-      console.warn('[WeiboLoggedInUsersCardComponent] WebSocketManager不可用，跳过实时连接');
+    if (!this.subscriptionClient) {
+      console.warn('[WeiboLoggedInUsersCardComponent] Subscription client 不可用');
       return;
     }
 
     try {
-      // 使用现有的 WebSocket 连接，而不是创建新的连接
-      this.wsService = this.wsManager.getConnection('screens') as WebSocketService;
-      console.log('[WeiboLoggedInUsersCardComponent] 获取现有WebSocket服务', {
-        hasWsService: !!this.wsService,
-        wsServiceType: this.wsService?.constructor?.name
-      });
+      this.subscriptionClient
+        .subscribe<{ weiboLoggedInUsersUpdate: LoggedInUsersStats }>({
+          query: `
+            subscription WeiboLoggedInUsersUpdate {
+              weiboLoggedInUsersUpdate {
+                total
+                todayNew
+                online
+              }
+            }
+          `
+        })
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (result) => {
+            console.log('[WeiboLoggedInUsersCardComponent] 收到 subscription 数据更新', { result });
+            this.handleSubscriptionUpdate(result.weiboLoggedInUsersUpdate);
+          },
+          error: (error) => {
+            console.error('[WeiboLoggedInUsersCardComponent] Subscription 错误', error);
+            this.handleSubscriptionError(error);
+          },
+          complete: () => {
+            console.log('[WeiboLoggedInUsersCardComponent] Subscription 完成');
+            this.isConnected = false;
+          }
+        });
 
-      if (!this.wsService) {
-        console.warn('[WeiboLoggedInUsersCardComponent] 未找到screens命名空间的WebSocket连接');
-        return;
-      }
-
-      this.observeConnectionState();
-      console.log('[WeiboLoggedInUsersCardComponent] 连接状态监听设置');
-
-      this.subscribeToDataUpdates();
-      console.log('[WeiboLoggedInUsersCardComponent] 数据更新订阅设置');
-
+      this.isConnected = true;
+      console.log('[WeiboLoggedInUsersCardComponent] Subscription 设置完成');
     } catch (error) {
-      console.error('[WeiboLoggedInUsersCardComponent] WebSocket初始化失败', {
+      console.error('[WeiboLoggedInUsersCardComponent] Subscription 初始化失败', {
         error: error instanceof Error ? error.message : error,
         stack: error instanceof Error ? error.stack : undefined
       });
+      this.setupRefreshTimer();
     }
   }
 
-  private getToken(): string | undefined {
-    return this.tokenStorage?.getToken() || undefined;
-  }
-
-  private observeConnectionState(): void {
-    this.wsService.state$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(state => {
-      this.connectionState = state;
-      this.handleConnectionStateChange(state);
-    });
-  }
-
-  private handleConnectionStateChange(state: ConnectionState): void {
-    switch (state) {
-      case ConnectionState.Connecting:
-      case ConnectionState.Reconnecting:
-        this.clearErrorState();
-        break;
-      case ConnectionState.Failed:
-        this.setNetworkError('WebSocket连接失败');
-        break;
-      case ConnectionState.Disconnected:
-        if (this.connectionState !== ConnectionState.Disconnected) {
-          this.setNetworkError('WebSocket连接已断开');
-        }
-        break;
-    }
-  }
-
-  private subscribeToDataUpdates(): void {
-    this.wsService.isConnected$.pipe(
-      filter(connected => connected),
-      switchMap(() => this.wsService.on('weibo:logged-in-users:update')),
-      takeUntil(this.destroy$)
-    ).subscribe({
-      next: (stats) => {
-        console.log('[WeiboLoggedInUsersCardComponent] 收到WebSocket数据更新', { stats });
-        this.updateStatsFromWebSocket(stats);
-      },
-      error: (error) => {
-        console.error('[WeiboLoggedInUsersCardComponent] WebSocket数据更新失败', error);
-        this.handleWebSocketError(error);
-      }
-    });
-  }
-
-  private updateStatsFromWebSocket(newStats: LoggedInUsersStats): void {
+  private handleSubscriptionUpdate(newStats: LoggedInUsersStats): void {
     this.clearErrorState();
     this.updateStats(newStats);
-    // 手动触发变更检测确保WebSocket数据更新能反映到视图
     this.cdr.detectChanges();
   }
 
-  private handleWebSocketError(error: any): void {
-    console.error('WebSocket数据更新失败:', error);
+  private handleSubscriptionError(error: any): void {
+    console.error('GraphQL subscription 错误:', error);
     this.setDataError('实时数据更新失败');
+    this.isConnected = false;
+    this.setupRefreshTimer();
   }
 
   private clearErrorState(): void {
@@ -765,17 +724,6 @@ export class WeiboLoggedInUsersCardComponent implements OnInit, OnDestroy, IScre
   }
 
   getConnectionStatusClass(): string {
-    switch (this.connectionState) {
-      case ConnectionState.Connected:
-        return 'connected';
-      case ConnectionState.Connecting:
-      case ConnectionState.Reconnecting:
-        return 'connecting';
-      case ConnectionState.Failed:
-        return 'failed';
-      case ConnectionState.Disconnected:
-      default:
-        return 'disconnected';
-    }
+    return this.isConnected ? 'connected' : 'disconnected';
   }
 }

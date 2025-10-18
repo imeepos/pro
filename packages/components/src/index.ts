@@ -23,8 +23,10 @@ export {
   WEIBO_STATS_DATA_SOURCE,
   EVENT_DATA_SOURCE,
   TOKEN_STORAGE,
+  SUBSCRIPTION_CLIENT,
   type WeiboStatsDataSource,
-  type EventDataSource
+  type EventDataSource,
+  type SubscriptionClient
 } from './data-providers/data-providers';
 
 // WebSocket Services (Unified Architecture)

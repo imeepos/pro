@@ -28,6 +28,30 @@ export interface CrawlResult {
   error?: string;
 }
 
+export interface TraceContext {
+  traceId: string;
+  taskId: number;
+  keyword: string;
+  startTime: Date;
+}
+
+export class TraceGenerator {
+  static generateTraceId(): string {
+    const timestamp = Date.now().toString(36);
+    const randomStr = Math.random().toString(36).substring(2, 15);
+    return `trace_${timestamp}_${randomStr}`;
+  }
+
+  static createTraceContext(taskId: number, keyword: string): TraceContext {
+    return {
+      traceId: this.generateTraceId(),
+      taskId,
+      keyword,
+      startTime: new Date()
+    };
+  }
+}
+
 @Injectable()
 export class WeiboSearchCrawlerService {
   private readonly logger = new Logger(WeiboSearchCrawlerService.name);
@@ -64,13 +88,18 @@ export class WeiboSearchCrawlerService {
     const { taskId, keyword, start, end, isInitialCrawl, weiboAccountId, enableAccountRotation } = message;
     const crawlStartTime = Date.now();
 
-    this.logger.debug('开始执行爬取任务', {
+    // 创建链路追踪上下文
+    const traceContext = TraceGenerator.createTraceContext(taskId, keyword);
+
+    this.logger.log('🚀 开始执行爬取任务', {
+      traceId: traceContext.traceId,
       taskId,
       keyword,
       timeRange: { start: start.toISOString(), end: end.toISOString() },
       isInitialCrawl,
       enableAccountRotation,
-      specifiedAccountId: weiboAccountId
+      specifiedAccountId: weiboAccountId,
+      startTime: new Date().toISOString()
     });
 
     let account: WeiboAccount | null = null;
@@ -87,24 +116,52 @@ export class WeiboSearchCrawlerService {
 
     try {
       // 获取可用账号
+      this.logger.debug('🔍 开始获取可用账号', {
+        traceId: traceContext.traceId,
+        requestedAccountId: weiboAccountId,
+        enableAccountRotation
+      });
+
       account = await this.accountService.getAvailableAccount(weiboAccountId);
       if (!account) {
+        this.logger.error('❌ 无可用微博账号', {
+          traceId: traceContext.traceId,
+          requestedAccountId: weiboAccountId,
+          enableAccountRotation
+        });
         throw new Error('无可用微博账号');
       }
 
-      this.logger.debug('账号获取成功', {
-        taskId,
+      this.logger.log('✅ 账号获取成功', {
+        traceId: traceContext.traceId,
         accountId: account.id,
         accountNickname: account.nickname,
-        usageCount: account.usageCount
+        usageCount: account.usageCount,
+        accountStatus: account.status
       });
 
       // 创建页面实例
+      this.logger.debug('🌐 开始创建浏览器页面', {
+        traceId: traceContext.traceId,
+        accountId: account.id
+      });
+
       page = await this.browserService.createPage(account.id, account.cookies);
+
+      this.logger.log('✅ 浏览器页面创建成功', {
+        traceId: traceContext.traceId,
+        accountId: account.id
+      });
 
       let firstPostTime: Date | null = null;
       let lastPostTime: Date | null = null;
       const pageLoadTimes: number[] = [];
+
+      this.logger.log('📄 开始逐页处理', {
+        traceId: traceContext.traceId,
+        maxPages: this.crawlerConfig.maxPages,
+        keyword
+      });
 
       // 逐页处理
       for (let currentPage = 1; currentPage <= this.crawlerConfig.maxPages; currentPage++) {
@@ -115,13 +172,19 @@ export class WeiboSearchCrawlerService {
           crawlMetrics.totalPages++;
           crawlMetrics.totalRequests++;
 
+          this.logger.debug('🔍 开始处理页面', {
+            traceId: traceContext.traceId,
+            page: currentPage,
+            url: url.length > 100 ? url.substring(0, 100) + '...' : url
+          });
+
           // 检查URL是否已存在（去重）
           const existingRecord = await this.rawDataService.findBySourceUrl(url);
           if (existingRecord) {
-            this.logger.debug('页面已存在，跳过抓取', {
-              taskId,
+            this.logger.debug('⏭️ 页面已存在，跳过抓取', {
+              traceId: traceContext.traceId,
               page: currentPage,
-              url,
+              url: url.length > 100 ? url.substring(0, 100) + '...' : url,
               existingCreatedAt: existingRecord.createdAt?.toISOString(),
               skipReason: 'already_exists'
             });
@@ -130,6 +193,12 @@ export class WeiboSearchCrawlerService {
           }
 
           // 获取页面HTML
+          this.logger.debug('📥 开始获取页面HTML', {
+            traceId: traceContext.traceId,
+            page: currentPage,
+            url: url.length > 100 ? url.substring(0, 100) + '...' : url
+          });
+
           const html = await this.getPageHtml(page, url);
           const pageLoadTime = Date.now() - pageStartTime;
           pageLoadTimes.push(pageLoadTime);
@@ -138,16 +207,23 @@ export class WeiboSearchCrawlerService {
           const dataSize = new Blob([html]).size;
           crawlMetrics.totalDataSize += dataSize;
 
-          this.logger.debug('页面抓取成功', {
-            taskId,
+          this.logger.log('✅ 页面抓取成功', {
+            traceId: traceContext.traceId,
             page: currentPage,
-            url,
+            url: url.length > 100 ? url.substring(0, 100) + '...' : url,
             loadTimeMs: pageLoadTime,
             dataSizeBytes: dataSize,
+            dataSizeKB: Math.round(dataSize / 1024),
             htmlLength: html.length
           });
 
           // 保存原始数据
+          this.logger.debug('💾 开始保存原始数据', {
+            traceId: traceContext.traceId,
+            page: currentPage,
+            dataSizeKB: Math.round(dataSize / 1024)
+          });
+
           await this.rawDataService.create({
             sourceType: 'weibo_keyword_search',
             sourceUrl: url,
@@ -161,19 +237,33 @@ export class WeiboSearchCrawlerService {
               accountId: account.id,
               crawledAt: new Date(),
               loadTimeMs: pageLoadTime,
-              dataSizeBytes: dataSize
+              dataSizeBytes: dataSize,
+              traceId: traceContext.traceId
             }
           });
 
           crawlMetrics.successfulPages++;
 
+          this.logger.log('✅ 原始数据保存成功', {
+            traceId: traceContext.traceId,
+            page: currentPage,
+            successfulPages: crawlMetrics.successfulPages,
+            totalDataSizeMB: Math.round(crawlMetrics.totalDataSize / 1024 / 1024 * 100) / 100
+          });
+
           // 提取时间信息
           if (currentPage === 1) {
             firstPostTime = this.extractFirstPostTime(html);
             if (firstPostTime) {
-              this.logger.debug('首条微博时间提取成功', {
-                taskId,
+              this.logger.log('⏰ 首条微博时间提取成功', {
+                traceId: traceContext.traceId,
+                page: currentPage,
                 firstPostTime: firstPostTime.toISOString()
+              });
+            } else {
+              this.logger.warn('⚠️ 首条微博时间提取失败', {
+                traceId: traceContext.traceId,
+                page: currentPage
               });
             }
           }
@@ -182,27 +272,36 @@ export class WeiboSearchCrawlerService {
 
           // 检查是否到最后一页
           if (this.isLastPage(html)) {
-            this.logger.debug('检测到最后一页，停止抓取', {
-              taskId,
-              finalPage: currentPage
+            this.logger.log('🏁 检测到最后一页，停止抓取', {
+              traceId: traceContext.traceId,
+              finalPage: currentPage,
+              totalPagesProcessed: crawlMetrics.successfulPages + crawlMetrics.failedPages
             });
             break;
           }
 
           // 应用延迟
+          this.logger.debug('⏱️ 应用请求延迟', {
+            traceId: traceContext.traceId,
+            page: currentPage,
+            delayRange: `${this.crawlerConfig.requestDelay.min}-${this.crawlerConfig.requestDelay.max}ms`
+          });
+
           await this.randomDelay(this.crawlerConfig.requestDelay.min, this.crawlerConfig.requestDelay.max);
 
         } catch (error) {
           const pageLoadTime = Date.now() - pageStartTime;
           crawlMetrics.failedPages++;
 
-          this.logger.warn('页面抓取失败', {
-            taskId,
+          this.logger.error('❌ 页面抓取失败', {
+            traceId: traceContext.traceId,
             page: currentPage,
-            url,
+            url: url.length > 100 ? url.substring(0, 100) + '...' : url,
             loadTimeMs: pageLoadTime,
             error: error instanceof Error ? error.message : '未知错误',
-            errorType: this.classifyPageError(error)
+            errorType: this.classifyPageError(error),
+            failedPages: crawlMetrics.failedPages,
+            totalPages: crawlMetrics.totalPages
           });
 
           // 第一页失败则整个任务失败
@@ -221,22 +320,35 @@ export class WeiboSearchCrawlerService {
         : 0;
 
       // 关闭浏览器上下文
+      this.logger.debug('🧹 开始清理浏览器资源', {
+        traceId: traceContext.traceId,
+        accountId: account.id
+      });
+
       await this.browserService.closeContext(account.id);
 
       const totalDuration = Date.now() - crawlStartTime;
 
-      this.logger.log('爬取任务完成', {
+      this.logger.log('🎉 爬取任务完成', {
+        traceId: traceContext.traceId,
         taskId,
         keyword,
         duration: totalDuration,
-        metrics: crawlMetrics,
+        durationFormatted: this.formatDuration(totalDuration),
+        metrics: {
+          ...crawlMetrics,
+          averagePageLoadTimeFormatted: `${crawlMetrics.averagePageLoadTime}ms`,
+          totalDataSizeMB: Math.round(crawlMetrics.totalDataSize / 1024 / 1024 * 100) / 100,
+          successRate: crawlMetrics.totalPages > 0 ? Math.round((crawlMetrics.successfulPages / crawlMetrics.totalPages) * 100) : 0
+        },
         firstPostTime: firstPostTime?.toISOString(),
         lastPostTime: lastPostTime?.toISOString(),
         throughput: Math.round((crawlMetrics.totalDataSize / 1024 / 1024) / (totalDuration / 1000) * 100) / 100, // MB/s
         accountUsed: {
           id: account.id,
           nickname: account.nickname
-        }
+        },
+        finishedAt: new Date().toISOString()
       });
 
       const result: CrawlResult = {
@@ -254,23 +366,35 @@ export class WeiboSearchCrawlerService {
     } catch (error) {
       const totalDuration = Date.now() - crawlStartTime;
 
-      this.logger.error('爬取任务失败', {
+      this.logger.error('💥 爬取任务失败', {
+        traceId: traceContext.traceId,
         taskId,
         keyword,
         duration: totalDuration,
-        metrics: crawlMetrics,
+        durationFormatted: this.formatDuration(totalDuration),
+        metrics: {
+          ...crawlMetrics,
+          totalDataSizeMB: Math.round(crawlMetrics.totalDataSize / 1024 / 1024 * 100) / 100,
+          successRate: crawlMetrics.totalPages > 0 ? Math.round((crawlMetrics.successfulPages / crawlMetrics.totalPages) * 100) : 0
+        },
         error: error instanceof Error ? error.message : '未知错误',
         errorType: this.classifyCrawlError(error),
         accountUsed: account ? { id: account.id, nickname: account.nickname } : null,
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
+        failedAt: new Date().toISOString()
       });
 
       // 确保清理资源
       if (page && account) {
         try {
+          this.logger.debug('🧹 开始清理失败的浏览器资源', {
+            traceId: traceContext.traceId,
+            accountId: account.id
+          });
           await this.browserService.closeContext(account.id);
         } catch (cleanupError) {
-          this.logger.warn('清理浏览器资源失败', {
+          this.logger.error('❌ 清理浏览器资源失败', {
+            traceId: traceContext.traceId,
             taskId,
             accountId: account.id,
             error: cleanupError instanceof Error ? cleanupError.message : '未知错误'
@@ -719,5 +843,77 @@ export class WeiboSearchCrawlerService {
     }
 
     return 'UNKNOWN_CRAWL_ERROR';
+  }
+
+  /**
+   * 格式化持续时间显示
+   */
+  private formatDuration(milliseconds: number): string {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
+
+  /**
+   * 获取详细的任务执行摘要
+   */
+  private getTaskSummary(traceContext: TraceContext, crawlMetrics: any, totalDuration: number): {
+    traceId: string;
+    taskId: number;
+    keyword: string;
+    startTime: Date;
+    duration: number;
+    durationFormatted: string;
+    performance: {
+      totalPages: number;
+      successfulPages: number;
+      failedPages: number;
+      skippedPages: number;
+      successRate: number;
+      averagePageLoadTime: number;
+      totalDataSizeMB: number;
+      throughputMBps: number;
+    };
+    efficiency: {
+      requestsPerSecond: number;
+      pagesPerMinute: number;
+      errorRate: number;
+    };
+  } {
+    const performance = {
+      totalPages: crawlMetrics.totalPages,
+      successfulPages: crawlMetrics.successfulPages,
+      failedPages: crawlMetrics.failedPages,
+      skippedPages: crawlMetrics.skippedPages,
+      successRate: crawlMetrics.totalPages > 0 ? Math.round((crawlMetrics.successfulPages / crawlMetrics.totalPages) * 100) : 0,
+      averagePageLoadTime: crawlMetrics.averagePageLoadTime,
+      totalDataSizeMB: Math.round(crawlMetrics.totalDataSize / 1024 / 1024 * 100) / 100,
+      throughputMBps: Math.round((crawlMetrics.totalDataSize / 1024 / 1024) / (totalDuration / 1000) * 100) / 100
+    };
+
+    const efficiency = {
+      requestsPerSecond: Math.round((crawlMetrics.totalRequests / totalDuration) * 1000 * 100) / 100,
+      pagesPerMinute: Math.round((crawlMetrics.totalPages / totalDuration) * 60000 * 100) / 100,
+      errorRate: crawlMetrics.totalPages > 0 ? Math.round((crawlMetrics.failedPages / crawlMetrics.totalPages) * 100) : 0
+    };
+
+    return {
+      traceId: traceContext.traceId,
+      taskId: traceContext.taskId,
+      keyword: traceContext.keyword,
+      startTime: traceContext.startTime,
+      duration: totalDuration,
+      durationFormatted: this.formatDuration(totalDuration),
+      performance,
+      efficiency
+    };
   }
 }

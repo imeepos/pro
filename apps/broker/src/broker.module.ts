@@ -25,6 +25,7 @@ import { AppController } from './app.controller';
     // 日志模块
     LoggerModule.forRoot(createLoggerConfig({
       serviceName: '@pro/broker',
+      logLevel: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
     })),
 
     // 数据库配置

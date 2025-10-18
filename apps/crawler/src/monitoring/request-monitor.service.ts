@@ -68,35 +68,54 @@ export class RequestMonitorService {
     // 清理过期记录
     this.cleanupOldRecords();
 
-    // 记录请求详情（仅在debug级别）
-    this.logger.debug('请求记录添加', {
+    const stats = this.getCurrentStats();
+
+    // 记录请求详情
+    this.logger.debug(`📊 ${success ? '✅' : '❌'} 请求记录`, {
       url: this.sanitizeUrl(url),
       success,
       duration,
+      durationCategory: this.categorizeResponseTime(duration),
       currentDelayMs: this.currentDelayMs,
       totalRequests: this.requests.length,
-      recentSuccessRate: this.calculateRecentSuccessRate(),
-      averageResponseTime: this.calculateAverageResponseTime()
+      recentSuccessRate: Math.round(this.calculateRecentSuccessRate() * 100),
+      averageResponseTime: Math.round(this.calculateAverageResponseTime()),
+      requestsPerSecond: Math.round(stats.requestsPerSecond * 100) / 100,
+      isThrottling: stats.isThrottling
     });
 
     // 对于失败的请求，记录更详细的信息
     if (!success) {
-      this.logger.warn('请求失败记录', {
+      this.logger.warn('❌ 请求失败记录', {
         url: this.sanitizeUrl(url),
         duration,
         failureCount: this.getRecentFailureCount(),
+        consecutiveFailures: this.getConsecutiveFailures(),
         currentDelayMs: this.currentDelayMs,
-        isThrottling: this.getCurrentStats().isThrottling
+        isThrottling: stats.isThrottling,
+        recentSuccessRate: Math.round(this.calculateRecentSuccessRate() * 100),
+        failureType: this.classifyFailure(url, duration)
       });
     }
 
     // 对于异常慢的请求，记录警告
     if (duration > 10000) { // 超过10秒
-      this.logger.warn('请求响应时间过长', {
+      this.logger.warn('⏱️ 请求响应时间过长', {
         url: this.sanitizeUrl(url),
         duration,
+        durationCategory: 'very_slow',
         threshold: 10000,
-        averageResponseTime: this.calculateAverageResponseTime()
+        averageResponseTime: Math.round(this.calculateAverageResponseTime()),
+        percentile95: this.calculateResponseTimePercentile(95),
+        impact: this.assessPerformanceImpact(duration)
+      });
+    } else if (duration > 5000) { // 超过5秒
+      this.logger.warn('⚠️ 请求响应时间较慢', {
+        url: this.sanitizeUrl(url),
+        duration,
+        durationCategory: 'slow',
+        threshold: 5000,
+        averageResponseTime: Math.round(this.calculateAverageResponseTime())
       });
     }
   }
@@ -111,27 +130,37 @@ export class RequestMonitorService {
 
     // 检查是否需要延迟
     if (stats.isThrottling) {
-      this.logger.warn('触发限流机制', {
+      this.logger.warn('🚦 触发限流机制', {
         currentDelayMs: this.currentDelayMs,
-        requestsPerSecond: stats.requestsPerSecond,
-        maxRequestsPerSecond: stats.maxRequestsPerWindow / (this.crawlerConfig.rateMonitoring.windowSizeMs / 1000),
+        requestsPerSecond: Math.round(stats.requestsPerSecond * 100) / 100,
+        maxRequestsPerSecond: Math.round(stats.maxRequestsPerWindow / (this.crawlerConfig.rateMonitoring.windowSizeMs / 1000) * 100) / 100,
         successRate: Math.round(stats.successRate * 100),
-        averageResponseTime: Math.round(stats.averageResponseTime)
+        averageResponseTime: Math.round(stats.averageResponseTime),
+        utilizationRate: Math.round((stats.requestsPerSecond / (stats.maxRequestsPerWindow / (this.crawlerConfig.rateMonitoring.windowSizeMs / 1000))) * 100),
+        throttlingReason: this.getThrottlingReason(stats)
       });
     }
 
     // 等待当前延迟时间
+    this.logger.debug('⏳ 开始请求间延迟', {
+      expectedDelayMs: this.currentDelayMs,
+      delayReason: this.getDelayReason(stats),
+      isAdaptive: this.crawlerConfig.rateMonitoring.adaptiveDelay.enabled
+    });
+
     await this.delay(this.currentDelayMs);
 
     const waitDuration = Date.now() - waitStartTime;
 
-    this.logger.debug('请求间延迟完成', {
+    this.logger.debug('✅ 请求间延迟完成', {
       waitedMs: waitDuration,
       expectedDelayMs: this.currentDelayMs,
+      delayAccuracy: Math.round((waitDuration / this.currentDelayMs) * 100),
       currentStats: {
         requestsPerSecond: Math.round(stats.requestsPerSecond * 100) / 100,
         successRate: Math.round(stats.successRate * 100),
-        averageResponseTime: Math.round(stats.averageResponseTime)
+        averageResponseTime: Math.round(stats.averageResponseTime),
+        isThrottling: stats.isThrottling
       }
     });
   }
@@ -236,6 +265,7 @@ export class RequestMonitorService {
 
   setCurrentDelay(delayMs: number): void {
     const previousDelay = this.currentDelayMs;
+    const stats = this.getCurrentStats();
 
     this.currentDelayMs = Math.max(
       this.crawlerConfig.rateMonitoring.adaptiveDelay.minDelayMs,
@@ -247,20 +277,28 @@ export class RequestMonitorService {
 
     // 只有延迟发生显著变化时才记录日志
     if (Math.abs(this.currentDelayMs - previousDelay) > 100) { // 变化超过100ms才记录
-      this.logger.log('请求延迟已调整', {
+      const changeDirection = this.currentDelayMs > previousDelay ? '⬆️ 增加' : '⬇️ 减少';
+      const changeSeverity = this.assessDelayChangeSeverity(previousDelay, this.currentDelayMs);
+
+      this.logger.log(`${changeDirection} 请求延迟已调整`, {
         previousDelayMs: previousDelay,
         newDelayMs: this.currentDelayMs,
         changeMs: this.currentDelayMs - previousDelay,
         changePercent: previousDelay > 0 ? Math.round(((this.currentDelayMs - previousDelay) / previousDelay) * 100) : 0,
+        changeSeverity,
         allowedRange: {
           min: this.crawlerConfig.rateMonitoring.adaptiveDelay.minDelayMs,
-          max: this.crawlerConfig.rateMonitoring.adaptiveDelay.maxDelayMs
+          max: this.crawlerConfig.rateMonitoring.adaptiveDelay.maxDelayMs,
+          utilizationPercent: Math.round((this.currentDelayMs - this.crawlerConfig.rateMonitoring.adaptiveDelay.minDelayMs) /
+            (this.crawlerConfig.rateMonitoring.adaptiveDelay.maxDelayMs - this.crawlerConfig.rateMonitoring.adaptiveDelay.minDelayMs) * 100)
         },
         currentStats: {
-          requestsPerSecond: Math.round(this.getCurrentStats().requestsPerSecond * 100) / 100,
-          successRate: Math.round(this.getCurrentStats().successRate * 100),
-          averageResponseTime: Math.round(this.getCurrentStats().averageResponseTime)
-        }
+          requestsPerSecond: Math.round(stats.requestsPerSecond * 100) / 100,
+          successRate: Math.round(stats.successRate * 100),
+          averageResponseTime: Math.round(stats.averageResponseTime),
+          isThrottling: stats.isThrottling
+        },
+        adjustmentReason: this.getDelayAdjustmentReason(stats, previousDelay, this.currentDelayMs)
       });
     }
   }
@@ -269,17 +307,29 @@ export class RequestMonitorService {
     const resetStartTime = Date.now();
     const previousRequestsCount = this.requests.length;
     const previousDelay = this.currentDelayMs;
+    const previousStats = this.getCurrentStats();
 
     this.requests = [];
     this.currentDelayMs = this.crawlerConfig.requestDelay.min;
 
     const resetDuration = Date.now() - resetStartTime;
 
-    this.logger.log('请求监控已重置', {
+    this.logger.log('🔄 请求监控已重置', {
       resetTimeMs: resetDuration,
       previousRequestsCount,
       previousDelayMs: previousDelay,
-      newDelayMs: this.currentDelayMs
+      newDelayMs: this.currentDelayMs,
+      clearedData: {
+        totalRequests: previousRequestsCount,
+        oldSuccessRate: Math.round(previousStats.successRate * 100),
+        oldRequestsPerSecond: Math.round(previousStats.requestsPerSecond * 100) / 100,
+        oldAverageResponseTime: Math.round(previousStats.averageResponseTime)
+      },
+      freshStart: {
+        baseDelay: this.crawlerConfig.requestDelay.min,
+        monitoringEnabled: this.crawlerConfig.rateMonitoring.enabled,
+        adaptiveDelayEnabled: this.crawlerConfig.rateMonitoring.adaptiveDelay.enabled
+      }
     });
   }
 
@@ -533,6 +583,199 @@ export class RequestMonitorService {
       summary: {
         trend,
         performanceScore
+      }
+    };
+  }
+
+  /**
+   * 分类响应时间
+   */
+  private categorizeResponseTime(duration: number): string {
+    if (duration < 1000) return 'fast';
+    if (duration < 3000) return 'normal';
+    if (duration < 10000) return 'slow';
+    return 'very_slow';
+  }
+
+  /**
+   * 获取连续失败次数
+   */
+  private getConsecutiveFailures(): number {
+    let consecutive = 0;
+    for (let i = this.requests.length - 1; i >= 0; i--) {
+      if (this.requests[i].success) {
+        break;
+      }
+      consecutive++;
+    }
+    return consecutive;
+  }
+
+  /**
+   * 分类失败类型
+   */
+  private classifyFailure(url: string, duration: number): string {
+    if (duration < 1000) return 'fast_failure';
+    if (duration < 5000) return 'normal_failure';
+    if (duration < 15000) return 'slow_failure';
+    return 'timeout_failure';
+  }
+
+  /**
+   * 计算响应时间百分位数
+   */
+  private calculateResponseTimePercentile(percentile: number): number {
+    if (this.requests.length === 0) return 0;
+
+    const durations = this.requests
+      .map(r => r.duration)
+      .sort((a, b) => a - b);
+
+    const index = Math.ceil((percentile / 100) * durations.length) - 1;
+    return durations[Math.max(0, index)];
+  }
+
+  /**
+   * 评估性能影响
+   */
+  private assessPerformanceImpact(duration: number): 'low' | 'medium' | 'high' | 'critical' {
+    if (duration < 5000) return 'low';
+    if (duration < 10000) return 'medium';
+    if (duration < 20000) return 'high';
+    return 'critical';
+  }
+
+  /**
+   * 获取限流原因
+   */
+  private getThrottlingReason(stats: RateStats): string {
+    if (stats.requestsPerSecond > stats.maxRequestsPerWindow / (this.crawlerConfig.rateMonitoring.windowSizeMs / 1000)) {
+      return 'rate_limit_exceeded';
+    }
+    if (stats.successRate < 0.8) {
+      return 'low_success_rate';
+    }
+    if (stats.averageResponseTime > 10000) {
+      return 'high_response_time';
+    }
+    return 'unknown';
+  }
+
+  /**
+   * 获取延迟原因
+   */
+  private getDelayReason(stats: RateStats): string {
+    if (stats.isThrottling) return 'throttling';
+    if (this.currentDelayMs > this.crawlerConfig.requestDelay.max) return 'adaptive_increase';
+    if (this.currentDelayMs < this.crawlerConfig.requestDelay.min) return 'adaptive_decrease';
+    return 'baseline';
+  }
+
+  /**
+   * 评估延迟变化严重程度
+   */
+  private assessDelayChangeSeverity(previousDelay: number, newDelay: number): 'minor' | 'moderate' | 'significant' | 'major' {
+    const changePercent = Math.abs(((newDelay - previousDelay) / previousDelay) * 100);
+
+    if (changePercent < 20) return 'minor';
+    if (changePercent < 50) return 'moderate';
+    if (changePercent < 100) return 'significant';
+    return 'major';
+  }
+
+  /**
+   * 获取延迟调整原因
+   */
+  private getDelayAdjustmentReason(stats: RateStats, previousDelay: number, newDelay: number): string {
+    if (stats.isThrottling) return 'rate_limit_protection';
+    if (newDelay > previousDelay) {
+      if (stats.successRate < 0.8) return 'low_success_rate_compensation';
+      if (stats.averageResponseTime > 10000) return 'high_response_time_compensation';
+      return 'performance_degradation';
+    } else {
+      if (stats.requestsPerSecond < stats.maxRequestsPerWindow * 0.5) return 'under_utilization_optimization';
+      return 'performance_improvement';
+    }
+  }
+
+  /**
+   * 获取实时性能基准
+   */
+  async getPerformanceBenchmark(): Promise<{
+    current: RateStats;
+    benchmark: {
+      excellent: { rps: number; successRate: number; avgResponseTime: number };
+      good: { rps: number; successRate: number; avgResponseTime: number };
+      acceptable: { rps: number; successRate: number; avgResponseTime: number };
+      poor: { rps: number; successRate: number; avgResponseTime: number };
+    };
+    assessment: {
+      level: 'excellent' | 'good' | 'acceptable' | 'poor';
+      score: number;
+      recommendations: string[];
+    };
+    trends: {
+      direction: 'improving' | 'stable' | 'degrading';
+      confidence: number;
+    };
+  }> {
+    const current = this.getCurrentStats();
+    const maxRPS = this.crawlerConfig.rateMonitoring.maxRequestsPerWindow / (this.crawlerConfig.rateMonitoring.windowSizeMs / 1000);
+
+    const benchmark = {
+      excellent: { rps: maxRPS * 0.9, successRate: 0.95, avgResponseTime: 2000 },
+      good: { rps: maxRPS * 0.7, successRate: 0.85, avgResponseTime: 5000 },
+      acceptable: { rps: maxRPS * 0.5, successRate: 0.75, avgResponseTime: 10000 },
+      poor: { rps: maxRPS * 0.3, successRate: 0.6, avgResponseTime: 15000 }
+    };
+
+    // 计算评分 (0-100)
+    let score = 0;
+    const rpsScore = Math.min((current.requestsPerSecond / benchmark.excellent.rps) * 40, 40);
+    const successRateScore = Math.min((current.successRate / benchmark.excellent.successRate) * 30, 30);
+    const responseTimeScore = Math.min((benchmark.excellent.avgResponseTime / Math.max(current.averageResponseTime, 1)) * 30, 30);
+    score = Math.round(rpsScore + successRateScore + responseTimeScore);
+
+    let level: 'excellent' | 'good' | 'acceptable' | 'poor';
+    const recommendations: string[] = [];
+
+    if (score >= 85) {
+      level = 'excellent';
+    } else if (score >= 70) {
+      level = 'good';
+    } else if (score >= 50) {
+      level = 'acceptable';
+      recommendations.push('考虑优化请求频率或目标网站性能');
+    } else {
+      level = 'poor';
+      recommendations.push('当前性能较差，建议检查网络连接和目标网站状态');
+      recommendations.push('考虑增加延迟时间或减少并发请求');
+    }
+
+    if (current.successRate < 0.8) {
+      recommendations.push('成功率偏低，检查请求逻辑和目标网站可用性');
+    }
+
+    if (current.averageResponseTime > benchmark.good.avgResponseTime) {
+      recommendations.push('响应时间较长，可能需要优化网络或增加延迟');
+    }
+
+    // 趋势分析
+    const trends = this.getPerformanceTrends(30); // 30分钟趋势
+    const direction = trends.summary.trend;
+    const confidence = Math.min(trends.timeline.length / 10, 1) * 100; // 数据点越多置信度越高
+
+    return {
+      current,
+      benchmark,
+      assessment: {
+        level,
+        score,
+        recommendations
+      },
+      trends: {
+        direction,
+        confidence
       }
     };
   }
