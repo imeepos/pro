@@ -18,6 +18,7 @@ import { WeiboTaskStatusConsumer } from './weibo-task-status.consumer';
 import { WeiboTaskStatusResolver } from './weibo-task-status.resolver';
 import { WeiboStatsRedisService } from './weibo-stats-redis.service';
 import { WeiboHourlyStatsService } from './weibo-hourly-stats.service';
+import { WeiboSessionStorage } from './weibo-session-storage.service';
 import { RedisClient } from '@pro/redis';
 import { redisConfigFactory } from '../config';
 import { ConfigService } from '@nestjs/config';
@@ -49,6 +50,7 @@ import { ConfigService } from '@nestjs/config';
     WeiboRabbitMQConfigService,
     WeiboStatsRedisService,
     WeiboHourlyStatsService,
+    WeiboSessionStorage,
     WeiboTaskStatusConsumer,
     WeiboTaskStatusResolver,
     {
