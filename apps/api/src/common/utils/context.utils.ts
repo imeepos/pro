@@ -6,6 +6,8 @@ import { GraphqlLoaders } from '../dataloaders/types';
 
 export type AugmentedRequest = Request & {
   apiKey?: string | ApiKeyEntity;
+  websocket?: any;
+  connectionParams?: any;
 };
 
 export interface GraphqlContext {

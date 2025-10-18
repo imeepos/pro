@@ -27,6 +27,8 @@ import { AugmentedRequest, GraphqlContext } from './common/utils/context.utils';
 import { UserLoader } from './user/user.loader';
 import { GraphqlLoaders } from './common/dataloaders/types';
 import { ApiKeyLoader } from './auth/api-key.loader';
+import { GraphqlWsAuthService } from './auth/services/graphql-ws-auth.service';
+import { GraphqlWsContextCreator } from './auth/utils/graphql-ws-context.util';
 import { EventTypeLoader } from './events/event-type.loader';
 import { IndustryTypeLoader } from './events/industry-type.loader';
 import { TagLoader } from './events/tag.loader';
@@ -42,8 +44,16 @@ import { TagLoader } from './events/tag.loader';
     })),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      imports: [LoadersModule],
-      inject: [ConfigService, UserLoader, ApiKeyLoader, EventTypeLoader, IndustryTypeLoader, TagLoader],
+      imports: [LoadersModule, AuthModule],
+      inject: [
+        ConfigService,
+        UserLoader,
+        ApiKeyLoader,
+        EventTypeLoader,
+        IndustryTypeLoader,
+        TagLoader,
+        GraphqlWsAuthService,
+      ],
       useFactory: (
         configService: ConfigService,
         userLoader: UserLoader,
@@ -51,8 +61,20 @@ import { TagLoader } from './events/tag.loader';
         eventTypeLoader: EventTypeLoader,
         industryTypeLoader: IndustryTypeLoader,
         tagLoader: TagLoader,
+        wsAuthService: GraphqlWsAuthService,
       ): ApolloDriverConfig => {
         const isProduction = configService.get<string>('NODE_ENV') === 'production';
+
+        // 创建 WebSocket 上下文处理器
+        const wsContextCreator = new GraphqlWsContextCreator(
+          wsAuthService,
+          userLoader,
+          apiKeyLoader,
+          eventTypeLoader,
+          industryTypeLoader,
+          tagLoader,
+        );
+
         return {
           autoSchemaFile: join(process.cwd(), 'apps', 'api', 'schema.graphql'),
           sortSchema: true,
@@ -60,12 +82,36 @@ import { TagLoader } from './events/tag.loader';
           graphiql: true,
           introspection: !isProduction,
           subscriptions: {
-            'graphql-ws': true,
+            'graphql-ws': {
+              onConnect: async (context: any) => {
+                try {
+                  const connectionContext = await wsContextCreator.createConnectionContext(
+                    context.connectionParams,
+                    context.socket,
+                    context,
+                  );
+                  // 返回包含上下文的对象，符合 graphql-ws 的类型要求
+                  return {
+                    context: connectionContext,
+                  };
+                } catch (error) {
+                  console.error('WebSocket connection authentication failed:', error);
+                  // 认证失败时不返回上下文，连接将被拒绝
+                  throw new Error('WebSocket连接认证失败');
+                }
+              },
+            },
           },
           plugins: isProduction
             ? [ApolloServerPluginLandingPageDisabled()]
             : [],
-          context: ({ req, res }): GraphqlContext => {
+          context: ({ req, res, connection }): GraphqlContext => {
+            // 如果是 WebSocket 连接，使用已认证的上下文
+            if (connection && connection.context) {
+              return connection.context;
+            }
+
+            // HTTP 请求的上下文处理
             const request = req as AugmentedRequest;
 
             return {

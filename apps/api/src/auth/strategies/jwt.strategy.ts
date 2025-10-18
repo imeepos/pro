@@ -19,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         (req: any) => req.query?.token || null,
       ]),
       ignoreExpiration: false,
-      secretOrKey: config.get('JWT_SECRET', 'ymm-123456'),
+      secretOrKey: config.get('JWT_SECRET', 'your-jwt-secret-change-in-production'),
       passReqToCallback: true,
     });
     this.redisClient = new RedisClient(redisConfigFactory(config));
