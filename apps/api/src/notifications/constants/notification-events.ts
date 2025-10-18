@@ -1,0 +1,3 @@
+export const NOTIFICATION_EVENTS = {
+  RECEIVED: 'NOTIFICATION_RECEIVED',
+} as const;
