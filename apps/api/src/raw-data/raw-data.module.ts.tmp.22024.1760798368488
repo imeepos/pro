@@ -1,0 +1,43 @@
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { JwtModule } from '@nestjs/jwt';
+import { RawDataSource, RawDataSourceSchema } from '@pro/mongodb';
+import { RawDataService } from './raw-data.service';
+import { RawDataResolver } from './raw-data.resolver';
+import { RawDataGateway } from './raw-data.gateway';
+
+/**
+ * 原始数据模块
+ * 负责原始数据的查询、统计、分析等功能
+ *
+ * 此模块专注于原始数据的业务逻辑层，依赖全局MongoDB连接。
+ * 模型注册是必需的，因为NestJS的依赖注入需要在使用的模块中明确声明。
+ *
+ * 模块设计哲学：
+ * - 单一职责：专注于原始数据的查询和分析
+ * - 存在即合理：每个依赖都有明确的目的
+ * - 优雅实用：在优雅与功能性之间找到平衡
+ */
+@Module({
+  imports: [
+    // 注册MongoDB模型，服务于依赖注入
+    MongooseModule.forFeature([
+      { name: RawDataSource.name, schema: RawDataSourceSchema }
+    ]),
+    // JWT模块用于WebSocket认证
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'your-secret-key',
+      signOptions: { expiresIn: '24h' },
+    }),
+  ],
+  providers: [
+    RawDataService,
+    RawDataResolver,
+    RawDataGateway,
+  ],
+  exports: [
+    RawDataService,
+    RawDataGateway,
+  ],
+})
+export class RawDataModule {}

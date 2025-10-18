@@ -138,14 +138,13 @@ import { TagLoader } from './events/tag.loader';
       useFactory: (configService: ConfigService) => createDatabaseConfig(configService) as TypeOrmModuleOptions,
     }),
     // MongoDB 全局模块配置
-    // Temporarily comment out custom Mongoose module to test direct configuration
-    // MongodbModule.forRootAsync({
-    //   inject: [ConfigService],
-    //   useFactory: (configService: ConfigService) => {
-    //     const config = mongodbConfigFactory(configService);
-    //     return { uri: config.uri };
-    //   },
-    // }),
+    MongodbModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const config = mongodbConfigFactory(configService);
+        return config.uri;
+      },
+    }),
 
     ConfigModule,
     DatabaseModule,
@@ -159,8 +158,7 @@ import { TagLoader } from './events/tag.loader';
     DashboardModule,
     NotificationsModule,
     BugModule,
-    // TODO: Temporarily disabled due to Mongoose dependency injection issues
-    // RawDataModule,
+    RawDataModule,
   ],
   controllers: [],
   providers: [HealthResolver],

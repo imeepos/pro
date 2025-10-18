@@ -1,0 +1,98 @@
+# Raw Data Core Fragment
+fragment RawDataCore on RawDataItem {
+  _id
+  sourceType
+  sourceUrl
+  contentPreview
+  contentHash
+  status
+  createdAt
+  processedAt
+}
+
+# Raw Data with Error Details
+fragment RawDataWithError on RawDataItem {
+  ...RawDataCore
+  errorMessage
+  metadata
+}
+
+# Paginated Raw Data List
+query RawDataList($filter: RawDataFilterInput) {
+  rawDataList(filter: $filter) {
+    items {
+      ...RawDataCore
+    }
+    total
+    page
+    pageSize
+    totalPages
+    hasNext
+    hasPrevious
+  }
+}
+
+# Single Raw Data by ID
+query RawDataById($id: String!) {
+  rawDataById(id: $id) {
+    ...RawDataWithError
+  }
+}
+
+# Raw Data Statistics
+query RawDataStatistics {
+  rawDataStatistics {
+    pending
+    processing
+    completed
+    failed
+    total
+    successRate
+  }
+}
+
+# Raw Data Trend Analysis
+query RawDataTrend($input: TrendDataInput) {
+  rawDataTrend(input: $input) {
+    timestamp
+    count
+    status
+  }
+}
+
+# Raw Data by Source Type
+query RawDataBySourceType($sourceType: SourceType!, $page: Int, $pageSize: Int) {
+  rawDataBySourceType(sourceType: $sourceType, page: $page, pageSize: $pageSize) {
+    items {
+      ...RawDataCore
+    }
+    total
+    page
+    pageSize
+    totalPages
+    hasNext
+    hasPrevious
+  }
+}
+
+# Search Raw Data
+query SearchRawData($keyword: String!, $page: Int, $pageSize: Int) {
+  searchRawData(keyword: $keyword, page: $page, pageSize: $pageSize) {
+    items {
+      ...RawDataCore
+    }
+    total
+    page
+    pageSize
+    totalPages
+    hasNext
+    hasPrevious
+  }
+}
+
+# Recent Raw Data
+query RecentRawData($limit: Int, $sourceType: SourceType) {
+  recentRawData(limit: $limit, sourceType: $sourceType) {
+    ...RawDataCore
+  }
+}

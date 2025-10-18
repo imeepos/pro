@@ -16,10 +16,10 @@ export interface MongodbConfig {
  * MongoDB 配置工厂函数
  */
 export const mongodbConfigFactory = (configService: ConfigService): MongodbConfig => {
-  const uri = configService.get<string>('MONGODB_URI');
+  const uri = configService.get<string>('MONGODB_URI') || configService.get<string>('MONGODB_URL');
 
   if (!uri) {
-    throw new Error('MONGODB_URI 环境变量未设置');
+    throw new Error('MONGODB_URI 或 MONGODB_URL 环境变量未设置');
   }
 
   return {

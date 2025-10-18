@@ -1,5 +1,5 @@
 import { ForbiddenException, UseGuards } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver, Subscription, ObjectType, Field, Int, Float } from '@nestjs/graphql';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { WeiboAuthService, WeiboLoginEvent } from './weibo-auth.service';
 import { observableToAsyncIterator } from '../common/utils/observable.utils';
@@ -14,29 +14,66 @@ import { map } from 'rxjs/operators';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PinoLogger } from '@pro/logger';
 
-// 会话统计的GraphQL类型定义
-interface WeiboSessionStats {
-  totalSessions: number;
-  activeSessions: number;
-  expiredSessions: number;
-  completedSessions: number;
-  memorySessions: number;
-  webSocketConnections: number;
-  averageSessionDuration: number;
-  sessionsByUser: Array<{
-    userId: string;
-    activeCount: number;
-    totalDuration: number;
-  }>;
+@ObjectType()
+class UserSessionStats {
+  @Field(() => String)
+  userId: string;
+
+  @Field(() => Int)
+  activeCount: number;
+
+  @Field(() => Float)
+  totalDuration: number;
 }
 
-interface WebSocketStats {
+@ObjectType()
+class WeiboSessionStats {
+  @Field(() => Int)
+  totalSessions: number;
+
+  @Field(() => Int)
+  activeSessions: number;
+
+  @Field(() => Int)
+  expiredSessions: number;
+
+  @Field(() => Int)
+  completedSessions: number;
+
+  @Field(() => Int)
+  memorySessions: number;
+
+  @Field(() => Int)
+  webSocketConnections: number;
+
+  @Field(() => Float)
+  averageSessionDuration: number;
+
+  @Field(() => [UserSessionStats])
+  sessionsByUser: UserSessionStats[];
+}
+
+@ObjectType()
+class UserConnectionStats {
+  @Field(() => String)
+  userId: string;
+
+  @Field(() => Int)
+  connectionCount: number;
+
+  @Field(() => Float)
+  averageDuration: number;
+}
+
+@ObjectType()
+class WebSocketStats {
+  @Field(() => Int)
   totalConnections: number;
-  connectionsByUser: Array<{
-    userId: string;
-    connectionCount: number;
-    averageDuration: number;
-  }>;
+
+  @Field(() => [UserConnectionStats])
+  connectionsByUser: UserConnectionStats[];
+
+  @Field(() => Float)
   averageConnectionDuration: number;
 }
 
@@ -141,7 +178,7 @@ export class WeiboAuthResolver {
   /**
    * 获取微博会话统计信息
    */
-  @Query(() => Object, { name: 'weiboSessionStats' })
+  @Query(() => WeiboSessionStats, { name: 'weiboSessionStats' })
   async getSessionStats(@CurrentUser('userId') userId: string): Promise<WeiboSessionStats> {
     try {
       const serviceStats = await this.weiboAuthService.getServiceStats();
@@ -170,7 +207,7 @@ export class WeiboAuthResolver {
   /**
    * 获取WebSocket连接统计
    */
-  @Query(() => Object, { name: 'webSocketStats' })
+  @Query(() => WebSocketStats, { name: 'webSocketStats' })
   async getWebSocketStats(@CurrentUser('userId') userId: string): Promise<WebSocketStats> {
     try {
       const stats = this.weiboAuthService.getWebSocketStats();
