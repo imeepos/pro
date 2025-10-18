@@ -68,13 +68,17 @@ export interface ValidationResult {
 }
 
 // 导出统一的枚举定义
-export * from './enums/weibo';
+export * from './enums/weibo.js';
+export * from './enums/file.js';
+export * from './enums/common.js';
 
 // 导出接口定义（从接口文件中重新导出枚举，保持向后兼容）
-export * from './weibo-search-task';
-export * from './weibo-account';
-export * from './api-key';
-export * from './bug';
-export * from './event';
-export * from './screen';
-export * from './auth';
+export * from './weibo-search-task.js';
+export * from './weibo-account.js';
+export * from './api-key.js';
+export * from './bug.js';
+export * from './event.js';
+export * from './screen.js';
+export * from './auth.js';
+export * from './config.js';
+export * from './raw-data.js';

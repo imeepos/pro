@@ -3,7 +3,7 @@
  * 定义WebSocket通信的数据结构和事件类型
  */
 
-import { ProcessingStatus, SourceType } from '../dto/raw-data.dto';
+import { ProcessingStatus, SourceType } from '@pro/types';
 
 /**
  * WebSocket事件类型枚举

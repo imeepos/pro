@@ -7,7 +7,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EventAttachmentEntity, EventEntity, FileType } from '@pro/entities';
+import { EventAttachmentEntity, EventEntity } from '@pro/entities';
+import { FileType } from '@pro/types';
 import { MinIOClient } from '@pro/minio';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';

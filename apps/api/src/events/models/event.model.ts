@@ -1,5 +1,6 @@
 import { Field, Float, GraphQLISODateTime, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
-import { EventAttachmentEntity, EventEntity, EventStatus, FileType, EventTagEntity } from '@pro/entities';
+import { EventAttachmentEntity, EventEntity, EventStatus, EventTagEntity } from '@pro/entities';
+import { FileType } from '@pro/types';
 import { EventTypeModel, mapEventTypeEntityToModel } from './event-type.model';
 import { IndustryTypeModel, mapIndustryTypeEntityToModel } from './industry-type.model';
 import { TagModel, mapTagEntityToModel } from './tag.model';

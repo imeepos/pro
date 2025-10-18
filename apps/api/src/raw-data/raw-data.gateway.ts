@@ -29,7 +29,7 @@ import {
   ConnectionAuth,
   RealtimeEventFactory
 } from './interfaces/realtime-update.interface';
-import { ProcessingStatus, SourceType } from './dto/raw-data.dto';
+import { ProcessingStatus, SourceType } from '@pro/types';
 
 /**
  * 原始数据实时更新 WebSocket Gateway

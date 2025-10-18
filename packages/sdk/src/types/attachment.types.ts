@@ -1,14 +1,6 @@
-/**
- * 文件类型枚举
- */
-export enum FileType {
-  /** 图片 */
-  IMAGE = 'image',
-  /** 视频 */
-  VIDEO = 'video',
-  /** 文档 */
-  DOCUMENT = 'document'
-}
+import { FileType } from '@pro/types';
+
+export { FileType };
 
 /**
  * 附件实体

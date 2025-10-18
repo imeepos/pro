@@ -1,25 +1,22 @@
-import { Field, ID, InputType, ObjectType, Int, Float } from '@nestjs/graphql';
+import { Field, ID, InputType, ObjectType, Int, Float, registerEnumType } from '@nestjs/graphql';
 import { IsString, IsOptional, IsInt, IsEnum, IsDateString, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ProcessingStatus, SourceType, SourcePlatform } from '@pro/types';
 
-/**
- * 数据处理状态枚举
- */
-export enum ProcessingStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  FAILED = 'failed'
-}
+registerEnumType(ProcessingStatus, {
+  name: 'ProcessingStatus',
+  description: '原始数据处理状态',
+});
 
-/**
- * 数据源类型枚举
- */
-export enum SourceType {
-  WEIBO = 'weibo',
-  JD = 'jd',
-  CUSTOM = 'custom'
-}
+registerEnumType(SourceType, {
+  name: 'SourceType',
+  description: '数据源类型',
+});
+
+registerEnumType(SourcePlatform, {
+  name: 'SourcePlatform',
+  description: '数据源平台',
+});
 
 /**
  * 时间范围过滤器
@@ -51,6 +48,11 @@ export class RawDataFilterDto {
   @IsEnum(SourceType)
   @Field(() => SourceType, { nullable: true, description: '数据源类型' })
   sourceType?: SourceType;
+
+  @IsOptional()
+  @IsEnum(SourcePlatform)
+  @Field(() => SourcePlatform, { nullable: true, description: '数据源平台' })
+  sourcePlatform?: SourcePlatform;
 
   @IsOptional()
   @IsEnum(ProcessingStatus)

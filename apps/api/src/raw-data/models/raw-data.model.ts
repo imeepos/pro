@@ -1,5 +1,5 @@
 import { Document } from 'mongoose';
-import { ProcessingStatus, SourceType } from '../dto/raw-data.dto';
+import { ProcessingStatus, SourceType, SourcePlatform } from '@pro/types';
 
 /**
  * MongoDB 原始数据文档接口
@@ -37,7 +37,7 @@ export interface AggregationPipeline {
  */
 export interface QueryBuilder {
   keyword?: string;
-  sourceType?: SourceType;
+  sourcePlatform?: SourcePlatform;
   status?: ProcessingStatus;
   startDate?: Date;
   endDate?: Date;
@@ -143,8 +143,8 @@ export class MongoQueryBuilder {
       ];
     }
 
-    if (filter.sourceType) {
-      query.sourceType = filter.sourceType;
+    if (filter.sourcePlatform) {
+      query.sourceType = this.platformToSourceTypes(filter.sourcePlatform);
     }
 
     if (filter.status) {
@@ -162,6 +162,22 @@ export class MongoQueryBuilder {
     }
 
     return query;
+  }
+
+  /**
+   * 将平台类型转换为源类型查询
+   */
+  private static platformToSourceTypes(platform: SourcePlatform): any {
+    switch (platform) {
+      case SourcePlatform.WEIBO:
+        return { $in: [SourceType.WEIBO_HTML, SourceType.WEIBO_API_JSON, SourceType.WEIBO_COMMENT] };
+      case SourcePlatform.JD:
+        return SourceType.JD;
+      case SourcePlatform.CUSTOM:
+        return SourceType.CUSTOM;
+      default:
+        return platform;
+    }
   }
 
   /**

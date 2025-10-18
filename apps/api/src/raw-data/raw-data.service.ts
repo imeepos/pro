@@ -9,9 +9,8 @@ import {
   TrendDataPointDto,
   RawDataItemDto,
   PaginatedRawDataDto,
-  ProcessingStatus,
-  SourceType
 } from './dto/raw-data.dto';
+import { ProcessingStatus, SourceType, SourcePlatform } from '@pro/types';
 import {
   RawDataDocument,
   DataStatistics,
@@ -37,7 +36,7 @@ export class RawDataService {
    * 获取原始数据列表（分页）
    */
   async findRawData(filter: RawDataFilterDto): Promise<PaginatedRawDataDto> {
-    this.logger.log(`查询原始数据，关键词: ${filter.keyword || '无'}, 类型: ${filter.sourceType || '全部'}, 状态: ${filter.status || '全部'}`);
+    this.logger.log(`查询原始数据，关键词: ${filter.keyword || '无'}, 平台: ${filter.sourcePlatform || '全部'}, 状态: ${filter.status || '全部'}`);
 
     const query = MongoQueryBuilder.buildQuery(filter);
     const page = filter.page || 1;
@@ -171,9 +170,9 @@ export class RawDataService {
   }
 
   /**
-   * 获取数据源类型统计
+   * 获取数据源类型统计（细粒度）
    */
-  async getSourceTypeStatistics(): Promise<Record<SourceType, number>> {
+  async getSourceTypeStatistics(): Promise<Record<string, number>> {
     this.logger.log('获取数据源类型统计');
 
     try {
@@ -187,9 +186,9 @@ export class RawDataService {
       ]).exec();
 
       const statistics = result.reduce((acc, item) => {
-        acc[item._id as SourceType] = item.count;
+        acc[item._id] = item.count;
         return acc;
-      }, {} as Record<SourceType, number>);
+      }, {} as Record<string, number>);
 
       // 确保所有类型都有值
       Object.values(SourceType).forEach(type => {

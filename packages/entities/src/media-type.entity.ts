@@ -6,11 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-
-export enum MediaTypeStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-}
+import { MediaTypeStatus } from '@pro/types';
 
 @Entity('media_type')
 export class MediaTypeEntity {

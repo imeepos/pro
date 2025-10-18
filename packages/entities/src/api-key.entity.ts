@@ -9,15 +9,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { UserEntity } from './user.entity.js';
-
-/**
- * API Key 类型枚举
- */
-export enum ApiKeyType {
-  READ_ONLY = 'read_only',
-  READ_WRITE = 'read_write',
-  ADMIN = 'admin'
-}
+import { ApiKeyType } from '@pro/types';
 
 /**
  * API Key 实体

@@ -1,11 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-export enum FileType {
-  IMAGE = 'image',
-  VIDEO = 'video',
-  DOCUMENT = 'document'
-}
+import { FileType } from '@pro/types';
 
 export interface Attachment {
   id?: number;
