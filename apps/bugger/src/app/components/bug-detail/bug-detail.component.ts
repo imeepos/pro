@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { BugService } from '../../services/bug.service';
+import { NotificationService } from '../../services/notification.service';
 import { Bug, CreateBugCommentDto, BugStatus, BugPriority } from '@pro/types';
+import { StatusChangeDialogComponent, StatusChangeData } from '../status-change-dialog/status-change-dialog.component';
 
 @Component({
   selector: 'app-bug-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, StatusChangeDialogComponent],
   template: `
     <div class="fade-in max-w-6xl mx-auto">
       <!-- 操作按钮 -->
@@ -211,6 +213,17 @@ import { Bug, CreateBugCommentDto, BugStatus, BugPriority } from '@pro/types';
           </div>
         </div>
       </div>
+
+      <!-- 状态更改弹框 -->
+      <app-status-change-dialog
+        [isVisible]="showStatusDialog"
+        [currentStatus]="bug?.status || null"
+        [newStatus]="selectedStatus"
+        [isLoading]="isChangingStatus"
+        [errorMessage]="statusChangeError"
+        (statusConfirm)="handleStatusChangeConfirm($event)"
+        (statusCancel)="cancelStatusChange()">
+      </app-status-change-dialog>
     </div>
   `,
   styles: []
@@ -218,10 +231,15 @@ import { Bug, CreateBugCommentDto, BugStatus, BugPriority } from '@pro/types';
 export class BugDetailComponent implements OnInit {
   bug: Bug | null = null;
   loading = true;
-  selectedStatus = '';
+  selectedStatus: BugStatus | null = null;
   assigneeId = '';
   newComment = '';
   isAddingComment = false;
+
+  // 状态更改弹框相关
+  showStatusDialog = false;
+  isChangingStatus = false;
+  statusChangeError = '';
 
   BugStatus = BugStatus;
   BugPriority = BugPriority;
@@ -229,7 +247,8 @@ export class BugDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private bugService: BugService
+    private bugService: BugService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -268,12 +287,17 @@ export class BugDetailComponent implements OnInit {
 
   deleteBug(): void {
     if (this.bug && confirm('确定要删除这个Bug吗？此操作不可恢复。')) {
-      this.bugService.deleteBug(this.bug.id).subscribe(result => {
-        if (result.success) {
-          alert('Bug删除成功');
-          this.router.navigate(['/bugs']);
-        } else {
-          alert('Bug删除失败');
+      this.bugService.deleteBug(this.bug.id).subscribe({
+        next: (result) => {
+          if (result.success) {
+            this.notificationService.showSuccess('删除成功', 'Bug已成功删除');
+            this.router.navigate(['/bugs']);
+          } else {
+            this.notificationService.showError('删除失败', result.error?.message || 'Bug删除失败，请重试');
+          }
+        },
+        error: () => {
+          this.notificationService.showError('删除失败', '网络请求失败，请检查连接后重试');
         }
       });
     }
@@ -282,27 +306,61 @@ export class BugDetailComponent implements OnInit {
   changeStatus(): void {
     if (!this.selectedStatus || !this.bug) return;
 
-    const comment = prompt('请输入状态变更说明（可选）:');
-    this.bugService.updateBugStatus(this.bug.id, this.selectedStatus, comment || undefined).subscribe(result => {
-      if (result.success && result.data) {
-        this.bug = result.data;
-        this.selectedStatus = '';
-        alert('状态更新成功');
-      } else {
-        alert('状态更新失败');
+    // 如果选择的状态和当前状态相同，不显示弹框
+    if (this.selectedStatus === this.bug.status) {
+      this.selectedStatus = null;
+      return;
+    }
+
+    this.showStatusDialog = true;
+    this.statusChangeError = '';
+  }
+
+  handleStatusChangeConfirm(data: StatusChangeData): void {
+    if (!this.bug) return;
+
+    this.isChangingStatus = true;
+    this.statusChangeError = '';
+
+    this.bugService.updateBugStatus(this.bug.id, data.newStatus, data.comment).subscribe({
+      next: (result) => {
+        if (result.success && result.data) {
+          this.bug = result.data;
+          this.selectedStatus = null;
+          this.showStatusDialog = false;
+          this.notificationService.showSuccess('状态更新成功', `Bug状态已更改为${this.getStatusText(data.newStatus)}`);
+        } else {
+          this.statusChangeError = result.error?.message || '状态更新失败，请重试';
+        }
+        this.isChangingStatus = false;
+      },
+      error: (error) => {
+        this.statusChangeError = '网络请求失败，请检查连接后重试';
+        this.isChangingStatus = false;
       }
     });
+  }
+
+  cancelStatusChange(): void {
+    this.showStatusDialog = false;
+    this.selectedStatus = null;
+    this.statusChangeError = '';
   }
 
   assignBug(): void {
     if (!this.assigneeId.trim() || !this.bug) return;
 
-    this.bugService.assignBug(this.bug.id, this.assigneeId.trim()).subscribe(result => {
-      if (result.success && result.data) {
-        this.bug = result.data;
-        alert('Bug分配成功');
-      } else {
-        alert('Bug分配失败');
+    this.bugService.assignBug(this.bug.id, this.assigneeId.trim()).subscribe({
+      next: (result) => {
+        if (result.success && result.data) {
+          this.bug = result.data;
+          this.notificationService.showSuccess('分配成功', `Bug已成功分配给用户 ${this.assigneeId.trim()}`);
+        } else {
+          this.notificationService.showError('分配失败', result.error?.message || 'Bug分配失败，请重试');
+        }
+      },
+      error: () => {
+        this.notificationService.showError('分配失败', '网络请求失败，请检查连接后重试');
       }
     });
   }
@@ -315,14 +373,21 @@ export class BugDetailComponent implements OnInit {
       content: this.newComment.trim()
     };
 
-    this.bugService.addComment(this.bug.id, commentData).subscribe(result => {
-      if (result.success && result.data) {
-        this.bug!.comments = [...(this.bug!.comments || []), result.data];
-        this.newComment = '';
-      } else {
-        alert('评论添加失败');
+    this.bugService.addComment(this.bug.id, commentData).subscribe({
+      next: (result) => {
+        if (result.success && result.data) {
+          this.bug!.comments = [...(this.bug!.comments || []), result.data];
+          this.newComment = '';
+          this.notificationService.showSuccess('评论成功', '评论已成功添加');
+        } else {
+          this.notificationService.showError('评论失败', result.error?.message || '评论添加失败，请重试');
+        }
+        this.isAddingComment = false;
+      },
+      error: () => {
+        this.notificationService.showError('评论失败', '网络请求失败，请检查连接后重试');
+        this.isAddingComment = false;
       }
-      this.isAddingComment = false;
     });
   }
 

@@ -192,7 +192,7 @@ export class RawDataService {
 
       // 确保所有类型都有值
       Object.values(SourceType).forEach(type => {
-        if (!(type in statistics)) {
+        if (typeof type === 'string' && !(type in statistics)) {
           statistics[type] = 0;
         }
       });
