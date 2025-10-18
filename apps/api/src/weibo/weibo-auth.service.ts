@@ -14,6 +14,7 @@ import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
 import { Subject, Observable, Subscription } from 'rxjs';
 import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
 import { ScreensGateway } from '../screens/screens.gateway';
+import { WeiboSessionStorage, SessionData } from './weibo-session-storage.service';
 
 /**
  * SSE 消息事件类型
@@ -58,6 +59,7 @@ export interface WeiboLoginSessionSnapshot {
   lastEvent?: WeiboLoginEvent;
   expiresAt: Date;
   isExpired: boolean;
+  status: 'active' | 'expired' | 'completed';
 }
 
 /**
@@ -84,6 +86,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
     @Inject(forwardRef(() => ScreensGateway))
     private readonly screensGateway: ScreensGateway,
+    private readonly sessionStorage: WeiboSessionStorage,
   ) {
     this.logger.setContext(WeiboAuthService.name);
   }
@@ -99,6 +102,9 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
       });
       this.logger.info('Playwright 浏览器启动成功');
+
+      // 清理可能存在的过期会话
+      await this.cleanupOrphanedSessions();
     } catch (error) {
       this.logger.warn('Playwright 浏览器启动失败，微博登录功能将不可用', error.message);
       this.browser = null;
@@ -151,8 +157,13 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       throw new ServiceUnavailableException('Playwright浏览器未就绪，微博登录功能暂时不可用');
     }
 
-    const sessionId = `${userId}_${Date.now()}`;
-    this.logger.info(`启动微博登录会话: ${sessionId}`);
+    // 首先在 Redis 中创建会话记录
+    const sessionData = await this.sessionStorage.createSession(userId, {
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    });
+
+    const { sessionId, expiresAt } = sessionData;
+    this.logger.info(`启动微博登录会话: ${sessionId}`, { userId, expiresAt });
 
     const context = await this.browser.newContext({
       userAgent:
@@ -162,7 +173,6 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     const page = await context.newPage();
     const subject = new Subject<WeiboLoginEvent>();
     const createdAt = new Date();
-    const expiresAt = new Date(createdAt.getTime() + this.SESSION_TIMEOUT);
 
     const session: LoginSession = {
       context,
@@ -173,8 +183,34 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       expiresAt,
     };
 
-    session.eventsSubscription = subject.subscribe((event) => {
-      session.lastEvent = event;
+    // 订阅事件并同步到 Redis
+    session.eventsSubscription = subject.subscribe({
+      next: async (event) => {
+        session.lastEvent = event;
+
+        // 通过WebSocket广播事件给前端
+        this.broadcastLoginEvent(sessionId, userId, event);
+
+        // 同步事件到 Redis
+        await this.sessionStorage.updateSessionEvent(sessionId, event).catch(error => {
+          this.logger.error('同步会话事件到Redis失败', { sessionId, error });
+        });
+      },
+      error: async (error) => {
+        this.logger.error('会话事件流错误', { sessionId, error });
+
+        // 广播错误事件
+        this.broadcastLoginEvent(sessionId, userId, {
+          type: 'error',
+          data: { message: '登录会话发生错误', error: error.message }
+        });
+
+        await this.sessionStorage.updateSessionStatus(sessionId, 'expired');
+      },
+      complete: async () => {
+        this.logger.debug('会话事件流完成', { sessionId });
+        await this.sessionStorage.updateSessionStatus(sessionId, 'completed');
+      }
     });
 
     this.loginSessions.set(sessionId, session);
@@ -223,18 +259,25 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  getLoginSessionSnapshot(sessionId: string): WeiboLoginSessionSnapshot {
-    const session = this.loginSessions.get(sessionId);
-    if (!session) {
+  async getLoginSessionSnapshot(sessionId: string): Promise<WeiboLoginSessionSnapshot> {
+    // 首先从 Redis 获取会话数据
+    const sessionData = await this.sessionStorage.getSession(sessionId);
+
+    if (!sessionData) {
       throw new NotFoundException('登录会话不存在或已结束');
     }
 
+    // 然后从内存获取实时状态
+    const memorySession = this.loginSessions.get(sessionId);
+    const isExpired = Date.now() >= sessionData.expiresAt.getTime();
+
     return {
       sessionId,
-      userId: session.userId,
-      lastEvent: session.lastEvent,
-      expiresAt: session.expiresAt,
-      isExpired: session.expiresAt.getTime() <= Date.now(),
+      userId: sessionData.userId,
+      lastEvent: memorySession?.lastEvent || sessionData.lastEvent,
+      expiresAt: sessionData.expiresAt,
+      isExpired,
+      status: sessionData.status,
     };
   }
 
@@ -244,7 +287,55 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException('登录会话不存在或已结束');
     }
 
-    return session.subject.asObservable();
+    // 检查会话是否已过期
+    if (session.expiresAt.getTime() <= Date.now()) {
+      throw new NotFoundException('登录会话已过期');
+    }
+
+    // 检查Subject是否已关闭
+    if (session.subject.closed) {
+      throw new NotFoundException('登录会话事件流已关闭');
+    }
+
+    return new Observable<WeiboLoginEvent>(subscriber => {
+      // 立即检查会话状态
+      const currentSession = this.loginSessions.get(sessionId);
+      if (!currentSession) {
+        subscriber.error(new NotFoundException('登录会话不存在或已结束'));
+        return;
+      }
+
+      if (currentSession.subject.closed) {
+        subscriber.error(new NotFoundException('登录会话事件流已关闭'));
+        return;
+      }
+
+      // 订阅会话的Subject
+      const subscription = currentSession.subject.subscribe({
+        next: (event) => {
+          try {
+            subscriber.next(event);
+          } catch (error) {
+            this.logger.error('推送登录事件到订阅者失败', { sessionId, error });
+          }
+        },
+        error: (error) => {
+          this.logger.error('会话Subject发生错误', { sessionId, error });
+          subscriber.error(error);
+        },
+        complete: () => {
+          this.logger.debug('会话Subject完成', { sessionId });
+          subscriber.complete();
+        }
+      });
+
+      // 清理函数
+      return () => {
+        if (!subscription.closed) {
+          subscription.unsubscribe();
+        }
+      };
+    });
   }
 
   /**
@@ -552,14 +643,40 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
 
     this.logger.debug(`清理登录会话: ${sessionId}`);
 
+    // 先从Map中移除，防止新的订阅
+    this.loginSessions.delete(sessionId);
+
     // 清除定时器
     if (session.timer) {
       clearTimeout(session.timer);
+      session.timer = undefined;
     }
 
-    session.eventsSubscription?.unsubscribe();
-    if (!session.subject.closed) {
-      session.subject.complete();
+    // 清理内部事件订阅
+    try {
+      session.eventsSubscription?.unsubscribe();
+    } catch (error) {
+      this.logger.error(`清理内部事件订阅失败: ${sessionId}`, error);
+    }
+
+    // 最后才关闭Subject，确保所有事件都能推送完
+    try {
+      if (!session.subject.closed) {
+        // 推送一个会话结束事件
+        session.subject.next({
+          type: 'expired',
+          data: { message: '登录会话已结束' }
+        });
+
+        // 延迟一点时间再关闭，确保事件被推送
+        setTimeout(() => {
+          if (!session.subject.closed) {
+            session.subject.complete();
+          }
+        }, 100);
+      }
+    } catch (error) {
+      this.logger.error(`关闭Subject失败: ${sessionId}`, error);
     }
 
     // 关闭浏览器上下文
@@ -569,8 +686,12 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       this.logger.error(`关闭浏览器上下文失败: ${sessionId}`, error);
     }
 
-    // 移除会话
-    this.loginSessions.delete(sessionId);
+    // 更新 Redis 中的会话状态
+    try {
+      await this.sessionStorage.updateSessionStatus(sessionId, 'completed');
+    } catch (error) {
+      this.logger.error(`更新Redis会话状态失败: ${sessionId}`, error);
+    }
   }
 
   /**
@@ -601,6 +722,145 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
     } catch (error) {
       this.logger.error('推送微博用户统计更新失败:', error);
+    }
+  }
+
+  /**
+   * 清理孤立的会话（服务重启后存在于Redis但内存中不存在的会话）
+   */
+  private async cleanupOrphanedSessions(): Promise<void> {
+    try {
+      const stats = await this.sessionStorage.getStats();
+      if (stats.active > 0) {
+        this.logger.info('发现活跃会话，标记为过期（可能是服务重启）', {
+          activeCount: stats.active
+        });
+
+        // 这里我们只记录，不实际清理，因为这些会话可能还在其他服务实例中运行
+        // 在实际部署中，可能需要更复杂的分布式会话管理
+      }
+    } catch (error) {
+      this.logger.error('清理孤立会话失败', error);
+    }
+  }
+
+  /**
+   * 获取服务会话统计信息
+   */
+  async getServiceStats(): Promise<{
+    memorySessions: number;
+    redisStats: any;
+  }> {
+    return {
+      memorySessions: this.loginSessions.size,
+      redisStats: await this.sessionStorage.getStats(),
+    };
+  }
+
+  /**
+   * 通过WebSocket广播登录事件
+   */
+  private broadcastLoginEvent(sessionId: string, userId: string, event: WeiboLoginEvent): void {
+    try {
+      const eventData = {
+        sessionId,
+        userId,
+        type: event.type,
+        data: event.data,
+        timestamp: new Date().toISOString()
+      };
+
+      // 通过ScreensGateway广播事件
+      this.screensGateway.sendToUser(userId, 'weibo:login:event', eventData);
+
+      // 特殊处理一些关键事件
+      switch (event.type) {
+        case 'qrcode':
+          this.logger.info(`[WebSocket] 二维码事件已广播: ${sessionId}`);
+          break;
+        case 'scanned':
+          this.logger.info(`[WebSocket] 扫码事件已广播: ${sessionId}`);
+          break;
+        case 'success':
+          this.logger.info(`[WebSocket] 登录成功事件已广播: ${sessionId}`);
+          break;
+        case 'error':
+          this.logger.error(`[WebSocket] 登录错误事件已广播: ${sessionId}`, event.data);
+          break;
+        case 'expired':
+          this.logger.warn(`[WebSocket] 登录过期事件已广播: ${sessionId}`);
+          break;
+      }
+
+    } catch (error) {
+      this.logger.error(`[WebSocket] 广播登录事件失败: ${sessionId}`, error);
+    }
+  }
+
+  /**
+   * 获取WebSocket连接统计
+   */
+  getWebSocketStats(): any {
+    try {
+      return this.screensGateway.getConnectionStats();
+    } catch (error) {
+      this.logger.error('获取WebSocket统计信息失败', error);
+      return {
+        totalConnections: 0,
+        connectionsByUser: [],
+        averageConnectionDuration: 0
+      };
+    }
+  }
+
+  /**
+   * 检查WebSocket连接健康状态
+   */
+  async checkWebSocketHealth(): Promise<void> {
+    try {
+      const stats = this.getWebSocketStats();
+      this.logger.info('WebSocket连接健康检查', stats);
+
+      if (stats.totalConnections === 0) {
+        this.logger.warn('没有活跃的WebSocket连接，可能影响登录体验');
+      }
+
+    } catch (error) {
+      this.logger.error('WebSocket健康检查失败', error);
+    }
+  }
+
+  /**
+   * 向特定用户发送WebSocket消息
+   */
+  sendToUser(userId: string, event: string, data: any): boolean {
+    try {
+      return this.screensGateway.sendToUser(userId, event, data);
+    } catch (error) {
+      this.logger.error(`发送WebSocket消息失败: userId=${userId}, event=${event}`, error);
+      return false;
+    }
+  }
+
+  /**
+   * 广播微博登录状态更新
+   */
+  broadcastLoginStatusUpdate(sessionId: string, status: {
+    isOnline: boolean;
+    totalAccounts: number;
+    activeAccounts: number;
+  }): void {
+    try {
+      const session = this.loginSessions.get(sessionId);
+      if (session) {
+        this.screensGateway.sendToUser(session.userId, 'weibo:status:update', {
+          sessionId,
+          ...status,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      this.logger.error(`广播登录状态更新失败: ${sessionId}`, error);
     }
   }
 }
