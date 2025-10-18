@@ -1,19 +1,25 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Context, ID, Int, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Context, ID, Int, Mutation, Parent, Query, ResolveField, Resolver, Subscription } from '@nestjs/graphql';
 import { ScreensService } from './screens.service';
 import { CreateScreenDto, UpdateScreenDto } from './dto';
 import { ScreenModel, ScreenConnection, mapScreenEntityToModel } from './models/screen.model';
+import { WeiboLoggedInUsersStatsModel } from './models/weibo-stats.model';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { GraphqlLoaders } from '../common/dataloaders/types';
 import { UserModel } from '../user/models/user.model';
 import { User } from '@pro/types';
 import { buildOffsetConnection } from '../common/utils/pagination.utils';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
+import { PubSubService } from '../common/pubsub/pubsub.service';
+import { SUBSCRIPTION_EVENTS } from './constants/subscription-events';
 
 @Resolver(() => ScreenModel)
 @UseGuards(CompositeAuthGuard)
 export class ScreensResolver {
-  constructor(private readonly screensService: ScreensService) {}
+  constructor(
+    private readonly screensService: ScreensService,
+    private readonly pubSub: PubSubService,
+  ) {}
 
   @Query(() => ScreenConnection, { name: 'screens' })
   async screens(
@@ -142,6 +148,13 @@ export class ScreensResolver {
     }
 
     return mapUserToModel(user);
+  }
+
+  @Subscription(() => WeiboLoggedInUsersStatsModel, {
+    name: 'weiboLoggedInUsersUpdate',
+  })
+  weiboLoggedInUsersUpdate() {
+    return this.pubSub.asyncIterator(SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE);
   }
 }
 

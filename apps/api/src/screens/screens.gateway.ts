@@ -10,6 +10,8 @@ import { Injectable, UnauthorizedException, Logger, OnModuleInit, Inject, forwar
 import { JwtService } from '@nestjs/jwt';
 import { LoggedInUsersStats } from '@pro/types';
 import { WeiboAccountService } from '../weibo/weibo-account.service';
+import { PubSubService } from '../common/pubsub/pubsub.service';
+import { SUBSCRIPTION_EVENTS } from './constants/subscription-events';
 
 /**
  * 大屏系统 WebSocket Gateway
@@ -33,8 +35,9 @@ export class ScreensGateway
 
   constructor(
     private readonly jwtService: JwtService,
+    private readonly pubSub: PubSubService,
     @Inject(forwardRef(() => WeiboAccountService))
-    private readonly weiboAccountService: WeiboAccountService
+    private readonly weiboAccountService: WeiboAccountService,
   ) {}
 
   async onModuleInit() {
@@ -85,6 +88,7 @@ export class ScreensGateway
    */
   broadcastWeiboLoggedInUsersUpdate(stats: LoggedInUsersStats) {
     this.server.emit('weibo:logged-in-users:update', stats);
+    this.pubSub.publish(SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE, stats);
   }
 
   /**
