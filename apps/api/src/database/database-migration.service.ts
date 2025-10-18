@@ -16,41 +16,48 @@ export class DatabaseMigrationService implements OnModuleInit {
 
   private async migrateEnumValues() {
     try {
-      // 检查 bugs 表是否存在
       const tableExists = await this.checkTableExists('bugs');
       if (!tableExists) {
         this.logger.log('bugs 表不存在，跳过枚举迁移');
         return;
       }
 
-      // 获取所有有效的枚举值
-      const validStatuses = Object.values(BugStatus);
+      const migrations = await this.migrateBugStatusValues();
 
-      // 查询不兼容的记录
-      const incompatibleRecords = await this.dataSource.query(
-        `SELECT id, status FROM bugs WHERE status NOT IN (${validStatuses.map((_, i) => `$${i + 1}`).join(', ')})`,
-        validStatuses
-      );
-
-      if (incompatibleRecords.length > 0) {
-        this.logger.warn(
-          `发现 ${incompatibleRecords.length} 条不兼容的 bug 记录，将删除这些记录`
-        );
-
-        // 删除不兼容的记录
-        await this.dataSource.query(
-          `DELETE FROM bugs WHERE status NOT IN (${validStatuses.map((_, i) => `$${i + 1}`).join(', ')})`,
-          validStatuses
-        );
-
-        this.logger.log('不兼容记录已清理');
-      } else {
-        this.logger.log('未发现不兼容的枚举值');
+      if (migrations > 0) {
+        this.logger.log(`已迁移 ${migrations} 条 bug 状态值`);
       }
     } catch (error) {
-      // 如果表不存在或其他错误，记录但不阻止启动
       this.logger.warn(`枚举迁移检查失败: ${error.message}`);
     }
+  }
+
+  private async migrateBugStatusValues(): Promise<number> {
+    const statusMappings: Record<string, BugStatus> = {
+      'open': BugStatus.OPEN,
+      'in_progress': BugStatus.IN_PROGRESS,
+      'resolved': BugStatus.RESOLVED,
+      'closed': BugStatus.CLOSED,
+      'rejected': BugStatus.REJECTED,
+      'reopened': BugStatus.REOPENED,
+    };
+
+    let totalMigrated = 0;
+
+    for (const [oldValue, newValue] of Object.entries(statusMappings)) {
+      const result = await this.dataSource.query(
+        `UPDATE bugs SET status = $1 WHERE status = $2`,
+        [newValue, oldValue]
+      );
+
+      const migratedCount = result[1];
+      if (migratedCount > 0) {
+        this.logger.log(`迁移 bug.status: '${oldValue}' -> '${newValue}' (${migratedCount} 条)`);
+        totalMigrated += migratedCount;
+      }
+    }
+
+    return totalMigrated;
   }
 
   private async synchronizeDatabase() {
