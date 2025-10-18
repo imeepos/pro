@@ -32,7 +32,7 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
               {
                 type: 'weibo-logged-in-users-card',
                 name: '微博已登录用户统计',
-                icon: 'users',
+                icon: 'users' as const,
                 category: 'weibo'
               },
               WeiboLoggedInUsersCardComponent
@@ -44,7 +44,7 @@ function initializeComponentRegistry(registry: ComponentRegistryService) {
               {
                 type: 'event-map-distribution',
                 name: '事件地图分布',
-                icon: 'compass',
+                icon: 'compass' as const,
                 category: 'events'
               },
               EventMapDistributionComponent

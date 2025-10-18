@@ -16,11 +16,12 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { logger } from '../../core/utils/logger';
 import { environment } from '../../../environments/environment';
 import { ScreenHeaderComponent } from '../screen/components/screen-header/screen-header.component';
+import { SvgIconComponent } from '../../shared/components/svg-icon';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, EmptyStateComponent, ScreenHeaderComponent],
+  imports: [CommonModule, EmptyStateComponent, ScreenHeaderComponent, SvgIconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']

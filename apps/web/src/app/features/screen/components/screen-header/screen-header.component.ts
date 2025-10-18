@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ScreenPage } from '../../../../core/types/screen.types';
+import { SvgIconComponent } from '../../../../shared/components/svg-icon';
 
 @Component({
   selector: 'app-screen-header',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="screen-header" [class.screen-header--compact]="isFullscreen">
@@ -24,21 +25,21 @@ import { ScreenPage } from '../../../../core/types/screen.types';
               (click)="autoPlayToggle.emit()"
               [title]="isAutoPlay ? '停止轮播' : '开始轮播'"
               [attr.aria-label]="isAutoPlay ? '停止轮播' : '开始轮播'">
-              {{ isAutoPlay ? '⏸️' : '▶️' }}
+              <pro-svg-icon [icon]="isAutoPlay ? 'pause' : 'play'" [size]="20" />
             </button>
             <button
               class="toolbar-trigger"
               (click)="previous.emit()"
               title="上一页"
               aria-label="上一页">
-              ⬅️
+              <pro-svg-icon icon="prev" [size]="20" />
             </button>
             <button
               class="toolbar-trigger"
               (click)="next.emit()"
               title="下一页"
               aria-label="下一页">
-              ➡️
+              <pro-svg-icon icon="next" [size]="20" />
             </button>
             <select
               class="toolbar-selector"

@@ -5,11 +5,12 @@ import { RouterModule } from '@angular/router';
 import { AuthStateService } from '../../../core/state/auth-state.service';
 import { AuthQuery } from '../../../core/state/auth.query';
 import { validatePassword } from '../../../core/utils/validation';
+import { SvgIconComponent } from '../../../shared/components/svg-icon';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, SvgIconComponent],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })

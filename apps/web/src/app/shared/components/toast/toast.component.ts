@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ToastService } from '../../services/toast.service';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { SvgIconComponent, IconType } from '../svg-icon/svg-icon.component';
 
 @Component({
   selector: 'app-toast-container',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconComponent],
   template: `
     <div
       class="fixed top-4 right-4 z-[9999] flex flex-col gap-3"
@@ -21,9 +22,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
         class="relative flex items-center gap-3 px-5 py-4 rounded-lg shadow-lg
                backdrop-blur-sm min-w-[320px] max-w-md border"
         [ngClass]="getToastClasses(toast.type)">
-        <span class="text-2xl flex-shrink-0" [attr.aria-hidden]="true">
-          {{ getIcon(toast.type) }}
-        </span>
+        <pro-svg-icon [icon]="getIcon(toast.type)" [size]="20" className="flex-shrink-0" [attr.aria-hidden]="true" />
         <p class="flex-1 text-sm font-medium">{{ toast.message }}</p>
         <button
           (click)="close(toast.id)"
@@ -66,12 +65,12 @@ export class ToastContainerComponent {
     return `${baseClasses} ${typeClasses[type] || typeClasses['info']}`;
   }
 
-  getIcon(type: string): string {
-    const icons: Record<string, string> = {
-      success: '✓',
-      error: '✕',
-      warning: '⚠',
-      info: 'ℹ'
+  getIcon(type: string): IconType {
+    const icons: Record<string, IconType> = {
+      success: 'success',
+      error: 'error',
+      warning: 'warning',
+      info: 'info'
     };
     return icons[type] || icons['info'];
   }

@@ -1,8 +1,9 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { IconType, SvgIconComponent } from '../svg-icon/svg-icon.component';
 
 export interface EmptyStateConfig {
-  icon?: string;
+  icon?: IconType;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -12,13 +13,17 @@ export interface EmptyStateConfig {
 @Component({
   selector: 'app-empty-state',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconComponent],
   template: `
     <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
       <div
         class="w-20 h-20 mb-6 rounded-full bg-slate-100 flex items-center justify-center"
         [attr.aria-hidden]="true">
-        <span class="text-4xl">{{ config.icon || '📭' }}</span>
+        @if (config.icon) {
+          <pro-svg-icon [icon]="config.icon" [size]="48" />
+        } @else {
+          <pro-svg-icon icon="mail" [size]="48" />
+        }
       </div>
 
       <h3 class="text-xl font-semibold text-slate-800 mb-2">
