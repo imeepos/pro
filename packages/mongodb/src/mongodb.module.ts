@@ -37,7 +37,7 @@ export class MongodbModule {
    * 异步根模块配置
    */
   static forRootAsync(options: {
-    useFactory: (...args: any[]) => Promise<{ uri: string }> | { uri: string };
+    useFactory: (...args: any[]) => Promise<string | { uri: string }> | string | { uri: string };
     inject?: any[];
   }): DynamicModule {
     return {

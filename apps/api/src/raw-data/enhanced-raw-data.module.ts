@@ -37,12 +37,14 @@ import { AuthModule } from '../auth/auth.module';
     ScheduleModule.forRoot(),
 
     // 集成 MongoDB 特性模块
-    MongodbModule.forFeature(),
+    // TODO: Temporarily disabled due to Mongoose dependency injection issues
+    // MongodbModule.forFeature(),
 
     // 显式注册 RawDataSource 模型
-    MongooseModule.forFeature([
-      { name: RawDataSource.name, schema: RawDataSourceSchema }
-    ]),
+    // TODO: Temporarily disabled due to Mongoose dependency injection issues
+    // MongooseModule.forFeature([
+    //   { name: RawDataSource.name, schema: RawDataSourceSchema }
+    // ]),
 
     // JWT模块用于认证和WebSocket认证
     JwtModule.register({

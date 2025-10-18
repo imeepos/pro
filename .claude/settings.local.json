@@ -61,7 +61,12 @@
       "Bash(psql:*)",
       "Bash(timeout 300 pnpm run:*)",
       "Bash(timeout 60 pnpm run typecheck:*)",
-      "Bash(pnpm run)"
+      "Bash(pnpm run)",
+      "Bash(pnpm list @nestjs/mongoose mongoose)",
+      "Bash(timeout 30 pnpm run start)",
+      "Bash(timeout 10 pnpm run start)",
+      "Bash(node dist/main.js)",
+      "Bash(timeout 10 node dist/main.js)"
     ],
     "deny": [],
     "ask": []

@@ -22,12 +22,14 @@ import { RawDataGateway } from './raw-data.gateway';
 @Module({
   imports: [
     // 集成 MongoDB 特性模块，提供数据源服务和模型注册
-    MongodbModule.forFeature(),
+    // TODO: Temporarily disabled due to Mongoose dependency injection issues
+    // MongodbModule.forFeature(),
 
     // 显式注册 RawDataSource 模型
-    MongooseModule.forFeature([
-      { name: RawDataSource.name, schema: RawDataSourceSchema }
-    ]),
+    // TODO: Temporarily disabled due to Mongoose dependency injection issues
+    // MongooseModule.forFeature([
+    //   { name: RawDataSource.name, schema: RawDataSourceSchema }
+    // ]),
 
     // JWT模块用于WebSocket认证
     JwtModule.register({
