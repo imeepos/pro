@@ -85,7 +85,7 @@ export const createDatabaseConfig = (configService: ConfigService): DataSourceOp
       type: 'postgres',
       url: databaseUrl,
       entities,
-      synchronize: true,
+      synchronize: false,
       logging: nodeEnv === 'development',
     };
   }
@@ -98,7 +98,7 @@ export const createDatabaseConfig = (configService: ConfigService): DataSourceOp
     password: configService.get<string>('POSTGRES_PASSWORD', 'postgres123'),
     database: configService.get<string>('POSTGRES_DB', 'pro'),
     entities,
-    synchronize: true,
+    synchronize: false,
     logging: nodeEnv === 'development',
   };
 };

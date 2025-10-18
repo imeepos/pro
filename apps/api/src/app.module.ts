@@ -20,6 +20,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { BugModule } from './bug/bug.module';
 import { RawDataModule } from './raw-data/raw-data.module';
+import { DatabaseModule } from './database/database.module';
 import { LoadersModule } from './loaders.module';
 import { createDatabaseConfig, mongodbConfigFactory } from './config';
 import { AugmentedRequest, GraphqlContext } from './common/utils/context.utils';
@@ -101,6 +102,7 @@ import { TagLoader } from './events/tag.loader';
     // }),
 
     ConfigModule,
+    DatabaseModule,
     AuthModule,
     UserModule,
     WeiboModule,
