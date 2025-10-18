@@ -41,7 +41,6 @@
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
     "tailwindcss": "^3.4.1",
-
     "@nestjs/common": "11.0.13",
     "@nestjs/core": "11.0.13",
     "@nestjs/platform-express": "11.0.13",
@@ -54,26 +53,23 @@
     "@nestjs/websockets": "^11.0.0",
     "@nestjs/microservices": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
-
     "typeorm": "^0.3.20",
     "pg": "8.13.1",
     "reflect-metadata": "0.2.2",
     "mongoose": "8.8.4",
-
     "passport-jwt": "4.0.1",
     "passport-local": "1.0.0",
-
     "tsup": "^8.5.0",
     "turbo": "2.3.3",
-
     "undici": "5.28.0",
-
     "rxjs": "7.8.1",
     "axios": "1.7.9"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "nestjs-pino": "^4.4.1",
     "passport-headerapikey": "^1.2.2",
+    "pg": "^8.16.3",
     "pino": "^9.13.1",
     "pino-http": "^10.5.0",
     "pino-pretty": "^13.1.2"
