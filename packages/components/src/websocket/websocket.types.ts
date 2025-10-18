@@ -51,11 +51,23 @@ export interface EventSubscription {
 
 export const defaultTransportConfig: TransportConfig = {
   transports: ['websocket', 'polling'],
-  timeout: 5000,
+  timeout: 20000, // 增加到20秒，给网络波动更多容错空间
   forceNew: true
 };
 
 export const defaultReconnectionConfig: ReconnectionConfig = {
-  maxAttempts: 5,
-  delay: (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 30000)
+  maxAttempts: 10,
+  delay: (attempt: number) => {
+    // 指数退避算法，但针对微博扫码登录等场景优化
+    const baseDelay = 1000;
+    const maxDelay = 60000; // 1分钟最大延迟
+    const exponentialDelay = baseDelay * Math.pow(2, attempt);
+
+    // 前3次重连使用较短延迟，之后使用指数退避
+    if (attempt <= 2) {
+      return Math.min(2000 * attempt, 5000); // 2s, 4s, 最大5s
+    }
+
+    return Math.min(exponentialDelay, maxDelay);
+  }
 };
