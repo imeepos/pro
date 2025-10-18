@@ -77,7 +77,7 @@ export class BrowserService implements OnModuleDestroy {
     }
 
     const defaultConfig: BrowserConfig = {
-      headless: this.configService.get<string>('NODE_ENV') === 'production',
+      headless: this.configService.get<string>('NODE_ENV') === 'production' || this.configService.get<boolean>('FORCE_HEADLESS', true),
       userAgent: this.crawlerConfig.userAgent,
       viewport: this.crawlerConfig.viewport,
       timeout: this.crawlerConfig.timeout

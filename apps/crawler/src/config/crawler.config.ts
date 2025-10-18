@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { CrawlerConfig, RabbitMQConfig, MongoDBConfig, WeiboConfig } from './crawler.interface';
 
 export const createCrawlerConfig = (configService: ConfigService): CrawlerConfig => ({
-  headless: configService.get<string>('NODE_ENV') === 'production',
+  headless: configService.get<string>('NODE_ENV') === 'production' || configService.get<boolean>('FORCE_HEADLESS', true),
   userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   viewport: {
     width: 1920,
