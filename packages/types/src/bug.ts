@@ -1,57 +1,6 @@
-export enum BugStatus {
-  OPEN = 'OPEN',
-  IN_PROGRESS = 'IN_PROGRESS',
-  RESOLVED = 'RESOLVED',
-  CLOSED = 'CLOSED',
-  REJECTED = 'REJECTED',
-  REOPENED = 'REOPENED'
-}
+import { BugStatus, BugPriority, BugCategory, BugActivityAction, BugNotificationType } from './enums/bug.js';
 
-export enum BugPriority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL'
-}
-
-export enum BugCategory {
-  FUNCTIONAL = 'FUNCTIONAL',
-  PERFORMANCE = 'PERFORMANCE',
-  SECURITY = 'SECURITY',
-  UI_UX = 'UI_UX',
-  INTEGRATION = 'INTEGRATION',
-  DATA = 'DATA',
-  CONFIGURATION = 'CONFIGURATION',
-  DOCUMENTATION = 'DOCUMENTATION'
-}
-
-export enum BugActivityAction {
-  CREATED = 'CREATED',
-  UPDATED = 'UPDATED',
-  ASSIGNED = 'ASSIGNED',
-  STATUS_CHANGED = 'STATUS_CHANGED',
-  PRIORITY_CHANGED = 'PRIORITY_CHANGED',
-  COMMENT_ADDED = 'COMMENT_ADDED',
-  ATTACHMENT_ADDED = 'ATTACHMENT_ADDED',
-  RESOLVED = 'RESOLVED',
-  CLOSED = 'CLOSED',
-  REOPENED = 'REOPENED',
-  WATCHER_ADDED = 'WATCHER_ADDED',
-  WATCHER_REMOVED = 'WATCHER_REMOVED',
-  TAG_ADDED = 'TAG_ADDED',
-  TAG_REMOVED = 'TAG_REMOVED'
-}
-
-export enum BugNotificationType {
-  ASSIGNED = 'ASSIGNED',
-  STATUS_CHANGED = 'STATUS_CHANGED',
-  COMMENT_ADDED = 'COMMENT_ADDED',
-  MENTION = 'MENTION',
-  DUE_DATE_REMINDER = 'DUE_DATE_REMINDER',
-  BUG_RESOLVED = 'BUG_RESOLVED',
-  BUG_CLOSED = 'BUG_CLOSED',
-  BUG_REOPENED = 'BUG_REOPENED'
-}
+export * from './enums/bug.js';
 
 export interface BugAttachment {
   id: string;

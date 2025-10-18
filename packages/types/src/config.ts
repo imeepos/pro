@@ -1,9 +1,6 @@
-/**
- * 配置类型枚举
- */
-export enum ConfigType {
-  AMAP_API_KEY = 'AMAP_API_KEY',
-}
+import { ConfigType } from './enums/config.js';
+
+export * from './enums/config.js';
 
 /**
  * 获取配置请求参数

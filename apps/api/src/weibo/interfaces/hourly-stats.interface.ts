@@ -3,16 +3,9 @@
  * 支持按小时维度的统计查询和曲线图展示
  */
 
-export enum HourlyStatsType {
-  /** 任务执行统计 */
-  TASK_EXECUTION = 'task_execution',
-  /** 消息处理统计 */
-  MESSAGE_PROCESSING = 'message_processing',
-  /** 性能统计 */
-  PERFORMANCE = 'performance',
-  /** 用户活跃度 */
-  USER_ACTIVITY = 'user_activity',
-}
+import { HourlyStatsType } from '@pro/types';
+
+export { HourlyStatsType };
 
 export interface HourlyStatsPoint {
   /** 时间点 (ISO 8601格式) */

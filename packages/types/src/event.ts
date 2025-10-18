@@ -1,47 +1,6 @@
-export enum EventStatus {
-  DRAFT = 'DRAFT',
-  PUBLISHED = 'PUBLISHED',
-  ARCHIVED = 'ARCHIVED'
-}
+import { EventStatus } from './enums/event.js';
 
-/**
- * EventStatus类型守卫
- */
-export function isValidEventStatus(value: string): value is EventStatus {
-  return Object.values(EventStatus).includes(value as EventStatus);
-}
-
-/**
- * 数字到EventStatus的转换
- */
-export function numberToEventStatus(value: number): EventStatus {
-  switch (value) {
-    case 0:
-      return EventStatus.DRAFT;
-    case 1:
-      return EventStatus.PUBLISHED;
-    case 2:
-      return EventStatus.ARCHIVED;
-    default:
-      throw new Error(`Invalid EventStatus number: ${value}`);
-  }
-}
-
-/**
- * EventStatus到数字的转换
- */
-export function eventStatusToNumber(status: EventStatus): number {
-  switch (status) {
-    case EventStatus.DRAFT:
-      return 0;
-    case EventStatus.PUBLISHED:
-      return 1;
-    case EventStatus.ARCHIVED:
-      return 2;
-    default:
-      throw new Error(`Unknown EventStatus: ${status}`);
-  }
-}
+export * from './enums/event.js';
 
 export interface EventSummary {
   id: string;

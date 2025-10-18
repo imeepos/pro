@@ -8,11 +8,11 @@
  * API Key 排序字段枚举
  */
 export enum ApiKeySortBy {
-  CREATED_AT = 'CREATED_AT',
-  LAST_USED_AT = 'LAST_USED_AT',
-  NAME = 'NAME',
-  UPDATED_AT = 'UPDATED_AT',
-  USAGE_COUNT = 'USAGE_COUNT'
+  CREATED_AT = 'createdAt',
+  UPDATED_AT = 'updatedAt',
+  NAME = 'name',
+  LAST_USED_AT = 'lastUsedAt',
+  USAGE_COUNT = 'usageCount'
 }
 
 /**
@@ -28,20 +28,20 @@ export enum ApiKeySortOrder {
  * 仪表盘活动类型枚举
  */
 export enum DashboardActivityType {
-  Event = 'Event',
-  Screen = 'Screen',
-  Task = 'Task',
-  Weibo = 'Weibo'
+  Screen = 'screen',
+  Event = 'event',
+  Weibo = 'weibo',
+  Task = 'task'
 }
 
 /**
  * 小时统计类型枚举
  */
 export enum HourlyStatsType {
-  MESSAGE_PROCESSING = 'MESSAGE_PROCESSING',
-  PERFORMANCE = 'PERFORMANCE',
-  TASK_EXECUTION = 'TASK_EXECUTION',
-  USER_ACTIVITY = 'USER_ACTIVITY'
+  TASK_EXECUTION = 'task_execution',
+  MESSAGE_PROCESSING = 'message_processing',
+  PERFORMANCE = 'performance',
+  USER_ACTIVITY = 'user_activity'
 }
 
 /**

@@ -1,8 +1,4 @@
-export enum UserStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  SUSPENDED = 'SUSPENDED',
-}
+import { UserStatus } from './enums/common.js';
 
 export interface User {
   id: string;
@@ -67,12 +63,8 @@ export interface ValidationResult {
   errors: string[];
 }
 
-// 导出统一的枚举定义
-export * from './enums/weibo.js';
-export * from './enums/file.js';
-export * from './enums/common.js';
+export * from './enums/index.js';
 
-// 导出接口定义（从接口文件中重新导出枚举，保持向后兼容）
 export * from './weibo-search-task.js';
 export * from './weibo-account.js';
 export * from './api-key.js';

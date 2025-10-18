@@ -1,12 +1,6 @@
 import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { DashboardActivityType } from '@pro/types';
 import { DashboardStats, RecentActivity } from '../dto/dashboard.dto';
-
-export enum DashboardActivityType {
-  Screen = 'screen',
-  Event = 'event',
-  Weibo = 'weibo',
-  Task = 'task',
-}
 
 registerEnumType(DashboardActivityType, {
   name: 'DashboardActivityType',

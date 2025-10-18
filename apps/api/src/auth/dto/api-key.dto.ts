@@ -13,7 +13,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ApiKeyType, ApiKeyStatusFilter } from '@pro/types';
+import { ApiKeyType, ApiKeyStatusFilter, ApiKeySortBy, ApiKeySortOrder } from '@pro/types';
 import {
   Field,
   Float,
@@ -37,30 +37,10 @@ registerEnumType(ApiKeyStatusFilter, {
   description: 'API Key 状态过滤枚举',
 });
 
-
-/**
- * API Key排序字段枚举
- */
-export enum ApiKeySortBy {
-  CREATED_AT = 'createdAt',
-  UPDATED_AT = 'updatedAt',
-  NAME = 'name',
-  LAST_USED_AT = 'lastUsedAt',
-  USAGE_COUNT = 'usageCount'
-}
-
 registerEnumType(ApiKeySortBy, {
   name: 'ApiKeySortBy',
   description: 'API Key 排序字段',
 });
-
-/**
- * API Key排序方向枚举
- */
-export enum ApiKeySortOrder {
-  ASC = 'ASC',
-  DESC = 'DESC'
-}
 
 registerEnumType(ApiKeySortOrder, {
   name: 'ApiKeySortOrder',

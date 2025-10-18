@@ -81,12 +81,19 @@ export class WeiboTaskStatusResolver {
   ): Promise<MultiTypeHourlyStatsDto> {
     try {
       this.logger.debug('获取多类型小时统计数据', { types: query.types });
-      return await this.hourlyStatsService.getMultiTypeStats(
+      const stats = await this.hourlyStatsService.getMultiTypeStats(
         query.types,
         query.startDate,
         query.endDate,
         query.timezone,
       );
+
+      return {
+        task_execution: stats[HourlyStatsType.TASK_EXECUTION],
+        message_processing: stats[HourlyStatsType.MESSAGE_PROCESSING],
+        performance: stats[HourlyStatsType.PERFORMANCE],
+        user_activity: stats[HourlyStatsType.USER_ACTIVITY],
+      };
     } catch (error) {
       this.logger.error('获取多类型小时统计数据失败', { query, error });
       throw error;

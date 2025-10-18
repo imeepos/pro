@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/co
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, Like, SelectQueryBuilder } from 'typeorm';
 import { ApiKeyEntity } from '@pro/entities';
-import { ApiKeyType } from '@pro/types';
+import { ApiKeyType, ApiKeySortBy } from '@pro/types';
 import { UserEntity } from '@pro/entities';
 import { UserStatus } from '@pro/types';
 import {
@@ -261,10 +261,10 @@ export class ApiKeyService {
     }
 
     // 排序
-    const sortField = sortBy === 'usageCount' ? 'apiKey.usageCount' :
-                     sortBy === 'name' ? 'apiKey.name' :
-                     sortBy === 'lastUsedAt' ? 'apiKey.lastUsedAt' :
-                     sortBy === 'updatedAt' ? 'apiKey.updatedAt' :
+    const sortField = sortBy === ApiKeySortBy.USAGE_COUNT ? 'apiKey.usageCount' :
+                     sortBy === ApiKeySortBy.NAME ? 'apiKey.name' :
+                     sortBy === ApiKeySortBy.LAST_USED_AT ? 'apiKey.lastUsedAt' :
+                     sortBy === ApiKeySortBy.UPDATED_AT ? 'apiKey.updatedAt' :
                      'apiKey.createdAt';
 
     queryBuilder = queryBuilder.orderBy(sortField, sortOrder || 'DESC');
