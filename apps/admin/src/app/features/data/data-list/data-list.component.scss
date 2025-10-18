@@ -1,0 +1,42 @@
+:host {
+  display: block;
+}
+
+.table-container {
+  @apply overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg;
+}
+
+.status-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.action-button {
+  @apply text-sm font-medium hover:underline focus:outline-none focus:underline;
+  transition: color 0.15s ease-in-out;
+}
+
+.pagination-button {
+  @apply relative inline-flex items-center px-4 py-2 border text-sm font-medium;
+  transition: all 0.15s ease-in-out;
+}
+
+.spinner {
+  @apply animate-spin h-5 w-5;
+}
+
+.bulk-actions-bar {
+  @apply bg-blue-50 border-l-4 border-blue-400 p-4;
+}
+
+.empty-state {
+  @apply text-center py-12;
+}
+
+.stats-card {
+  @apply bg-white overflow-hidden shadow rounded-lg;
+  transition: transform 0.15s ease-in-out;
+}
+
+.stats-card:hover {
+  @apply transform scale-105;
+}
