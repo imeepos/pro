@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { connect, disconnect, model, Document } from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { RawDataSource, RawDataSourceSchema } from './raw-data-source.schema.js';
-import { SourceType, ProcessingStatus } from '../types/raw-data-source.types.js';
+import { SourceType, ProcessingStatus } from '@pro//types';
 
 describe('RawDataSource Schema', () => {
   let mongoServer: MongoMemoryServer;

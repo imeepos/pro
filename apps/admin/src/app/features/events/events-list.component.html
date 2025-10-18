@@ -94,7 +94,7 @@
             <button nz-button nzType="link" nzSize="small" (click)="viewDetail(event)">查看</button>
             <button nz-button nzType="link" nzSize="small" (click)="editEvent(event)">编辑</button>
             <button
-              *ngIf="event.status === 0"
+              *ngIf="event.status === EventStatus.DRAFT"
               nz-button
               nzType="link"
               nzSize="small"
@@ -102,7 +102,7 @@
               发布
             </button>
             <button
-              *ngIf="event.status === 1"
+              *ngIf="event.status === EventStatus.PUBLISHED"
               nz-button
               nzType="link"
               nzSize="small"

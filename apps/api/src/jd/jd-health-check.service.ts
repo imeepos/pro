@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
-import { JdAccountEntity, JdAccountStatus } from '@pro/entities';
+import { JdAccountEntity } from '@pro/entities';
 import { JdAccountService } from './jd-account.service';
-
+import { JdAccountStatus } from '@pro/types'
 /**
  * 京东账号健康检查服务
  * 负责检查京东账号Cookie的有效性和状态

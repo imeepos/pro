@@ -19,6 +19,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   event: EventDetail | null = null;
   loading = false;
   showDeleteDialog = false;
+  EventStatus = EventStatus
 
   private destroy$ = new Subject<void>();
 

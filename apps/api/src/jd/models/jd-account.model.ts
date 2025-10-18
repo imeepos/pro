@@ -1,5 +1,5 @@
 import { Field, GraphQLISODateTime, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
-import { JdAccountStatus } from '@pro/entities';
+import { JdAccountStatus } from '@pro/types';
 import { createOffsetConnectionType } from '../../common/models/pagination.model';
 import { JdAccountSummary } from '../jd-account.service';
 

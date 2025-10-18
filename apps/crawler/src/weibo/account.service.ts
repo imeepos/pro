@@ -324,7 +324,7 @@ export class WeiboAccountService implements OnModuleInit {
 
     if (accountId) {
       const account = this.accounts.get(accountId);
-      const isAvailable = account && account.status === 'active';
+      const isAvailable = account && account.status === WeiboAccountStatus.ACTIVE;
 
       this.logger.debug(`${isAvailable ? '✅' : '❌'} 指定账号可用性检查`, {
         accountId,
@@ -337,7 +337,7 @@ export class WeiboAccountService implements OnModuleInit {
       return isAvailable ? account : null;
     }
 
-    const activeAccounts = Array.from(this.accounts.values()).filter(acc => acc.status === 'active');
+    const activeAccounts = Array.from(this.accounts.values()).filter(acc => acc.status === WeiboAccountStatus.ACTIVE);
 
     if (activeAccounts.length === 0) {
       this.logger.warn('⚠️ 没有可用的微博账号，尝试刷新账号列表...', {
@@ -355,7 +355,7 @@ export class WeiboAccountService implements OnModuleInit {
       const refreshDuration = Date.now() - refreshStartTime;
 
       // 刷新后再次检查
-      const refreshedAccounts = Array.from(this.accounts.values()).filter(acc => acc.status === 'active');
+      const refreshedAccounts = Array.from(this.accounts.values()).filter(acc => acc.status === WeiboAccountStatus.ACTIVE);
       if (refreshedAccounts.length === 0) {
         this.logger.error('❌ 刷新后仍然没有可用的微博账号', {
           refreshDuration,
@@ -776,7 +776,7 @@ export class WeiboAccountService implements OnModuleInit {
       recommendations.push('可用账号数量较少，建议增加更多账号以提高稳定性');
     }
 
-    const balance = this.calculateUsageBalance(accounts.filter(acc => acc.status === 'active'));
+    const balance = this.calculateUsageBalance(accounts.filter(acc => acc.status === WeiboAccountStatus.ACTIVE));
     if (balance.balanceScore < 50) {
       recommendations.push('账号使用不均衡，建议调整轮换策略');
     }

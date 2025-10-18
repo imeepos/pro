@@ -42,6 +42,8 @@ export class EventsListComponent implements OnInit, OnDestroy {
   eventToDelete: Event | null = null;
   searchHistory: string[] = [];
 
+  EventStatus=EventStatus;
+
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<void>;
   @ViewChild('suffixIcons', { static: true }) suffixIcons!: TemplateRef<void>;
 
