@@ -306,11 +306,11 @@ export class WeiboSearchTasksApi {
 
   private parseTaskStatus(status: string): WeiboSearchTaskStatus {
     const statusMap: Record<string, WeiboSearchTaskStatus> = {
-      'pending': WeiboSearchTaskStatus.PENDING,
-      'running': WeiboSearchTaskStatus.RUNNING,
-      'paused': WeiboSearchTaskStatus.PAUSED,
-      'failed': WeiboSearchTaskStatus.FAILED,
-      'timeout': WeiboSearchTaskStatus.TIMEOUT,
+      'PENDING': WeiboSearchTaskStatus.PENDING,
+      'RUNNING': WeiboSearchTaskStatus.RUNNING,
+      'PAUSED': WeiboSearchTaskStatus.PAUSED,
+      'FAILED': WeiboSearchTaskStatus.FAILED,
+      'TIMEOUT': WeiboSearchTaskStatus.TIMEOUT,
     };
     return statusMap[status] ?? WeiboSearchTaskStatus.PENDING;
   }

@@ -5,12 +5,13 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, EventMapDistributionComponent, WebSocketManager, WebSocketService, JwtAuthService, createScreensWebSocketConfig, createNotificationWebSocketConfig } from '@pro/components';
+import { ComponentRegistryService, WeiboLoggedInUsersCardComponent, EventMapDistributionComponent, SUBSCRIPTION_CLIENT } from '@pro/components';
 import { TestSimpleComponent } from './features/screens/components/test-simple.component';
 import { TokenStorageService } from './core/services/token-storage.service';
 import { AuthService } from './state/auth.service';
 import { SkerSDK } from '@pro/sdk';
 import { environment } from '../environments/environment';
+import { SubscriptionClientAdapter } from './core/graphql/subscription-client.adapter';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
 import { zh_CN, provideNzI18n } from 'ng-zorro-antd/i18n';
 import { provideNzConfig } from 'ng-zorro-antd/core/config';
@@ -123,32 +124,10 @@ export const appConfig: ApplicationConfig = {
       multi: true
     },
 
-    // WebSocket 认证服务
-    JwtAuthService,
-
-    // WebSocket 管理器
+    // GraphQL Subscription Client
     {
-      provide: WebSocketManager,
-      useFactory: (authService: JwtAuthService) => {
-        try {
-          const wsManager = new WebSocketManager(() => new WebSocketService(authService));
-
-          const token = localStorage.getItem(environment.tokenKey);
-          if (token) {
-            const screensConfig = createScreensWebSocketConfig(environment.wsUrl, token);
-            const notificationsConfig = createNotificationWebSocketConfig(environment.wsUrl, token);
-
-            wsManager.connectToNamespace(screensConfig);
-            wsManager.connectToNamespace(notificationsConfig);
-          }
-
-          return wsManager;
-        } catch (error) {
-          console.warn('[App] WebSocket初始化失败，将在后续需要时重试', error);
-          return new WebSocketManager(() => new WebSocketService(authService));
-        }
-      },
-      deps: [JwtAuthService]
+      provide: SUBSCRIPTION_CLIENT,
+      useClass: SubscriptionClientAdapter
     }
   ]
 };

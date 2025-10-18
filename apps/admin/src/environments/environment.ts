@@ -7,7 +7,5 @@ export const environment = {
   amapLoaderSource: 'https://webapi.amap.com/loader.js',
   tokenKey: 'access_token',
   refreshTokenKey: 'refresh_token',
-  timeout: 30000,
-  wsUrl: 'ws://43.240.223.138:3000',
-  wsNamespace: 'screens'
+  timeout: 30000
 };

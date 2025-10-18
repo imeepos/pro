@@ -18,6 +18,22 @@ interface BrowserMetrics {
   activeContexts: number;
   memoryUsage?: NodeJS.MemoryUsage;
   lastActivity: number;
+  lastHealthCheck?: number;
+  totalErrors: number;
+  totalRecoveries: number;
+}
+
+interface BrowserHealthStatus {
+  isHealthy: boolean;
+  issues: string[];
+  recommendations: string[];
+  metrics: {
+    uptime: number;
+    memoryUsageMB: number;
+    activeContextsCount: number;
+    errorRate: number;
+    averageContextLifetime: number;
+  };
 }
 
 @Injectable()
@@ -29,8 +45,13 @@ export class BrowserService implements OnModuleDestroy {
     totalContextsClosed: 0,
     totalPagesCreated: 0,
     activeContexts: 0,
-    lastActivity: Date.now()
+    lastActivity: Date.now(),
+    totalErrors: 0,
+    totalRecoveries: 0
   };
+
+  private contextCreationTimes: Map<string, number> = new Map();
+  private errorCounts: Map<string, number> = new Map();
 
   constructor(
     private readonly configService: ConfigService,
@@ -41,8 +62,17 @@ export class BrowserService implements OnModuleDestroy {
   async initialize(config?: Partial<BrowserConfig>): Promise<void> {
     const initStartTime = Date.now();
 
+    this.logger.log('🌐 开始初始化浏览器服务', {
+      initStartTime: new Date(initStartTime).toISOString(),
+      hasExistingBrowser: !!this.browser,
+      isConnected: this.browser?.isConnected()
+    });
+
     if (this.browser && this.browser.isConnected()) {
-      this.logger.debug('浏览器已初始化且连接正常，跳过重复初始化');
+      this.logger.debug('✅ 浏览器已初始化且连接正常，跳过重复初始化', {
+        browserUptime: this.metrics.browserStartTime ? Date.now() - this.metrics.browserStartTime : 0,
+        activeContexts: this.contexts.size
+      });
       return;
     }
 
@@ -55,19 +85,25 @@ export class BrowserService implements OnModuleDestroy {
 
     const browserConfig = { ...defaultConfig, ...config };
 
-    this.logger.debug('开始初始化浏览器实例', {
+    this.logger.debug('⚙️ 浏览器配置信息', {
       headless: browserConfig.headless,
       userAgent: browserConfig.userAgent.substring(0, 50) + '...',
       viewport: browserConfig.viewport,
-      timeout: browserConfig.timeout
+      timeout: browserConfig.timeout,
+      nodeVersion: process.version,
+      platform: process.platform
     });
 
     try {
       if (this.browser) {
+        this.logger.debug('🔄 关闭已存在的浏览器实例');
         await this.browser.close();
-        this.logger.debug('关闭已存在的浏览器实例');
+        this.metrics.totalRecoveries++;
       }
 
+      this.logger.log('🚀 启动 Chromium 浏览器实例');
+
+      const launchStartTime = Date.now();
       this.browser = await chromium.launch({
         headless: browserConfig.headless,
         args: [
@@ -83,6 +119,13 @@ export class BrowserService implements OnModuleDestroy {
           '--disable-features=TranslateUI',
           '--disable-ipc-flooding-protection'
         ]
+      });
+      const launchDuration = Date.now() - launchStartTime;
+
+      this.logger.log('✅ 浏览器实例启动成功', {
+        launchDuration,
+        headless: browserConfig.headless,
+        processId: process.pid
       });
 
       this.metrics.browserStartTime = Date.now();
@@ -116,11 +159,13 @@ export class BrowserService implements OnModuleDestroy {
     const contextStartTime = Date.now();
     const contextKey = `account_${accountId}`;
 
-    this.logger.debug('开始创建浏览器上下文', {
+    this.logger.debug('📱 开始创建浏览器上下文', {
       accountId,
       contextKey,
       hasCookies: !!(cookies && cookies.length > 0),
-      cookiesCount: cookies?.length || 0
+      cookiesCount: cookies?.length || 0,
+      currentActiveContexts: this.contexts.size,
+      totalContextsCreated: this.metrics.totalContextsCreated
     });
 
     try {
@@ -132,20 +177,31 @@ export class BrowserService implements OnModuleDestroy {
       if (this.contexts.has(contextKey)) {
         const existingContext = this.contexts.get(contextKey)!;
         if (!existingContext.browser().isConnected()) {
-          this.logger.warn('发现断开连接的上下文，将重新创建', {
+          this.logger.warn('⚠️ 发现断开连接的上下文，将重新创建', {
             accountId,
-            contextKey
+            contextKey,
+            contextAge: this.contextCreationTimes.get(contextKey) ? Date.now() - this.contextCreationTimes.get(contextKey)! : 'unknown'
           });
           this.contexts.delete(contextKey);
+          this.contextCreationTimes.delete(contextKey);
         } else {
-          this.logger.debug('复用已存在的浏览器上下文', {
+          this.logger.debug('♻️ 复用已存在的浏览器上下文', {
             accountId,
-            contextKey
+            contextKey,
+            contextAge: this.contextCreationTimes.get(contextKey) ? Date.now() - this.contextCreationTimes.get(contextKey)! : 'unknown'
           });
           return existingContext;
         }
       }
 
+      this.logger.debug('🏗️ 创建新的浏览器上下文实例', {
+        accountId,
+        contextKey,
+        userAgent: this.crawlerConfig.userAgent.substring(0, 50) + '...',
+        viewport: this.crawlerConfig.viewport
+      });
+
+      const contextCreationStart = Date.now();
       const context = await this.browser!.newContext({
         userAgent: this.crawlerConfig.userAgent,
         viewport: this.crawlerConfig.viewport,
@@ -153,24 +209,38 @@ export class BrowserService implements OnModuleDestroy {
         acceptDownloads: false,
         javaScriptEnabled: true
       });
+      const contextCreationDuration = Date.now() - contextCreationStart;
 
       // 注入cookies
       if (cookies && cookies.length > 0) {
         try {
+          const cookieInjectStart = Date.now();
           await context.addCookies(cookies);
-          this.logger.debug('cookies注入成功', {
+          const cookieInjectDuration = Date.now() - cookieInjectStart;
+
+          this.logger.debug('🍪 cookies注入成功', {
             accountId,
-            cookiesCount: cookies.length
+            cookiesCount: cookies.length,
+            injectDuration: cookieInjectDuration,
+            domains: [...new Set(cookies.map(c => c.domain))].slice(0, 3) // 显示前3个域名
           });
         } catch (cookieError) {
-          this.logger.warn('cookies注入失败，继续执行', {
+          this.logger.warn('⚠️ cookies注入失败，继续执行', {
             accountId,
-            error: cookieError instanceof Error ? cookieError.message : '未知错误'
+            error: cookieError instanceof Error ? cookieError.message : '未知错误',
+            cookiesCount: cookies.length
           });
+          this.recordError('cookie_injection', accountId);
         }
       }
 
       // 注入反检测脚本
+      this.logger.debug('🎭 注入反检测脚本', {
+        accountId,
+        scripts: ['webdriver_hiding', 'plugins_spoofing', 'languages_spoofing', 'permissions_spoofing', 'chrome_object_spoofing']
+      });
+
+      const scriptInjectStart = Date.now();
       await context.addInitScript(() => {
         // 隐藏webdriver属性
         Object.defineProperty(navigator, 'webdriver', {
@@ -203,6 +273,12 @@ export class BrowserService implements OnModuleDestroy {
           app: {}
         };
       });
+      const scriptInjectDuration = Date.now() - scriptInjectStart;
+
+      this.logger.debug('✅ 反检测脚本注入完成', {
+        accountId,
+        injectDuration: scriptInjectDuration
+      });
 
       // 阻止不必要的资源加载以提高性能
       await context.route('**/*.{png,jpg,jpeg,gif,svg,webp,css,font,woff,woff2,ico}', (route) => {
@@ -210,31 +286,39 @@ export class BrowserService implements OnModuleDestroy {
       });
 
       this.contexts.set(contextKey, context);
+      this.contextCreationTimes.set(contextKey, Date.now());
       this.metrics.totalContextsCreated++;
       this.metrics.activeContexts = this.contexts.size;
       this.metrics.lastActivity = Date.now();
 
       const contextDuration = Date.now() - contextStartTime;
 
-      this.logger.debug('浏览器上下文创建成功', {
+      this.logger.log('✅ 浏览器上下文创建成功', {
         accountId,
         contextKey,
         creationTimeMs: contextDuration,
+        contextCreationDuration,
         activeContextsCount: this.contexts.size,
-        totalContextsCreated: this.metrics.totalContextsCreated
+        totalContextsCreated: this.metrics.totalContextsCreated,
+        browserUptime: this.metrics.browserStartTime ? Date.now() - this.metrics.browserStartTime : 0,
+        memoryUsageMB: Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 100) / 100
       });
 
       return context;
 
     } catch (error) {
       const contextDuration = Date.now() - contextStartTime;
-      this.logger.error('浏览器上下文创建失败', {
+      this.logger.error('❌ 浏览器上下文创建失败', {
         accountId,
         contextKey,
         creationTimeMs: contextDuration,
         error: error instanceof Error ? error.message : '未知错误',
-        stack: error instanceof Error ? error.stack : undefined
+        errorType: this.classifyContextError(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        browserConnected: this.browser?.isConnected(),
+        activeContexts: this.contexts.size
       });
+      this.recordError('context_creation', accountId);
       throw error;
     }
   }
@@ -338,16 +422,30 @@ export class BrowserService implements OnModuleDestroy {
     const context = this.contexts.get(contextKey);
 
     if (!context) {
-      this.logger.debug('尝试关闭不存在的上下文', {
+      this.logger.debug('⚠️ 尝试关闭不存在的上下文', {
         accountId,
-        contextKey
+        contextKey,
+        activeContexts: this.contexts.size,
+        knownContexts: Array.from(this.contexts.keys())
       });
       return;
     }
 
+    const contextAge = this.contextCreationTimes.get(contextKey)
+      ? Date.now() - this.contextCreationTimes.get(contextKey)!
+      : 'unknown';
+
+    this.logger.debug('🗑️ 开始关闭浏览器上下文', {
+      accountId,
+      contextKey,
+      contextAge,
+      contextAgeFormatted: typeof contextAge === 'number' ? this.formatDuration(contextAge) : 'unknown'
+    });
+
     try {
       await context.close();
       this.contexts.delete(contextKey);
+      this.contextCreationTimes.delete(contextKey);
 
       this.metrics.totalContextsClosed++;
       this.metrics.activeContexts = this.contexts.size;
@@ -355,27 +453,36 @@ export class BrowserService implements OnModuleDestroy {
 
       const closeDuration = Date.now() - contextStartTime;
 
-      this.logger.debug('浏览器上下文关闭成功', {
+      this.logger.log('✅ 浏览器上下文关闭成功', {
         accountId,
         contextKey,
         closeTimeMs: closeDuration,
+        contextAge,
+        contextAgeFormatted: typeof contextAge === 'number' ? this.formatDuration(contextAge) : 'unknown',
         remainingContextsCount: this.contexts.size,
-        totalContextsClosed: this.metrics.totalContextsClosed
+        totalContextsClosed: this.metrics.totalContextsClosed,
+        successRate: this.metrics.totalContextsCreated > 0
+          ? Math.round((this.metrics.totalContextsClosed / this.metrics.totalContextsCreated) * 100)
+          : 0
       });
 
     } catch (error) {
       const closeDuration = Date.now() - contextStartTime;
-      this.logger.error('浏览器上下文关闭失败', {
+      this.logger.error('❌ 浏览器上下文关闭失败', {
         accountId,
         contextKey,
         closeTimeMs: closeDuration,
+        contextAge,
         error: error instanceof Error ? error.message : '未知错误',
+        errorType: this.classifyContextError(error),
         stack: error instanceof Error ? error.stack : undefined
       });
 
       // 即使关闭失败，也要从映射中移除，避免泄漏
       this.contexts.delete(contextKey);
+      this.contextCreationTimes.delete(contextKey);
       this.metrics.activeContexts = this.contexts.size;
+      this.recordError('context_closure', accountId);
     }
   }
 
@@ -548,5 +655,202 @@ export class BrowserService implements OnModuleDestroy {
         error: error instanceof Error ? error.message : '未知错误'
       });
     }
+  }
+
+  /**
+   * 获取浏览器健康状态
+   */
+  async getHealthStatus(): Promise<BrowserHealthStatus> {
+    this.updateMemoryUsage();
+    this.metrics.lastHealthCheck = Date.now();
+
+    const uptime = this.metrics.browserStartTime
+      ? Date.now() - this.metrics.browserStartTime
+      : 0;
+
+    const issues: string[] = [];
+    const recommendations: string[] = [];
+
+    // 检查浏览器连接状态
+    if (!this.browser || !this.browser.isConnected()) {
+      issues.push('browser_disconnected');
+      recommendations.push('重新初始化浏览器实例');
+    }
+
+    // 检查内存使用情况
+    const memoryUsageMB = (this.metrics.memoryUsage?.heapUsed || 0) / 1024 / 1024;
+    if (memoryUsageMB > 500) { // 超过500MB
+      issues.push('high_memory_usage');
+      recommendations.push('考虑重启浏览器实例以释放内存');
+    }
+
+    // 检查活跃上下文数量
+    if (this.contexts.size > 10) {
+      issues.push('too_many_active_contexts');
+      recommendations.push('清理不活跃的浏览器上下文');
+    }
+
+    // 检查错误率
+    const errorRate = this.metrics.totalContextsCreated > 0
+      ? this.metrics.totalErrors / this.metrics.totalContextsCreated
+      : 0;
+    if (errorRate > 0.1) { // 错误率超过10%
+      issues.push('high_error_rate');
+      recommendations.push('检查网络连接和目标网站状态');
+    }
+
+    // 检查运行时间
+    const uptimeHours = uptime / (1000 * 60 * 60);
+    if (uptimeHours > 24) { // 运行超过24小时
+      issues.push('long_uptime');
+      recommendations.push('考虑定期重启浏览器实例');
+    }
+
+    // 计算平均上下文生命周期
+    let averageContextLifetime = 0;
+    if (this.contextCreationTimes.size > 0) {
+      const totalAge = Array.from(this.contextCreationTimes.values())
+        .reduce((sum, age) => sum + (Date.now() - age), 0);
+      averageContextLifetime = totalAge / this.contextCreationTimes.size;
+    }
+
+    const isHealthy = issues.length === 0 && this.browser?.isConnected();
+
+    return {
+      isHealthy,
+      issues,
+      recommendations,
+      metrics: {
+        uptime,
+        memoryUsageMB: Math.round(memoryUsageMB * 100) / 100,
+        activeContextsCount: this.contexts.size,
+        errorRate: Math.round(errorRate * 100 * 100) / 100,
+        averageContextLifetime: Math.round(averageContextLifetime / 1000) // 秒
+      }
+    };
+  }
+
+  /**
+   * 记录错误统计
+   */
+  private recordError(errorType: string, accountId?: number): void {
+    this.metrics.totalErrors++;
+    const key = accountId ? `${errorType}_${accountId}` : errorType;
+    this.errorCounts.set(key, (this.errorCounts.get(key) || 0) + 1);
+
+    this.logger.debug('记录错误统计', {
+      errorType,
+      accountId,
+      totalErrors: this.metrics.totalErrors,
+      errorTypeCount: this.errorCounts.get(key)
+    });
+  }
+
+  /**
+   * 分类上下文错误
+   */
+  private classifyContextError(error: any): string {
+    if (!error) return 'UNKNOWN_CONTEXT_ERROR';
+
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+    if (errorMessage.includes('timeout') || errorMessage.includes('超时')) {
+      return 'CONTEXT_TIMEOUT';
+    }
+
+    if (errorMessage.includes('target closed') || errorMessage.includes('connection')) {
+      return 'BROWSER_DISCONNECTED';
+    }
+
+    if (errorMessage.includes('context') && errorMessage.includes('destroyed')) {
+      return 'CONTEXT_DESTROYED';
+    }
+
+    if (errorMessage.includes('permission') || errorMessage.includes('access')) {
+      return 'PERMISSION_ERROR';
+    }
+
+    return 'UNKNOWN_CONTEXT_ERROR';
+  }
+
+  /**
+   * 格式化持续时间
+   */
+  private formatDuration(milliseconds: number): string {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
+
+  /**
+   * 获取性能报告
+   */
+  async getPerformanceReport(): Promise<{
+    summary: BrowserHealthStatus;
+    contexts: Array<{
+      accountId: number;
+      contextKey: string;
+      age: number;
+      ageFormatted: string;
+    }>;
+    errors: Array<{
+      type: string;
+      count: number;
+      percentage: number;
+    }>;
+    trends: {
+      creationRate: number;
+      closureRate: number;
+      errorRate: number;
+      recoveryRate: number;
+    };
+  }> {
+    const healthStatus = await this.getHealthStatus();
+
+    // 上下文详情
+    const contexts = Array.from(this.contextCreationTimes.entries()).map(([contextKey, creationTime]) => {
+      const accountId = parseInt(contextKey.replace('account_', ''));
+      const age = Date.now() - creationTime;
+      return {
+        accountId,
+        contextKey,
+        age,
+        ageFormatted: this.formatDuration(age)
+      };
+    }).sort((a, b) => b.age - a.age);
+
+    // 错误统计
+    const totalErrors = Array.from(this.errorCounts.values()).reduce((sum, count) => sum + count, 0);
+    const errors = Array.from(this.errorCounts.entries())
+      .map(([type, count]) => ({
+        type,
+        count,
+        percentage: totalErrors > 0 ? Math.round((count / totalErrors) * 100 * 100) / 100 : 0
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // 趋势分析
+    const trends = {
+      creationRate: this.metrics.totalContextsCreated,
+      closureRate: this.metrics.totalContextsClosed,
+      errorRate: this.metrics.totalErrors,
+      recoveryRate: this.metrics.totalRecoveries
+    };
+
+    return {
+      summary: healthStatus,
+      contexts,
+      errors,
+      trends
+    };
   }
 }
