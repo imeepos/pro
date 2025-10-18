@@ -9,12 +9,12 @@
  * 统一管理微博账号的各种状态
  */
 export enum WeiboAccountStatus {
-  ACTIVE = 'active',       // 正常可用
-  INACTIVE = 'inactive',   // 用户手动禁用
-  SUSPENDED = 'suspended', // 平台暂停
-  BANNED = 'banned',       // 账号被封禁
-  RESTRICTED = 'restricted', // 风控受限
-  EXPIRED = 'expired'      // Cookie 已过期
+  ACTIVE = 'ACTIVE',       // 正常可用
+  INACTIVE = 'INACTIVE',   // 用户手动禁用
+  SUSPENDED = 'SUSPENDED', // 平台暂停
+  BANNED = 'BANNED',       // 账号被封禁
+  RESTRICTED = 'RESTRICTED', // 风控受限
+  EXPIRED = 'EXPIRED'      // Cookie 已过期
 }
 
 /**
@@ -22,11 +22,11 @@ export enum WeiboAccountStatus {
  * 统一管理微博搜索任务的执行状态
  */
 export enum WeiboSearchTaskStatus {
-  PENDING = 'pending',     // 等待执行
-  RUNNING = 'running',     // 正在执行
-  PAUSED = 'paused',       // 已暂停
-  FAILED = 'failed',       // 执行失败
-  TIMEOUT = 'timeout'      // 执行超时
+  PENDING = 'PENDING',     // 等待执行
+  RUNNING = 'RUNNING',     // 正在执行
+  PAUSED = 'PAUSED',       // 已暂停
+  FAILED = 'FAILED',       // 执行失败
+  TIMEOUT = 'TIMEOUT'      // 执行超时
 }
 
 /**

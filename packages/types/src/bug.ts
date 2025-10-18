@@ -15,42 +15,42 @@ export enum BugPriority {
 }
 
 export enum BugCategory {
-  FUNCTIONAL = 'functional',
-  PERFORMANCE = 'performance',
-  SECURITY = 'security',
-  UI_UX = 'ui_ux',
-  INTEGRATION = 'integration',
-  DATA = 'data',
-  CONFIGURATION = 'configuration',
-  DOCUMENTATION = 'documentation'
+  FUNCTIONAL = 'FUNCTIONAL',
+  PERFORMANCE = 'PERFORMANCE',
+  SECURITY = 'SECURITY',
+  UI_UX = 'UI_UX',
+  INTEGRATION = 'INTEGRATION',
+  DATA = 'DATA',
+  CONFIGURATION = 'CONFIGURATION',
+  DOCUMENTATION = 'DOCUMENTATION'
 }
 
 export enum BugActivityAction {
-  CREATED = 'created',
-  UPDATED = 'updated',
-  ASSIGNED = 'assigned',
-  STATUS_CHANGED = 'status_changed',
-  PRIORITY_CHANGED = 'priority_changed',
-  COMMENT_ADDED = 'comment_added',
-  ATTACHMENT_ADDED = 'attachment_added',
-  RESOLVED = 'resolved',
-  CLOSED = 'closed',
-  REOPENED = 'reopened',
-  WATCHER_ADDED = 'watcher_added',
-  WATCHER_REMOVED = 'watcher_removed',
-  TAG_ADDED = 'tag_added',
-  TAG_REMOVED = 'tag_removed'
+  CREATED = 'CREATED',
+  UPDATED = 'UPDATED',
+  ASSIGNED = 'ASSIGNED',
+  STATUS_CHANGED = 'STATUS_CHANGED',
+  PRIORITY_CHANGED = 'PRIORITY_CHANGED',
+  COMMENT_ADDED = 'COMMENT_ADDED',
+  ATTACHMENT_ADDED = 'ATTACHMENT_ADDED',
+  RESOLVED = 'RESOLVED',
+  CLOSED = 'CLOSED',
+  REOPENED = 'REOPENED',
+  WATCHER_ADDED = 'WATCHER_ADDED',
+  WATCHER_REMOVED = 'WATCHER_REMOVED',
+  TAG_ADDED = 'TAG_ADDED',
+  TAG_REMOVED = 'TAG_REMOVED'
 }
 
 export enum BugNotificationType {
-  ASSIGNED = 'assigned',
-  STATUS_CHANGED = 'status_changed',
-  COMMENT_ADDED = 'comment_added',
-  MENTION = 'mention',
-  DUE_DATE_REMINDER = 'due_date_reminder',
-  BUG_RESOLVED = 'bug_resolved',
-  BUG_CLOSED = 'bug_closed',
-  BUG_REOPENED = 'bug_reopened'
+  ASSIGNED = 'ASSIGNED',
+  STATUS_CHANGED = 'STATUS_CHANGED',
+  COMMENT_ADDED = 'COMMENT_ADDED',
+  MENTION = 'MENTION',
+  DUE_DATE_REMINDER = 'DUE_DATE_REMINDER',
+  BUG_RESOLVED = 'BUG_RESOLVED',
+  BUG_CLOSED = 'BUG_CLOSED',
+  BUG_REOPENED = 'BUG_REOPENED'
 }
 
 export interface BugAttachment {

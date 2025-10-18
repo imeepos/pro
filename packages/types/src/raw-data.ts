@@ -4,10 +4,10 @@
  * 表达数据在处理流程中的生命周期状态
  */
 export enum ProcessingStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
 }
 
 /**
@@ -17,11 +17,11 @@ export enum ProcessingStatus {
  * 用于 MongoDB 存储和爬虫数据分类
  */
 export enum SourceType {
-  WEIBO_HTML = 'weibo_html',
-  WEIBO_API_JSON = 'weibo_api_json',
-  WEIBO_COMMENT = 'weibo_comment',
-  JD = 'jd',
-  CUSTOM = 'custom',
+  WEIBO_HTML = 'WEIBO_HTML',
+  WEIBO_API_JSON = 'WEIBO_API_JSON',
+  WEIBO_COMMENT = 'WEIBO_COMMENT',
+  JD = 'JD',
+  CUSTOM = 'CUSTOM',
 }
 
 /**
@@ -31,9 +31,9 @@ export enum SourceType {
  * 用于 API 查询过滤和业务逻辑分组
  */
 export enum SourcePlatform {
-  WEIBO = 'weibo',
-  JD = 'jd',
-  CUSTOM = 'custom',
+  WEIBO = 'WEIBO',
+  JD = 'JD',
+  CUSTOM = 'CUSTOM',
 }
 
 /**

@@ -13,9 +13,9 @@ export enum ApiKeyStatusFilter {
 }
 
 export enum ApiKeyType {
-  READ_ONLY = 'read_only',
-  READ_WRITE = 'read_write',
-  ADMIN = 'admin'
+  READ_ONLY = 'READ_ONLY',
+  READ_WRITE = 'READ_WRITE',
+  ADMIN = 'ADMIN'
 }
 
 export interface ApiKey {
