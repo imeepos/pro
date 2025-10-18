@@ -6,6 +6,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'path';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
+import { MongodbModule } from '@pro/mongodb';
 import { HealthResolver } from './health.resolver';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
@@ -18,8 +19,9 @@ import { ConfigModule } from './config/config.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { BugModule } from './bug/bug.module';
+import { RawDataModule } from './raw-data/raw-data.module';
 import { LoadersModule } from './loaders.module';
-import { createDatabaseConfig } from './config';
+import { createDatabaseConfig, mongodbConfigFactory } from './config';
 import { AugmentedRequest, GraphqlContext } from './common/utils/context.utils';
 import { UserLoader } from './user/user.loader';
 import { GraphqlLoaders } from './common/dataloaders/types';
@@ -88,6 +90,15 @@ import { TagLoader } from './events/tag.loader';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => createDatabaseConfig(configService) as TypeOrmModuleOptions,
     }),
+    // MongoDB 全局模块配置
+    MongodbModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const config = mongodbConfigFactory(configService);
+        return { uri: config.uri };
+      },
+    }),
+
     ConfigModule,
     AuthModule,
     UserModule,
@@ -99,6 +110,7 @@ import { TagLoader } from './events/tag.loader';
     DashboardModule,
     NotificationsModule,
     BugModule,
+    RawDataModule,
   ],
   controllers: [],
   providers: [HealthResolver],

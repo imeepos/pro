@@ -120,6 +120,10 @@ export const routes: Routes = [
       {
         path: 'flowbite-demo',
         loadComponent: () => import('./features/flowbite-demo/flowbite-demo.component').then(m => m.FlowbiteDemoComponent)
+      },
+      {
+        path: 'data',
+        loadChildren: () => import('./features/data/data.routes').then(m => m.DATA_ROUTES)
       }
     ]
   },

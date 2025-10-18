@@ -34,6 +34,33 @@ export class MongodbModule {
   }
 
   /**
+   * 异步根模块配置
+   */
+  static forRootAsync(options: {
+    useFactory: (...args: any[]) => Promise<{ uri: string }> | { uri: string };
+    inject?: any[];
+  }): DynamicModule {
+    return {
+      module: MongodbModule,
+      imports: [
+        MongooseModule.forRootAsync({
+          ...options,
+          useFactory: async (...args: any[]) => {
+            const result = await options.useFactory(...args);
+            return typeof result === 'string' ? { uri: result } : result;
+          },
+        }),
+        MongooseModule.forFeature([
+          { name: RawDataSource.name, schema: RawDataSourceSchema },
+        ]),
+      ],
+      providers: [RawDataSourceService],
+      exports: [RawDataSourceService],
+      global: true,
+    };
+  }
+
+  /**
    * 特性模块配置（用于子模块）
    */
   static forFeature(): DynamicModule {

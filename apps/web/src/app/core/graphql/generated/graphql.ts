@@ -158,6 +158,17 @@ export type BugAttachmentModel = {
   url: Scalars['String']['output'];
 };
 
+export enum BugCategory {
+  Configuration = 'CONFIGURATION',
+  Data = 'DATA',
+  Documentation = 'DOCUMENTATION',
+  Functional = 'FUNCTIONAL',
+  Integration = 'INTEGRATION',
+  Performance = 'PERFORMANCE',
+  Security = 'SECURITY',
+  UiUx = 'UI_UX'
+}
+
 export type BugCategoryStatistics = {
   __typename?: 'BugCategoryStatistics';
   configuration: Scalars['Int']['output'];
