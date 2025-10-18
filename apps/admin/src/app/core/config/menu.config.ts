@@ -21,6 +21,12 @@ export const MENU_ITEMS: MenuItem[] = [
     route: '/api-keys'
   },
   {
+    id: 'data',
+    label: '数据管理',
+    icon: 'database',
+    route: '/data'
+  },
+  {
     id: 'screens',
     label: '大屏管理',
     icon: 'monitor',

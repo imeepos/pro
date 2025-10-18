@@ -51,6 +51,7 @@ import { WeiboApi } from './api/weibo-api.js';
 import { ApiKeyApi } from './api/api-key-api.js';
 import { DashboardApi } from './api/dashboard-api.js';
 import { BugApi } from './api/bug-api.js';
+import { RawDataApi } from './api/raw-data-api.js';
 
 export { EventApi } from './api/event-api.js';
 export { TagApi } from './api/tag-api.js';
@@ -66,6 +67,7 @@ export { WeiboApi } from './api/weibo-api.js';
 export { ApiKeyApi } from './api/api-key-api.js';
 export { DashboardApi } from './api/dashboard-api.js';
 export { BugApi } from './api/bug-api.js';
+export { RawDataApi } from './api/raw-data-api.js';
 
 /**
  * SDK 主类
@@ -88,6 +90,7 @@ export class SkerSDK {
   public apiKey: ApiKeyApi;
   public dashboard: DashboardApi;
   public bug: BugApi;
+  public rawData: RawDataApi;
 
   constructor(baseUrl: string, tokenKey: string = 'access_token') {
     if (!baseUrl) {
@@ -111,5 +114,6 @@ export class SkerSDK {
     this.apiKey = new ApiKeyApi(baseUrl, tokenKey);
     this.dashboard = new DashboardApi(baseUrl, tokenKey);
     this.bug = new BugApi(baseUrl, tokenKey);
+    this.rawData = new RawDataApi(baseUrl, tokenKey);
   }
 }
