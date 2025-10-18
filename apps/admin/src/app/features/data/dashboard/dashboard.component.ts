@@ -281,13 +281,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.dataManager.getStats('media-type'),
       this.dataManager.getStats('api-keys')
     ]).pipe(
-      map(([eventsStats, tasksStats, mediaStats, keysStats]) => [
+      map(([eventsStats, tasksStats, mediaStats, keysStats]): StatsCardData[] => [
         {
           title: '事件总数',
           value: eventsStats.total,
           subtitle: '本周新增 ' + Math.floor(Math.random() * 100),
           icon: '📊',
-          color: 'primary',
+          color: 'primary' as const,
           trend: {
             value: 12.5,
             isPositive: true,
@@ -301,7 +301,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           value: tasksStats.total,
           subtitle: '运行中 ' + tasksStats.pending,
           icon: '🔍',
-          color: 'info',
+          color: 'info' as const,
           trend: {
             value: 8.2,
             isPositive: true,
@@ -315,7 +315,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           value: mediaStats.total,
           subtitle: '活跃 ' + mediaStats.success,
           icon: '🎬',
-          color: 'success',
+          color: 'success' as const,
           trend: {
             value: -2.1,
             isPositive: false,
@@ -329,7 +329,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           value: keysStats.total,
           subtitle: '有效 ' + keysStats.success,
           icon: '🔑',
-          color: 'warning',
+          color: 'warning' as const,
           trend: {
             value: 5.7,
             isPositive: true,

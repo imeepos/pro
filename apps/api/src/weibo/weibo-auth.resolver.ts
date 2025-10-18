@@ -59,10 +59,7 @@ class UserConnectionStats {
   userId: string;
 
   @Field(() => Int)
-  connectionCount: number;
-
-  @Field(() => Float)
-  averageDuration: number;
+  count: number;
 }
 
 @ObjectType()
@@ -214,8 +211,8 @@ export class WeiboAuthResolver {
 
       const webSocketStats: WebSocketStats = {
         totalConnections: stats.totalConnections,
-        connectionsByUser: stats.connectionsByUser || [],
-        averageConnectionDuration: stats.averageConnectionDuration || 0,
+        connectionsByUser: stats.connectionsByUser,
+        averageConnectionDuration: stats.averageConnectionDuration,
       };
 
       this.logger.debug('获取WebSocket统计信息', { userId, stats: webSocketStats });

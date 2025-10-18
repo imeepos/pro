@@ -76,9 +76,10 @@ export interface DataStats {
   lastUpdated: string;
 }
 
-export interface RealTimeUpdate<T> {
+export interface RealTimeUpdate<T = any> {
   id: string;
   type: 'create' | 'update' | 'delete';
+  entity?: string;
   data: T;
   timestamp: string;
 }

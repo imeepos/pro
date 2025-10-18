@@ -8,7 +8,7 @@ import {
   SimpleChanges
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { BatchAction } from '../types/data.types';
+import { BatchAction } from '../../types/data.types';
 
 export interface BatchActionConfig {
   position: 'top' | 'bottom' | 'float';

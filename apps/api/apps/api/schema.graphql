@@ -1415,8 +1415,7 @@ type User {
 }
 
 type UserConnectionStats {
-  averageDuration: Float!
-  connectionCount: Int!
+  count: Int!
   userId: String!
 }
 

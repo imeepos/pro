@@ -11,9 +11,6 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Injectable, Logger, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { RawDataSource } from '@pro/mongodb';
 import { RawDataService } from './raw-data.service';
 import {
   RealtimeEventType,
@@ -79,16 +76,20 @@ export class RawDataGateway implements OnGatewayInit, OnGatewayConnection, OnGat
 
   constructor(
     private readonly jwtService: JwtService,
-    private readonly rawDataService: RawDataService,
-    @InjectModel(RawDataSource.name)
-    private readonly rawDataModel: Model<RawDataSource>
+    private readonly rawDataService: RawDataService
   ) {}
 
   /**
    * Gateway 初始化完成后的回调
+   * 优雅即简约：简洁而完整的初始化流程
    */
   afterInit(server: Server) {
-    this.logger.log('RawData WebSocket Gateway initialized successfully');
+    this.server = server;
+
+    this.logger.log('RawData WebSocket Gateway initialized successfully', {
+      namespace: '/raw-data',
+      transports: ['websocket', 'polling']
+    });
 
     // 设置定期统计更新
     this.setupStatisticsUpdater();
@@ -99,9 +100,17 @@ export class RawDataGateway implements OnGatewayInit, OnGatewayConnection, OnGat
 
   /**
    * 处理新的WebSocket连接
+   * 日志是思想的表达：记录连接建立的每一个关键时刻
    */
   async handleConnection(client: Socket) {
-    this.logger.log(`New connection attempt: ${client.id}`);
+    const connectionAttemptTime = Date.now();
+
+    this.logger.log('New WebSocket connection attempt initiated', {
+      clientId: client.id,
+      remoteAddress: client.request.connection.remoteAddress,
+      userAgent: client.request.headers['user-agent'],
+      timestamp: new Date().toISOString()
+    });
 
     try {
       // 验证认证信息
@@ -119,12 +128,30 @@ export class RawDataGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       // 立即发送当前统计数据
       await this.sendCurrentStatistics(client);
 
-      this.logger.log(`Client connected successfully: ${client.id}, userId: ${auth.userId}`);
-    } catch (error) {
-      this.logger.error(`Connection failed for ${client.id}: ${error.message}`, error.stack);
+      const connectionStats = this.getConnectionStatistics();
+      const establishmentDuration = Date.now() - connectionAttemptTime;
 
-      this.sendConnectionStatus(client, 'error', 'Authentication failed', {
-        code: 'AUTH_ERROR',
+      this.logger.log('WebSocket connection established successfully', {
+        clientId: client.id,
+        userId: auth.userId,
+        purpose: auth.purpose,
+        establishmentDuration: `${establishmentDuration}ms`,
+        totalConnections: connectionStats.total,
+        activeUsers: connectionStats.byUser
+      });
+    } catch (error) {
+      const establishmentDuration = Date.now() - connectionAttemptTime;
+
+      this.logger.error('WebSocket connection establishment failed', {
+        clientId: client.id,
+        error: error.message,
+        establishmentDuration: `${establishmentDuration}ms`,
+        errorType: error.name,
+        stack: error.stack
+      });
+
+      this.sendConnectionStatus(client, 'error', 'Connection establishment failed', {
+        code: 'CONNECTION_ERROR',
         message: error.message
       });
 
@@ -135,9 +162,16 @@ export class RawDataGateway implements OnGatewayInit, OnGatewayConnection, OnGat
 
   /**
    * 处理连接断开
+   * 错误处理如为人处世的哲学：优雅地处理断开，不留痕迹
    */
   handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected: ${client.id}`);
+    const connectionStats = this.getConnectionStatistics();
+
+    this.logger.log('Client disconnected gracefully', {
+      clientId: client.id,
+      remainingConnections: connectionStats.total - 1,
+      activeUsers: connectionStats.byUser
+    });
 
     // 清理连接记录
     this.unregisterUserConnection(client.id);
@@ -147,9 +181,9 @@ export class RawDataGateway implements OnGatewayInit, OnGatewayConnection, OnGat
 
     // 发送断开状态通知（如果可能）
     try {
-      this.sendConnectionStatus(client, 'disconnected', 'Connection closed');
+      this.sendConnectionStatus(client, 'disconnected', 'Connection closed gracefully');
     } catch (error) {
-      // 连接已断开，忽略错误
+      // 连接已断开，这是正常现象，不需要记录错误
     }
   }
 
@@ -455,13 +489,59 @@ export class RawDataGateway implements OnGatewayInit, OnGatewayConnection, OnGat
 
   /**
    * 发送事件到所有订阅的客户端
+   * 存在即合理：每一个检查都有其不可替代的必要性
    */
   private sendEventToAll(event: BaseRealtimeEvent) {
-    this.server.sockets.sockets.forEach((client) => {
-      if (client.connected) {
-        this.sendEventToClient(client, event);
+    if (!this.isServerReady()) {
+      this.logger.warn('WebSocket server not ready, event queued for later delivery', {
+        eventType: event.type,
+        eventId: event.eventId
+      });
+      return;
+    }
+
+    try {
+      const connectedClients = this.getConnectedClients();
+
+      if (connectedClients.length === 0) {
+        this.logger.debug('No connected clients for event broadcast', {
+          eventType: event.type
+        });
+        return;
       }
-    });
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      connectedClients.forEach((client) => {
+        try {
+          this.sendEventToClient(client, event);
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          this.logger.warn('Failed to send event to client', {
+            clientId: client.id,
+            eventType: event.type,
+            error: error.message
+          });
+        }
+      });
+
+      if (errorCount > 0) {
+        this.logger.debug('Event broadcast completed with some failures', {
+          eventType: event.type,
+          successCount,
+          errorCount,
+          totalClients: connectedClients.length
+        });
+      }
+    } catch (error) {
+      this.logger.error('Critical error during event broadcast', {
+        eventType: event.type,
+        error: error.message,
+        stack: error.stack
+      });
+    }
   }
 
   /**
@@ -590,35 +670,173 @@ export class RawDataGateway implements OnGatewayInit, OnGatewayConnection, OnGat
 
   /**
    * 设置定期统计更新
+   * 错误处理如为人处世的哲学：将失败转化为改进的机会
    */
   private setupStatisticsUpdater() {
     const updateInterval = 5000; // 5秒更新一次
+    let consecutiveFailures = 0;
+    const maxConsecutiveFailures = 3;
 
     setInterval(async () => {
+      if (!this.isServerReady()) {
+        this.logger.debug('Skipping statistics update - WebSocket server not ready');
+        return;
+      }
+
       try {
         const statistics = await this.rawDataService.getStatistics();
-        this.broadcastStatisticsUpdate(undefined, statistics);
+        const connectionStats = this.getConnectionStatistics();
+
+        if (connectionStats.total > 0) {
+          this.broadcastStatisticsUpdate(undefined, statistics);
+          consecutiveFailures = 0; // 重置失败计数器
+        } else {
+          this.logger.debug('No connected clients - skipping statistics broadcast');
+        }
       } catch (error) {
-        this.logger.error(`Failed to update statistics: ${error.message}`);
-        this.broadcastError('STATISTICS_UPDATE_ERROR', 'Failed to update statistics', 'low');
+        consecutiveFailures++;
+
+        this.logger.error('Statistics update failed', {
+          error: error.message,
+          consecutiveFailures,
+          maxFailures: maxConsecutiveFailures,
+          willRetry: consecutiveFailures < maxConsecutiveFailures
+        });
+
+        if (consecutiveFailures >= maxConsecutiveFailures) {
+          this.broadcastError(
+            'STATISTICS_UPDATE_CRITICAL_ERROR',
+            `Statistics update has failed ${consecutiveFailures} consecutive times`,
+            'high'
+          );
+        } else {
+          this.broadcastError('STATISTICS_UPDATE_ERROR', 'Temporary statistics update failure', 'low');
+        }
       }
     }, updateInterval);
   }
 
   /**
    * 设置系统健康检查
+   * 存在即合理：通过服务层进行健康检查，保持架构的一致性
    */
   private setupHealthChecker() {
     const healthCheckInterval = 30000; // 30秒检查一次
+    let consecutiveFailures = 0;
+    const maxConsecutiveFailures = 3;
 
     setInterval(async () => {
+      if (!this.isServerReady()) {
+        this.logger.debug('Skipping health check - WebSocket server not ready');
+        return;
+      }
+
       try {
-        // 检查数据库连接
-        await this.rawDataModel.findOne().limit(1).exec();
+        const healthResult = await this.rawDataService.checkHealth();
+
+        if (healthResult.isHealthy) {
+          consecutiveFailures = 0;
+          this.logger.debug('System health check passed successfully');
+        } else {
+          consecutiveFailures++;
+          this.logger.warn('System health check reported unhealthy state', {
+            consecutiveFailures,
+            details: healthResult.details
+          });
+
+          if (consecutiveFailures >= maxConsecutiveFailures) {
+            this.broadcastError(
+              'SYSTEM_HEALTH_CHECK_CRITICAL',
+              `System health has been unhealthy for ${consecutiveFailures} consecutive checks`,
+              'critical',
+              undefined,
+              healthResult.details
+            );
+          } else {
+            this.broadcastError(
+              'SYSTEM_HEALTH_CHECK_WARNING',
+              'System health check detected issues',
+              'medium',
+              undefined,
+              healthResult.details
+            );
+          }
+        }
       } catch (error) {
-        this.logger.error(`Health check failed: ${error.message}`);
-        this.broadcastError('SYSTEM_HEALTH_CHECK_FAILED', 'System health check failed', 'high');
+        consecutiveFailures++;
+
+        this.logger.error('Health check execution failed', {
+          error: error.message,
+          consecutiveFailures,
+          maxFailures: maxConsecutiveFailures
+        });
+
+        if (consecutiveFailures >= maxConsecutiveFailures) {
+          this.broadcastError(
+            'SYSTEM_HEALTH_CHECK_FAILED',
+            `Health check has failed ${consecutiveFailures} consecutive times`,
+            'critical'
+          );
+        } else {
+          this.broadcastError(
+            'SYSTEM_HEALTH_CHECK_ERROR',
+            'Health check execution error',
+            'high'
+          );
+        }
       }
     }, healthCheckInterval);
+  }
+
+  /**
+   * 检查 WebSocket 服务器是否就绪
+   * 存在即合理：每一个状态检查都服务于系统的稳定性
+   */
+  private isServerReady(): boolean {
+    return !!(
+      this.server &&
+      this.server.sockets &&
+      this.server.sockets.sockets &&
+      typeof this.server.sockets.sockets.forEach === 'function'
+    );
+  }
+
+  /**
+   * 获取所有已连接的客户端
+   * 性能即艺术：优雅地处理连接集合，避免不必要的遍历
+   */
+  private getConnectedClients(): Socket[] {
+    if (!this.isServerReady()) {
+      return [];
+    }
+
+    const clients: Socket[] = [];
+
+    try {
+      this.server.sockets.sockets.forEach((client) => {
+        if (client?.connected) {
+          clients.push(client);
+        }
+      });
+    } catch (error) {
+      this.logger.warn('Error while collecting connected clients', {
+        error: error.message
+      });
+    }
+
+    return clients;
+  }
+
+  /**
+   * 获取连接统计信息
+   * 日志是思想的表达：提供有意义的运行时洞察
+   */
+  private getConnectionStatistics(): { total: number; byUser: number } {
+    const connectedClients = this.getConnectedClients();
+
+    return {
+      total: connectedClients.length,
+      byUser: this.userConnections.size
+    };
   }
 }
