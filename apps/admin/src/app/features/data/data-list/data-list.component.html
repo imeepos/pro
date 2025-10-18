@@ -1,0 +1,83 @@
+<div class="p-4">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">数据管理</h2>
+    <button
+      nz-button
+      nzType="primary"
+      (click)="openForm()"
+      class="flex items-center gap-2">
+      <i nz-icon nzType="plus"></i>
+      添加数据
+    </button>
+  </div>
+
+  <nz-card>
+    <div class="mb-4">
+      <nz-input-group nzSearch [nzAddOnAfter]="suffixIconButton">
+        <input
+          type="text"
+          nz-input
+          placeholder="搜索数据..."
+          [(ngModel)]="searchKeyword"
+          (input)="onSearch()" />
+      </nz-input-group>
+      <ng-template #suffixIconButton>
+        <button nz-button nzType="primary" nzSearch>
+          <i nz-icon nzType="search"></i>
+        </button>
+      </ng-template>
+    </div>
+
+    <nz-table
+      #basicTable
+      [nzData]="dataList"
+      [nzLoading]="loading"
+      [nzFrontPagination]="false"
+      [nzTotal]="pagination.total"
+      [nzPageSize]="pagination.pageSize"
+      [nzPageIndex]="pagination.pageIndex"
+      (nzPageIndexChange)="onPageIndexChange($event)"
+      (nzPageSizeChange)="onPageSizeChange($event)">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>标题</th>
+          <th>类型</th>
+          <th>状态</th>
+          <th>创建时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let data of basicTable.data">
+          <td>{{ data.id }}</td>
+          <td>{{ data.title }}</td>
+          <td>
+            <nz-tag [nzColor]="getTypeColor(data.type)">{{ data.type }}</nz-tag>
+          </td>
+          <td>
+            <nz-tag [nzColor]="getStatusColor(data.status)">{{ data.status }}</nz-tag>
+          </td>
+          <td>{{ data.createdAt | date:'yyyy-MM-dd HH:mm' }}</td>
+          <td>
+            <button
+              nz-button
+              nzType="link"
+              nzSize="small"
+              (click)="editData(data)">
+              编辑
+            </button>
+            <button
+              nz-button
+              nzType="link"
+              nzSize="small"
+              nzDanger
+              (click)="deleteData(data)">
+              删除
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </nz-table>
+  </nz-card>
+</div>

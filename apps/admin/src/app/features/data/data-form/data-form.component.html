@@ -1,0 +1,81 @@
+<div class="p-4">
+  <nz-card>
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">{{ isEdit ? '编辑数据' : '添加数据' }}</h2>
+      <button nz-button nzType="default" (click)="closeForm()">
+        <i nz-icon nzType="close"></i>
+        关闭
+      </button>
+    </div>
+
+    <form nz-form [formGroup]="form" (ngSubmit)="submit()">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6" nzRequired>标题</nz-form-label>
+        <nz-form-control [nzSpan]="14" nzHasFeedback>
+          <input
+            nz-input
+            formControlName="title"
+            placeholder="请输入标题" />
+          <nz-form-explain *ngIf="form.get('title')?.invalid && form.get('title')?.touched">
+            请输入有效的标题
+          </nz-form-explain>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6" nzRequired>类型</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <nz-select formControlName="type" placeholder="请选择类型">
+            <nz-option nzValue="text" nzLabel="文本"></nz-option>
+            <nz-option nzValue="image" nzLabel="图片"></nz-option>
+            <nz-option nzValue="video" nzLabel="视频"></nz-option>
+            <nz-option nzValue="audio" nzLabel="音频"></nz-option>
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">内容</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <textarea
+            nz-input
+            formControlName="content"
+            placeholder="请输入内容"
+            rows="4"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">状态</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <nz-select formControlName="status" placeholder="请选择状态">
+            <nz-option nzValue="active" nzLabel="激活"></nz-option>
+            <nz-option nzValue="inactive" nzLabel="未激活"></nz-option>
+            <nz-option nzValue="pending" nzLabel="待处理"></nz-option>
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-control [nzOffset]="6" [nzSpan]="14">
+          <button
+            nz-button
+            nzType="primary"
+            [nzLoading]="loading"
+            [disabled]="form.invalid"
+            type="submit">
+            {{ isEdit ? '更新' : '提交' }}
+          </button>
+          <button
+            nz-button
+            nzType="default"
+            class="ml-2"
+            (click)="closeForm()"
+            type="button">
+            取消
+          </button>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </nz-card>
+</div>
