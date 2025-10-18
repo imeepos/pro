@@ -2,6 +2,7 @@ import { Controller, Get, Post, Param, Body, HttpStatus } from '@nestjs/common';
 // import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
 import { TaskMonitor } from './weibo/task-monitor.service';
+import { DiagnosticService } from './weibo/diagnostic.service';
 import { PinoLogger } from '@pro/logger';
 
 // @ApiTags('broker')
@@ -10,6 +11,7 @@ export class AppController {
   constructor(
     private readonly taskScanner: TaskScannerScheduler,
     private readonly taskMonitor: TaskMonitor,
+    private readonly diagnostic: DiagnosticService,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(AppController.name);
@@ -141,5 +143,19 @@ export class AppController {
       service: 'broker',
       timestamp: new Date().toISOString(),
     };
+  }
+
+  @Get('broker/diagnostic')
+  async diagnose() {
+    this.logger.info('收到数据库诊断请求');
+    const result = await this.diagnostic.diagnoseTaskStatuses();
+    return result;
+  }
+
+  @Post('broker/fix-overdue')
+  async fixOverdue() {
+    this.logger.info('收到修复过期任务请求');
+    const result = await this.diagnostic.fixOverdueTasks();
+    return result;
   }
 }
