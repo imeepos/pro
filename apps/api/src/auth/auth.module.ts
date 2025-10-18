@@ -15,6 +15,7 @@ import { createJwtConfig } from '../config';
 import { AuthResolver } from './auth.resolver';
 import { ApiKeyResolver } from './api-key.resolver';
 import { ApiKeyLoader } from './api-key.loader';
+import { GraphqlWsAuthService } from './services/graphql-ws-auth.service';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ApiKeyLoader } from './api-key.loader';
     AuthResolver,
     ApiKeyResolver,
     ApiKeyLoader,
+    GraphqlWsAuthService,
   ],
   exports: [
     AuthService,
@@ -43,6 +45,7 @@ import { ApiKeyLoader } from './api-key.loader';
     JwtAuthGuard,
     ApiKeyAuthGuard,
     CompositeAuthGuard,
+    GraphqlWsAuthService,
   ],
 })
 export class AuthModule {}
