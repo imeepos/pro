@@ -63,7 +63,6 @@ lerna-debug.log*
 Thumbs.db
 
 # Data & Temporary
-data/
 tmp/
 temp/
 *.tmp
