@@ -1,8 +1,9 @@
 import { UseGuards } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
+import { DashboardActivityType } from '@pro/types';
 import { DashboardService } from './dashboard.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { DashboardActivityModel, DashboardActivityType, DashboardStatsModel } from './models/dashboard.model';
+import { DashboardActivityModel, DashboardStatsModel } from './models/dashboard.model';
 import { RecentActivity } from './dto/dashboard.dto';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 

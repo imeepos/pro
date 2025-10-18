@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsInt, IsIn, Min, IsNumber, IsPositive, Matches } from 'class-validator';
-import { FileType } from '@pro/entities';
+import { FileType } from '@pro/types';
 import { Field, Float, GraphQLISODateTime, ID, InputType, ObjectType } from '@nestjs/graphql';
 
 export class UploadAttachmentDto {

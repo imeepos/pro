@@ -3,7 +3,12 @@ import { IsString, IsOptional, IsInt, IsEnum, IsDateString, Min, Max, IsArray, I
 import { Type } from 'class-transformer';
 
 /**
- * 增强的数据处理状态枚举
+ * 增强的数据处理状态枚举 (API特有)
+ * 扩展了基础 ProcessingStatus，增加了 API 层特有的状态管理能力：
+ * - RETRYING: 失败后的自动重试状态
+ * - CANCELLED: 用户主动取消的状态
+ * - ARCHIVED: 历史数据归档状态
+ * 存在必要性：API 层需要更精细的状态控制来支持数据管理功能
  */
 export enum EnhancedProcessingStatus {
   PENDING = 'pending',
@@ -16,7 +21,9 @@ export enum EnhancedProcessingStatus {
 }
 
 /**
- * 数据质量等级枚举
+ * 数据质量等级枚举 (API特有)
+ * 用于量化评估原始数据质量，支持数据清洗优先级决策
+ * 存在必要性：API 提供的高级数据分析功能需要质量分级
  */
 export enum DataQualityLevel {
   EXCELLENT = 'excellent',
@@ -27,7 +34,9 @@ export enum DataQualityLevel {
 }
 
 /**
- * 导出格式枚举
+ * 导出格式枚举 (API特有)
+ * 支持多种数据导出格式，满足不同场景的数据消费需求
+ * 存在必要性：API 提供的数据导出功能需要明确格式选项
  */
 export enum ExportFormat {
   CSV = 'csv',
@@ -38,7 +47,9 @@ export enum ExportFormat {
 }
 
 /**
- * 聚合粒度枚举
+ * 聚合粒度枚举 (API特有)
+ * 定义时间序列数据的聚合维度，支持多级数据汇总
+ * 存在必要性：API 的统计分析功能需要灵活的时间粒度控制
  */
 export enum AggregationGranularity {
   MINUTE = 'minute',
@@ -51,7 +62,9 @@ export enum AggregationGranularity {
 }
 
 /**
- * 排序方向枚举
+ * 排序方向枚举 (API特有)
+ * 通用的排序方向定义，用于各类查询接口
+ * 存在必要性：API 查询参数标准化需要
  */
 export enum SortDirection {
   ASC = 'asc',
@@ -59,7 +72,9 @@ export enum SortDirection {
 }
 
 /**
- * 数据源风险等级枚举
+ * 数据源风险等级枚举 (API特有)
+ * 评估数据来源的可信度和风险级别，支持智能过滤
+ * 存在必要性：API 的数据质量管理需要源头风险控制
  */
 export enum SourceRiskLevel {
   LOW = 'low',
@@ -69,7 +84,9 @@ export enum SourceRiskLevel {
 }
 
 /**
- * 批量操作类型枚举
+ * 批量操作类型枚举 (API特有)
+ * 定义支持的批量数据处理操作，提升管理效率
+ * 存在必要性：API 的批量管理功能需要明确的操作类型
  */
 export enum BatchOperationType {
   RETRY = 'retry',

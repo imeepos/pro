@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ScreenPageEntity, EventEntity, WeiboAccountEntity, WeiboSearchTaskEntity, EventStatus } from '@pro/entities';
+import { DashboardActivityType } from '@pro/types';
 import { DashboardStats, RecentActivity } from './dto/dashboard.dto';
 
 @Injectable()
@@ -61,7 +62,7 @@ export class DashboardService {
 
     recentScreens.forEach(screen => {
       activities.push({
-        type: 'screen',
+        type: DashboardActivityType.Screen,
         message: `${screen.status === 'published' ? '发布了' : '更新了'}大屏 "${screen.name}"`,
         time: this.formatTime(screen.updatedAt),
         entityId: screen.id,
@@ -70,7 +71,7 @@ export class DashboardService {
 
     recentEvents.forEach(event => {
       activities.push({
-        type: 'event',
+        type: DashboardActivityType.Event,
         message: `${event.status === EventStatus.PUBLISHED ? '发布了' : '更新了'}事件 "${event.eventName}"`,
         time: this.formatTime(event.updatedAt),
         entityId: event.id,
@@ -79,7 +80,7 @@ export class DashboardService {
 
     recentWeiboAccounts.forEach(account => {
       activities.push({
-        type: 'weibo',
+        type: DashboardActivityType.Weibo,
         message: `更新了微博账号 "${account.weiboNickname || account.weiboUid}"`,
         time: this.formatTime(account.updatedAt),
         entityId: account.id.toString(),
@@ -88,7 +89,7 @@ export class DashboardService {
 
     recentTasks.forEach(task => {
       activities.push({
-        type: 'task',
+        type: DashboardActivityType.Task,
         message: `${task.enabled ? '启用了' : '暂停了'}搜索任务 "${task.keyword}"`,
         time: this.formatTime(task.updatedAt),
         entityId: task.id.toString(),

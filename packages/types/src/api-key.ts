@@ -1,15 +1,6 @@
-export enum ApiKeyStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  EXPIRED = 'EXPIRED',
-  REVOKED = 'REVOKED'
-}
+import { ApiKeyStatus, ApiKeyType } from './enums/api-key.js';
 
-export enum ApiKeyType {
-  READ_ONLY = 'read_only',
-  READ_WRITE = 'read_write',
-  ADMIN = 'admin'
-}
+export * from './enums/api-key.js';
 
 export interface ApiKey {
   id: number;

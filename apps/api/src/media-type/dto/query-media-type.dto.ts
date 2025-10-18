@@ -1,7 +1,7 @@
 import { IsOptional, IsInt, IsEnum, IsString, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Field, InputType, Int } from '@nestjs/graphql';
-import { MediaTypeStatus } from '@pro/entities';
+import { MediaTypeStatus } from '@pro/types';
 
 @InputType('MediaTypeFilterInput')
 export class QueryMediaTypeDto {

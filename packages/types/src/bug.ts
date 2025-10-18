@@ -1,29 +1,6 @@
-export enum BugStatus {
-  OPEN = 'OPEN',
-  IN_PROGRESS = 'IN_PROGRESS',
-  RESOLVED = 'RESOLVED',
-  CLOSED = 'CLOSED',
-  REJECTED = 'REJECTED',
-  REOPENED = 'REOPENED'
-}
+import { BugStatus, BugPriority, BugCategory, BugActivityAction, BugNotificationType } from './enums/bug.js';
 
-export enum BugPriority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL'
-}
-
-export enum BugCategory {
-  FUNCTIONAL = 'functional',
-  PERFORMANCE = 'performance',
-  SECURITY = 'security',
-  UI_UX = 'ui_ux',
-  INTEGRATION = 'integration',
-  DATA = 'data',
-  CONFIGURATION = 'configuration',
-  DOCUMENTATION = 'documentation'
-}
+export * from './enums/bug.js';
 
 export interface BugAttachment {
   id: string;
@@ -189,7 +166,7 @@ export interface BugStats {
 export interface BugActivity {
   id: string;
   bugId: string;
-  action: 'created' | 'updated' | 'assigned' | 'status_changed' | 'comment_added' | 'attachment_added' | 'resolved' | 'closed';
+  action: BugActivityAction;
   userId: string;
   userName: string;
   oldValue?: any;
@@ -221,7 +198,7 @@ export interface BugNotification {
   id: string;
   userId: string;
   bugId: string;
-  type: 'assigned' | 'status_changed' | 'comment_added' | 'mention' | 'due_date_reminder';
+  type: BugNotificationType;
   title: string;
   message: string;
   isRead: boolean;

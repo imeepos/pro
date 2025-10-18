@@ -10,6 +10,7 @@ import {
   EventDetail,
   FileType,
 } from '@pro/sdk';
+import { EventStatus } from '@pro/types';
 import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
 import {
   EventsDocument,
@@ -310,17 +311,17 @@ export class EventsService {
     };
   }
 
-  private toGqlEventStatus(status?: number): GqlEventStatus | undefined {
+  private toGqlEventStatus(status?: EventStatus): GqlEventStatus | undefined {
     if (status === undefined) {
       return undefined;
     }
 
     switch (status) {
-      case 0:
+      case EventStatus.DRAFT:
         return GqlEventStatus.Draft;
-      case 1:
+      case EventStatus.PUBLISHED:
         return GqlEventStatus.Published;
-      case 2:
+      case EventStatus.ARCHIVED:
         return GqlEventStatus.Archived;
       default:
         return undefined;

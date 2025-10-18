@@ -160,6 +160,8 @@ export class WeiboApi {
           active: res.weiboAccountStats.online,
           inactive: 0,
           suspended: 0,
+          banned: 0,
+          restricted: 0,
           expired: 0,
           healthy: res.weiboAccountStats.online,
           unhealthy: res.weiboAccountStats.total - res.weiboAccountStats.online,

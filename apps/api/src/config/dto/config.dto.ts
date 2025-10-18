@@ -1,8 +1,7 @@
 import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { ConfigType } from '@pro/types';
 
-export enum ConfigType {
-  AMAP_API_KEY = 'amap_api_key',
-}
+export { ConfigType };
 
 export class GetConfigDto {
   @IsEnum(ConfigType, { message: '配置类型必须是有效的枚举值' })

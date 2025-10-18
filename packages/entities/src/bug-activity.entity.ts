@@ -9,23 +9,7 @@ import {
 } from 'typeorm';
 import { BugEntity } from './bug.entity.js';
 import { UserEntity } from './user.entity.js';
-
-export enum BugActivityAction {
-  CREATED = 'created',
-  UPDATED = 'updated',
-  ASSIGNED = 'assigned',
-  STATUS_CHANGED = 'status_changed',
-  PRIORITY_CHANGED = 'priority_changed',
-  COMMENT_ADDED = 'comment_added',
-  ATTACHMENT_ADDED = 'attachment_added',
-  RESOLVED = 'resolved',
-  CLOSED = 'closed',
-  REOPENED = 'reopened',
-  WATCHER_ADDED = 'watcher_added',
-  WATCHER_REMOVED = 'watcher_removed',
-  TAG_ADDED = 'tag_added',
-  TAG_REMOVED = 'tag_removed'
-}
+import { BugActivityAction } from '@pro/types';
 
 @Entity('bug_activities')
 export class BugActivityEntity {

@@ -5,7 +5,8 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { EventsService } from '../../state/events.service';
 import { EventsQuery } from '../../state/events.query';
-import { Event, EventQueryParams, EventStatus } from '@pro/sdk';
+import { Event, EventQueryParams } from '@pro/sdk';
+import { EventStatus } from '@pro/types';
 import { ToastService } from '../../shared/services/toast.service';
 import { DeleteEventDialogComponent } from './components';
 import { DISPLAY_NZ_MODULES, COMMON_NZ_MODULES } from '../../shared/ng-zorro-components';
@@ -40,6 +41,8 @@ export class EventsListComponent implements OnInit, OnDestroy {
   showDeleteDialog = false;
   eventToDelete: Event | null = null;
   searchHistory: string[] = [];
+
+  EventStatus=EventStatus;
 
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<void>;
   @ViewChild('suffixIcons', { static: true }) suffixIcons!: TemplateRef<void>;

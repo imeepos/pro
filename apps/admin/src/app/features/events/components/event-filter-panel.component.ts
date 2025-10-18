@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AddressCascaderComponent, AddressData } from './address-cascader.component';
 import { Tag, IndustryType, EventType } from '@pro/sdk';
-import { EventStatus } from '@pro/sdk';
+import { EventStatus } from '@pro/types';
 import { EventQueryParams } from '@pro/sdk';
 
 export interface EventFilterParams extends Omit<EventQueryParams, 'page' | 'pageSize' | 'sortBy' | 'sortOrder'> {}

@@ -1,8 +1,6 @@
-export enum EventStatus {
-  DRAFT = 'DRAFT',
-  PUBLISHED = 'PUBLISHED',
-  ARCHIVED = 'ARCHIVED'
-}
+import { EventStatus } from './enums/event.js';
+
+export * from './enums/event.js';
 
 export interface EventSummary {
   id: string;

@@ -1,9 +1,11 @@
-export enum WeiboAccountStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  SUSPENDED = 'suspended',
-  EXPIRED = 'expired'
-}
+/**
+ * 微博账号接口定义
+ * 枚举值统一从 enums/weibo.ts 导入
+ */
+import { WeiboAccountStatus } from './enums/weibo.js';
+
+// 重新导出枚举，保持向后兼容
+export { WeiboAccountStatus } from './enums/weibo.js';
 
 export interface WeiboAccount {
   id: number;
@@ -47,6 +49,8 @@ export interface WeiboAccountStats {
   active: number;
   inactive: number;
   suspended: number;
+  banned: number;
+  restricted: number;
   expired: number;
   healthy: number;
   unhealthy: number;

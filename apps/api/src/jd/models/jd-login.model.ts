@@ -1,25 +1,17 @@
 import { Field, GraphQLISODateTime, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { GraphQLJSONObject } from 'graphql-type-json';
-import { JdLoginEvent, JdLoginEventType, JdLoginSessionSnapshot } from '../jd-auth.service';
+import { JdLoginEventType } from '@pro/types';
+import { JdLoginEvent, JdLoginEventType as JdLoginEventTypeString, JdLoginSessionSnapshot } from '../jd-auth.service';
 
-export enum JdLoginEventTypeEnum {
-  Qrcode = 'qrcode',
-  Status = 'status',
-  Scanned = 'scanned',
-  Success = 'success',
-  Expired = 'expired',
-  Error = 'error',
-}
-
-registerEnumType(JdLoginEventTypeEnum, {
+registerEnumType(JdLoginEventType, {
   name: 'JdLoginEventType',
   description: '京东扫码登录事件类型',
 });
 
 @ObjectType('JdLoginEvent')
 export class JdLoginEventModel {
-  @Field(() => JdLoginEventTypeEnum)
-  type: JdLoginEventTypeEnum;
+  @Field(() => JdLoginEventType)
+  type: JdLoginEventType;
 
   @Field(() => GraphQLJSONObject, { nullable: true })
   data?: Record<string, unknown>;
@@ -40,21 +32,21 @@ export class JdLoginSessionModel {
   lastEvent?: JdLoginEventModel;
 }
 
-const mapEventType = (type: JdLoginEventType): JdLoginEventTypeEnum => {
+const mapEventType = (type: JdLoginEventTypeString): JdLoginEventType => {
   switch (type) {
     case 'qrcode':
-      return JdLoginEventTypeEnum.Qrcode;
+      return JdLoginEventType.Qrcode;
     case 'status':
-      return JdLoginEventTypeEnum.Status;
+      return JdLoginEventType.Status;
     case 'scanned':
-      return JdLoginEventTypeEnum.Scanned;
+      return JdLoginEventType.Scanned;
     case 'success':
-      return JdLoginEventTypeEnum.Success;
+      return JdLoginEventType.Success;
     case 'expired':
-      return JdLoginEventTypeEnum.Expired;
+      return JdLoginEventType.Expired;
     case 'error':
     default:
-      return JdLoginEventTypeEnum.Error;
+      return JdLoginEventType.Error;
   }
 };
 

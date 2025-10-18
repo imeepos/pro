@@ -9,17 +9,7 @@ import {
 } from 'typeorm';
 import { BugEntity } from './bug.entity.js';
 import { UserEntity } from './user.entity.js';
-
-export enum BugNotificationType {
-  ASSIGNED = 'assigned',
-  STATUS_CHANGED = 'status_changed',
-  COMMENT_ADDED = 'comment_added',
-  MENTION = 'mention',
-  DUE_DATE_REMINDER = 'due_date_reminder',
-  BUG_RESOLVED = 'bug_resolved',
-  BUG_CLOSED = 'bug_closed',
-  BUG_REOPENED = 'bug_reopened'
-}
+import { BugNotificationType } from '@pro/types';
 
 @Entity('bug_notifications')
 export class BugNotificationEntity {

@@ -1,25 +1,17 @@
 import { Field, GraphQLISODateTime, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { GraphQLJSONObject } from 'graphql-type-json';
-import { WeiboLoginEvent, WeiboLoginEventType, WeiboLoginSessionSnapshot } from '../weibo-auth.service';
+import { WeiboLoginEventType } from '@pro/types';
+import { WeiboLoginEvent, WeiboLoginEventType as WeiboLoginEventTypeString, WeiboLoginSessionSnapshot } from '../weibo-auth.service';
 
-export enum WeiboLoginEventTypeEnum {
-  Qrcode = 'qrcode',
-  Status = 'status',
-  Scanned = 'scanned',
-  Success = 'success',
-  Expired = 'expired',
-  Error = 'error',
-}
-
-registerEnumType(WeiboLoginEventTypeEnum, {
+registerEnumType(WeiboLoginEventType, {
   name: 'WeiboLoginEventType',
   description: '微博扫码登录事件类型',
 });
 
 @ObjectType('WeiboLoginEvent')
 export class WeiboLoginEventModel {
-  @Field(() => WeiboLoginEventTypeEnum)
-  type: WeiboLoginEventTypeEnum;
+  @Field(() => WeiboLoginEventType)
+  type: WeiboLoginEventType;
 
   @Field(() => GraphQLJSONObject, { nullable: true })
   data?: Record<string, unknown>;
@@ -40,21 +32,21 @@ export class WeiboLoginSessionModel {
   lastEvent?: WeiboLoginEventModel;
 }
 
-const mapEventType = (type: WeiboLoginEventType): WeiboLoginEventTypeEnum => {
+const mapEventType = (type: WeiboLoginEventTypeString): WeiboLoginEventType => {
   switch (type) {
     case 'qrcode':
-      return WeiboLoginEventTypeEnum.Qrcode;
+      return WeiboLoginEventType.Qrcode;
     case 'status':
-      return WeiboLoginEventTypeEnum.Status;
+      return WeiboLoginEventType.Status;
     case 'scanned':
-      return WeiboLoginEventTypeEnum.Scanned;
+      return WeiboLoginEventType.Scanned;
     case 'success':
-      return WeiboLoginEventTypeEnum.Success;
+      return WeiboLoginEventType.Success;
     case 'expired':
-      return WeiboLoginEventTypeEnum.Expired;
+      return WeiboLoginEventType.Expired;
     case 'error':
     default:
-      return WeiboLoginEventTypeEnum.Error;
+      return WeiboLoginEventType.Error;
   }
 };
 

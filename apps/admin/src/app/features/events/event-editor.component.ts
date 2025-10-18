@@ -10,7 +10,8 @@ import { IndustryTypesService } from '../../state/industry-types.service';
 import { IndustryTypesQuery } from '../../state/industry-types.query';
 import { EventTypesService } from '../../state/event-types.service';
 import { EventTypesQuery } from '../../state/event-types.query';
-import { CreateEventDto, UpdateEventDto, EventStatus, EventDetail, Tag } from '@pro/sdk';
+import { CreateEventDto, UpdateEventDto, EventDetail, Tag } from '@pro/sdk';
+import { EventStatus, FileType } from '@pro/types';
 import { ToastService } from '../../shared/services/toast.service';
 import { FORM_NZ_MODULES, COMMON_NZ_MODULES } from '../../shared/ng-zorro-components';
 import { TagSelectorComponent } from './components';
@@ -283,9 +284,9 @@ export class EventEditorComponent implements OnInit, OnDestroy {
   }
 
   categorizeAttachments(attachments: Attachment[]): void {
-    this.existingImages = attachments.filter(att => att.fileType === 'image');
-    this.existingDocuments = attachments.filter(att => att.fileType === 'document');
-    this.existingVideos = attachments.filter(att => att.fileType === 'video');
+    this.existingImages = attachments.filter(att => att.fileType === FileType.IMAGE);
+    this.existingDocuments = attachments.filter(att => att.fileType === FileType.DOCUMENT);
+    this.existingVideos = attachments.filter(att => att.fileType === FileType.VIDEO);
   }
 
   onImageUploadSuccess(attachment: Attachment): void {

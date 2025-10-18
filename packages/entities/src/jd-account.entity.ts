@@ -9,16 +9,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { UserEntity } from './user.entity.js';
-
-/**
- * 京东账号状态枚举
- */
-export enum JdAccountStatus {
-  ACTIVE = 'active',       // 正常可用
-  EXPIRED = 'expired',     // Cookie 已过期
-  BANNED = 'banned',       // 账号被封禁
-  RESTRICTED = 'restricted', // 风控受限
-}
+import { JdAccountStatus } from '@pro/types';
 
 /**
  * 京东账号实体

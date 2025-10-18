@@ -9,16 +9,10 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { UserEntity } from './user.entity.js';
+import { WeiboAccountStatus } from '@pro/types';
 
-/**
- * 微博账号状态枚举
- */
-export enum WeiboAccountStatus {
-  ACTIVE = 'active',       // 正常可用
-  EXPIRED = 'expired',     // Cookie 已过期
-  BANNED = 'banned',       // 账号被封禁
-  RESTRICTED = 'restricted', // 风控受限
-}
+// 重新导出枚举，保持向后兼容
+export { WeiboAccountStatus } from '@pro/types';
 
 /**
  * 微博账号实体

@@ -8,12 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { EventEntity } from './event.entity.js';
-
-export enum FileType {
-  IMAGE = 'image',
-  VIDEO = 'video',
-  DOCUMENT = 'document',
-}
+import { FileType } from '@pro/types';
 
 @Entity('event_attachment')
 export class EventAttachmentEntity {

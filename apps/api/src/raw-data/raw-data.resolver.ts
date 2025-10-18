@@ -7,8 +7,8 @@ import {
   TrendDataPointDto,
   RawDataItemDto,
   PaginatedRawDataDto,
-  SourceType
 } from './dto/raw-data.dto';
+import { SourceType } from '@pro/types';
 import { RawDataService } from './raw-data.service';
 
 /**

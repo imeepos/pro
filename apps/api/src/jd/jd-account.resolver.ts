@@ -1,6 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { JdAccountStatus } from '@pro/entities';
+import { JdAccountStatus } from '@pro/types';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { buildOffsetConnection } from '../common/utils/pagination.utils';
 import { JdAccountService } from './jd-account.service';

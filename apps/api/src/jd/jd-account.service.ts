@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
-import { JdAccountEntity, JdAccountStatus } from '@pro/entities';
-
+import { JdAccountEntity } from '@pro/entities';
+import { JdAccountStatus } from '@pro/types'
 export type JdAccountSummary = {
   id: number;
   jdUid: string;

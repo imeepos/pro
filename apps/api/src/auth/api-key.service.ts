@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, Like, SelectQueryBuilder } from 'typeorm';
-import { ApiKeyEntity, ApiKeyType } from '@pro/entities';
+import { ApiKeyEntity } from '@pro/entities';
+import { ApiKeyType, ApiKeySortBy } from '@pro/types';
 import { UserEntity } from '@pro/entities';
 import { UserStatus } from '@pro/types';
 import {
@@ -10,10 +11,10 @@ import {
   ApiKeyQueryDto,
   ApiKeyListResponseDto,
   ApiKeyResponseDto,
-  ApiKeyStatus,
   ApiKeyStatsDto,
   ApiKeySummaryStatsDto
 } from './dto/api-key.dto';
+import { ApiKeyStatusFilter } from '@pro/types';
 
 /**
  * API Key 管理服务
@@ -223,18 +224,18 @@ export class ApiKeyService {
     }
 
     // 状态过滤
-    if (status && status !== ApiKeyStatus.ALL) {
+    if (status && status !== ApiKeyStatusFilter.ALL) {
       switch (status) {
-        case ApiKeyStatus.ACTIVE:
+        case ApiKeyStatusFilter.ACTIVE:
           queryBuilder = queryBuilder.andWhere('apiKey.isActive = :isActive', { isActive: true });
           if (!includeExpired) {
             queryBuilder = queryBuilder.andWhere('(apiKey.expiresAt IS NULL OR apiKey.expiresAt > :now)', { now: new Date() });
           }
           break;
-        case ApiKeyStatus.INACTIVE:
+        case ApiKeyStatusFilter.INACTIVE:
           queryBuilder = queryBuilder.andWhere('apiKey.isActive = :isActive', { isActive: false });
           break;
-        case ApiKeyStatus.EXPIRED:
+        case ApiKeyStatusFilter.EXPIRED:
           queryBuilder = queryBuilder.andWhere('apiKey.expiresAt IS NOT NULL AND apiKey.expiresAt <= :now', { now: new Date() });
           break;
       }
@@ -260,10 +261,10 @@ export class ApiKeyService {
     }
 
     // 排序
-    const sortField = sortBy === 'usageCount' ? 'apiKey.usageCount' :
-                     sortBy === 'name' ? 'apiKey.name' :
-                     sortBy === 'lastUsedAt' ? 'apiKey.lastUsedAt' :
-                     sortBy === 'updatedAt' ? 'apiKey.updatedAt' :
+    const sortField = sortBy === ApiKeySortBy.USAGE_COUNT ? 'apiKey.usageCount' :
+                     sortBy === ApiKeySortBy.NAME ? 'apiKey.name' :
+                     sortBy === ApiKeySortBy.LAST_USED_AT ? 'apiKey.lastUsedAt' :
+                     sortBy === ApiKeySortBy.UPDATED_AT ? 'apiKey.updatedAt' :
                      'apiKey.createdAt';
 
     queryBuilder = queryBuilder.orderBy(sortField, sortOrder || 'DESC');

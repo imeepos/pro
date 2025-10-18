@@ -13,7 +13,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ApiKeyType } from '@pro/entities';
+import { ApiKeyType, ApiKeyStatusFilter, ApiKeySortBy, ApiKeySortOrder } from '@pro/types';
 import {
   Field,
   Float,
@@ -25,7 +25,6 @@ import {
 } from '@nestjs/graphql';
 import { createOffsetConnectionType } from '../../common/models/pagination.model';
 
-// 重新导出，以便其他地方使用
 export { ApiKeyType };
 
 registerEnumType(ApiKeyType, {
@@ -33,45 +32,15 @@ registerEnumType(ApiKeyType, {
   description: 'API Key 类型',
 });
 
-/**
- * API Key状态枚举
- */
-export enum ApiKeyStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  EXPIRED = 'EXPIRED',
-  ALL = 'ALL'
-}
-
-registerEnumType(ApiKeyStatus, {
+registerEnumType(ApiKeyStatusFilter, {
   name: 'ApiKeyStatus',
   description: 'API Key 状态过滤枚举',
 });
-
-
-/**
- * API Key排序字段枚举
- */
-export enum ApiKeySortBy {
-  CREATED_AT = 'createdAt',
-  UPDATED_AT = 'updatedAt',
-  NAME = 'name',
-  LAST_USED_AT = 'lastUsedAt',
-  USAGE_COUNT = 'usageCount'
-}
 
 registerEnumType(ApiKeySortBy, {
   name: 'ApiKeySortBy',
   description: 'API Key 排序字段',
 });
-
-/**
- * API Key排序方向枚举
- */
-export enum ApiKeySortOrder {
-  ASC = 'ASC',
-  DESC = 'DESC'
-}
 
 registerEnumType(ApiKeySortOrder, {
   name: 'ApiKeySortOrder',
@@ -247,13 +216,13 @@ export class ApiKeyQueryDto {
 
   @ApiPropertyOptional({
     description: 'API Key状态',
-    enum: ApiKeyStatus,
-    example: ApiKeyStatus.ACTIVE
+    enum: ApiKeyStatusFilter,
+    example: ApiKeyStatusFilter.ACTIVE
   })
   @IsOptional()
-  @IsEnum(ApiKeyStatus, { message: 'API Key状态无效' })
-  @Field(() => ApiKeyStatus, { nullable: true })
-  status?: ApiKeyStatus;
+  @IsEnum(ApiKeyStatusFilter, { message: 'API Key状态无效' })
+  @Field(() => ApiKeyStatusFilter, { nullable: true })
+  status?: ApiKeyStatusFilter;
 
   @ApiPropertyOptional({
     description: '是否显示已过期的Key',
