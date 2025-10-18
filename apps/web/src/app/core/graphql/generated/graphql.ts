@@ -158,17 +158,6 @@ export type BugAttachmentModel = {
   url: Scalars['String']['output'];
 };
 
-export enum BugCategory {
-  Configuration = 'CONFIGURATION',
-  Data = 'DATA',
-  Documentation = 'DOCUMENTATION',
-  Functional = 'FUNCTIONAL',
-  Integration = 'INTEGRATION',
-  Performance = 'PERFORMANCE',
-  Security = 'SECURITY',
-  UiUx = 'UI_UX'
-}
-
 export type BugCategoryStatistics = {
   __typename?: 'BugCategoryStatistics';
   configuration: Scalars['Int']['output'];
@@ -1620,6 +1609,8 @@ export type StatsAggregationQueryDto = {
 export type Subscription = {
   __typename?: 'Subscription';
   jdLoginEvents: JdLoginEvent;
+  notificationReceived: Notification;
+  weiboLoggedInUsersUpdate: WeiboLoggedInUsersStats;
   weiboLoginEvents: WeiboLoginEvent;
 };
 
@@ -1828,6 +1819,13 @@ export type WeiboAccountWithCookies = {
   status: Scalars['String']['output'];
   weiboNickname?: Maybe<Scalars['String']['output']>;
   weiboUid: Scalars['String']['output'];
+};
+
+export type WeiboLoggedInUsersStats = {
+  __typename?: 'WeiboLoggedInUsersStats';
+  online: Scalars['Int']['output'];
+  todayNew: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
 };
 
 export type WeiboLoginEvent = {
