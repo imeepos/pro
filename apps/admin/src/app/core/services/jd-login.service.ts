@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { print } from 'graphql';
 import { GraphqlGateway } from '../graphql/graphql-gateway.service';
 import { SubscriptionClient } from '../graphql/subscription-client.service';
 import { StartJdLoginMutation, JdLoginEventsSubscription } from '../graphql/jd-account.documents';
@@ -35,7 +36,7 @@ export class JdLoginService {
 
       const unsubscribe = client.subscribe(
         {
-          query: JdLoginEventsSubscription.toString(),
+          query: print(JdLoginEventsSubscription),
           variables: { sessionId }
         },
         {
