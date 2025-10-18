@@ -16,6 +16,9 @@ import { ApiKey, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyType, ApiKeyStatus } fr
 export class ApiKeyFormComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
+  // 枚举常量，供模板使用
+  ApiKeyType = ApiKeyType;
+
   @Input() apiKey: ApiKey | null = null;
   @Input() loading: boolean = false;
   @Output() submit = new EventEmitter<CreateApiKeyDto | UpdateApiKeyDto>();

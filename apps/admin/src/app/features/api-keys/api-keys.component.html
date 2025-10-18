@@ -57,10 +57,10 @@
             class="px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white transition-all duration-300 outline-none text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
           >
             <option value="">全部状态</option>
-            <option value="active">活跃</option>
-            <option value="inactive">未激活</option>
-            <option value="expired">已过期</option>
-            <option value="revoked">已撤销</option>
+            <option [value]="ApiKeyStatus.ACTIVE">活跃</option>
+            <option [value]="ApiKeyStatus.INACTIVE">未激活</option>
+            <option [value]="ApiKeyStatus.EXPIRED">已过期</option>
+            <option [value]="ApiKeyStatus.REVOKED">已撤销</option>
           </select>
         </div>
 
@@ -72,9 +72,9 @@
             class="px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white transition-all duration-300 outline-none text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
           >
             <option value="">全部类型</option>
-            <option value="read_only">只读</option>
-            <option value="read_write">读写</option>
-            <option value="admin">管理员</option>
+            <option [value]="ApiKeyType.READ_ONLY">只读</option>
+            <option [value]="ApiKeyType.READ_WRITE">读写</option>
+            <option [value]="ApiKeyType.ADMIN">管理员</option>
           </select>
         </div>
 
