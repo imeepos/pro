@@ -179,11 +179,38 @@ export class TaskScannerScheduler {
 
       // 检查是否成功获取锁（是否有记录被更新）
       if (lockResult.affected === 0) {
-        this.logger.debug(`任务 ${task.id} 已被其他实例调度或状态已变更，跳过`, {
+        // 重新查询任务当前状态
+        const currentTask = await this.taskRepository.findOne({ where: { id: task.id } });
+
+        if (!currentTask) {
+          this.logger.warn(`任务 ${task.id} 已被删除`);
+          return;
+        }
+
+        this.logger.debug(`任务 ${task.id} 锁冲突`, {
           taskId: task.id,
           expectedStatus: task.status,
-          expectedUpdatedAt: task.updatedAt.toISOString()
+          currentStatus: currentTask.status,
+          expectedUpdatedAt: task.updatedAt.toISOString(),
+          currentUpdatedAt: currentTask.updatedAt.toISOString()
         });
+
+        // 如果当前状态是 RUNNING，说明其他实例正在处理，无需操作
+        if (currentTask.status === WeiboSearchTaskStatus.RUNNING) {
+          this.logger.debug(`任务 ${task.id} 正在被其他实例处理`);
+          return;
+        }
+
+        // 如果当前状态仍是 PENDING，但锁失败，说明 updatedAt 不匹配
+        // 重新调度，避免停滞
+        if (currentTask.status === WeiboSearchTaskStatus.PENDING) {
+          const retryDelay = 60 * 1000; // 1分钟后重试
+          await this.taskRepository.update(task.id, {
+            nextRunAt: new Date(Date.now() + retryDelay),
+          });
+          this.logger.debug(`任务 ${task.id} 已重新调度，1分钟后重试`);
+        }
+
         return;
       }
 

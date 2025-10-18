@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
 import { TaskMonitor } from './weibo/task-monitor.service';
+import { DiagnosticService } from './weibo/diagnostic.service';
 import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
 import { WeiboSearchTaskEntity } from '@pro/entities';
 import { createDatabaseConfig } from './config/database.config';
@@ -50,6 +51,9 @@ import { AppController } from './app.controller';
 
     // 任务监控服务
     TaskMonitor,
+
+    // 诊断服务
+    DiagnosticService,
   ],
   exports: [
     RabbitMQConfigService,
