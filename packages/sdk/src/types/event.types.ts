@@ -3,18 +3,10 @@ import { EventType } from './event-type.types.js';
 import { IndustryType } from './industry-type.types.js';
 import { Tag } from './tag.types.js';
 import { Attachment } from './attachment.types.js';
+import { EventStatus } from '@pro/types';
 
-/**
- * 事件状态枚举
- */
-export enum EventStatus {
-  /** 草稿 */
-  DRAFT = 0,
-  /** 已发布 */
-  PUBLISHED = 1,
-  /** 已归档 */
-  ARCHIVED = 2
-}
+// 重新导出类型守卫和转换函数
+export { isValidEventStatus, numberToEventStatus, eventStatusToNumber } from '@pro/types';
 
 /**
  * 事件实体

@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { EventsService } from '../../state/events.service';
-import { EventDetail, EventStatus } from '@pro/sdk';
+import { EventDetail } from '@pro/sdk';
+import { EventStatus } from '@pro/types';
 import { ToastService } from '../../shared/services/toast.service';
 import { AmapViewerComponent, DeleteEventDialogComponent } from './components';
 

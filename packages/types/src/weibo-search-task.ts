@@ -1,10 +1,11 @@
-export enum WeiboSearchTaskStatus {
-  PENDING = 'PENDING',
-  RUNNING = 'RUNNING',
-  PAUSED = 'PAUSED',
-  FAILED = 'FAILED',
-  TIMEOUT = 'TIMEOUT'
-}
+/**
+ * 微博搜索任务接口定义
+ * 枚举值统一从 enums/weibo.ts 导入
+ */
+import { WeiboSearchTaskStatus } from './enums/weibo.js';
+
+// 重新导出枚举，保持向后兼容
+export { WeiboSearchTaskStatus } from './enums/weibo.js';
 
 export interface WeiboSearchTask {
   id: number;
@@ -74,4 +75,9 @@ export interface WeiboSearchTaskListResponse {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export interface RunWeiboTaskNowInput {
+  weiboAccountId?: number;
+  forceRestart?: boolean;
 }

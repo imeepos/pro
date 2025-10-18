@@ -10,17 +10,10 @@ import {
 } from 'typeorm';
 import { UserEntity } from './user.entity.js';
 import { WeiboAccountEntity } from './weibo-account.entity.js';
+import { WeiboSearchTaskStatus } from '@pro/types';
 
-/**
- * 微博搜索任务状态枚举
- */
-export enum WeiboSearchTaskStatus {
-  PENDING = 'pending',   // 等待执行
-  RUNNING = 'running',   // 正在执行
-  PAUSED = 'paused',     // 已暂停
-  FAILED = 'failed',     // 执行失败
-  TIMEOUT = 'timeout',   // 执行超时
-}
+// 重新导出枚举，保持向后兼容
+export { WeiboSearchTaskStatus } from '@pro/types';
 
 /**
  * 微博搜索任务实体

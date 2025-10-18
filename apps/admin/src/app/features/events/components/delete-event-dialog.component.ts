@@ -2,7 +2,8 @@ import { Component, Input, Output, EventEmitter, HostListener, OnInit } from '@a
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { trigger, transition, style, animate } from '@angular/animations';
-import { Event, EventStatus } from '@pro/sdk';
+import { Event } from '@pro/sdk';
+import { EventStatus } from '@pro/types';
 
 @Component({
   selector: 'app-delete-event-dialog',

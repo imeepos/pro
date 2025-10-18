@@ -1,4 +1,5 @@
-import { Event, EventStatus } from '@pro/sdk';
+import { Event } from '@pro/sdk';
+import { EventStatus } from '@pro/types';
 import { EventStatus as GqlEventStatus } from '../graphql/generated/graphql';
 
 export interface GraphqlEvent {

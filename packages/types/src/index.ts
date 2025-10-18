@@ -67,6 +67,10 @@ export interface ValidationResult {
   errors: string[];
 }
 
+// 导出统一的枚举定义
+export * from './enums/weibo';
+
+// 导出接口定义（从接口文件中重新导出枚举，保持向后兼容）
 export * from './weibo-search-task';
 export * from './weibo-account';
 export * from './api-key';
