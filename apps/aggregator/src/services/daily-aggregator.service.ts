@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Logger } from '@pro/logger';
 import { DailyStatsEntity, HourlyStatsEntity } from '@pro/entities';
 import { CacheService } from './cache.service';
+import { TransactionService, TransactionContext } from './transaction.service';
+import { Transactional, CriticalTransaction, BatchTransaction } from '../decorators/transactional.decorator';
 import { ConfigService } from '@nestjs/config';
 
 interface AggregationConfig {
@@ -45,6 +47,7 @@ export class DailyAggregatorService {
     @InjectRepository(HourlyStatsEntity)
     private readonly hourlyStatsRepo: Repository<HourlyStatsEntity>,
     private readonly cacheService: CacheService,
+    private readonly transactionService: TransactionService,
     private readonly configService: ConfigService,
     private readonly logger: Logger,
   ) {
@@ -83,6 +86,9 @@ export class DailyAggregatorService {
     return stats;
   }
 
+  @BatchTransaction({
+    description: '日度数据汇总批量处理',
+  })
   async rollupFromHourly(date: Date): Promise<void> {
     const normalizedDate = this.normalizeToDay(date);
     const dateRange = this.createDateRange(normalizedDate);
@@ -96,7 +102,7 @@ export class DailyAggregatorService {
       }
 
       const keywordGroups = this.groupStatsByKeyword(hourlyStats);
-      const processedKeywords = await this.processKeywordGroups(
+      const processedKeywords = await this.processKeywordGroupsInBatches(
         keywordGroups,
         normalizedDate,
       );
@@ -115,10 +121,49 @@ export class DailyAggregatorService {
     }
   }
 
+  @CriticalTransaction({
+    description: '关键词日度数据原子汇总',
+  })
   private async rollupKeywordDaily(
     keyword: string,
     date: Date,
     hourlyStats: HourlyStatsEntity[],
+  ): Promise<void> {
+    const result = await this.transactionService.executeInTransaction(
+      async (context: TransactionContext) => {
+        return this.rollupKeywordDailyWithinTransaction(keyword, date, hourlyStats, context);
+      },
+      {
+        description: '关键词日度汇总事务',
+        isolationLevel: 'READ COMMITTED',
+        retryOnDeadlock: true,
+        maxRetries: 3,
+      }
+    );
+
+    if (!result.success) {
+      this.logger.error('关键词日度汇总失败', {
+        keyword,
+        date,
+        error: result.error?.message,
+        attempts: result.attempts,
+      });
+      throw result.error;
+    }
+
+    this.logger.debug('关键词日度统计已更新', {
+      keyword,
+      date,
+      attempts: result.attempts,
+      duration: result.duration,
+    });
+  }
+
+  private async rollupKeywordDailyWithinTransaction(
+    keyword: string,
+    date: Date,
+    hourlyStats: HourlyStatsEntity[],
+    context: TransactionContext,
   ): Promise<void> {
     const validationResult = this.validateHourlyData(hourlyStats);
     if (!validationResult.isValid) {
@@ -130,27 +175,21 @@ export class DailyAggregatorService {
       return;
     }
 
-    let dailyStats = await this.dailyStatsRepo.findOne({
+    let dailyStats = await context.findOne(DailyStatsEntity, {
       where: { keyword, date },
     });
 
     if (!dailyStats) {
-      dailyStats = this.createEmptyDailyStats(keyword, date);
+      dailyStats = context.create(DailyStatsEntity, this.createEmptyDailyStatsData(keyword, date));
     }
 
     const aggregatedMetrics = this.aggregateHourlyMetrics(hourlyStats);
     this.applyAggregatedMetrics(dailyStats, aggregatedMetrics);
 
-    await this.dailyStatsRepo.save(dailyStats);
+    await context.save(dailyStats);
 
     const cacheKey = this.cacheService.buildDailyKey(keyword, date);
     await this.cacheService.invalidateKey(cacheKey);
-
-    this.logger.debug('关键词日度统计已更新', {
-      keyword,
-      date,
-      totalPostCount: dailyStats.totalPostCount,
-    });
   }
 
   async getDailyStats(
@@ -177,7 +216,14 @@ export class DailyAggregatorService {
     keyword: string,
     date: Date,
   ): DailyStatsEntity {
-    return this.dailyStatsRepo.create({
+    return this.dailyStatsRepo.create(this.createEmptyDailyStatsData(keyword, date));
+  }
+
+  private createEmptyDailyStatsData(
+    keyword: string,
+    date: Date,
+  ): Partial<DailyStatsEntity> {
+    return {
       keyword,
       date,
       totalPostCount: 0,
@@ -186,7 +232,7 @@ export class DailyAggregatorService {
       activeUserCount: 0,
       topKeywords: [],
       hourlyBreakdown: Array(this.config.HOURS_PER_DAY).fill(0),
-    });
+    };
   }
 
   private validateHourlyData(
@@ -307,6 +353,39 @@ export class DailyAggregatorService {
       groups.get(keyword)!.push(stat);
       return groups;
     }, new Map<string, HourlyStatsEntity[]>());
+  }
+
+  private async processKeywordGroupsInBatches(
+    keywordGroups: Map<string, HourlyStatsEntity[]>,
+    date: Date,
+  ): Promise<number> {
+    const keywordEntries = Array.from(keywordGroups.entries());
+
+    const result = await this.transactionService.executeBatch(
+      keywordEntries,
+      async ([keyword, stats], context) => {
+        await this.rollupKeywordDailyWithinTransaction(keyword, date, stats, context);
+      },
+      10, // 批量大小
+      {
+        description: '关键词批量汇总事务',
+        isolationLevel: 'READ COMMITTED',
+        retryOnDeadlock: true,
+        maxRetries: 2,
+      }
+    );
+
+    if (result.errors.length > 0) {
+      this.logger.warn('部分关键词汇总失败', {
+        date,
+        totalKeywords: keywordEntries.length,
+        processed: result.processed,
+        failed: result.errors.length,
+        errors: result.errors.map(e => ({ keyword: e.item[0], error: e.error.message })),
+      });
+    }
+
+    return result.processed;
   }
 
   private async processKeywordGroups(

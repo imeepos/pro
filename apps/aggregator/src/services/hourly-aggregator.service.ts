@@ -4,7 +4,15 @@ import { Repository } from 'typeorm';
 import { Logger } from '@pro/logger';
 import { HourlyStatsEntity } from '@pro/entities';
 import { CacheService } from './cache.service';
+import { TransactionService, TransactionContext } from './transaction.service';
+import { Transactional, CriticalTransaction } from '../decorators/transactional.decorator';
 import { ConfigService } from '@nestjs/config';
+import {
+  PerformanceMonitor,
+  DatabaseMonitor,
+  BusinessMonitor,
+  CacheMonitor,
+} from '../decorators/performance-monitor.decorator';
 
 export interface TimeWindow {
   keyword: string;
@@ -20,12 +28,14 @@ export class HourlyAggregatorService {
     @InjectRepository(HourlyStatsEntity)
     private readonly hourlyStatsRepo: Repository<HourlyStatsEntity>,
     private readonly cacheService: CacheService,
+    private readonly transactionService: TransactionService,
     private readonly configService: ConfigService,
     private readonly logger: Logger,
   ) {
     this.cacheTtl = this.configService.get('CACHE_TTL_HOURLY', 86400);
   }
 
+  @BusinessMonitor('hourly_aggregation')
   async aggregateHourly(timeWindow: TimeWindow): Promise<HourlyStatsEntity> {
     const { keyword, startTime } = timeWindow;
     const hourTimestamp = this.normalizeToHour(startTime);
@@ -66,6 +76,9 @@ export class HourlyAggregatorService {
     return stats;
   }
 
+  @CriticalTransaction({
+    description: '小时统计数据原子更新',
+  })
   async updateHourlyStats(data: {
     keyword: string;
     timestamp: Date;
@@ -74,15 +87,55 @@ export class HourlyAggregatorService {
     sentiment?: { score: number; label: string };
     keywords?: string[];
   }): Promise<void> {
+    const result = await this.transactionService.executeInTransaction(
+      async (context: TransactionContext) => {
+        return this.updateHourlyStatsWithinTransaction(data, context);
+      },
+      {
+        description: '小时统计更新事务',
+        isolationLevel: 'READ COMMITTED',
+        retryOnDeadlock: true,
+        maxRetries: 3,
+      }
+    );
+
+    if (!result.success) {
+      this.logger.error('小时统计更新失败', {
+        data,
+        error: result.error?.message,
+        attempts: result.attempts,
+      });
+      throw result.error;
+    }
+
+    this.logger.debug('小时统计已更新', {
+      keyword: data.keyword,
+      hourTimestamp: this.normalizeToHour(data.timestamp),
+      attempts: result.attempts,
+      duration: result.duration,
+    });
+  }
+
+  private async updateHourlyStatsWithinTransaction(
+    data: {
+      keyword: string;
+      timestamp: Date;
+      postCount?: number;
+      commentCount?: number;
+      sentiment?: { score: number; label: string };
+      keywords?: string[];
+    },
+    context: TransactionContext,
+  ): Promise<void> {
     const { keyword, timestamp, postCount, commentCount, sentiment, keywords } = data;
     const hourTimestamp = this.normalizeToHour(timestamp);
 
-    let stats = await this.hourlyStatsRepo.findOne({
+    let stats = await context.findOne(HourlyStatsEntity, {
       where: { keyword, hourTimestamp },
     });
 
     if (!stats) {
-      stats = this.hourlyStatsRepo.create({
+      stats = context.create(HourlyStatsEntity, {
         keyword,
         hourTimestamp,
         postCount: 0,
@@ -105,16 +158,12 @@ export class HourlyAggregatorService {
       stats.topKeywords = this.mergeKeywords(stats.topKeywords || [], keywords);
     }
 
-    await this.hourlyStatsRepo.save(stats);
-    await this.invalidateCache(keyword, hourTimestamp);
+    await context.save(stats);
 
-    this.logger.debug('小时统计已更新', {
-      keyword,
-      hourTimestamp,
-      postCount: stats.postCount,
-    });
+    await this.invalidateCache(keyword, hourTimestamp);
   }
 
+  @DatabaseMonitor('query_hourly_stats')
   async getHourlyStats(
     keyword: string,
     startTime: Date,

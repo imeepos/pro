@@ -2,6 +2,8 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisClient, RedisPipeline, redisConfigFactory } from '@pro/redis';
 import { Logger } from '@pro/logger';
+import { ConfigurationService } from '@pro/configuration';
+import { ErrorHandlerService } from '@pro/error-handling';
 import { createHash } from 'crypto';
 
 export interface CacheMetrics {
@@ -35,24 +37,22 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     lastReset: new Date(),
   };
 
-  private readonly layers: Record<CacheLayer, LayerConfig> = {
-    realtime: { ttl: 300, prefix: 'rt', description: '实时数据层' },
-    hourly: { ttl: 7200, prefix: 'hr', description: '小时数据层' },
-    daily: { ttl: 86400, prefix: 'dy', description: '日数据层' },
-    window: { ttl: 3600, prefix: 'wd', description: '窗口数据层' },
-    archive: { ttl: 2592000, prefix: 'ar', description: '归档数据层' },
-  };
+  private layers: Record<CacheLayer, LayerConfig>;
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly configuration: ConfigurationService,
+    private readonly errorHandler: ErrorHandlerService,
     private readonly logger: Logger,
   ) {
     const config = redisConfigFactory(this.configService);
     this.client = new RedisClient(config);
+    this.initializeLayers();
   }
 
   async onModuleInit() {
     await this.ensureConnection();
+    this.setupConfigurationWatchers();
     this.logger.log('缓存服务已启动', 'CacheService');
   }
 
@@ -60,13 +60,81 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     await this.gracefulShutdown();
   }
 
+  private initializeLayers(): void {
+    this.layers = {
+      realtime: {
+        ttl: this.configuration.get('cache.ttl.realtime'),
+        prefix: 'rt',
+        description: '实时数据层'
+      },
+      hourly: {
+        ttl: this.configuration.get('cache.ttl.hourly'),
+        prefix: 'hr',
+        description: '小时数据层'
+      },
+      daily: {
+        ttl: this.configuration.get('cache.ttl.daily'),
+        prefix: 'dy',
+        description: '日数据层'
+      },
+      window: {
+        ttl: this.configuration.get('cache.ttl.window'),
+        prefix: 'wd',
+        description: '窗口数据层'
+      },
+      archive: {
+        ttl: this.configuration.get('cache.ttl.archive'),
+        prefix: 'ar',
+        description: '归档数据层'
+      },
+    };
+  }
+
+  private setupConfigurationWatchers(): void {
+    // 监听TTL配置变化
+    this.configuration.watch('cache.ttl.realtime', (newValue) => {
+      this.layers.realtime.ttl = newValue as number;
+      this.logger.log('实时缓存TTL已更新', { newValue });
+    });
+
+    this.configuration.watch('cache.ttl.hourly', (newValue) => {
+      this.layers.hourly.ttl = newValue as number;
+      this.logger.log('小时缓存TTL已更新', { newValue });
+    });
+
+    this.configuration.watch('cache.ttl.daily', (newValue) => {
+      this.layers.daily.ttl = newValue as number;
+      this.logger.log('日缓存TTL已更新', { newValue });
+    });
+
+    this.configuration.watch('cache.ttl.window', (newValue) => {
+      this.layers.window.ttl = newValue as number;
+      this.logger.log('窗口缓存TTL已更新', { newValue });
+    });
+
+    this.configuration.watch('cache.ttl.archive', (newValue) => {
+      this.layers.archive.ttl = newValue as number;
+      this.logger.log('归档缓存TTL已更新', { newValue });
+    });
+  }
+
   private async ensureConnection(): Promise<void> {
     try {
       await this.client.set('health:check', '1', 5);
       this.logger.log('缓存连接健康检查通过', 'CacheService');
     } catch (error) {
-      this.logger.error('缓存连接失败', error, 'CacheService');
-      throw error;
+      const enhancedError = await this.errorHandler.handle(error as Error, {
+        code: 'CACHE_CONNECTION_FAILED',
+        context: {
+          operation: 'health-check',
+          service: 'CacheService',
+          timestamp: new Date(),
+          environment: process.env.NODE_ENV || 'unknown',
+          version: '1.0.0',
+        },
+      });
+      this.logger.error('缓存连接失败', enhancedError, 'CacheService');
+      throw enhancedError;
     }
   }
 
@@ -107,7 +175,17 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     try {
       return await operation();
     } catch (error) {
-      this.logger.warn(`缓存操作降级: ${context}`, { error: error.message });
+      const enhancedError = await this.errorHandler.handle(error as Error, {
+        code: 'CACHE_OPERATION_FAILED',
+        context: {
+          operation: context,
+          service: 'CacheService',
+          timestamp: new Date(),
+          environment: process.env.NODE_ENV || 'unknown',
+          version: '1.0.0',
+        },
+      });
+      this.logger.warn(`缓存操作降级: ${context}`, { error: enhancedError.message });
       return fallback;
     }
   }

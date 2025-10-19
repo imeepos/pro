@@ -1,0 +1,35 @@
+{
+  "name": "@pro/configuration",
+  "version": "1.0.0",
+  "description": "统一配置管理服务 - 优雅的配置化解决方案",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@pro/logger": "workspace:*",
+    "reflect-metadata": "^0.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "rimraf": "^5.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "tsup": {
+    "entry": ["src/index.ts"],
+    "format": ["esm"],
+    "dts": true,
+    "clean": true,
+    "external": ["@nestjs/common", "@pro/logger"]
+  }
+}
