@@ -71,13 +71,13 @@ export class DailyAggregatorService {
     });
 
     if (existing) {
-      await this.cacheService.set(cacheKey, existing, this.cacheTtl);
+      await this.cacheService.set(cacheKey, existing, 'daily');
       return existing;
     }
 
     const stats = this.createEmptyDailyStats(keyword, normalizedDate);
     await this.dailyStatsRepo.save(stats);
-    await this.cacheService.set(cacheKey, stats, this.cacheTtl);
+    await this.cacheService.set(cacheKey, stats, 'daily');
 
     this.logger.log('创建日度统计记录', { date: normalizedDate });
     return stats;

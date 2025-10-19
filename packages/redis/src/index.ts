@@ -1,5 +1,43 @@
 import { Redis, RedisOptions } from 'ioredis';
 
+export class RedisPipeline {
+  constructor(private pipeline: any) {}
+
+  get(key: string): RedisPipeline {
+    this.pipeline.get(key);
+    return this;
+  }
+
+  set(key: string, value: string): RedisPipeline {
+    this.pipeline.set(key, value);
+    return this;
+  }
+
+  del(key: string): RedisPipeline {
+    this.pipeline.del(key);
+    return this;
+  }
+
+  zincrby(key: string, increment: number, member: string): RedisPipeline {
+    this.pipeline.zincrby(key, increment, member);
+    return this;
+  }
+
+  expire(key: string, seconds: number): RedisPipeline {
+    this.pipeline.expire(key, seconds);
+    return this;
+  }
+
+  hmset(key: string, data: Record<string, any>): RedisPipeline {
+    this.pipeline.hmset(key, data);
+    return this;
+  }
+
+  async exec(): Promise<[Error | null, any][]> {
+    return await this.pipeline.exec();
+  }
+}
+
 export class RedisClient {
   private client: Redis;
 
@@ -89,25 +127,19 @@ export class RedisClient {
   }
 }
 
-class RedisPipeline {
-  constructor(private pipeline: any) {}
+import { ConfigService } from '@nestjs/config';
 
-  zincrby(key: string, increment: number, member: string): RedisPipeline {
-    this.pipeline.zincrby(key, increment, member);
-    return this;
+export const redisConfigFactory = (configService: ConfigService): RedisOptions | string => {
+  const redisUrl = configService.get<string>('REDIS_URL');
+
+  if (redisUrl) {
+    return redisUrl;
   }
 
-  expire(key: string, seconds: number): RedisPipeline {
-    this.pipeline.expire(key, seconds);
-    return this;
-  }
-
-  hmset(key: string, data: Record<string, any>): RedisPipeline {
-    this.pipeline.hmset(key, data);
-    return this;
-  }
-
-  async exec(): Promise<[Error | null, any][]> {
-    return await this.pipeline.exec();
-  }
-}
+  return {
+    host: configService.get<string>('REDIS_HOST', 'localhost'),
+    port: configService.get<number>('REDIS_PORT', 6379),
+    password: configService.get<string>('REDIS_PASSWORD'),
+    retryStrategy: (times: number) => Math.min(times * 50, 2000),
+  };
+};

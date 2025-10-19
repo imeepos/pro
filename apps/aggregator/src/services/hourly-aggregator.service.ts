@@ -43,7 +43,7 @@ export class HourlyAggregatorService {
     });
 
     if (existing) {
-      await this.cacheService.set(cacheKey, existing, this.cacheTtl);
+      await this.cacheService.set(cacheKey, existing, 'hourly');
       return existing;
     }
 
@@ -60,7 +60,7 @@ export class HourlyAggregatorService {
     });
 
     await this.hourlyStatsRepo.save(stats);
-    await this.cacheService.set(cacheKey, stats, this.cacheTtl);
+    await this.cacheService.set(cacheKey, stats, 'hourly');
 
     this.logger.log('创建小时统计记录', { keyword, hourTimestamp });
     return stats;
@@ -95,28 +95,18 @@ export class HourlyAggregatorService {
       });
     }
 
-    if (postCount) stats.postCount += postCount;
-    if (commentCount) stats.commentCount += commentCount;
+    this.updateCounts(stats, { postCount, commentCount });
 
     if (sentiment) {
-      const totalCount = stats.postCount + (postCount || 0);
-      stats.avgSentimentScore =
-        (stats.avgSentimentScore * stats.postCount + sentiment.score * (postCount || 1)) /
-        totalCount;
-
-      if (sentiment.label === 'positive') stats.positiveCount++;
-      else if (sentiment.label === 'neutral') stats.neutralCount++;
-      else if (sentiment.label === 'negative') stats.negativeCount++;
+      this.updateSentimentMetrics(stats, sentiment, postCount);
     }
 
-    if (keywords && keywords.length > 0) {
+    if (keywords?.length) {
       stats.topKeywords = this.mergeKeywords(stats.topKeywords || [], keywords);
     }
 
     await this.hourlyStatsRepo.save(stats);
-
-    const cacheKey = this.cacheService.buildHourlyKey(keyword, hourTimestamp);
-    await this.cacheService.invalidateKey(cacheKey);
+    await this.invalidateCache(keyword, hourTimestamp);
 
     this.logger.debug('小时统计已更新', {
       keyword,
@@ -143,6 +133,72 @@ export class HourlyAggregatorService {
     const normalized = new Date(date);
     normalized.setMinutes(0, 0, 0);
     return normalized;
+  }
+
+  private updateCounts(
+    stats: HourlyStatsEntity,
+    counts: { postCount?: number; commentCount?: number },
+  ): void {
+    if (counts.postCount) stats.postCount += counts.postCount;
+    if (counts.commentCount) stats.commentCount += counts.commentCount;
+  }
+
+  private updateSentimentMetrics(
+    stats: HourlyStatsEntity,
+    sentiment: { score: number; label: string },
+    postIncrement?: number,
+  ): void {
+    const increment = postIncrement || 1;
+    const previousPostCount = stats.postCount - (postIncrement || 0);
+
+    if (previousPostCount <= 0) {
+      stats.avgSentimentScore = sentiment.score;
+    } else {
+      const totalWeight = previousPostCount + increment;
+      stats.avgSentimentScore = this.calculateWeightedAverage(
+        stats.avgSentimentScore,
+        previousPostCount,
+        sentiment.score,
+        increment,
+        totalWeight,
+      );
+    }
+
+    this.incrementSentimentCount(stats, sentiment.label);
+  }
+
+  private calculateWeightedAverage(
+    currentAvg: number,
+    currentWeight: number,
+    newValue: number,
+    newWeight: number,
+    totalWeight: number,
+  ): number {
+    if (totalWeight === 0) return 0;
+
+    return (currentAvg * currentWeight + newValue * newWeight) / totalWeight;
+  }
+
+  private incrementSentimentCount(
+    stats: HourlyStatsEntity,
+    label: string,
+  ): void {
+    switch (label) {
+      case 'positive':
+        stats.positiveCount++;
+        break;
+      case 'neutral':
+        stats.neutralCount++;
+        break;
+      case 'negative':
+        stats.negativeCount++;
+        break;
+    }
+  }
+
+  private async invalidateCache(keyword: string, hourTimestamp: Date): Promise<void> {
+    const cacheKey = this.cacheService.buildHourlyKey(keyword, hourTimestamp);
+    await this.cacheService.invalidateKey(cacheKey);
   }
 
   private mergeKeywords(existing: string[], newKeywords: string[]): string[] {

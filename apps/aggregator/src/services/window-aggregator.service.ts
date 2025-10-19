@@ -71,7 +71,7 @@ export class WindowAggregatorService {
       metrics = await this.aggregateLast7Days(keyword, now);
     }
 
-    await this.cacheService.set(cacheKey, metrics, this.cacheTtl);
+    await this.cacheService.set(cacheKey, metrics, 'window');
     this.logger.debug('滑动窗口聚合完成', { keyword, windowType });
 
     return metrics;
@@ -131,7 +131,7 @@ export class WindowAggregatorService {
       timestamp: now,
     };
 
-    await this.cacheService.set(cacheKey, metrics, this.cacheTtl);
+    await this.cacheService.set(cacheKey, metrics, 'realtime');
     this.logger.debug('实时指标聚合完成', { keyword });
 
     return metrics;
