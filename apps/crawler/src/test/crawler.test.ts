@@ -36,7 +36,33 @@ describe('WeiboSearchCrawlerService', () => {
     antiDetection: {
       randomUserAgents: ['test-agent'],
       blockResources: true,
-      simulateHuman: true
+      simulateHuman: true,
+      stealthScript: true,
+      advancedFingerprinting: true,
+      userAgentRotation: true,
+      cdpMode: false,
+      cdpConfig: {
+        enabled: false,
+        debugPort: 9222,
+        autoCloseBrowser: true
+      },
+      fingerprinting: {
+        screenResolution: {
+          desktop: { width: 1920, height: 1080 },
+          mobile: { width: 375, height: 667 }
+        },
+        timezone: 'Asia/Shanghai',
+        languages: {
+          desktop: ['zh-CN', 'zh', 'en'],
+          mobile: ['zh-CN', 'zh']
+        },
+        platforms: {
+          desktop: ['Win32', 'MacIntel', 'Linux x86_64'],
+          mobile: ['iPhone', 'Android']
+        },
+        webglFingerprint: true,
+        canvasFingerprint: true
+      }
     },
     robots: {
       enabled: true,
@@ -228,7 +254,18 @@ describe('WeiboSearchCrawlerService', () => {
         nickname: 'test',
         cookies: [],
         status: WeiboAccountStatus.ACTIVE,
-        usageCount: 0
+        usageCount: 0,
+        lastUsedAt: undefined,
+        // MediaCrawler风格的智能字段
+        healthScore: 100,
+        lastValidatedAt: undefined,
+        consecutiveFailures: 0,
+        totalSuccesses: 0,
+        averageResponseTime: 0,
+        bannedRiskLevel: 'low',
+        priority: 1,
+        cookieExpiryTime: undefined,
+        cookieValidationHash: 'test-hash'
       });
 
       // 模拟页面内容

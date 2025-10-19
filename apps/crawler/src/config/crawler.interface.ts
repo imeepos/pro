@@ -27,11 +27,38 @@ export interface CrawlerConfig {
     cooldownTime: number; // 账号冷却时间（毫秒）
   };
 
-  // 反爬策略配置
+  // 反检测策略配置
   antiDetection: {
     randomUserAgents: string[];
     blockResources: boolean; // 是否拦截资源文件
     simulateHuman: boolean; // 是否模拟人类行为
+    stealthScript: boolean; // 是否启用stealth.min.js脚本
+    advancedFingerprinting: boolean; // 是否启用高级浏览器指纹伪装
+    userAgentRotation: boolean; // 是否启用User-Agent轮换
+    cdpMode: boolean; // 是否启用CDP模式
+    cdpConfig: {
+      enabled: boolean;
+      debugPort: number;
+      customBrowserPath?: string;
+      autoCloseBrowser: boolean;
+    };
+    fingerprinting: {
+      screenResolution: {
+        desktop: { width: number; height: number };
+        mobile: { width: number; height: number };
+      };
+      timezone: string;
+      languages: {
+        desktop: string[];
+        mobile: string[];
+      };
+      platforms: {
+        desktop: string[];
+        mobile: string[];
+      };
+      webglFingerprint: boolean;
+      canvasFingerprint: boolean;
+    };
   };
 
   // Robots.txt 配置
