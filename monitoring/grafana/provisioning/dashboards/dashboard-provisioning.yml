@@ -1,0 +1,71 @@
+# Grafana仪表板配置
+# Grafana Dashboards Provisioning for Weibo Crawler System
+
+apiVersion: 1
+
+providers:
+  # 微博爬取系统仪表板
+  - name: 'weibo-crawler-dashboards'
+    orgId: 1
+    folder: '微博爬取系统'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/weibo-crawler
+
+  # Kubernetes监控仪表板
+  - name: 'kubernetes-dashboards'
+    orgId: 1
+    folder: 'Kubernetes'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 60
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/kubernetes
+
+  # 数据库监控仪表板
+  - name: 'database-dashboards'
+    orgId: 1
+    folder: '数据库监控'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 60
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/database
+
+  # 网络监控仪表板
+  - name: 'network-dashboards'
+    orgId: 1
+    folder: '网络监控'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 60
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/network
+
+  # 业务指标仪表板
+  - name: 'business-dashboards'
+    orgId: 1
+    folder: '业务指标'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/business
+
+  # 安全监控仪表板
+  - name: 'security-dashboards'
+    orgId: 1
+    folder: '安全监控'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/security

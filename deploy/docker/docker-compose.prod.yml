@@ -1,0 +1,329 @@
+# 基于MediaCrawler增强的微博爬取系统 - 生产环境配置
+# Production Docker Compose configuration for Weibo Crawler System
+version: '3.8'
+
+services:
+  # PostgreSQL for structured data
+  postgres:
+    image: postgres:15-alpine
+    container_name: pro-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pro}
+      POSTGRES_USER: ${POSTGRES_USER:-pro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - pro-network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pro}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # MongoDB for raw data storage
+  mongodb:
+    image: mongo:7
+    container_name: pro-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-pro}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - pro-network
+    ports:
+      - "27017:27017"
+    command: mongod --auth --bind_ip_all
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: pro-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - pro-network
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # RabbitMQ for message queuing
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: pro-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    networks:
+      - pro-network
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # MinIO for object storage
+  minio:
+    image: minio/minio:latest
+    container_name: pro-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks:
+      - pro-network
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Crawler Service (main microservice)
+  crawler:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.crawler
+    container_name: pro-crawler
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+
+      # Database connections
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-pro}
+      POSTGRES_USER: ${POSTGRES_USER:-pro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+      MONGODB_URL: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE:-pro}?authSource=admin
+      MONGODB_DATABASE: ${MONGO_DATABASE:-pro}
+
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+
+      # RabbitMQ connection
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+
+      # MinIO configuration
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_USE_SSL: false
+
+      # Crawler configuration
+      CRAWLER_CONCURRENCY: ${CRAWLER_CONCURRENCY:-3}
+      CRAWLER_DELAY_MIN: ${CRAWLER_DELAY_MIN:-2000}
+      CRAWLER_DELAY_MAX: ${CRAWLER_DELAY_MAX:-5000}
+      CRAWLER_MAX_RETRIES: ${CRAWLER_MAX_RETRIES:-3}
+      CRAWLER_HEADLESS: ${CRAWLER_HEADLESS:-true}
+
+      # Anti-detection settings
+      ANTI_DETECTION_STEALTH_SCRIPT: ${ANTI_DETECTION_STEALTH_SCRIPT:-true}
+      ANTI_DETECTION_FINGERPRINTING: ${ANTI_DETECTION_FINGERPRINTING:-true}
+      ANTI_DETECTION_UA_ROTATION: ${ANTI_DETECTION_UA_ROTATION:-true}
+      ANTI_DETECTION_TIMEZONE: ${ANTI_DETECTION_TIMEZONE:-Asia/Shanghai}
+
+      # Monitoring
+      RATE_MONITORING_ENABLED: ${RATE_MONITORING_ENABLED:-true}
+      RATE_WINDOW_SIZE_MS: ${RATE_WINDOW_SIZE_MS:-60000}
+      RATE_MAX_REQUESTS_PER_WINDOW: ${RATE_MAX_REQUESTS_PER_WINDOW:-10}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+    volumes:
+      - crawler_logs:/app/logs
+      - crawler_downloads:/app/downloads
+      - ./browsers:/app/.cache/ms-playwright
+    networks:
+      - pro-network
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  # Nginx reverse proxy
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    container_name: pro-nginx
+    restart: unless-stopped
+    environment:
+      NGINX_WORKER_PROCESSES: auto
+      NGINX_WORKER_CONNECTIONS: 1024
+    volumes:
+      - nginx_logs:/var/log/nginx
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - pro-network
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - crawler
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Prometheus for monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: pro-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules
+      - prometheus_data:/prometheus
+    networks:
+      - pro-network
+    ports:
+      - "9090:9090"
+    depends_on:
+      - crawler
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pro-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - pro-network
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+  # AlertManager for alerting
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: pro-alertmanager
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    networks:
+      - pro-network
+    ports:
+      - "9093:9093"
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  minio_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+  crawler_logs:
+    driver: local
+  crawler_downloads:
+    driver: local
+
+networks:
+  pro-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

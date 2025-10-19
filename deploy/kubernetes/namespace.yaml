@@ -1,0 +1,12 @@
+# Kubernetes namespace for Weibo Crawler System
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: weibo-crawler
+  labels:
+    name: weibo-crawler
+    environment: production
+    managed-by: kubectl
+  annotations:
+    description: "基于MediaCrawler增强的微博爬取系统命名空间"
+    contact: "ops-team@company.com"

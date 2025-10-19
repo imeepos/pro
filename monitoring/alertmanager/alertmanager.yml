@@ -1,0 +1,386 @@
+# AlertManager configuration for Weibo Crawler System
+# 基于MediaCrawler增强的告警管理配置
+
+global:
+  smtp_smarthost: 'smtp.company.com:587'
+  smtp_from: 'alerts@company.com'
+  smtp_auth_username: 'alerts@company.com'
+  smtp_auth_password: 'your_smtp_password'
+  smtp_require_tls: true
+
+  # Slack配置
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+  slack_api_url_file: '/etc/alertmanager/slack_webhook_url'
+
+# 模板文件
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# 路由配置
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+
+  # 关键告警立即发送
+  - match:
+      severity: critical
+    receiver: 'critical-alerts'
+    group_wait: 0s
+    repeat_interval: 5m
+    routes:
+    - match:
+        service: crawler
+        component: service
+      receiver: 'crawler-critical'
+    - match:
+        service: database
+      receiver: 'database-critical'
+    - match:
+        service: storage
+      receiver: 'storage-critical'
+
+  # 警告告警聚合发送
+  - match:
+      severity: warning
+    receiver: 'warning-alerts'
+    group_wait: 30s
+    repeat_interval: 2h
+    routes:
+    - match:
+        service: crawler
+      receiver: 'crawler-warning'
+    - match:
+        service: database
+      receiver: 'database-warning'
+    - match:
+        service: network
+      receiver: 'network-warning'
+
+  # 性能告警
+  - match:
+      component: performance
+    receiver: 'performance-alerts'
+    group_wait: 1m
+    repeat_interval: 30m
+
+  # 反爬虫告警立即处理
+  - match:
+      component: anti-bot
+    receiver: 'anti-bot-alerts'
+    group_wait: 0s
+    repeat_interval: 1m
+
+  # 静默维护期间告警
+  - match:
+      alertname: 'CrawlerServiceDown'
+    active_time_intervals:
+      - business-hours
+    receiver: 'maintenance-alerts'
+
+# 时间间隔定义
+time_intervals:
+  - name: business-hours
+    time_intervals:
+      - times:
+          - start_time: '09:00'
+            end_time: '18:00'
+        weekdays: ['monday:friday']
+
+  - name: after-hours
+    time_intervals:
+      - times:
+          - start_time: '18:01'
+            end_time: '08:59'
+        weekdays: ['monday:friday']
+      - weekdays: ['saturday', 'sunday']
+
+# 抑制规则
+inhibit_rules:
+  # 如果服务宕机，抑制该服务的其他告警
+  - source_match:
+      alertname: 'CrawlerServiceDown'
+    target_match_re:
+      service: 'crawler'
+    equal: ['instance']
+
+  # 如果数据库宕机，抑制相关的连接告警
+  - source_match_re:
+      alertname: '(PostgreSQLDown|MongoDBDown|RedisDown)'
+    target_match_re:
+      service: 'crawler|queue'
+    equal: ['instance']
+
+  # 如果网络不通，抑制HTTP服务告警
+  - source_match:
+      alertname: 'TCPServiceDown'
+    target_match:
+      component: 'http'
+    equal: ['instance']
+
+# 接收器配置
+receivers:
+  # 默认Webhook接收器
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://alert-webhook-service:8080/webhook'
+        send_resolved: true
+        http_config:
+          bearer_token: 'your_webhook_token'
+
+  # 关键告警接收器
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'ops-team@company.com,manager@company.com'
+        subject: '[CRITICAL] 微博爬取系统告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          告警名称: {{ .Annotations.summary }}
+          告警描述: {{ .Annotations.description }}
+          严重程度: {{ .Labels.severity }}
+          服务组件: {{ .Labels.service }}/{{ .Labels.component }}
+          实例: {{ .Labels.instance }}
+          开始时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          运维手册: {{ .Annotations.runbook_url }}
+          {{ end }}
+        send_resolved: true
+
+    slack_configs:
+      - channel: '#alerts-critical'
+        title: '🚨 CRITICAL: 微博爬取系统告警'
+        text: |
+          {{ range .Alerts }}
+          *告警:* {{ .Annotations.summary }}
+          *描述:* {{ .Annotations.description }}
+          *服务:* {{ .Labels.service }}/{{ .Labels.component }}
+          *实例:* {{ .Labels.instance }}
+          *时间:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+        actions:
+          - type: button
+            text: '查看详情'
+            url: 'https://grafana.company.com/d/weibo-crawler'
+          - type: button
+            text: '运维手册'
+            url: '{{ (index .Alerts 0).Annotations.runbook_url }}'
+
+    webhook_configs:
+      - url: 'https://api.company.com/alerts/critical'
+        send_resolved: true
+
+  # 爬虫关键告警
+  - name: 'crawler-critical'
+    email_configs:
+      - to: 'crawler-team@company.com,ops-team@company.com'
+        subject: '[CRITICAL] 爬虫服务告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          爬虫服务关键告警！
+
+          {{ range .Alerts }}
+          告警: {{ .Annotations.summary }}
+          详情: {{ .Annotations.description }}
+          Pod: {{ .Labels.pod }}
+          节点: {{ .Labels.node }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+
+          快速处理步骤:
+          1. 检查服务状态: kubectl get pods -n weibo-crawler
+          2. 查看日志: kubectl logs -f deployment/crawler -n weibo-crawler
+          3. 检查资源使用: kubectl top pods -n weibo-crawler
+          4. 参考运维手册: {{ .Annotations.runbook_url }}
+          {{ end }}
+        send_resolved: true
+
+    slack_configs:
+      - channel: '#crawler-alerts'
+        title: '🚨 爬虫服务关键告警'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          *Pod:* {{ .Labels.pod }}
+          *时间:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+  # 数据库关键告警
+  - name: 'database-critical'
+    email_configs:
+      - to: 'db-team@company.com,ops-team@company.com'
+        subject: '[CRITICAL] 数据库告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          数据库关键告警！
+
+          {{ range .Alerts }}
+          告警: {{ .Annotations.summary }}
+          详情: {{ .Annotations.description }}
+          数据库: {{ .Labels.instance }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+  # 存储关键告警
+  - name: 'storage-critical'
+    email_configs:
+      - to: 'storage-team@company.com,ops-team@company.com'
+        subject: '[CRITICAL] 存储告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          存储系统关键告警！
+
+          {{ range .Alerts }}
+          告警: {{ .Annotations.summary }}
+          详情: {{ .Annotations.description }}
+          存储: {{ .Labels.instance }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+  # 警告告警接收器
+  - name: 'warning-alerts'
+    email_configs:
+      - to: 'ops-team@company.com'
+        subject: '[WARNING] 微博爬取系统警告 - {{ .GroupLabels.alertname }}'
+        body: |
+          系统警告通知：
+
+          {{ range .Alerts }}
+          警告: {{ .Annotations.summary }}
+          详情: {{ .Annotations.description }}
+          服务: {{ .Labels.service }}/{{ .Labels.component }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+    slack_configs:
+      - channel: '#alerts-warning'
+        title: '⚠️ 系统警告'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+  # 爬虫警告告警
+  - name: 'crawler-warning'
+    email_configs:
+      - to: 'crawler-team@company.com'
+        subject: '[WARNING] 爬虫服务警告 - {{ .GroupLabels.alertname }}'
+        body: |
+          爬虫服务警告：
+
+          {{ range .Alerts }}
+          警告: {{ .Annotations.summary }}
+          详情: {{ .Annotations.description }}
+          Pod: {{ .Labels.pod }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+  # 数据库警告告警
+  - name: 'database-warning'
+    email_configs:
+      - to: 'db-team@company.com'
+        subject: '[WARNING] 数据库警告 - {{ .GroupLabels.alertname }}'
+        body: |
+          数据库警告：
+
+          {{ range .Alerts }}
+          警告: {{ .Annotations.summary }}
+          详情: {{ .Annotations.description }}
+          数据库: {{ .Labels.instance }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+  # 网络警告告警
+  - name: 'network-warning'
+    email_configs:
+      - to: 'network-team@company.com'
+        subject: '[WARNING] 网络警告 - {{ .GroupLabels.alertname }}'
+        body: |
+          网络服务警告：
+
+          {{ range .Alerts }}
+          警告: {{ .Annotations.summary }}
+          详情: {{ .Annotations.description }}
+          服务: {{ .Labels.instance }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+  # 性能告警接收器
+  - name: 'performance-alerts'
+    email_configs:
+      - to: 'performance-team@company.com,crawler-team@company.com'
+        subject: '[PERFORMANCE] 性能告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          性能告警通知：
+
+          {{ range .Alerts }}
+          告警: {{ .Annotations.summary }}
+          详情: {{ .Annotations.description }}
+          服务: {{ .Labels.service }}
+          Pod: {{ .Labels.pod }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+  # 反爬虫告警接收器
+  - name: 'anti-bot-alerts'
+    email_configs:
+      - to: 'crawler-team@company.com,security-team@company.com'
+        subject: '[URGENT] 反爬虫检测告警'
+        body: |
+          检测到反爬虫机制！需要立即处理！
+
+          {{ range .Alerts }}
+          告警: {{ .Annotations.summary }}
+          详情: {{ .Annotations.description }}
+          Pod: {{ .Labels.pod }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+
+          紧急处理步骤：
+          1. 立即检查爬虫配置
+          2. 考虑暂停相关爬取任务
+          3. 更换User-Agent和代理
+          4. 增加请求间隔
+          {{ end }}
+        send_resolved: true
+
+    slack_configs:
+      - channel: '#crawler-urgent'
+        title: '🚨 URGENT: 反爬虫检测'
+        text: |
+          检测到反爬虫机制！需要立即处理！
+
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          *Pod:* {{ .Labels.pod }}
+          *时间:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+    webhook_configs:
+      - url: 'https://api.company.com/alerts/urgent'
+        send_resolved: true
+
+  # 维护期间告警
+  - name: 'maintenance-alerts'
+    email_configs:
+      - to: 'ops-team@company.com'
+        subject: '[MAINTENANCE] 维护期间告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          维护期间告警（已静默）：
+
+          {{ range .Alerts }}
+          告警: {{ .Annotations.summary }}
+          详情: {{ .Annotations.description }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true

@@ -1,0 +1,170 @@
+# RBAC configuration for Weibo Crawler System
+---
+# Service Account for Prometheus
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: prometheus
+
+---
+# Service Account for Crawler
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: crawler
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: crawler
+
+---
+# Service Account for Monitoring
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitoring
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: monitoring
+
+---
+# Role for Prometheus to access metrics
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+  labels:
+    app: weibo-crawler
+    component: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/metrics
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  - daemonsets
+  verbs: ["get", "list", "watch"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+
+---
+# Role for Crawler service
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: crawler
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: crawler
+rules:
+- apiGroups: [""]
+  resources:
+  - configmaps
+  - secrets
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - pods
+  - pods/log
+  verbs: ["get", "list", "watch"]
+
+---
+# Role for monitoring operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: monitoring
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: monitoring
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  - services
+  - endpoints
+  - configmaps
+  - secrets
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  - cronjobs
+  verbs: ["get", "list", "watch", "create", "delete"]
+
+---
+# Bind Prometheus ClusterRole to ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+  labels:
+    app: weibo-crawler
+    component: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: weibo-crawler
+roleRef:
+  kind: ClusterRole
+  name: prometheus
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Bind Crawler Role to ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crawler
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: crawler
+subjects:
+- kind: ServiceAccount
+  name: crawler
+  namespace: weibo-crawler
+roleRef:
+  kind: Role
+  name: crawler
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Bind Monitoring Role to ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: monitoring
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: monitoring
+subjects:
+- kind: ServiceAccount
+  name: monitoring
+  namespace: weibo-crawler
+roleRef:
+  kind: Role
+  name: monitoring
+  apiGroup: rbac.authorization.k8s.io

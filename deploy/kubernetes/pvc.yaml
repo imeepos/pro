@@ -1,0 +1,90 @@
+# Persistent Volume Claims for Weibo Crawler System
+---
+# Prometheus PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: prometheus
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 200Gi
+
+---
+# Grafana PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: grafana
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+# AlertManager PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: alertmanager-pvc
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: alertmanager
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Shared storage for crawler logs and downloads
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: crawler-shared-storage
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: shared-storage
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: shared-storage
+  resources:
+    requests:
+      storage: 500Gi
+
+---
+# Backup storage PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backup-storage
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: backup
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: backup-storage
+  resources:
+    requests:
+      storage: 1Ti

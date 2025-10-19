@@ -1,0 +1,316 @@
+# 基于MediaCrawler增强的微博爬取系统告警规则
+# Weibo Crawler System Alert Rules
+
+groups:
+  # 爬虫服务告警
+  - name: crawler.rules
+    rules:
+      # 服务可用性告警
+      - alert: CrawlerServiceDown
+        expr: up{job="crawler-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: crawler
+          component: service
+        annotations:
+          summary: "爬虫服务宕机"
+          description: "爬虫服务 {{ $labels.instance }} 已宕机超过1分钟"
+          runbook_url: "https://docs.company.com/runbooks/crawler-service-down"
+
+      # 高CPU使用率告警
+      - alert: CrawlerHighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{pod=~"crawler-.*"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: crawler
+          component: performance
+        annotations:
+          summary: "爬虫服务CPU使用率过高"
+          description: "爬虫服务 {{ $labels.pod }} CPU使用率 {{ $value | printf \"%.2f\" }}% 超过80%"
+          runbook_url: "https://docs.company.com/runbooks/high-cpu-usage"
+
+      # 高内存使用率告警
+      - alert: CrawlerHighMemoryUsage
+        expr: (container_memory_usage_bytes{pod=~"crawler-.*"} / container_spec_memory_limit_bytes{pod=~"crawler-.*"}) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: crawler
+          component: performance
+        annotations:
+          summary: "爬虫服务内存使用率过高"
+          description: "爬虫服务 {{ $labels.pod }} 内存使用率 {{ $value | printf \"%.2f\" }}% 超过85%"
+          runbook_url: "https://docs.company.com/runbooks/high-memory-usage"
+
+      # 爬虫队列积压告警
+      - alert: CrawlerQueueBacklog
+        expr: crawler_queue_size > 500
+        for: 2m
+        labels:
+          severity: warning
+          service: crawler
+          component: queue
+        annotations:
+          summary: "爬虫任务队列积压"
+          description: "爬虫任务队列大小 {{ $value }} 超过500个任务"
+          runbook_url: "https://docs.company.com/runbooks/queue-backlog"
+
+      # 爬虫成功率低告警
+      - alert: CrawlerLowSuccessRate
+        expr: rate(crawler_requests_success_total[5m]) / rate(crawler_requests_total[5m]) * 100 < 70
+        for: 5m
+        labels:
+          severity: warning
+          service: crawler
+          component: success-rate
+        annotations:
+          summary: "爬虫成功率过低"
+          description: "爬虫成功率 {{ $value | printf \"%.2f\" }}% 低于70%"
+          runbook_url: "https://docs.company.com/runbooks/low-success-rate"
+
+      # 爬虫响应时间过长告警
+      - alert: CrawlerHighResponseTime
+        expr: histogram_quantile(0.95, rate(crawler_request_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+          service: crawler
+          component: performance
+        annotations:
+          summary: "爬虫响应时间过长"
+          description: "爬虫95%分位响应时间 {{ $value | printf \"%.2f\" }}s 超过30秒"
+          runbook_url: "https://docs.company.com/runbooks/high-response-time"
+
+      # 反爬虫检测告警
+      - alert: CrawlerAntiBotDetected
+        expr: increase(crawler_anti_bot_detections_total[5m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+          service: crawler
+          component: anti-bot
+        annotations:
+          summary: "检测到反爬虫机制"
+          description: "5分钟内检测到 {{ $value }} 次反爬虫拦截"
+          runbook_url: "https://docs.company.com/runbooks/anti-bot-detected"
+
+      # 账号轮换告警
+      - alert: CrawlerAccountRotationHigh
+        expr: rate(crawler_account_rotations_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: crawler
+          component: account-rotation
+        annotations:
+          summary: "账号轮换频率过高"
+          description: "账号轮换率 {{ $value | printf \"%.2f\" }}/s 过高，可能被限流"
+          runbook_url: "https://docs.company.com/runbooks/account-rotation-high"
+
+      # 浏览器异常告警
+      - alert: CrawlerBrowserErrors
+        expr: rate(crawler_browser_errors_total[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          service: crawler
+          component: browser
+        annotations:
+          summary: "浏览器异常率过高"
+          description: "浏览器异常率 {{ $value | printf \"%.2f\" }}/s 过高"
+          runbook_url: "https://docs.company.com/runbooks/browser-errors"
+
+      # 数据下载失败告警
+      - alert: CrawlerDownloadFailures
+        expr: rate(crawler_download_failures_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: crawler
+          component: download
+        annotations:
+          summary: "数据下载失败率过高"
+          description: "数据下载失败率 {{ $value | printf \"%.2f\" }}/s 过高"
+          runbook_url: "https://docs.company.com/runbooks/download-failures"
+
+  # 数据库告警
+  - name: database.rules
+    rules:
+      # PostgreSQL连接告警
+      - alert: PostgreSQLDown
+        expr: up{job="postgres-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL数据库宕机"
+          description: "PostgreSQL数据库 {{ $labels.instance }} 无法连接"
+
+      # PostgreSQL连接数告警
+      - alert: PostgreSQLTooManyConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL连接数过多"
+          description: "PostgreSQL连接数使用率 {{ $value | printf \"%.2f\" }}% 超过80%"
+
+      # MongoDB连接告警
+      - alert: MongoDBDown
+        expr: up{job="mongodb-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+          component: mongodb
+        annotations:
+          summary: "MongoDB数据库宕机"
+          description: "MongoDB数据库 {{ $labels.instance }} 无法连接"
+
+      # Redis连接告警
+      - alert: RedisDown
+        expr: up{job="redis-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+          component: redis
+        annotations:
+          summary: "Redis缓存宕机"
+          description: "Redis缓存 {{ $labels.instance }} 无法连接"
+
+      # Redis内存使用告警
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+          component: redis
+        annotations:
+          summary: "Redis内存使用率过高"
+          description: "Redis内存使用率 {{ $value | printf \"%.2f\" }}% 超过85%"
+
+  # 消息队列告警
+  - name: queue.rules
+    rules:
+      # RabbitMQ连接告警
+      - alert: RabbitMQDown
+        expr: up{job="rabbitmq-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: queue
+          component: rabbitmq
+        annotations:
+          summary: "RabbitMQ消息队列宕机"
+          description: "RabbitMQ消息队列 {{ $labels.instance }} 无法连接"
+
+      # RabbitMQ队列积压告警
+      - alert: RabbitMQQueueBacklog
+        expr: rabbitmq_queue_messages > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: queue
+          component: rabbitmq
+        annotations:
+          summary: "RabbitMQ队列积压"
+          description: "RabbitMQ队列 {{ $labels.queue }} 消息数 {{ $value }} 超过1000"
+
+      # RabbitMQ消息处理延迟告警
+      - alert: RabbitMQMessageDelay
+        expr: rabbitmq_queue_head_message_timestamp_seconds < (time() - 300)
+        for: 2m
+        labels:
+          severity: warning
+          service: queue
+          component: rabbitmq
+        annotations:
+          summary: "RabbitMQ消息处理延迟"
+          description: "RabbitMQ队列 {{ $labels.queue }} 消息处理延迟超过5分钟"
+
+  # 存储告警
+  - name: storage.rules
+    rules:
+      # MinIO连接告警
+      - alert: MinIODown
+        expr: up{job="minio-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: storage
+          component: minio
+        annotations:
+          summary: "MinIO对象存储宕机"
+          description: "MinIO对象存储 {{ $labels.instance }} 无法连接"
+
+      # MinIO磁盘空间告警
+      - alert: MinIOLowDiskSpace
+        expr: minio_scout_disk_available_bytes / minio_scout_disk_total_bytes * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+          service: storage
+          component: minio
+        annotations:
+          summary: "MinIO磁盘空间不足"
+          description: "MinIO磁盘空间使用率 {{ $value | printf \"%.2f\" }}% 超过85%"
+
+      # PVC磁盘空间告警
+      - alert: PVCLowDiskSpace
+        expr: kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+          service: storage
+          component: pvc
+        annotations:
+          summary: "PVC磁盘空间不足"
+          description: "PVC {{ $labels.persistentvolumeclaim }} 磁盘空间使用率 {{ $value | printf \"%.2f\" }}% 超过90%"
+
+  # 网络告警
+  - name: network.rules
+    rules:
+      # HTTP服务不可用告警
+      - alert: HTTPServiceDown
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: network
+          component: http
+        annotations:
+          summary: "HTTP服务不可用"
+          description: "HTTP服务 {{ $labels.instance }} 不可访问"
+
+      # TCP服务不可用告警
+      - alert: TCPServiceDown
+        expr: probe_success{job="blackbox-tcp"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: network
+          component: tcp
+        annotations:
+          summary: "TCP服务不可用"
+          description: "TCP服务 {{ $labels.instance }} 不可访问"
+
+      # HTTP响应时间过长告警
+      - alert: HTTPSlowResponse
+        expr: probe_duration_seconds{job="blackbox-http"} > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: network
+          component: http
+        annotations:
+          summary: "HTTP响应时间过长"
+          description: "HTTP服务 {{ $labels.instance }} 响应时间 {{ $value | printf \"%.2f\" }}s 超过5秒"
