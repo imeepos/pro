@@ -22,7 +22,8 @@
         "build"
       ],
       "outputs": [
-        "coverage/**"
+        "coverage/**",
+        "!coverage/**"
       ],
       "cache": true
     },
