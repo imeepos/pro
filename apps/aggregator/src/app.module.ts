@@ -4,7 +4,7 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { HourlyStatsEntity, DailyStatsEntity } from '@pro/entities';
-import { createDatabaseConfig } from './config/database.config';
+import { createDatabaseConfig } from '@pro/entities';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RabbitMQService } from './rabbitmq/rabbitmq.service';

@@ -11,7 +11,7 @@ import { SentimentAnalysisService } from './services/sentiment-analysis.service'
 import { NLPAnalysisService } from './services/nlp-analysis.service';
 import { LLMAnalysisService } from './services/llm-analysis.service';
 import analyzerConfig from './config/analyzer.config';
-import { createDatabaseConfig } from './config/database.config';
+import { createDatabaseConfig } from '@pro/entities';
 
 @Module({
   imports: [
