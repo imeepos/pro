@@ -6,58 +6,6 @@
 // 增加测试超时时间
 jest.setTimeout(60000);
 
-// 自定义匹配器
-expect.extend({
-  toBeValidDate(received: any) {
-    const pass = received instanceof Date && !isNaN(received.getTime());
-    return {
-      message: () => `expected ${received} to be a valid Date`,
-      pass,
-    };
-  },
-
-  toBeValidTaskId(received: any) {
-    const pass = typeof received === 'number' && received > 0 && Number.isInteger(received);
-    return {
-      message: () => `expected ${received} to be a valid task ID (positive integer)`,
-      pass,
-    };
-  },
-
-  toBeWithinTimeRange(received: Date, start: Date, end: Date) {
-    const pass = received.getTime() >= start.getTime() && received.getTime() <= end.getTime();
-    return {
-      message: () => `expected ${received.toISOString()} to be within ${start.toISOString()} and ${end.toISOString()}`,
-      pass,
-    };
-  },
-
-  toHaveValidPerformanceMetrics(received: any) {
-    const requiredFields = ['executionTime', 'memoryUsage', 'cpuUsage', 'timestamp'];
-    const hasRequiredFields = requiredFields.every(field => received.hasOwnProperty(field));
-    const validTypes = {
-      executionTime: 'number',
-      memoryUsage: 'number',
-      cpuUsage: 'number',
-      timestamp: 'object',
-    };
-
-    let validTypesCheck = true;
-    for (const [field, type] of Object.entries(validTypes)) {
-      if (typeof received[field] !== type) {
-        validTypesCheck = false;
-        break;
-      }
-    }
-
-    const pass = hasRequiredFields && validTypesCheck && received.timestamp instanceof Date;
-    return {
-      message: () => `expected ${JSON.stringify(received)} to have valid performance metrics`,
-      pass,
-    };
-  },
-});
-
 // 全局测试常量
 global.testConstants = {
   DEFAULT_TIMEOUT: 30000,

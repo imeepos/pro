@@ -13,8 +13,8 @@ module.exports = {
 
   // 测试文件匹配模式 - 聚焦集成测试
   testMatch: [
-    '<rootDir>/test/integration/**/*.integration.test.ts',
-    '<rootDir>/test/integration/**/*.test.ts',
+    '<rootDir>/**/*.integration.test.ts',
+    '<rootDir>/**/*.test.ts',
   ],
 
   // 测试文件忽略模式
@@ -40,7 +40,10 @@ module.exports = {
   },
 
   // 测试环境设置
-  setupFilesAfterEnv: ['<rootDir>/setup.ts'],
+  setupFilesAfterEnv: [
+    '<rootDir>/setup.ts',
+    'jest-extended/all', // 扩展Jest匹配器
+  ],
 
   // 覆盖率配置 - 集成测试默认关闭，可单独启用
   collectCoverage: false,
@@ -63,6 +66,7 @@ module.exports = {
 
   // 并发控制 - 爬虫资源消耗大，限制并发数
   maxWorkers: 2, // 最多2个并发进程，避免资源竞争
+  maxConcurrency: 1, // 串行执行，确保浏览器测试稳定
 
   // 详细输出 - 便于调试爬虫问题
   verbose: true,
@@ -70,20 +74,24 @@ module.exports = {
   // 资源清理 - 确保浏览器进程正确退出
   clearMocks: true,
   restoreMocks: true,
+  resetMocks: true,
   detectOpenHandles: true,
+  detectLeaks: false, // 启用可能导致性能问题，按需开启
   forceExit: true,
 
-  // TypeScript配置
+  // TypeScript配置 - 优化编译性能
   globals: {
     'ts-jest': {
       tsconfig: 'tsconfig.build.json',
+      isolatedModules: true, // 提高编译性能
     },
   },
 
-  // 测试环境变量
+  // 测试环境变量 - 爬虫测试特定配置
   testEnvironmentOptions: {
     NODE_ENV: 'test',
     CRAWLER_TEST_MODE: 'integration',
+    PLAYWRIGHT_BROWSERS_PATH: '0', // 使用系统安装的浏览器
   },
 
   // 缓存配置 - 集成测试通常禁用缓存以确保一致性
@@ -92,16 +100,17 @@ module.exports = {
   // 模块加载配置
   moduleDirectories: ['node_modules', '<rootDir>/../../packages'],
 
-  // 监视模式忽略模式
+  // 监视模式忽略模式 - 提高watch性能
   watchPathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/dist/',
     '<rootDir>/coverage/',
+    '<rootDir>/test-results/',
   ],
 
-  // 转换忽略模式
+  // 转换忽略模式 - 优化Playwright相关模块的处理
   transformIgnorePatterns: [
-    'node_modules/(?!(.*\\.mjs$))',
+    'node_modules/(?!(playwright|@playwright))/',
   ],
 
   // 错误处理

@@ -1,75 +1,25 @@
 /**
- * Jest集成测试设置文件
- * 配置全局测试环境和工具函数
+ * 集成测试工具函数
+ * 测试文件可以直接导入使用这些工具
  */
 
 // 增加测试超时时间
-jest.setTimeout(60000);
-
-// 自定义匹配器
-expect.extend({
-  toBeValidDate(received: any) {
-    const pass = received instanceof Date && !isNaN(received.getTime());
-    return {
-      message: () => `expected ${received} to be a valid Date`,
-      pass,
-    };
-  },
-
-  toBeValidTaskId(received: any) {
-    const pass = typeof received === 'number' && received > 0 && Number.isInteger(received);
-    return {
-      message: () => `expected ${received} to be a valid task ID (positive integer)`,
-      pass,
-    };
-  },
-
-  toBeWithinTimeRange(received: Date, start: Date, end: Date) {
-    const pass = received.getTime() >= start.getTime() && received.getTime() <= end.getTime();
-    return {
-      message: () => `expected ${received.toISOString()} to be within ${start.toISOString()} and ${end.toISOString()}`,
-      pass,
-    };
-  },
-
-  toHaveValidPerformanceMetrics(received: any) {
-    const requiredFields = ['executionTime', 'memoryUsage', 'cpuUsage', 'timestamp'];
-    const hasRequiredFields = requiredFields.every(field => received.hasOwnProperty(field));
-    const validTypes = {
-      executionTime: 'number',
-      memoryUsage: 'number',
-      cpuUsage: 'number',
-      timestamp: 'object',
-    };
-
-    let validTypesCheck = true;
-    for (const [field, type] of Object.entries(validTypes)) {
-      if (typeof received[field] !== type) {
-        validTypesCheck = false;
-        break;
-      }
-    }
-
-    const pass = hasRequiredFields && validTypesCheck && received.timestamp instanceof Date;
-    return {
-      message: () => `expected ${JSON.stringify(received)} to have valid performance metrics`,
-      pass,
-    };
-  },
-});
+export const setTestTimeout = (timeout: number = 60000) => {
+  jest.setTimeout(timeout);
+};
 
 // 全局测试常量
-global.testConstants = {
+export const TEST_CONSTANTS = {
   DEFAULT_TIMEOUT: 30000,
   SHORT_TIMEOUT: 5000,
   LONG_TIMEOUT: 120000,
   RETRY_DELAY: 1000,
   BATCH_SIZE: 10,
   MAX_RETRIES: 3,
-};
+} as const;
 
-// 全局测试工具函数
-global.testUtils = {
+// 测试工具函数
+export const TestUtils = {
   /**
    * 创建指定时间范围的日期
    */
@@ -192,35 +142,50 @@ global.testUtils = {
   },
 };
 
-// 设置控制台输出格式
-const originalConsoleLog = console.log;
-console.log = (...args: any[]) => {
-  if (process.env.VERBOSE_TESTS === 'true') {
-    originalConsoleLog(...args);
-  }
+// 自定义匹配器（可选）
+export const customMatchers = {
+  toBeValidDate(received: any) {
+    const pass = received instanceof Date && !isNaN(received.getTime());
+    return {
+      message: () => `expected ${received} to be a valid Date`,
+      pass,
+    };
+  },
+
+  toBeValidTaskId(received: any) {
+    const pass = typeof received === 'number' && received > 0 && Number.isInteger(received);
+    return {
+      message: () => `expected ${received} to be a valid task ID (positive integer)`,
+      pass,
+    };
+  },
+
+  toBeWithinTimeRange(received: Date, start: Date, end: Date) {
+    const pass = received.getTime() >= start.getTime() && received.getTime() <= end.getTime();
+    return {
+      message: () => `expected ${received.toISOString()} to be within ${start.toISOString()} and ${end.toISOString()}`,
+      pass,
+    };
+  },
 };
 
-// 设置未处理的Promise rejection处理
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
+// 设置控制台输出格式
+export const setupTestLogging = () => {
+  const originalConsoleLog = console.log;
+  console.log = (...args: any[]) => {
+    if (process.env.VERBOSE_TESTS === 'true') {
+      originalConsoleLog(...args);
+    }
+  };
+};
 
-// 设置未捕获的异常处理
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-});
+// 设置错误处理
+export const setupErrorHandlers = () => {
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  });
 
-// 测试环境清理
-afterEach(() => {
-  // 清理所有模拟
-  jest.clearAllMocks();
-
-  // 重置模块注册表
-  jest.resetModules();
-});
-
-// 全局测试清理
-afterAll(() => {
-  // 关闭数据库连接（如果有的话）
-  // 关闭其他资源连接
-});
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+  });
+};

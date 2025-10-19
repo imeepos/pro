@@ -8,6 +8,9 @@ import type { Config } from 'jest';
 const config: Config = {
   displayName: 'Broker Integration Tests',
 
+  // 设置根目录为broker应用根目录
+  rootDir: '../..',
+
   // 测试环境
   testEnvironment: 'node',
 
@@ -22,7 +25,9 @@ const config: Config = {
   // 转换配置
   preset: 'ts-jest',
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    '^.+\\.(t|j)s$': ['ts-jest', {
+      tsconfig: 'tsconfig.build.json',
+    }],
   },
 
   // 模块路径映射
@@ -32,13 +37,16 @@ const config: Config = {
   },
 
   // 测试设置文件
-  setupFilesAfterEnv: ['<rootDir>/test/integration/jest.setup.ts'],
+  // setupFilesAfterEnv: ['<rootDir>/test/integration/jest.final.setup.ts'], // 禁用以避免缓存问题
 
   // 覆盖率配置
   collectCoverage: false, // 集成测试不生成覆盖率
 
   // 测试超时设置
   testTimeout: 60000, // 60秒超时
+
+  // 缓存设置
+  cache: false, // 禁用缓存以避免缓存问题
 
   // 并发设置
   maxWorkers: 4, // 最大4个并发进程
@@ -49,13 +57,6 @@ const config: Config = {
   // 清理模拟
   clearMocks: true,
   restoreMocks: true,
-
-  // 全局变量
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.build.json',
-    },
-  },
 
   // 环境变量
   testEnvironmentOptions: {
