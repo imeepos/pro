@@ -26,7 +26,7 @@ const config: Config = {
   },
 
   // 模块路径映射
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@pro/(.*)$': '<rootDir>/../../packages/$1/src',
     '^@pro/(.*)/(.*)$': '<rootDir>/../../packages/$1/src/$2',
   },

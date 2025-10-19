@@ -3,7 +3,7 @@
  * 为微博爬虫系统API集成测试提供专门的Jest配置
  */
 
-const { TEST_CONFIG } = require('./index');
+const { TEST_CONFIG } = { TIMEOUTS: { default: 30000 } }; // 简化配置，避免循环依赖
 
 module.exports = {
   // 测试环境
@@ -30,7 +30,7 @@ module.exports = {
   },
 
   // 模块路径映射
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@pro/(.*)$': '<rootDir>/../../../packages/$1/src',
     '^@app/(.*)$': '<rootDir>/../src/$1',
   },

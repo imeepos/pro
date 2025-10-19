@@ -22,7 +22,19 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:integration": "jest --config test/integration/jest.integration.config.js",
+    "test:integration:watch": "jest --config test/integration/jest.integration.config.js --watch",
+    "test:integration:cov": "jest --config test/integration/jest.integration.config.js --coverage",
+    "test:integration:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --config test/integration/jest.integration.config.js --runInBand",
+    "test:integration:search": "jest --config test/integration/jest.integration.config.js search-crawler.integration.test.ts",
+    "test:integration:detail": "jest --config test/integration/jest.integration.config.js detail-crawler.integration.test.ts",
+    "test:integration:account": "jest --config test/integration/jest.integration.config.js account-rotation.integration.test.ts",
+    "test:integration:validation": "jest --config test/integration/jest.integration.config.js data-validation.integration.test.ts",
+    "test:integration:core": "jest --config test/integration/jest.integration.config.js core/",
+    "test:integration:e2e": "jest --config test/integration/jest.integration.config.js e2e/",
+    "test:integration:failures": "jest --config test/integration/jest.integration.config.js failures/",
+    "test:all": "jest && jest --config test/integration/jest.integration.config.js"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
