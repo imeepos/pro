@@ -1747,7 +1747,8 @@ export enum SourceType {
   Jd = 'JD',
   WeiboApiJson = 'WEIBO_API_JSON',
   WeiboComment = 'WEIBO_COMMENT',
-  WeiboHtml = 'WEIBO_HTML'
+  WeiboHtml = 'WEIBO_HTML',
+  WeiboKeywordSearch = 'WEIBO_KEYWORD_SEARCH'
 }
 
 export type StatsAggregationQueryDto = {

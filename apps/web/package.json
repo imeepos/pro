@@ -55,6 +55,7 @@
     "@pro/eslint-config": "workspace:*",
     "@pro/prettier-config": "workspace:*",
     "@types/jasmine": "~5.1.0",
+    "@types/node": "^20.3.1",
     "autoprefixer": "^10.4.21",
     "jasmine-core": "~5.1.0",
     "karma": "~6.4.0",

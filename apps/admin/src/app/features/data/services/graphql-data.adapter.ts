@@ -349,7 +349,7 @@ export class GraphQLDataAdapter {
 
   private transformItemToLegacyFormat(item: any): RawData {
     return {
-      id: parseInt(item._id, 10) || 0,
+      id: item._id,
       sourceUrl: item.sourceUrl,
       sourceType: this.transformSourceTypeFromGraphQL(item.sourceType),
       sourcePlatform: this.inferSourcePlatformFromType(item.sourceType),
@@ -393,6 +393,7 @@ export class GraphQLDataAdapter {
       [LegacySourceType.WEIBO_HTML]: SourceType.WeiboHtml,
       [LegacySourceType.WEIBO_API_JSON]: SourceType.WeiboApiJson,
       [LegacySourceType.WEIBO_COMMENT]: SourceType.WeiboComment,
+      [LegacySourceType.WEIBO_KEYWORD_SEARCH]: SourceType.WeiboKeywordSearch,
       [LegacySourceType.JD]: SourceType.Jd,
       [LegacySourceType.CUSTOM]: SourceType.Custom
     };
@@ -404,6 +405,7 @@ export class GraphQLDataAdapter {
       [SourceType.WeiboHtml]: LegacySourceType.WEIBO_HTML,
       [SourceType.WeiboApiJson]: LegacySourceType.WEIBO_API_JSON,
       [SourceType.WeiboComment]: LegacySourceType.WEIBO_COMMENT,
+      [SourceType.WeiboKeywordSearch]: LegacySourceType.WEIBO_KEYWORD_SEARCH,
       [SourceType.Jd]: LegacySourceType.JD,
       [SourceType.Custom]: LegacySourceType.CUSTOM
     };

@@ -9,6 +9,7 @@ import { RabbitMQClient } from '@pro/rabbitmq';
 import { RobotsService } from '../robots/robots.service';
 import { RequestMonitorService } from '../monitoring/request-monitor.service';
 import { CrawlerConfig, RabbitMQConfig, WeiboConfig } from '../config/crawler.interface';
+import { SourceType } from '@pro/types';
 
 export interface SubTaskMessage {
   taskId: number;
@@ -225,7 +226,7 @@ export class WeiboSearchCrawlerService {
           });
 
           await this.rawDataService.create({
-            sourceType: 'weibo_keyword_search',
+            sourceType: SourceType.WEIBO_KEYWORD_SEARCH,
             sourceUrl: url,
             rawContent: html,
             metadata: {

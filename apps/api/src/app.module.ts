@@ -3,10 +3,10 @@ import { ConfigService, ConfigModule as NestConfigModule } from '@nestjs/config'
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
+import { MongooseModule } from '@nestjs/mongoose';
 import { join } from 'path';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
-import { MongodbModule } from '@pro/mongodb';
 import { HealthResolver } from './health.resolver';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
@@ -22,7 +22,7 @@ import { BugModule } from './bug/bug.module';
 import { RawDataModule } from './raw-data/raw-data.module';
 import { DatabaseModule } from './database/database.module';
 import { LoadersModule } from './loaders.module';
-import { createDatabaseConfig, mongodbConfigFactory } from './config';
+import { createDatabaseConfig } from './config';
 import { AugmentedRequest, GraphqlContext } from './common/utils/context.utils';
 import { UserLoader } from './user/user.loader';
 import { GraphqlLoaders } from './common/dataloaders/types';
@@ -137,13 +137,16 @@ import { TagLoader } from './events/tag.loader';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => createDatabaseConfig(configService) as TypeOrmModuleOptions,
     }),
-    // MongoDB 全局模块配置
-    MongodbModule.forRootAsync({
+    // MongoDB 全局模块配置 - 简化同步方式
+    MongooseModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const config = mongodbConfigFactory(configService);
-        return config.uri;
-      },
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGODB_URI') || configService.get<string>('MONGODB_URL'),
+        maxPoolSize: configService.get<number>('MONGODB_MAX_POOL_SIZE', 10),
+        serverSelectionTimeoutMS: configService.get<number>('MONGODB_SERVER_SELECTION_TIMEOUT', 5000),
+        socketTimeoutMS: configService.get<number>('MONGODB_SOCKET_TIMEOUT', 45000),
+        bufferCommands: configService.get<boolean>('MONGODB_BUFFER_COMMANDS', false),
+      }),
     }),
 
     ConfigModule,

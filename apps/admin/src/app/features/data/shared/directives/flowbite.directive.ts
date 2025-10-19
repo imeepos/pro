@@ -107,12 +107,19 @@ export class FlowbiteDirective implements OnInit, OnDestroy {
     const responsiveClasses = this.getResponsiveClasses(type);
     const animationClasses = this.flowbiteAnimation ? this.getAnimationClasses(type) : '';
 
-    this.renderer.addClass(element, ...baseClasses.split(' '));
+    // 分别添加每个类
+    baseClasses.split(' ').forEach(className => {
+      if (className) this.renderer.addClass(element, className);
+    });
     if (responsiveClasses) {
-      this.renderer.addClass(element, ...responsiveClasses.split(' '));
+      responsiveClasses.split(' ').forEach(className => {
+        if (className) this.renderer.addClass(element, className);
+      });
     }
     if (animationClasses) {
-      this.renderer.addClass(element, ...animationClasses.split(' '));
+      animationClasses.split(' ').forEach(className => {
+        if (className) this.renderer.addClass(element, className);
+      });
     }
   }
 
@@ -156,9 +163,9 @@ export class FlowbiteDirective implements OnInit, OnDestroy {
     const typeMap = responsiveClassMap[type];
     if (!typeMap) return '';
 
-    if (state.isMobile) return typeMap.mobile || '';
-    if (state.isTablet) return typeMap.tablet || '';
-    if (state.isDesktop) return typeMap.desktop || '';
+    if (state.isMobile) return typeMap['mobile'] || '';
+    if (state.isTablet) return typeMap['tablet'] || '';
+    if (state.isDesktop) return typeMap['desktop'] || '';
 
     return '';
   }
@@ -296,14 +303,18 @@ export class FlowbiteDirective implements OnInit, OnDestroy {
 
   private showDropdown(menu: HTMLElement): void {
     this.renderer.removeClass(menu, 'hidden');
-    this.renderer.addClass(menu, 'opacity-100', 'scale-100');
-    this.renderer.removeClass(menu, 'opacity-0', 'scale-95');
+    this.renderer.addClass(menu, 'opacity-100');
+    this.renderer.addClass(menu, 'scale-100');
+    this.renderer.removeClass(menu, 'opacity-0');
+    this.renderer.removeClass(menu, 'scale-95');
   }
 
   private closeDropdown(menu: HTMLElement): void {
     this.renderer.addClass(menu, 'hidden');
-    this.renderer.removeClass(menu, 'opacity-100', 'scale-100');
-    this.renderer.addClass(menu, 'opacity-0', 'scale-95');
+    this.renderer.removeClass(menu, 'opacity-100');
+    this.renderer.removeClass(menu, 'scale-100');
+    this.renderer.addClass(menu, 'opacity-0');
+    this.renderer.addClass(menu, 'scale-95');
   }
 
   private setupTooltipEvents(trigger: HTMLElement, tooltip: HTMLElement): void {
@@ -326,12 +337,14 @@ export class FlowbiteDirective implements OnInit, OnDestroy {
   }
 
   private showTooltip(tooltip: HTMLElement): void {
-    this.renderer.removeClass(tooltip, 'hidden', 'opacity-0');
+    this.renderer.removeClass(tooltip, 'hidden');
+    this.renderer.removeClass(tooltip, 'opacity-0');
     this.renderer.addClass(tooltip, 'opacity-100');
   }
 
   private hideTooltip(tooltip: HTMLElement): void {
-    this.renderer.addClass(tooltip, 'hidden', 'opacity-0');
+    this.renderer.addClass(tooltip, 'hidden');
+    this.renderer.addClass(tooltip, 'opacity-0');
     this.renderer.removeClass(tooltip, 'opacity-100');
   }
 
@@ -348,12 +361,14 @@ export class FlowbiteDirective implements OnInit, OnDestroy {
     this.renderer.removeClass(content, 'hidden');
     setTimeout(() => {
       this.renderer.addClass(content, 'opacity-100');
-      this.renderer.removeClass(content, 'opacity-0', 'max-h-0');
+      this.renderer.removeClass(content, 'opacity-0');
+      this.renderer.removeClass(content, 'max-h-0');
     }, 10);
   }
 
   private hideCollapse(content: HTMLElement): void {
-    this.renderer.addClass(content, 'opacity-0', 'max-h-0');
+    this.renderer.addClass(content, 'opacity-0');
+    this.renderer.addClass(content, 'max-h-0');
     this.renderer.removeClass(content, 'opacity-100');
     setTimeout(() => {
       this.renderer.addClass(content, 'hidden');
@@ -368,11 +383,15 @@ export class FlowbiteDirective implements OnInit, OnDestroy {
     // 切换按钮状态
     buttons.forEach((button, index) => {
       if (index === activeIndex) {
-        this.renderer.addClass(button, 'text-blue-600', 'border-blue-600');
-        this.renderer.removeClass(button, 'text-gray-500', 'border-transparent');
+        this.renderer.addClass(button, 'text-blue-600');
+        this.renderer.addClass(button, 'border-blue-600');
+        this.renderer.removeClass(button, 'text-gray-500');
+        this.renderer.removeClass(button, 'border-transparent');
       } else {
-        this.renderer.removeClass(button, 'text-blue-600', 'border-blue-600');
-        this.renderer.addClass(button, 'text-gray-500', 'border-transparent');
+        this.renderer.removeClass(button, 'text-blue-600');
+        this.renderer.removeClass(button, 'border-blue-600');
+        this.renderer.addClass(button, 'text-gray-500');
+        this.renderer.addClass(button, 'border-transparent');
       }
     });
 
@@ -387,13 +406,15 @@ export class FlowbiteDirective implements OnInit, OnDestroy {
   }
 
   private showModal(modal: HTMLElement): void {
-    this.renderer.removeClass(modal, 'hidden', 'opacity-0');
+    this.renderer.removeClass(modal, 'hidden');
+    this.renderer.removeClass(modal, 'opacity-0');
     this.renderer.addClass(modal, 'opacity-100');
     this.renderer.setStyle(document.body, 'overflow', 'hidden');
   }
 
   private hideModal(modal: HTMLElement): void {
-    this.renderer.addClass(modal, 'hidden', 'opacity-0');
+    this.renderer.addClass(modal, 'hidden');
+    this.renderer.addClass(modal, 'opacity-0');
     this.renderer.removeClass(modal, 'opacity-100');
     this.renderer.removeStyle(document.body, 'overflow');
   }

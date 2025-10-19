@@ -100,7 +100,7 @@ export class DataService {
     return of({} as RawData);
   }
 
-  updateData(id: number, updates: UpdateRawDataDto): Observable<RawData> {
+  updateData(id: string, updates: UpdateRawDataDto): Observable<RawData> {
     this.setLoading(true);
     this.clearError();
 
@@ -110,7 +110,7 @@ export class DataService {
     return of({} as RawData);
   }
 
-  deleteData(id: number): Observable<void> {
+  deleteData(id: string): Observable<void> {
     this.setLoading(true);
     this.clearError();
 
@@ -122,7 +122,7 @@ export class DataService {
     return of();
   }
 
-  processData(id: number): Observable<RawData> {
+  processData(id: string): Observable<RawData> {
     this.setLoading(true);
 
     // Note: GraphQL mutations for processing operations would need to be implemented
@@ -131,7 +131,7 @@ export class DataService {
     return of({} as RawData);
   }
 
-  reprocessData(id: number): Observable<RawData> {
+  reprocessData(id: string): Observable<RawData> {
     this.setLoading(true);
 
     // Note: GraphQL mutations for reprocessing operations would need to be implemented
@@ -148,8 +148,8 @@ export class DataService {
     this.selectedDataSubject.next(null);
   }
 
-  getData(id: number): Observable<RawData | null> {
-    return this.graphqlAdapter.findOne(id.toString()).pipe(
+  getData(id: string): Observable<RawData | null> {
+    return this.graphqlAdapter.findOne(id).pipe(
       catchError(() => of(null))
     );
   }
@@ -166,7 +166,7 @@ export class DataService {
     );
   }
 
-  bulkDeleteData(ids: number[]): Observable<void> {
+  bulkDeleteData(ids: string[]): Observable<void> {
     // Note: GraphQL mutations for bulk operations would need to be implemented
     console.warn('bulkDeleteData: GraphQL mutations not yet implemented');
     this.loadDataList();
@@ -174,7 +174,7 @@ export class DataService {
     return of();
   }
 
-  bulkProcessData(ids: number[]): Observable<void> {
+  bulkProcessData(ids: string[]): Observable<void> {
     // Note: GraphQL mutations for bulk processing would need to be implemented
     console.warn('bulkProcessData: GraphQL mutations not yet implemented');
     this.loadDataList();
@@ -212,7 +212,7 @@ export class DataService {
     }
   }
 
-  private removeDataFromList(id: number): void {
+  private removeDataFromList(id: string): void {
     const currentList = this.dataListSubject.value;
     const filteredList = currentList.filter(data => data.id !== id);
     this.dataListSubject.next(filteredList);

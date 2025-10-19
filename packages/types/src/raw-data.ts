@@ -3,7 +3,7 @@ import { SourceType, ProcessingStatus, SourcePlatform } from './enums/raw-data.j
 export * from './enums/raw-data.js';
 
 export interface RawData {
-  id: number;
+  id: string;
   sourceType: SourceType;
   sourcePlatform: SourcePlatform;
   sourceUrl: string;

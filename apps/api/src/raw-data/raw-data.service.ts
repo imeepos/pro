@@ -64,11 +64,17 @@ export class RawDataService {
     this.logger.log(`寻觅数据精魂: ${id}`);
 
     try {
+      // 验证ID格式
+      if (!id || id.trim().length === 0) {
+        this.logger.warn(`无效的数据ID: ${id}`);
+        throw new NotFoundException('数据ID不能为空');
+      }
+
       const document = await this.rawDataSourceService.findById(id);
 
       if (!document) {
         this.logger.warn(`数据精魂不在此处: ${id}`);
-        throw new NotFoundException(`指定的数据记录不存在`);
+        throw new NotFoundException(`数据记录不存在，请确认ID是否正确`);
       }
 
       const result = this.transformToDto(document.toObject());

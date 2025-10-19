@@ -44,7 +44,7 @@ export class DataListComponent implements OnInit, OnDestroy {
   showBulkActionModal = false;
 
   searchForm: FormGroup;
-  selectedItems: Set<number> = new Set();
+  selectedItems: Set<string> = new Set();
 
   currentPage = 1;
   pageSize = 10;
@@ -327,7 +327,7 @@ export class DataListComponent implements OnInit, OnDestroy {
     return `显示 ${start}-${end} 条，共 ${this.totalItems} 条`;
   }
 
-  trackByDataId(index: number, data: RawData): number {
+  trackByDataId(index: number, data: RawData): string {
     return data.id;
   }
 

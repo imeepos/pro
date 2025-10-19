@@ -8,7 +8,6 @@ export interface MongodbConfig {
   maxPoolSize: number;
   serverSelectionTimeoutMS: number;
   socketTimeoutMS: number;
-  bufferMaxEntries: number;
   bufferCommands: boolean;
 }
 
@@ -27,7 +26,6 @@ export const mongodbConfigFactory = (configService: ConfigService): MongodbConfi
     maxPoolSize: configService.get<number>('MONGODB_MAX_POOL_SIZE', 10),
     serverSelectionTimeoutMS: configService.get<number>('MONGODB_SERVER_SELECTION_TIMEOUT', 5000),
     socketTimeoutMS: configService.get<number>('MONGODB_SOCKET_TIMEOUT', 45000),
-    bufferMaxEntries: configService.get<number>('MONGODB_BUFFER_MAX_ENTRIES', 0),
     bufferCommands: configService.get<boolean>('MONGODB_BUFFER_COMMANDS', false),
   };
 };

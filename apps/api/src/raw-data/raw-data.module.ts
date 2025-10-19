@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { RawDataSource, RawDataSourceSchema } from '@pro/mongodb';
+import { RawDataSource, RawDataSourceSchema, RawDataSourceService } from '@pro/mongodb';
 import { RawDataService } from './raw-data.service';
 import { RawDataResolver } from './raw-data.resolver';
 import { RawDataGateway } from './raw-data.gateway';
@@ -28,6 +28,7 @@ import { RawDataGateway } from './raw-data.gateway';
     }),
   ],
   providers: [
+    RawDataSourceService,
     RawDataService,
     RawDataResolver,
     RawDataGateway,

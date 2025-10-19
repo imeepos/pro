@@ -1230,6 +1230,7 @@ enum SourceType {
   WEIBO_API_JSON
   WEIBO_COMMENT
   WEIBO_HTML
+  WEIBO_KEYWORD_SEARCH
 }
 
 input StatsAggregationQueryDto {

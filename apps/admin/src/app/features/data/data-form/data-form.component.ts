@@ -30,7 +30,7 @@ export class DataFormComponent implements OnInit, OnDestroy {
 
   dataForm: FormGroup;
   isEditMode = false;
-  dataId: number | null = null;
+  dataId: string | null = null;
   loading = false;
   saving = false;
   error: string | null = null;
@@ -77,7 +77,7 @@ export class DataFormComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
         if (params['id']) {
-          this.dataId = +params['id'];
+          this.dataId = params['id'];
           this.isEditMode = true;
           this.loadData();
         }
