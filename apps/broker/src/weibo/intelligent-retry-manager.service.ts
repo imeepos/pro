@@ -1,0 +1,658 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, LessThan, MoreThan } from 'typeorm';
+import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
+import { PinoLogger } from '@pro/logger';
+import { @Inject("RedisService") RedisClient } from '@pro/redis';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
+/**
+ * 重试策略枚举
+ * 不同的重试哲学适用于不同的失败场景
+ */
+export enum RetryStrategy {
+  EXPONENTIAL_BACKOFF = 'exponential_backoff',     // 指数退避：标准重试策略
+  LINEAR_BACKOFF = 'linear_backoff',               // 线性退避：温和的重试策略
+  FIXED_INTERVAL = 'fixed_interval',               // 固定间隔：稳定的重试策略
+  ADAPTIVE = 'adaptive',                           // 自适应：智能的重试策略
+  IMMEDIATE = 'immediate',                         // 立即重试：紧急情况使用
+}
+
+/**
+ * 失败类型枚举
+ * 精准识别失败原因，制定针对性的重试策略
+ */
+export enum FailureType {
+  NETWORK_ERROR = 'network_error',                 // 网络错误：通常可重试
+  AUTHENTICATION_ERROR = 'authentication_error',   // 认证错误：需要人工干预
+  RATE_LIMIT_ERROR = 'rate_limit_error',           // 限流错误：需要延长等待
+  DATA_ERROR = 'data_error',                       // 数据错误：可能可重试
+  SYSTEM_ERROR = 'system_error',                   // 系统错误：通常可重试
+  TIMEOUT_ERROR = 'timeout_error',                 // 超时错误：可能需要调整策略
+  UNKNOWN_ERROR = 'unknown_error',                 // 未知错误：保守重试
+}
+
+/**
+ * 重试配置接口
+ * 每个重试决策都有其深思熟虑的理由
+ */
+export interface RetryConfig {
+  strategy: RetryStrategy;
+  maxRetries: number;
+  baseDelay: number;
+  maxDelay: number;
+  multiplier?: number;           // 指数退避的倍数
+  jitter?: boolean;              // 是否添加随机抖动
+  failureTypes: FailureType[];   // 适用的失败类型
+}
+
+/**
+ * 重试记录接口
+ * 记录每次重试的智慧足迹
+ */
+export interface RetryRecord {
+  taskId: number;
+  attempt: number;
+  failureType: FailureType;
+  errorMessage: string;
+  retryAt: Date;
+  strategy: RetryStrategy;
+  delay: number;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * 重试决策结果接口
+ * 每个重试决策都是经过深思熟虑的选择
+ */
+export interface RetryDecision {
+  shouldRetry: boolean;
+  strategy: RetryStrategy;
+  delay: number;
+  reason: string;
+  confidence: number;
+  alternativeActions?: string[];
+}
+
+/**
+ * 智能重试管理器
+ * 基于MediaCrawler的错误恢复机制，创造数字时代的容错艺术品
+ *
+ * 设计哲学：
+ * - 存在即合理：每次重试都有其存在的必要性和不可替代的价值
+ * - 优雅即简约：通过智能算法简化复杂的重试决策过程
+ * - 错误处理如为人处世：每个错误都是成长和学习的机会
+ * - 性能即艺术：智能重试策略平衡可靠性与效率
+ */
+@Injectable()
+export class IntelligentRetryManager {
+  private readonly RETRY_RECORDS_KEY = 'retry_records';
+  private readonly RETRY_STATS_KEY = 'retry_stats';
+  private readonly FAILURE_PATTERNS_KEY = 'failure_patterns';
+
+  // 预定义的重试策略配置
+  private readonly retryStrategies: Record<RetryStrategy, RetryConfig> = {
+    [RetryStrategy.EXPONENTIAL_BACKOFF]: {
+      strategy: RetryStrategy.EXPONENTIAL_BACKOFF,
+      maxRetries: 5,
+      baseDelay: 5 * 60 * 1000,      // 5分钟
+      maxDelay: 60 * 60 * 1000,      // 1小时
+      multiplier: 2,
+      jitter: true,
+      failureTypes: [
+        FailureType.NETWORK_ERROR,
+        FailureType.SYSTEM_ERROR,
+        FailureType.TIMEOUT_ERROR,
+      ],
+    },
+    [RetryStrategy.LINEAR_BACKOFF]: {
+      strategy: RetryStrategy.LINEAR_BACKOFF,
+      maxRetries: 8,
+      baseDelay: 2 * 60 * 1000,      // 2分钟
+      maxDelay: 30 * 60 * 1000,      // 30分钟
+      multiplier: 1.5,
+      jitter: false,
+      failureTypes: [
+        FailureType.DATA_ERROR,
+        FailureType.NETWORK_ERROR,
+      ],
+    },
+    [RetryStrategy.FIXED_INTERVAL]: {
+      strategy: RetryStrategy.FIXED_INTERVAL,
+      maxRetries: 10,
+      baseDelay: 10 * 60 * 1000,     // 10分钟
+      maxDelay: 10 * 60 * 1000,      // 固定10分钟
+      jitter: true,
+      failureTypes: [
+        FailureType.RATE_LIMIT_ERROR,
+      ],
+    },
+    [RetryStrategy.ADAPTIVE]: {
+      strategy: RetryStrategy.ADAPTIVE,
+      maxRetries: 6,
+      baseDelay: 3 * 60 * 1000,      // 3分钟
+      maxDelay: 45 * 60 * 1000,      // 45分钟
+      multiplier: 1.8,
+      jitter: true,
+      failureTypes: [
+        FailureType.NETWORK_ERROR,
+        FailureType.SYSTEM_ERROR,
+        FailureType.TIMEOUT_ERROR,
+        FailureType.DATA_ERROR,
+      ],
+    },
+    [RetryStrategy.IMMEDIATE]: {
+      strategy: RetryStrategy.IMMEDIATE,
+      maxRetries: 2,
+      baseDelay: 5 * 1000,           // 5秒
+      maxDelay: 30 * 1000,           // 30秒
+      jitter: false,
+      failureTypes: [
+        FailureType.UNKNOWN_ERROR,
+      ],
+    },
+  };
+
+  constructor(
+    private readonly logger: PinoLogger,
+    @InjectRepository(WeiboSearchTaskEntity)
+    private readonly taskRepository: Repository<WeiboSearchTaskEntity>,
+    private readonly redisService: @Inject("RedisService") RedisClient,
+    private readonly eventEmitter: EventEmitter2,
+  ) {
+    this.logger.setContext(IntelligentRetryManager.name);
+  }
+
+  /**
+   * 分析失败类型
+   * 智能识别失败的根本原因
+   */
+  analyzeFailureType(errorMessage: string): FailureType {
+    const message = errorMessage.toLowerCase();
+
+    if (message.includes('network') || message.includes('connection') || message.includes('timeout')) {
+      if (message.includes('timeout')) {
+        return FailureType.TIMEOUT_ERROR;
+      }
+      return FailureType.NETWORK_ERROR;
+    }
+
+    if (message.includes('auth') || message.includes('unauthorized') || message.includes('forbidden')) {
+      return FailureType.AUTHENTICATION_ERROR;
+    }
+
+    if (message.includes('rate') || message.includes('limit') || message.includes('quota')) {
+      return FailureType.RATE_LIMIT_ERROR;
+    }
+
+    if (message.includes('data') || message.includes('parse') || message.includes('format')) {
+      return FailureType.DATA_ERROR;
+    }
+
+    if (message.includes('system') || message.includes('internal') || message.includes('server')) {
+      return FailureType.SYSTEM_ERROR;
+    }
+
+    return FailureType.UNKNOWN_ERROR;
+  }
+
+  /**
+   * 制定重试决策
+   * 基于历史数据和失败类型的智能决策
+   */
+  async makeRetryDecision(
+    task: WeiboSearchTaskEntity,
+    errorMessage: string
+  ): Promise<RetryDecision> {
+    const failureType = this.analyzeFailureType(errorMessage);
+    const currentAttempt = task.retryCount;
+
+    // 认证错误通常需要人工干预
+    if (failureType === FailureType.AUTHENTICATION_ERROR) {
+      return {
+        shouldRetry: false,
+        strategy: RetryStrategy.EXPONENTIAL_BACKOFF,
+        delay: 0,
+        reason: '认证错误需要人工干预，自动重试无法解决',
+        confidence: 0.95,
+        alternativeActions: ['检查账号配置', '更新认证信息', '联系管理员'],
+      };
+    }
+
+    // 检查是否超过最大重试次数
+    if (currentAttempt >= task.maxRetries) {
+      return {
+        shouldRetry: false,
+        strategy: RetryStrategy.EXPONENTIAL_BACKOFF,
+        delay: 0,
+        reason: `已达到最大重试次数 (${task.maxRetries})`,
+        confidence: 1.0,
+      };
+    }
+
+    // 获取失败模式历史
+    const failurePatterns = await this.getFailurePatterns(task.id);
+    const patternAnalysis = this.analyzeFailurePatterns(failurePatterns, failureType);
+
+    // 选择最适合的重试策略
+    const strategy = this.selectOptimalStrategy(failureType, currentAttempt, patternAnalysis);
+
+    // 计算重试延迟
+    const delay = this.calculateRetryDelay(strategy, currentAttempt, patternAnalysis);
+
+    // 计算决策置信度
+    const confidence = this.calculateDecisionConfidence(
+      failureType,
+      currentAttempt,
+      patternAnalysis
+    );
+
+    const shouldRetry = confidence > 0.3 && delay > 0;
+
+    return {
+      shouldRetry,
+      strategy,
+      delay,
+      reason: this.generateRetryReason(failureType, strategy, delay, patternAnalysis),
+      confidence,
+      alternativeActions: this.generateAlternativeActions(failureType, currentAttempt),
+    };
+  }
+
+  /**
+   * 执行重试
+   * 将重试决策转化为实际行动
+   */
+  async executeRetry(
+    task: WeiboSearchTaskEntity,
+    errorMessage: string
+  ): Promise<boolean> {
+    const decision = await this.makeRetryDecision(task, errorMessage);
+
+    if (!decision.shouldRetry) {
+      this.logger.warn(`任务 ${task.id} 不适合重试`, {
+        taskId: task.id,
+        reason: decision.reason,
+        confidence: decision.confidence,
+      });
+      return false;
+    }
+
+    try {
+      // 记录重试决策
+      await this.recordRetryAttempt(task, errorMessage, decision);
+
+      // 更新任务状态
+      const retryAt = new Date(Date.now() + decision.delay);
+      await this.taskRepository.update(task.id, {
+        status: WeiboSearchTaskStatus.PENDING,
+        nextRunAt: retryAt,
+        retryCount: task.retryCount + 1,
+        errorMessage: `${errorMessage} (重试 ${task.retryCount + 1}/${task.maxRetries})`,
+      });
+
+      // 发布重试事件
+      this.eventEmitter.emit('task.retry.scheduled', {
+        taskId: task.id,
+        retryAt,
+        strategy: decision.strategy,
+        delay: decision.delay,
+      });
+
+      this.logger.info(`任务 ${task.id} 已安排重试`, {
+        taskId: task.id,
+        retryCount: task.retryCount + 1,
+        maxRetries: task.maxRetries,
+        strategy: decision.strategy,
+        delayMinutes: Math.round(decision.delay / 1000 / 60),
+        retryAt: retryAt.toISOString(),
+        reason: decision.reason,
+        confidence: decision.confidence,
+      });
+
+      return true;
+    } catch (error) {
+      this.logger.error(`执行任务重试失败`, {
+        taskId: task.id,
+        error: error.message,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * 记录重试尝试
+   * 为智能决策积累数据
+   */
+  private async recordRetryAttempt(
+    task: WeiboSearchTaskEntity,
+    errorMessage: string,
+    decision: RetryDecision
+  ): Promise<void> {
+    const failureType = this.analyzeFailureType(errorMessage);
+    const record: RetryRecord = {
+      taskId: task.id,
+      attempt: task.retryCount + 1,
+      failureType,
+      errorMessage,
+      retryAt: new Date(Date.now() + decision.delay),
+      strategy: decision.strategy,
+      delay: decision.delay,
+      metadata: {
+        reason: decision.reason,
+        confidence: decision.confidence,
+      },
+    };
+
+    // 记录到Redis
+    await this.redisService.zadd(
+      `${this.RETRY_RECORDS_KEY}:${task.id}`,
+      record.retryAt.getTime(),
+      JSON.stringify(record)
+    );
+
+    // 更新失败模式统计
+    await this.updateFailurePatterns(task.id, failureType, decision.strategy);
+
+    // 设置过期时间
+    await this.redisService.expire(`${this.RETRY_RECORDS_KEY}:${task.id}`, 7 * 24 * 60 * 60);
+  }
+
+  /**
+   * 选择最优重试策略
+   * 基于失败类型和历史模式选择最适合的策略
+   */
+  private selectOptimalStrategy(
+    failureType: FailureType,
+    attempt: number,
+    patternAnalysis: any
+  ): RetryStrategy {
+    // 限流错误使用固定间隔策略
+    if (failureType === FailureType.RATE_LIMIT_ERROR) {
+      return RetryStrategy.FIXED_INTERVAL;
+    }
+
+    // 认证错误不重试，这里只是为了类型安全
+    if (failureType === FailureType.AUTHENTICATION_ERROR) {
+      return RetryStrategy.EXPONENTIAL_BACKOFF;
+    }
+
+    // 未知错误在前几次尝试使用立即重试
+    if (failureType === FailureType.UNKNOWN_ERROR && attempt < 2) {
+      return RetryStrategy.IMMEDIATE;
+    }
+
+    // 基于历史模式选择策略
+    if (patternAnalysis.mostSuccessfulStrategy) {
+      return patternAnalysis.mostSuccessfulStrategy;
+    }
+
+    // 默认使用自适应策略
+    return RetryStrategy.ADAPTIVE;
+  }
+
+  /**
+   * 计算重试延迟
+   * 智能的延迟计算，考虑多种因素
+   */
+  private calculateRetryDelay(
+    strategy: RetryStrategy,
+    attempt: number,
+    patternAnalysis: any
+  ): number {
+    const config = this.retryStrategies[strategy];
+
+    let delay: number;
+
+    switch (strategy) {
+      case RetryStrategy.EXPONENTIAL_BACKOFF:
+        delay = config.baseDelay * Math.pow(config.multiplier || 2, attempt);
+        break;
+
+      case RetryStrategy.LINEAR_BACKOFF:
+        delay = config.baseDelay + (attempt * config.baseDelay * 0.5);
+        break;
+
+      case RetryStrategy.FIXED_INTERVAL:
+        delay = config.baseDelay;
+        break;
+
+      case RetryStrategy.ADAPTIVE:
+        // 基于历史成功率调整延迟
+        const successRate = patternAnalysis.recentSuccessRate || 0.5;
+        const adaptiveMultiplier = 1 + (1 - successRate); // 成功率越低，延迟越长
+        delay = config.baseDelay * Math.pow(config.multiplier || 1.8, attempt) * adaptiveMultiplier;
+        break;
+
+      case RetryStrategy.IMMEDIATE:
+        delay = config.baseDelay * (attempt + 1);
+        break;
+
+      default:
+        delay = config.baseDelay;
+    }
+
+    // 应用最大延迟限制
+    delay = Math.min(delay, config.maxDelay);
+
+    // 添加随机抖动以避免雷群效应
+    if (config.jitter) {
+      const jitterRange = delay * 0.1; // 10%的抖动范围
+      delay += (Math.random() - 0.5) * jitterRange;
+    }
+
+    return Math.round(delay);
+  }
+
+  /**
+   * 计算决策置信度
+   * 量化决策的可靠性
+   */
+  private calculateDecisionConfidence(
+    failureType: FailureType,
+    attempt: number,
+    patternAnalysis: any
+  ): number {
+    let confidence = 0.5; // 基础置信度
+
+    // 基于失败类型调整置信度
+    const failureTypeConfidence = {
+      [FailureType.NETWORK_ERROR]: 0.8,
+      [FailureType.AUTHENTICATION_ERROR]: 0.95,
+      [FailureType.RATE_LIMIT_ERROR]: 0.9,
+      [FailureType.DATA_ERROR]: 0.6,
+      [FailureType.SYSTEM_ERROR]: 0.7,
+      [FailureType.TIMEOUT_ERROR]: 0.65,
+      [FailureType.UNKNOWN_ERROR]: 0.4,
+    };
+
+    confidence = failureTypeConfidence[failureType] || 0.5;
+
+    // 基于重试次数调整置信度
+    if (attempt > 3) {
+      confidence *= 0.8; // 重试次数越多，置信度越低
+    }
+
+    // 基于历史模式调整置信度
+    if (patternAnalysis.recentSuccessRate !== undefined) {
+      confidence *= (0.5 + patternAnalysis.recentSuccessRate);
+    }
+
+    return Math.max(0.1, Math.min(1.0, confidence));
+  }
+
+  /**
+   * 生成重试原因说明
+   * 让每个重试决策都有其合理的解释
+   */
+  private generateRetryReason(
+    failureType: FailureType,
+    strategy: RetryStrategy,
+    delay: number,
+    patternAnalysis: any
+  ): string {
+    const failureTypeNames = {
+      [FailureType.NETWORK_ERROR]: '网络错误',
+      [FailureType.AUTHENTICATION_ERROR]: '认证错误',
+      [FailureType.RATE_LIMIT_ERROR]: '频率限制',
+      [FailureType.DATA_ERROR]: '数据错误',
+      [FailureType.SYSTEM_ERROR]: '系统错误',
+      [FailureType.TIMEOUT_ERROR]: '超时错误',
+      [FailureType.UNKNOWN_ERROR]: '未知错误',
+    };
+
+    const strategyNames = {
+      [RetryStrategy.EXPONENTIAL_BACKOFF]: '指数退避',
+      [RetryStrategy.LINEAR_BACKOFF]: '线性退避',
+      [RetryStrategy.FIXED_INTERVAL]: '固定间隔',
+      [RetryStrategy.ADAPTIVE]: '自适应',
+      [RetryStrategy.IMMEDIATE]: '立即重试',
+    };
+
+    let reason = `检测到${failureTypeNames[failureType]}，采用${strategyNames[strategy]}策略`;
+
+    if (delay > 0) {
+      reason += `，${Math.round(delay / 1000 / 60)}分钟后重试`;
+    }
+
+    if (patternAnalysis.recentSuccessRate !== undefined) {
+      reason += `，基于${Math.round(patternAnalysis.recentSuccessRate * 100)}%的历史成功率`;
+    }
+
+    return reason;
+  }
+
+  /**
+   * 生成替代行动建议
+   * 当重试不是最佳选择时提供建议
+   */
+  private generateAlternativeActions(
+    failureType: FailureType,
+    attempt: number
+  ): string[] {
+    const actions: string[] = [];
+
+    switch (failureType) {
+      case FailureType.AUTHENTICATION_ERROR:
+        actions.push('检查账号登录状态', '更新认证令牌', '联系管理员');
+        break;
+
+      case FailureType.RATE_LIMIT_ERROR:
+        actions.push('降低请求频率', '使用不同的账号', '等待限流解除');
+        break;
+
+      case FailureType.NETWORK_ERROR:
+        if (attempt > 2) {
+          actions.push('检查网络连接', '更换网络环境', '联系技术支持');
+        }
+        break;
+
+      case FailureType.DATA_ERROR:
+        actions.push('检查数据格式', '更新解析规则', '检查目标网站变更');
+        break;
+
+      case FailureType.TIMEOUT_ERROR:
+        actions.push('增加超时时间', '优化请求参数', '检查服务器负载');
+        break;
+    }
+
+    if (attempt >= 3) {
+      actions.push('考虑手动干预', '暂停任务进行排查');
+    }
+
+    return actions;
+  }
+
+  /**
+   * 获取失败模式
+   * 分析历史失败模式以指导决策
+   */
+  private async getFailurePatterns(taskId: number): Promise<any[]> {
+    const patterns = await this.redisService.get(`${this.FAILURE_PATTERNS_KEY}:${taskId}`);
+    return patterns ? JSON.parse(patterns) : [];
+  }
+
+  /**
+   * 更新失败模式统计
+   * 持续学习和优化重试策略
+   */
+  private async updateFailurePatterns(
+    taskId: number,
+    failureType: FailureType,
+    strategy: RetryStrategy
+  ): Promise<void> {
+    const patterns = await this.getFailurePatterns(taskId);
+
+    const existingPattern = patterns.find(p => p.failureType === failureType && p.strategy === strategy);
+
+    if (existingPattern) {
+      existingPattern.count++;
+      existingPattern.lastOccurrence = new Date();
+    } else {
+      patterns.push({
+        failureType,
+        strategy,
+        count: 1,
+        firstOccurrence: new Date(),
+        lastOccurrence: new Date(),
+        successRate: 0,
+      });
+    }
+
+    await this.redisService.setex(
+      `${this.FAILURE_PATTERNS_KEY}:${taskId}`,
+      7 * 24 * 60 * 60, // 7天
+      JSON.stringify(patterns)
+    );
+  }
+
+  /**
+   * 分析失败模式
+   * 从历史数据中提取智慧
+   */
+  private analyzeFailurePatterns(patterns: any[], currentFailureType: FailureType): any {
+    const relevantPatterns = patterns.filter(p => p.failureType === currentFailureType);
+
+    if (relevantPatterns.length === 0) {
+      return {};
+    }
+
+    // 找出最成功的策略
+    const mostSuccessfulStrategy = relevantPatterns
+      .sort((a, b) => (b.successRate || 0) - (a.successRate || 0))[0]?.strategy;
+
+    // 计算最近的平均成功率
+    const recentSuccessRate = relevantPatterns.reduce((sum, p) => sum + (p.successRate || 0), 0) / relevantPatterns.length;
+
+    return {
+      mostSuccessfulStrategy,
+      recentSuccessRate,
+      totalOccurrences: relevantPatterns.reduce((sum, p) => sum + p.count, 0),
+      patterns: relevantPatterns,
+    };
+  }
+
+  /**
+   * 获取重试统计信息
+   */
+  async getRetryStatistics(timeWindow: number = 24 * 60 * 60 * 1000): Promise<{
+    totalRetries: number;
+    successRate: number;
+    averageRetryDelay: number;
+    strategyDistribution: Record<RetryStrategy, number>;
+    failureTypeDistribution: Record<FailureType, number>;
+  }> {
+    const cutoffTime = Date.now() - timeWindow;
+    const stats = await this.redisService.get(this.RETRY_STATS_KEY);
+
+    // 这里应该从Redis中获取实际的统计数据
+    // 为了简化，返回模拟数据
+    return {
+      totalRetries: 0,
+      successRate: 0,
+      averageRetryDelay: 0,
+      strategyDistribution: {} as Record<RetryStrategy, number>,
+      failureTypeDistribution: {} as Record<FailureType, number>,
+    };
+  }
+}
