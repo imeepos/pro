@@ -2,6 +2,9 @@ import "reflect-metadata"
 
 export * from './user.entity.js';
 export * from './weibo-account.entity.js';
+export * from './weibo-post.entity.js';
+export * from './weibo-comment.entity.js';
+export * from './weibo-user.entity.js';
 export * from './jd-account.entity.js';
 export * from './screen-page.entity.js';
 export * from './industry-type.entity.js';
@@ -21,6 +24,10 @@ export * from './bug-watch.entity.js';
 export * from './bug-activity.entity.js';
 export * from './bug-time-tracking.entity.js';
 export * from './bug-notification.entity.js';
+export * from './analysis-result.entity.js';
+export * from './types/analysis-types.js';
+export * from './hourly-stats.entity.js';
+export * from './daily-stats.entity.js';
 
 export { EventStatus } from '@pro/types';
 
@@ -28,6 +35,9 @@ import { DataSourceOptions } from 'typeorm';
 import { UserEntity } from './user.entity.js';
 import { ApiKeyEntity } from './api-key.entity.js';
 import { WeiboAccountEntity } from './weibo-account.entity.js';
+import { WeiboPostEntity } from './weibo-post.entity.js';
+import { WeiboCommentEntity } from './weibo-comment.entity.js';
+import { WeiboUserEntity } from './weibo-user.entity.js';
 import { WeiboSearchTaskEntity } from './weibo-search-task.entity.js';
 import { JdAccountEntity } from './jd-account.entity.js';
 import { ScreenPageEntity } from './screen-page.entity.js';
@@ -46,7 +56,9 @@ import { BugWatchEntity } from './bug-watch.entity.js';
 import { BugActivityEntity } from './bug-activity.entity.js';
 import { BugTimeTrackingEntity } from './bug-time-tracking.entity.js';
 import { BugNotificationEntity } from './bug-notification.entity.js';
-
+import { AnalysisResultEntity } from './analysis-result.entity.js';
+import { HourlyStatsEntity } from './hourly-stats.entity.js';
+import { DailyStatsEntity } from './daily-stats.entity.js';
 
 interface ConfigService {
   get<T = any>(key: string, defaultValue?: T): T;
@@ -56,6 +68,9 @@ const entities = [
   UserEntity,
   ApiKeyEntity,
   WeiboAccountEntity,
+  WeiboPostEntity,
+  WeiboCommentEntity,
+  WeiboUserEntity,
   WeiboSearchTaskEntity,
   JdAccountEntity,
   ScreenPageEntity,
@@ -74,6 +89,9 @@ const entities = [
   BugActivityEntity,
   BugTimeTrackingEntity,
   BugNotificationEntity,
+  AnalysisResultEntity,
+  HourlyStatsEntity,
+  DailyStatsEntity,
 ];
 
 export const createDatabaseConfig = (configService: ConfigService): DataSourceOptions => {

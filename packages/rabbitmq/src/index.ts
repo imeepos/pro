@@ -3,25 +3,12 @@ import * as amqp from 'amqplib';
 export interface RabbitMQConfig {
   url: string;
   queue?: string;
-  /**
-   * 最大重试次数（默认 3 次）
-   * 超过此次数后，消息将被发送到死信队列
-   */
   maxRetries?: number;
-  /**
-   * 是否启用死信队列（默认 true）
-   */
   enableDLQ?: boolean;
 }
 
 export interface ConsumeOptions {
-  /**
-   * 是否自动 ACK（默认 false）
-   */
   noAck?: boolean;
-  /**
-   * 预取数量，控制并发（默认 1）
-   */
   prefetchCount?: number;
 }
 
@@ -44,19 +31,12 @@ export class RabbitMQClient {
     }
   }
 
-  /**
-   * 检查连接状态
-   */
   isConnected(): boolean {
     return !!(this.channel && this.connection);
   }
 
-  /**
-   * 设置队列，包括死信队列配置
-   */
   private async setupQueue(queue: string): Promise<void> {
     if (this.enableDLQ) {
-      // 创建死信交换机
       const dlxExchange = `${queue}.dlx`;
       const dlqQueue = `${queue}.dlq`;
 
@@ -64,7 +44,6 @@ export class RabbitMQClient {
       await this.channel.assertQueue(dlqQueue, { durable: true });
       await this.channel.bindQueue(dlqQueue, dlxExchange, queue);
 
-      // 创建主队列，配置死信交换机
       await this.channel.assertQueue(queue, {
         durable: true,
         arguments: {
@@ -105,12 +84,6 @@ export class RabbitMQClient {
     return result;
   }
 
-  /**
-   * 消费消息 - 安全的 ACK 机制
-   * @param queue 队列名称
-   * @param callback 处理回调（必须是 async 函数）
-   * @param options 消费选项
-   */
   async consume(
     queue: string,
     callback: (msg: any) => Promise<void>,
@@ -120,7 +93,6 @@ export class RabbitMQClient {
 
     await this.setupQueue(queue);
 
-    // 设置预取数量，控制并发
     await this.channel.prefetch(options?.prefetchCount ?? 1);
 
     this.channel.consume(
@@ -137,27 +109,23 @@ export class RabbitMQClient {
           const content = JSON.parse(msg.content.toString());
           const processStart = Date.now();
 
-          // 等待回调完成
           await callback(content);
 
           const processDuration = Date.now() - processStart;
           console.log(`[RabbitMQ] 消息 ${messageId} 处理成功, 耗时: ${processDuration}ms`);
 
-          // 成功后 ACK
           this.channel?.ack(msg);
         } catch (error) {
           console.error(`[RabbitMQ] 消息 ${messageId} 处理失败:`, error);
 
           const retryCount = this.getRetryCount(msg);
 
-          // 判断是否超过重试次数
           if (retryCount >= this.maxRetries) {
             console.error(
               `[RabbitMQ] 消息 ${messageId} 重试次数已达上限 (${this.maxRetries}), 发送到死信队列`,
               { messageId: msg.properties.messageId }
             );
 
-            // 拒绝消息，不重新入队（进入死信队列）
             this.channel?.nack(msg, false, false);
           } else {
             console.warn(
@@ -165,10 +133,8 @@ export class RabbitMQClient {
               { messageId: msg.properties.messageId }
             );
 
-            // 增加重试计数
             this.incrementRetryCount(msg);
 
-            // 拒绝消息，重新入队
             this.channel?.nack(msg, false, true);
           }
         }
@@ -179,17 +145,11 @@ export class RabbitMQClient {
     );
   }
 
-  /**
-   * 获取消息的重试次数
-   */
   private getRetryCount(msg: any): number {
     const headers = msg.properties.headers || {};
     return headers['x-retry-count'] || 0;
   }
 
-  /**
-   * 增加消息的重试次数
-   */
   private incrementRetryCount(msg: any): void {
     const headers = msg.properties.headers || {};
     headers['x-retry-count'] = (headers['x-retry-count'] || 0) + 1;
@@ -200,3 +160,20 @@ export class RabbitMQClient {
     if (this.connection) await this.connection.close();
   }
 }
+
+export { ConnectionPool } from './connection-pool.js';
+export { RabbitMQPublisher } from './publisher.service.js';
+export { RabbitMQConsumer, type MessageHandler } from './consumer.service.js';
+export { RabbitMQService } from './rabbitmq.service.js';
+
+export type {
+  PublishOptions,
+  ConsumerOptions,
+  RetryStrategy,
+  ConnectionPoolConfig,
+  MessageMetadata,
+  BatchPublishResult,
+  QueueStats,
+  ConnectionState,
+  ConnectionEvent,
+} from './types.js';

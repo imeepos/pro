@@ -29,6 +29,7 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
+    "@pro/types": "workspace:*",
     "amqplib": "^0.10.9"
   },
   "devDependencies": {

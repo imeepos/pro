@@ -7,6 +7,7 @@ import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
 import { TaskMonitor } from './weibo/task-monitor.service';
 import { DiagnosticService } from './weibo/diagnostic.service';
 import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
+import { AggregateSchedulerService } from './services/aggregate-scheduler.service';
 import { WeiboSearchTaskEntity } from '@pro/entities';
 import { createDatabaseConfig } from './config/database.config';
 import { AppController } from './app.controller';
@@ -49,6 +50,9 @@ import { AppController } from './app.controller';
     // 任务调度服务
     TaskScannerScheduler,
 
+    // 聚合调度服务
+    AggregateSchedulerService,
+
     // 任务监控服务
     TaskMonitor,
 
@@ -58,6 +62,7 @@ import { AppController } from './app.controller';
   exports: [
     RabbitMQConfigService,
     TaskScannerScheduler,
+    AggregateSchedulerService,
     TaskMonitor,
   ],
 })

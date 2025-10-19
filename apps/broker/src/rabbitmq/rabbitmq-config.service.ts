@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { RabbitMQClient, RabbitMQConfig } from '@pro/rabbitmq';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from '@pro/logger';
+import { QUEUE_NAMES, AggregateTaskEvent } from '@pro/types';
 import { SubTaskMessage, TaskResultMessage, WEIBO_CRAWL_QUEUE } from '../weibo/interfaces/sub-task-message.interface';
 
 /**
@@ -131,6 +132,66 @@ export class RabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
       return success;
     } catch (error) {
       this.logger.error('发布任务结果失败:', error, 'RabbitMQConfigService');
+      throw error;
+    }
+  }
+
+  /**
+   * 发布聚合任务事件
+   */
+  async publishAggregateTask(event: AggregateTaskEvent): Promise<boolean> {
+    const publishStart = Date.now();
+    const messageSize = JSON.stringify(event).length;
+
+    this.logger.debug('开始发布聚合任务事件', {
+      windowType: event.windowType,
+      timeRange: {
+        start: event.startTime,
+        end: event.endTime,
+      },
+      metrics: event.metrics,
+      messageSizeBytes: messageSize,
+    });
+
+    try {
+      const success = await this.client.publish(
+        QUEUE_NAMES.AGGREGATE_TASK,
+        event,
+      );
+      const publishDuration = Date.now() - publishStart;
+
+      this.logger.debug('聚合任务事件发布完成', {
+        success,
+        publishTimeMs: publishDuration,
+        queue: QUEUE_NAMES.AGGREGATE_TASK,
+      });
+
+      if (success) {
+        this.logger.info(
+          `已发布聚合任务: 窗口类型=${event.windowType}, 时间范围=${event.startTime} ~ ${event.endTime}, 耗时 ${publishDuration}ms`,
+          'RabbitMQConfigService',
+        );
+      } else {
+        this.logger.warn(
+          '聚合任务事件发布失败: 返回false',
+          'RabbitMQConfigService',
+        );
+      }
+
+      return success;
+    } catch (error) {
+      const publishDuration = Date.now() - publishStart;
+      this.logger.error(
+        '发布聚合任务事件失败',
+        {
+          windowType: event.windowType,
+          queue: QUEUE_NAMES.AGGREGATE_TASK,
+          error: error.message,
+          publishTimeMs: publishDuration,
+          messageSizeBytes: messageSize,
+        },
+        'RabbitMQConfigService',
+      );
       throw error;
     }
   }

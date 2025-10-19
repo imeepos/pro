@@ -1,27 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Logger } from '@pro/logger';
 import { Model } from 'mongoose';
 import { createHash } from 'crypto';
 import * as cheerio from 'cheerio';
+import { RabbitMQClient } from '@pro/rabbitmq';
+import { QUEUE_NAMES, RawDataReadyEvent, SourcePlatform } from '@pro/types';
 
 export interface RawDataSource {
+  _id?: any;
   sourceType: string;
   sourceUrl: string;
   rawContent: string;
   contentHash: string;
   metadata: Record<string, any>;
   status: 'pending' | 'processed' | 'failed';
+  sourcePlatform?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
+interface RabbitMQConfig {
+  url: string;
+}
+
 @Injectable()
 export class RawDataService {
+  private rabbitMQClient: RabbitMQClient | null = null;
+  private isRabbitMQConnected = false;
+  private publishRetryCount = 0;
+  private readonly MAX_PUBLISH_RETRIES = 3;
+
   constructor(
     @InjectModel('RawDataSource') private rawDataSourceModel: Model<RawDataSource>,
-    private readonly logger: Logger
-  ) {}
+    private readonly logger: Logger,
+    @Inject('RABBITMQ_CONFIG') private readonly rabbitmqConfig: RabbitMQConfig
+  ) {
+    this.initializeRabbitMQ();
+  }
 
   async create(data: {
     sourceType: string;
@@ -124,6 +140,8 @@ export class RawDataService {
         traceId: data.metadata.traceId,
         taskId: data.metadata.taskId
       }, 'RawDataService');
+
+      await this.publishRawDataReady(savedRecord);
 
       return savedRecord;
 
@@ -628,6 +646,137 @@ export class RawDataService {
         count: 0
       };
     }
+  }
+
+  /**
+   * 初始化 RabbitMQ 连接
+   */
+  private async initializeRabbitMQ(): Promise<void> {
+    try {
+      this.rabbitMQClient = new RabbitMQClient({ url: this.rabbitmqConfig.url });
+      await this.rabbitMQClient.connect();
+      this.isRabbitMQConnected = true;
+      this.logger.log('🔗 RabbitMQ 连接初始化成功', {
+        url: this.rabbitmqConfig.url.replace(/\/\/.*@/, '//***@')
+      }, 'RawDataService');
+    } catch (error) {
+      this.isRabbitMQConnected = false;
+      this.logger.warn('⚠️ RabbitMQ 初始化失败，消息发布将被跳过', {
+        error: error instanceof Error ? error.message : '未知错误',
+        willRetry: true
+      }, 'RawDataService');
+    }
+  }
+
+  /**
+   * 发布原始数据就绪事件
+   */
+  private async publishRawDataReady(rawData: RawDataSource): Promise<void> {
+    if (!this.isRabbitMQConnected || !this.rabbitMQClient) {
+      this.logger.debug('⏭️ RabbitMQ 未连接，跳过消息发布', {
+        rawDataId: rawData._id,
+        sourceType: rawData.sourceType
+      }, 'RawDataService');
+      return;
+    }
+
+    const publishStartTime = Date.now();
+    const rawDataId = rawData._id?.toString();
+
+    if (!rawDataId) {
+      this.logger.warn('⚠️ 原始数据ID缺失，跳过消息发布', {
+        sourceType: rawData.sourceType,
+        sourceUrl: rawData.sourceUrl.substring(0, 100)
+      }, 'RawDataService');
+      return;
+    }
+
+    const sourcePlatform = this.extractSourcePlatform(rawData.sourceType);
+    const event: RawDataReadyEvent = {
+      rawDataId,
+      sourceType: rawData.sourceType as any,
+      sourcePlatform,
+      sourceUrl: rawData.sourceUrl,
+      contentHash: rawData.contentHash,
+      metadata: {
+        taskId: rawData.metadata?.taskId,
+        keyword: rawData.metadata?.keyword,
+        fileSize: rawData.rawContent?.length || 0,
+      },
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      await this.retryPublish(QUEUE_NAMES.RAW_DATA_READY, event);
+      const publishDuration = Date.now() - publishStartTime;
+
+      this.logger.log('📤 原始数据就绪事件发布成功', {
+        rawDataId,
+        sourceType: rawData.sourceType,
+        sourcePlatform,
+        queue: QUEUE_NAMES.RAW_DATA_READY,
+        publishDuration,
+        taskId: rawData.metadata?.taskId,
+        traceId: rawData.metadata?.traceId
+      }, 'RawDataService');
+
+      this.publishRetryCount = 0;
+
+    } catch (error) {
+      const publishDuration = Date.now() - publishStartTime;
+      this.logger.error('❌ 原始数据就绪事件发布失败', {
+        rawDataId,
+        sourceType: rawData.sourceType,
+        queue: QUEUE_NAMES.RAW_DATA_READY,
+        error: error instanceof Error ? error.message : '未知错误',
+        publishDuration,
+        retryCount: this.publishRetryCount,
+        taskId: rawData.metadata?.taskId,
+        traceId: rawData.metadata?.traceId
+      }, 'RawDataService');
+    }
+  }
+
+  /**
+   * 带指数退避的重试发布
+   */
+  private async retryPublish(queue: string, event: RawDataReadyEvent, retryCount = 0): Promise<void> {
+    try {
+      if (!this.rabbitMQClient) {
+        throw new Error('RabbitMQ 客户端未初始化');
+      }
+
+      await this.rabbitMQClient.publish(queue, event);
+    } catch (error) {
+      if (retryCount < this.MAX_PUBLISH_RETRIES) {
+        const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 8000);
+
+        this.logger.warn(`🔄 消息发布失败，${backoffDelay}ms 后重试 (${retryCount + 1}/${this.MAX_PUBLISH_RETRIES})`, {
+          queue,
+          rawDataId: event.rawDataId,
+          error: error instanceof Error ? error.message : '未知错误',
+          backoffDelay
+        }, 'RawDataService');
+
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+        return this.retryPublish(queue, event, retryCount + 1);
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * 从 sourceType 提取 sourcePlatform
+   */
+  private extractSourcePlatform(sourceType: string): SourcePlatform {
+    if (sourceType.startsWith('weibo')) {
+      return SourcePlatform.WEIBO;
+    }
+    if (sourceType.startsWith('jd')) {
+      return SourcePlatform.JD;
+    }
+    return SourcePlatform.CUSTOM;
   }
 
   /**

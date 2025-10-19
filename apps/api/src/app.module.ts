@@ -22,6 +22,8 @@ import { BugModule } from './bug/bug.module';
 import { RawDataModule } from './raw-data/raw-data.module';
 import { DatabaseModule } from './database/database.module';
 import { LoadersModule } from './loaders.module';
+import { RabbitMQModule } from './rabbitmq/rabbitmq.module';
+import { TasksModule } from './tasks/tasks.module';
 import { createDatabaseConfig } from './config';
 import { AugmentedRequest, GraphqlContext } from './common/utils/context.utils';
 import { UserLoader } from './user/user.loader';
@@ -151,6 +153,7 @@ import { TagLoader } from './events/tag.loader';
 
     ConfigModule,
     DatabaseModule,
+    RabbitMQModule,
     AuthModule,
     UserModule,
     WeiboModule,
@@ -162,6 +165,7 @@ import { TagLoader } from './events/tag.loader';
     NotificationsModule,
     BugModule,
     RawDataModule,
+    TasksModule,
   ],
   controllers: [],
   providers: [HealthResolver],
