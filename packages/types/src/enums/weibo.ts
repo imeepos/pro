@@ -5,6 +5,30 @@
  */
 
 /**
+ * 微博搜索类型枚举 - 灵感源自MediaCrawler的多模式爬取策略
+ * 每种类型都有其独特的存在价值和使用场景
+ */
+export enum WeiboSearchType {
+  DEFAULT = 'DEFAULT',         // 综合搜索 - 默认模式，平衡覆盖面与精确性
+  REAL_TIME = 'REAL_TIME',     // 实时搜索 - 捕捉当下正在发生的微博
+  POPULAR = 'POPULAR',         // 热门搜索 - 发现广受关注的热点内容
+  VIDEO = 'VIDEO',             // 视频搜索 - 专注于视频内容的多媒体探索
+  USER = 'USER',               // 用户搜索 - 寻找特定创作者或账号
+  TOPIC = 'TOPIC'              // 话题搜索 - 跟踪超话和热门话题
+}
+
+/**
+ * 微博爬取模式枚举 - 定义不同的爬取维度和策略
+ */
+export enum WeiboCrawlMode {
+  SEARCH = 'SEARCH',           // 搜索模式 - 基于关键词的内容发现
+  DETAIL = 'DETAIL',           // 详情模式 - 深度挖掘单条微博的完整信息
+  CREATOR = 'CREATOR',         // 创作者模式 - 探索用户的全部作品和轨迹
+  COMMENT = 'COMMENT',         // 评论模式 - 提取互动数据和社会反响
+  MEDIA = 'MEDIA'              // 媒体模式 - 下载和管理图片视频资源
+}
+
+/**
  * 微博账号状态枚举
  * 统一管理微博账号的各种状态
  */
@@ -33,13 +57,23 @@ export enum WeiboSearchTaskStatus {
  * 任务执行结果的枚举值验证
  * 确保数据库存储值与枚举定义一致
  */
+export const WEIBO_SEARCH_TYPE_VALUES = Object.values(WeiboSearchType) as readonly string[];
+export const WEIBO_CRAWL_MODE_VALUES = Object.values(WeiboCrawlMode) as readonly string[];
 export const WEIBO_ACCOUNT_STATUS_VALUES = Object.values(WeiboAccountStatus) as readonly string[];
 export const WEIBO_SEARCH_TASK_STATUS_VALUES = Object.values(WeiboSearchTaskStatus) as readonly string[];
 
 /**
- * 枚举值验证工具函数
+ * 枚举值验证工具函数 - 守护数字时代的类型安全
  */
 export class WeiboEnumValidator {
+  static isValidSearchType(type: string): type is WeiboSearchType {
+    return WEIBO_SEARCH_TYPE_VALUES.includes(type);
+  }
+
+  static isValidCrawlMode(mode: string): mode is WeiboCrawlMode {
+    return WEIBO_CRAWL_MODE_VALUES.includes(mode);
+  }
+
   static isValidAccountStatus(status: string): status is WeiboAccountStatus {
     return WEIBO_ACCOUNT_STATUS_VALUES.includes(status);
   }
