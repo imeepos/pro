@@ -187,10 +187,10 @@ export class BatchActionsComponent<T = any> implements OnChanges {
   private resultTimer: any;
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.operationResult && this.operationResult) {
+    if (changes['operationResult'] && this.operationResult) {
       this.clearResultTimer();
       this.resultTimer = setTimeout(() => {
-        this.operationResult = null;
+        this.operationResult = undefined;
       }, 5000);
     }
   }

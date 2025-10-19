@@ -348,7 +348,7 @@ export class ChartComponent implements OnChanges, AfterViewInit {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.data || changes.config) {
+    if (changes['data'] || changes['config']) {
       this.calculateDimensions();
     }
   }

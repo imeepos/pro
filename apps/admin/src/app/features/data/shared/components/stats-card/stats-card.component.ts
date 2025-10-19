@@ -105,9 +105,9 @@ export interface StatsCardData {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class StatsCardComponent implements OnChanges {
-  @Input() data: StatsCardData;
+  @Input() data: StatsCardData | null = null;
   @Input() loading = false;
-  @Input() error: string;
+  @Input() error: string | null = null;
 
   @Output() click = new EventEmitter<void>();
 
@@ -121,11 +121,11 @@ export class StatsCardComponent implements OnChanges {
   }
 
   get subtitle(): string {
-    return this.data?.subtitle;
+    return this.data?.subtitle || '';
   }
 
   get icon(): string {
-    return this.data?.icon;
+    return this.data?.icon || '';
   }
 
   get color(): string {

@@ -35,6 +35,7 @@ export interface BreakpointValues {
   lg?: any;
   xl?: any;
   '2xl'?: any;
+  [key: string]: any;
 }
 
 @Injectable({
@@ -170,7 +171,7 @@ export class LayoutUtils {
     const sizeMap = this.defaultConfig.spacing!;
 
     if (size && sizeMap[size as keyof typeof sizeMap]) {
-      return sizeMap[size as keyof typeof sizeMap];
+      return sizeMap[size as keyof typeof sizeMap]!;
     }
 
     // 默认基于屏幕大小
@@ -363,7 +364,7 @@ export class LayoutUtils {
     const classes: string[] = [];
 
     const getPaddingValue = (value: any): string => {
-      const numericValue = this.responsiveService.getResponsiveValue(value, 4);
+      const numericValue = this.responsiveService.getResponsiveValue(value, 4) as number;
       if (numericValue === 0) return '0';
       if (numericValue === 1) return '1';
       if (numericValue === 2) return '2';
@@ -425,7 +426,7 @@ export class LayoutUtils {
     if (value === 'fit') return 'w-fit';
 
     // 数字值
-    const numericWidth = parseInt(value.toString());
+    const numericWidth = parseInt(String(value));
     if (!isNaN(numericWidth)) {
       return `w-${numericWidth}/12`;
     }
@@ -446,7 +447,7 @@ export class LayoutUtils {
     if (value === 'fit') return 'h-fit';
 
     // 数字值
-    const numericHeight = parseInt(value.toString());
+    const numericHeight = parseInt(String(value));
     if (!isNaN(numericHeight)) {
       if (numericHeight <= 96) {
         return `h-${numericHeight}`;

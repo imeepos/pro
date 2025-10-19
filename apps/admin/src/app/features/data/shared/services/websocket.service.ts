@@ -51,7 +51,7 @@ export class WebSocketService {
 
   private websocket: WebSocket | null = null;
   private defaultConfig: WebSocketConfig = {
-    url: environment.wsUrl || 'ws://localhost:3000',
+    url: 'ws://localhost:3000',
     protocols: [],
     reconnectInterval: 5000,
     maxReconnectAttempts: 10,

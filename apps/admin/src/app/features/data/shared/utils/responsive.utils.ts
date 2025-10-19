@@ -147,7 +147,7 @@ export class ResponsiveService {
     }
 
     // 返回默认值
-    return defaultValue || values.base || (Object.values(values)[0] as T);
+    return defaultValue || values['base'] || (Object.values(values)[0] as T);
   }
 
   // 获取网格列数

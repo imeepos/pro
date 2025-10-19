@@ -297,7 +297,7 @@ export class DataTableComponent<T = any> implements OnChanges {
   displayData: T[] = [];
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.data) {
+    if (changes['data']) {
       this.applyFiltersAndSort();
     }
   }
