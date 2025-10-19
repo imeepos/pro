@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, MoreThan } from 'typeorm';
 import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
@@ -157,7 +157,7 @@ export class IntelligentRetryManager {
     private readonly logger: PinoLogger,
     @InjectRepository(WeiboSearchTaskEntity)
     private readonly taskRepository: Repository<WeiboSearchTaskEntity>,
-    @Inject("RedisService") private readonly redisService: RedisClient,
+    @Inject('RedisService') private readonly redisService: RedisClient,
     private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger.setContext(IntelligentRetryManager.name);

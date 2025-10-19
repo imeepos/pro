@@ -3,7 +3,6 @@
  * 提供统一的测试环境配置和工具方法
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
 import { GraphQLTestSetup, TEST_API_KEY } from '../../graphql-test-client';
 import { TestDataFactory } from '../factories/data.factory';
 
@@ -23,47 +22,18 @@ export abstract class IntegrationTestBase {
   }
 
   /**
-   * 测试套件初始化
+   * 设置测试环境
    */
-  beforeAll(async () => {
+  async setupEnvironment(): Promise<void> {
     await this.testSetup.createTestApp();
-    await this.setupTestEnvironment();
-  });
-
-  /**
-   * 测试套件清理
-   */
-  afterAll(async () => {
-    await this.cleanupTestEnvironment();
-    await this.testSetup.cleanup();
-  });
-
-  /**
-   * 每个测试前的准备
-   */
-  beforeEach(async () => {
     await this.setupTestClient();
-  });
-
-  /**
-   * 每个测试后的清理
-   */
-  afterEach(async () => {
-    await this.cleanupTestData();
-  });
-
-  /**
-   * 设置测试环境 - 子类可重写
-   */
-  protected async setupTestEnvironment(): Promise<void> {
-    // 默认实现，子类可重写以添加特定环境设置
   }
 
   /**
-   * 清理测试环境 - 子类可重写
+   * 清理测试环境
    */
-  protected async cleanupTestEnvironment(): Promise<void> {
-    // 默认实现，子类可重写以添加特定环境清理
+  async cleanupEnvironment(): Promise<void> {
+    await this.testSetup.cleanup();
   }
 
   /**
@@ -101,14 +71,6 @@ export abstract class IntegrationTestBase {
 
     this.currentUser = registerResult.register.user;
     this.authToken = registerResult.register.accessToken;
-  }
-
-  /**
-   * 清理测试数据
-   */
-  protected async cleanupTestData(): Promise<void> {
-    // 清理可能存在的测试数据
-    // 这里可以添加数据库清理逻辑
   }
 
   /**
@@ -202,9 +164,6 @@ export abstract class WeiboIntegrationTestBase extends IntegrationTestBase {
    */
   protected async createTestWeiboAccount(): Promise<any> {
     const accountData = TestDataFactory.weiboAccount.createAccountData();
-
-    // 这里需要通过实际的API创建账号
-    // 由于WeiboAccountResolver没有创建账号的mutation，可能需要直接通过服务层创建
     return accountData;
   }
 

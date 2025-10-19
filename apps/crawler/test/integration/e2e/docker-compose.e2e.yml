@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: weibo_crawler_e2e_postgres
+    environment:
+      POSTGRES_DB: weibo_crawler_e2e
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_e2e_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d weibo_crawler_e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - e2e_network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: weibo_crawler_e2e_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_e2e_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - e2e_network
+
+  # RabbitMQ 消息队列
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: weibo_crawler_e2e_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: test
+      RABBITMQ_DEFAULT_PASS: test
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq_e2e_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - e2e_network
+
+  # MongoDB 原始数据存储
+  mongodb:
+    image: mongo:6
+    container_name: weibo_crawler_e2e_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: test
+      MONGO_INITDB_ROOT_PASSWORD: test
+      MONGO_INITDB_DATABASE: weibo_raw_e2e
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_e2e_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - e2e_network
+
+  # MinIO 对象存储
+  minio:
+    image: minio/minio:latest
+    container_name: weibo_crawler_e2e_minio
+    environment:
+      MINIO_ROOT_USER: test
+      MINIO_ROOT_PASSWORD: testtest
+    ports:
+      - "9001:9000"
+      - "9002:9001"
+    volumes:
+      - minio_e2e_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - e2e_network
+
+  # Elasticsearch 搜索引擎（可选）
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    container_name: weibo_crawler_e2e_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9201:9200"
+    volumes:
+      - elasticsearch_e2e_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - e2e_network
+
+  # 模拟的微博爬虫服务
+  mock-weibo-service:
+    build:
+      context: ../../mock-services
+      dockerfile: Dockerfile
+    container_name: weibo_crawler_e2e_mock_service
+    ports:
+      - "8081:8080"
+    environment:
+      - MOCK_RESPONSE_DELAY=100-1000
+      - FAILURE_RATE=0.05
+      - ACCOUNT_BAN_RATE=0.02
+    volumes:
+      - ./mock-data:/app/mock-data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - e2e_network
+
+volumes:
+  postgres_e2e_data:
+  redis_e2e_data:
+  rabbitmq_e2e_data:
+  mongodb_e2e_data:
+  minio_e2e_data:
+  elasticsearch_e2e_data:
+
+networks:
+  e2e_network:
+    driver: bridge

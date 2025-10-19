@@ -5,7 +5,8 @@
   "testMatch": [
     "**/__tests__/**/*.ts",
     "**/?(*.)+(spec|test).ts",
-    "**/e2e/**/*.test.ts"
+    "**/e2e/**/*.test.ts",
+    "**/integration/**/*.test.ts"
   ],
   "transform": {
     "^.+\\.ts$": "ts-jest"
@@ -18,7 +19,7 @@
   ],
   "coverageDirectory": "./coverage/e2e",
   "coverageReporters": ["text", "lcov", "html", "json"],
-  "setupFilesAfterEnv": ["<rootDir>/e2e/setup.ts"],
+  "setupFilesAfterEnv": ["<rootDir>/integration/setup.ts"],
   "testTimeout": 300000,
   "maxWorkers": 4,
   "verbose": true,

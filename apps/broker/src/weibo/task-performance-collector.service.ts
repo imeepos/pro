@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, MoreThan, Between } from 'typeorm';
 import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
 import { PinoLogger } from '@pro/logger';
-import { @Inject("RedisService") RedisClient } from '@pro/redis';
+import { RedisClient } from '@pro/redis';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 /**
@@ -121,7 +121,7 @@ export class TaskPerformanceCollector {
     private readonly logger: PinoLogger,
     @InjectRepository(WeiboSearchTaskEntity)
     private readonly taskRepository: Repository<WeiboSearchTaskEntity>,
-    private readonly redisService: @Inject("RedisService") RedisClient,
+    @Inject("RedisService") private readonly redisService: RedisClient,
     private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger.setContext(TaskPerformanceCollector.name);
