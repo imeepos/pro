@@ -66,6 +66,16 @@ export class RedisClient {
     }
   }
 
+  async setex(key: string, seconds: number, value: any): Promise<void> {
+    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    await this.client.setex(key, seconds, serialized);
+  }
+
+  async setnx(key: string, value: any): Promise<number> {
+    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    return await this.client.setnx(key, serialized);
+  }
+
   async del(key: string): Promise<void> {
     await this.client.del(key);
   }
@@ -80,6 +90,10 @@ export class RedisClient {
   }
 
   // Sorted Set operations
+  async zadd(key: string, score: number, member: string): Promise<number> {
+    return await this.client.zadd(key, score, member);
+  }
+
   async zincrby(key: string, increment: number, member: string): Promise<number> {
     const result = await this.client.zincrby(key, increment, member);
     return parseFloat(result);
@@ -102,9 +116,64 @@ export class RedisClient {
     }
   }
 
+  async zremrangebyscore(key: string, min: number, max: number): Promise<number> {
+    return await this.client.zremrangebyscore(key, min, max);
+  }
+
+  async zrange(key: string, start: number, stop: number, withScores?: boolean): Promise<string[]> {
+    try {
+      if (withScores) {
+        return await this.client.zrange(key, start, stop, 'WITHSCORES');
+      } else {
+        return await this.client.zrange(key, start, stop);
+      }
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async zrevrange(key: string, start: number, stop: number, withScores?: boolean): Promise<string[]> {
+    try {
+      if (withScores) {
+        return await this.client.zrevrange(key, start, stop, 'WITHSCORES');
+      } else {
+        return await this.client.zrevrange(key, start, stop);
+      }
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async zcard(key: string): Promise<number> {
+    return await this.client.zcard(key);
+  }
+
   // Hash operations
   async hmset(key: string, data: Record<string, any>): Promise<string> {
     return await this.client.hmset(key, data);
+  }
+
+  async hset(key: string, field: string, value: any): Promise<number> {
+    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    return await this.client.hset(key, field, serialized);
+  }
+
+  async hget<T = string>(key: string, field: string): Promise<T | null> {
+    const value = await this.client.hget(key, field);
+    if (!value) return null;
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return value as T;
+    }
+  }
+
+  async hgetall(key: string): Promise<Record<string, string>> {
+    return await this.client.hgetall(key);
+  }
+
+  async hdel(key: string, ...fields: string[]): Promise<number> {
+    return await this.client.hdel(key, ...fields);
   }
 
   // Expiration operations
@@ -136,6 +205,11 @@ export class RedisClient {
 
   async smembers(key: string): Promise<string[]> {
     return await this.client.smembers(key);
+  }
+
+  // List operations
+  async lpush(key: string, ...elements: string[]): Promise<number> {
+    return await this.client.lpush(key, ...elements);
   }
 
   // Key operations

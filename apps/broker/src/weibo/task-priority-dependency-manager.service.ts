@@ -594,7 +594,7 @@ export class TaskPriorityDependencyManager {
   /**
    * 预留资源
    */
-  private async reserveResources(
+  async reserveResources(
     task: WeiboSearchTaskEntity,
     resources: Record<string, number>
   ): Promise<void> {
@@ -619,7 +619,7 @@ export class TaskPriorityDependencyManager {
       for (const [resourceName, amount] of Object.entries(reservation.resources)) {
         const constraint = await this.getResourceConstraint(resourceName);
         if (constraint) {
-          constraint.currentUsage = Math.max(0, constraint.currentUsage - amount);
+          constraint.currentUsage = Math.max(0, constraint.currentUsage - (typeof amount === 'number' ? amount : 0));
           await this.updateResourceConstraint(resourceName, constraint);
         }
       }

@@ -282,7 +282,7 @@ export class EnhancedTaskOrchestrator implements OnModuleInit {
     }>;
   }> {
     const healthCheck = {
-      overall: 'healthy' as const,
+      overall: 'healthy' as 'healthy' | 'degraded' | 'unhealthy',
       components: {} as Record<string, 'healthy' | 'degraded' | 'unhealthy'>,
       metrics: {} as Record<string, any>,
       alerts: [] as Array<{

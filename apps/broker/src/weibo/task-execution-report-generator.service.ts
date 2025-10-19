@@ -827,7 +827,17 @@ export class TaskExecutionReportGenerator {
    */
   async deleteReport(reportId: string): Promise<boolean> {
     const reportKey = `${this.REPORTS_KEY_PREFIX}${reportId}`;
-    const result = await this.redisService.del(reportKey);
-    return result > 0;
+    try {
+      await this.redisService.del(reportKey);
+      // 验证key是否真的被删除了
+      const exists = await this.redisService.exists(reportKey);
+      return !exists;
+    } catch (error) {
+      this.logger.error(`删除报告失败`, {
+        reportId,
+        error: error.message,
+      });
+      return false;
+    }
   }
 }

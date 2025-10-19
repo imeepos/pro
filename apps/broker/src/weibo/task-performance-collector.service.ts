@@ -15,9 +15,12 @@ export interface TaskPerformanceMetrics {
   timestamp: Date;
 
   // 时间指标
+  startTime?: Date;                 // 开始时间
+  endTime?: Date;                   // 结束时间
   executionTime?: number;           // 执行时间(ms)
   queueTime?: number;               // 队列等待时间(ms)
   processingTime?: number;          // 处理时间(ms)
+  lockAcquisitionTime?: number;     // 锁获取时间(ms)
 
   // 资源使用指标
   memoryUsage?: number;             // 内存使用(MB)
@@ -41,6 +44,13 @@ export interface TaskPerformanceMetrics {
   throughput?: number;              // 吞吐量(records/sec)
   latency?: number;                 // 延迟(ms)
   resourceEfficiency?: number;      // 资源效率评分
+
+  // 状态指标
+  phase?: string;                   // 执行阶段
+  lockConflict?: boolean;           // 锁冲突标志
+  currentTaskState?: string;        // 当前任务状态
+  subTaskGenerated?: boolean;       // 子任务是否生成
+  errorMessage?: string;            // 错误信息
 
   // 扩展指标
   customMetrics?: Record<string, number>;  // 自定义指标
@@ -515,7 +525,7 @@ export class TaskPerformanceCollector {
     severity?: string,
     timeWindow: number = 24 * 60 * 60 * 1000
   ): Promise<PerformanceAnomaly[]> {
-    const anomaliesKey = this.ANONYMIES_KEY;
+    const anomaliesKey = this.ANOMALIES_KEY;
     const cutoffTime = Date.now() - timeWindow;
 
     // 这里应该从Redis或数据库获取异常数据
@@ -575,7 +585,7 @@ export class TaskPerformanceCollector {
   private async saveAnomalies(anomalies: PerformanceAnomaly[]): Promise<void> {
     // 保存异常到Redis或数据库
     for (const anomaly of anomalies) {
-      const anomalyKey = `${this.ANONYMIES_KEY}:${anomaly.taskId}`;
+      const anomalyKey = `${this.ANOMALIES_KEY}:${anomaly.taskId}`;
       await this.redisService.zadd(
         anomalyKey,
         anomaly.detectedAt.getTime(),

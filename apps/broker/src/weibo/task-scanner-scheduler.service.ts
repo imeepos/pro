@@ -153,7 +153,7 @@ export class TaskScannerScheduler {
    * 调度单个主任务（增强版）
    * 集成智能任务管理的艺术性调度逻辑
    */
-  private async dispatchTask(task: WeiboSearchTaskEntity): Promise<void> {
+  async dispatchTask(task: WeiboSearchTaskEntity): Promise<void> {
     const dispatchStart = Date.now();
     this.logger.debug(`开始处理主任务 ${task.id}: ${task.keyword}`, {
       taskId: task.id,
