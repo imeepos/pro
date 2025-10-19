@@ -6,7 +6,10 @@ const config: Config = {
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.spec.ts', '**/*.spec.ts'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: 'tsconfig.json',
+      useESM: false
+    }],
   },
   collectCoverageFrom: [
     'src/**/*.ts',
@@ -29,6 +32,8 @@ const config: Config = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   testTimeout: 30000,
+  cache: false,
+  passWithNoTests: true,
 };
 
 export default config;
