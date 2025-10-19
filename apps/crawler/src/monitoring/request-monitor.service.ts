@@ -6,6 +6,12 @@ export interface RequestRecord {
   url: string;
   success: boolean;
   duration: number;
+  domain: string;
+  statusCode?: number;
+  errorType?: string;
+  retryCount?: number;
+  userAgent?: string;
+  responseSize?: number;
 }
 
 export interface RateWindow {
@@ -15,6 +21,10 @@ export interface RateWindow {
   successCount: number;
   errorCount: number;
   totalDuration: number;
+  uniqueDomains: number;
+  errorTypes: Map<string, number>;
+  statusCodeDistribution: Map<number, number>;
+  retryDistribution: Map<number, number>;
 }
 
 export interface RateStats {
@@ -25,6 +35,44 @@ export interface RateStats {
   windowSize: number;
   maxRequestsPerWindow: number;
   isThrottling: boolean;
+  domainDistribution: Map<string, number>;
+  performanceScore: number;
+  trendDirection: 'improving' | 'stable' | 'degrading';
+  nextRecommendedDelay: number;
+  recommendedActions: string[];
+}
+
+export interface AdaptiveDelayStrategy {
+  name: string;
+  enabled: boolean;
+  weight: number;
+  lastAdjustment: number;
+  performance: {
+    successRateImprovement: number;
+    responseTimeImprovement: number;
+    errorReduction: number;
+  };
+}
+
+export interface IntelligentBackoffConfig {
+  enabled: boolean;
+  strategies: {
+    exponential: { base: number; max: number; factor: number };
+    linear: { increment: number; max: number };
+    fibonacci: { max: number };
+    adaptive: { targetSuccessRate: number; adjustmentFactor: number };
+  };
+  errorTypeMultipliers: Map<string, number>;
+  cooldownPeriods: Map<string, number>;
+}
+
+export interface DomainThrottlingRule {
+  domain: string;
+  maxRequestsPerSecond: number;
+  maxConcurrentRequests: number;
+  backoffDuration: number;
+  recoveryThreshold: number;
+  priority: number;
 }
 
 @Injectable()
@@ -32,25 +80,163 @@ export class RequestMonitorService {
   private readonly logger = new Logger(RequestMonitorService.name);
   private requests: RequestRecord[] = [];
   private currentDelayMs: number;
-  private readonly maxHistorySize = 1000;
+  private readonly maxHistorySize = 10000;
+
+  // 智能延迟策略
+  private adaptiveStrategies: Map<string, AdaptiveDelayStrategy> = new Map();
+  private domainThrottlingRules: Map<string, DomainThrottlingRule> = new Map();
+  private intelligentBackoffConfig: IntelligentBackoffConfig;
+
+  // 性能监控
+  private performanceHistory: Array<{
+    timestamp: number;
+    delay: number;
+    successRate: number;
+    averageResponseTime: number;
+    requestsPerSecond: number;
+  }> = [];
+
+  // 错误模式识别
+  private errorPatterns: Map<string, {
+    count: number;
+    lastOccurrence: number;
+    frequency: number;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    recommendedAction: string;
+  }> = new Map();
 
   constructor(
     @Inject('CRAWLER_CONFIG') private readonly crawlerConfig: CrawlerConfig,
   ) {
     this.currentDelayMs = crawlerConfig.requestDelay.min;
+    this.initializeIntelligentFeatures();
   }
 
-  recordRequest(url: string, success: boolean, duration: number): void {
+  private initializeIntelligentFeatures(): void {
+    // 初始化自适应延迟策略
+    this.initializeAdaptiveStrategies();
+
+    // 初始化域名限流规则
+    this.initializeDomainThrottlingRules();
+
+    // 初始化智能退避配置
+    this.initializeIntelligentBackoffConfig();
+
+    this.logger.log(`智能请求监控系统已初始化`, {
+      adaptiveStrategies: this.adaptiveStrategies.size,
+      domainRules: this.domainThrottlingRules.size,
+      initialDelay: this.currentDelayMs
+    });
+  }
+
+  private initializeAdaptiveStrategies(): void {
+    const strategies: AdaptiveDelayStrategy[] = [
+      {
+        name: 'success_rate_based',
+        enabled: true,
+        weight: 0.4,
+        lastAdjustment: Date.now(),
+        performance: { successRateImprovement: 0, responseTimeImprovement: 0, errorReduction: 0 }
+      },
+      {
+        name: 'response_time_based',
+        enabled: true,
+        weight: 0.3,
+        lastAdjustment: Date.now(),
+        performance: { successRateImprovement: 0, responseTimeImprovement: 0, errorReduction: 0 }
+      },
+      {
+        name: 'error_rate_based',
+        enabled: true,
+        weight: 0.2,
+        lastAdjustment: Date.now(),
+        performance: { successRateImprovement: 0, responseTimeImprovement: 0, errorReduction: 0 }
+      },
+      {
+        name: 'domain_health_based',
+        enabled: true,
+        weight: 0.1,
+        lastAdjustment: Date.now(),
+        performance: { successRateImprovement: 0, responseTimeImprovement: 0, errorReduction: 0 }
+      }
+    ];
+
+    strategies.forEach(strategy => {
+      this.adaptiveStrategies.set(strategy.name, strategy);
+    });
+  }
+
+  private initializeDomainThrottlingRules(): void {
+    const prioritizedDomains = [
+      { domain: 'weibo.com', maxRPS: 2, maxConcurrent: 1, priority: 1 },
+      { domain: 'weibo.cn', maxRPS: 1, maxConcurrent: 1, priority: 2 },
+      { domain: 's.weibo.com', maxRPS: 3, maxConcurrent: 2, priority: 3 },
+      { domain: 'm.weibo.cn', maxRPS: 2, maxConcurrent: 1, priority: 4 }
+    ];
+
+    prioritizedDomains.forEach(({ domain, maxRPS, maxConcurrent, priority }) => {
+      this.domainThrottlingRules.set(domain, {
+        domain,
+        maxRequestsPerSecond: maxRPS,
+        maxConcurrentRequests: maxConcurrent,
+        backoffDuration: 30000, // 30秒
+        recoveryThreshold: 0.8,
+        priority
+      });
+    });
+  }
+
+  private initializeIntelligentBackoffConfig(): void {
+    this.intelligentBackoffConfig = {
+      enabled: true,
+      strategies: {
+        exponential: { base: 1000, max: 60000, factor: 2 },
+        linear: { increment: 5000, max: 30000 },
+        fibonacci: { max: 45000 },
+        adaptive: { targetSuccessRate: 0.85, adjustmentFactor: 1.5 }
+      },
+      errorTypeMultipliers: new Map([
+        ['rate_limited', 3.0],
+        ['timeout', 2.0],
+        ['server_error', 2.5],
+        ['client_error', 1.5],
+        ['network_error', 1.8],
+        ['authentication_error', 4.0]
+      ]),
+      cooldownPeriods: new Map([
+        ['rate_limited', 60000],
+        ['timeout', 30000],
+        ['server_error', 45000],
+        ['authentication_error', 300000] // 5分钟
+      ])
+    };
+  }
+
+  recordRequest(url: string, success: boolean, duration: number, additionalInfo?: {
+    statusCode?: number;
+    errorType?: string;
+    retryCount?: number;
+    userAgent?: string;
+    responseSize?: number;
+  }): void {
     if (!this.crawlerConfig.rateMonitoring.enabled) {
       return;
     }
 
     const recordStartTime = Date.now();
+    const domain = this.extractDomain(url);
+
     const record: RequestRecord = {
       timestamp: Date.now(),
       url,
       success,
       duration,
+      domain,
+      statusCode: additionalInfo?.statusCode,
+      errorType: additionalInfo?.errorType,
+      retryCount: additionalInfo?.retryCount || 0,
+      userAgent: additionalInfo?.userAgent,
+      responseSize: additionalInfo?.responseSize
     };
 
     this.requests.push(record);
@@ -60,64 +246,32 @@ export class RequestMonitorService {
       this.requests.shift();
     }
 
+    // 检查域名限流规则
+    this.checkDomainThrottling(domain, record);
+
+    // 识别错误模式
+    if (!success && additionalInfo?.errorType) {
+      this.identifyErrorPattern(additionalInfo.errorType, domain);
+    }
+
     // 更新自适应延迟
     if (this.crawlerConfig.rateMonitoring.adaptiveDelay.enabled) {
-      this.updateAdaptiveDelay();
+      this.updateIntelligentAdaptiveDelay();
     }
+
+    // 更新性能历史
+    this.updatePerformanceHistory();
 
     // 清理过期记录
     this.cleanupOldRecords();
 
-    const stats = this.getCurrentStats();
+    const stats = this.getCurrentIntelligentStats();
 
-    // 记录请求详情
-    this.logger.debug(`📊 ${success ? '✅' : '❌'} 请求记录`, {
-      url: this.sanitizeUrl(url),
-      success,
-      duration,
-      durationCategory: this.categorizeResponseTime(duration),
-      currentDelayMs: this.currentDelayMs,
-      totalRequests: this.requests.length,
-      recentSuccessRate: Math.round(this.calculateRecentSuccessRate() * 100),
-      averageResponseTime: Math.round(this.calculateAverageResponseTime()),
-      requestsPerSecond: Math.round(stats.requestsPerSecond * 100) / 100,
-      isThrottling: stats.isThrottling
-    });
+    // 智能日志记录
+    this.logRequestIntelligently(record, stats);
 
-    // 对于失败的请求，记录更详细的信息
-    if (!success) {
-      this.logger.warn('❌ 请求失败记录', {
-        url: this.sanitizeUrl(url),
-        duration,
-        failureCount: this.getRecentFailureCount(),
-        consecutiveFailures: this.getConsecutiveFailures(),
-        currentDelayMs: this.currentDelayMs,
-        isThrottling: stats.isThrottling,
-        recentSuccessRate: Math.round(this.calculateRecentSuccessRate() * 100),
-        failureType: this.classifyFailure(url, duration)
-      });
-    }
-
-    // 对于异常慢的请求，记录警告
-    if (duration > 10000) { // 超过10秒
-      this.logger.warn('⏱️ 请求响应时间过长', {
-        url: this.sanitizeUrl(url),
-        duration,
-        durationCategory: 'very_slow',
-        threshold: 10000,
-        averageResponseTime: Math.round(this.calculateAverageResponseTime()),
-        percentile95: this.calculateResponseTimePercentile(95),
-        impact: this.assessPerformanceImpact(duration)
-      });
-    } else if (duration > 5000) { // 超过5秒
-      this.logger.warn('⚠️ 请求响应时间较慢', {
-        url: this.sanitizeUrl(url),
-        duration,
-        durationCategory: 'slow',
-        threshold: 5000,
-        averageResponseTime: Math.round(this.calculateAverageResponseTime())
-      });
-    }
+    // 触发智能预警
+    this.triggerIntelligentAlerts(record, stats);
   }
 
   async waitForNextRequest(): Promise<void> {
@@ -190,6 +344,11 @@ export class RequestMonitorService {
       windowSize,
       maxRequestsPerWindow: this.crawlerConfig.rateMonitoring.maxRequestsPerWindow,
       isThrottling,
+      domainDistribution: new Map(),
+      performanceScore: 50,
+      trendDirection: 'stable' as const,
+      nextRecommendedDelay: this.currentDelayMs,
+      recommendedActions: []
     };
   }
 
@@ -387,11 +546,23 @@ export class RequestMonitorService {
         windowSize: windowSizeSeconds,
         maxRequestsPerWindow: this.crawlerConfig.rateMonitoring.maxRequestsPerWindow,
         isThrottling: false,
+        domainDistribution: new Map(),
+        performanceScore: 100,
+        trendDirection: 'stable' as const,
+        nextRecommendedDelay: this.currentDelayMs,
+        recommendedActions: []
       };
     }
 
     const successCount = requests.filter(r => r.success).length;
     const totalDuration = requests.reduce((sum, r) => sum + r.duration, 0);
+
+    // 计算域名分布
+    const domainDistribution = new Map<string, number>();
+    requests.forEach(request => {
+      const count = domainDistribution.get(request.domain) || 0;
+      domainDistribution.set(request.domain, count + 1);
+    });
 
     return {
       currentDelayMs: this.currentDelayMs,
@@ -401,6 +572,15 @@ export class RequestMonitorService {
       windowSize: windowSizeSeconds,
       maxRequestsPerWindow: this.crawlerConfig.rateMonitoring.maxRequestsPerWindow,
       isThrottling: requests.length >= this.crawlerConfig.rateMonitoring.maxRequestsPerWindow,
+      domainDistribution,
+      performanceScore: this.calculatePerformanceScore(
+        successCount / requests.length,
+        totalDuration / requests.length,
+        requests.length / windowSizeSeconds
+      ),
+      trendDirection: 'stable' as const,
+      nextRecommendedDelay: this.currentDelayMs,
+      recommendedActions: []
     };
   }
 
@@ -777,6 +957,585 @@ export class RequestMonitorService {
         direction,
         confidence
       }
+    };
+  }
+
+  // 新增智能方法
+
+  private extractDomain(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch {
+      return 'unknown';
+    }
+  }
+
+  private checkDomainThrottling(domain: string, record: RequestRecord): void {
+    const rule = this.domainThrottlingRules.get(domain);
+    if (!rule) return;
+
+    const now = Date.now();
+    const recentRequests = this.requests.filter(r =>
+      r.domain === domain && r.timestamp >= now - 1000
+    );
+
+    if (recentRequests.length >= rule.maxRequestsPerSecond) {
+      // 触发域名限流
+      this.logger.warn(`域名 ${domain} 触发限流`, {
+        domain,
+        currentRPS: recentRequests.length,
+        maxRPS: rule.maxRequestsPerSecond,
+        backoffDuration: rule.backoffDuration,
+        priority: rule.priority
+      });
+
+      // 应用退避延迟
+      const backoffDelay = this.calculateIntelligentBackoff(record.errorType || 'rate_limited', record.retryCount || 0);
+      this.setCurrentDelay(Math.max(this.currentDelayMs, backoffDelay));
+    }
+  }
+
+  private identifyErrorPattern(errorType: string, domain: string): void {
+    const patternKey = `${domain}:${errorType}`;
+    const now = Date.now();
+
+    const pattern = this.errorPatterns.get(patternKey) || {
+      count: 0,
+      lastOccurrence: 0,
+      frequency: 0,
+      severity: 'low' as const,
+      recommendedAction: ''
+    };
+
+    pattern.count++;
+    pattern.lastOccurrence = now;
+
+    // 计算频率（每小时错误次数）
+    const hourMs = 60 * 60 * 1000;
+    const recentErrors = this.requests.filter(r =>
+      r.domain === domain &&
+      r.errorType === errorType &&
+      r.timestamp >= now - hourMs
+    );
+    pattern.frequency = recentErrors.length;
+
+    // 评估严重程度
+    if (pattern.frequency > 20) {
+      pattern.severity = 'critical';
+      pattern.recommendedAction = '立即停止请求，检查账户状态和网站政策';
+    } else if (pattern.frequency > 10) {
+      pattern.severity = 'high';
+      pattern.recommendedAction = '大幅增加延迟，减少请求频率';
+    } else if (pattern.frequency > 5) {
+      pattern.severity = 'medium';
+      pattern.recommendedAction = '适度增加延迟，监控错误模式';
+    } else {
+      pattern.severity = 'low';
+      pattern.recommendedAction = '继续监控，保持当前策略';
+    }
+
+    this.errorPatterns.set(patternKey, pattern);
+
+    if (pattern.severity === 'critical' || pattern.severity === 'high') {
+      this.logger.error(`检测到严重错误模式`, {
+        domain,
+        errorType,
+        severity: pattern.severity,
+        frequency: pattern.frequency,
+        totalOccurrences: pattern.count,
+        recommendedAction: pattern.recommendedAction
+      });
+    }
+  }
+
+  private updateIntelligentAdaptiveDelay(): void {
+    const stats = this.getCurrentIntelligentStats();
+    let totalWeightedDelay = 0;
+    let totalWeight = 0;
+
+    // 应用各种自适应策略
+    for (const [name, strategy] of this.adaptiveStrategies) {
+      if (!strategy.enabled) continue;
+
+      const strategyDelay = this.calculateStrategyDelay(name, stats);
+      totalWeightedDelay += strategyDelay * strategy.weight;
+      totalWeight += strategy.weight;
+    }
+
+    if (totalWeight > 0) {
+      const recommendedDelay = totalWeightedDelay / totalWeight;
+      const clampedDelay = Math.max(
+        this.crawlerConfig.rateMonitoring.adaptiveDelay.minDelayMs,
+        Math.min(this.crawlerConfig.rateMonitoring.adaptiveDelay.maxDelayMs, recommendedDelay)
+      );
+
+      if (Math.abs(clampedDelay - this.currentDelayMs) > 100) {
+        this.setCurrentDelay(clampedDelay);
+      }
+    }
+  }
+
+  private calculateStrategyDelay(strategyName: string, stats: any): number {
+    switch (strategyName) {
+      case 'success_rate_based':
+        return this.calculateSuccessRateBasedDelay(stats);
+      case 'response_time_based':
+        return this.calculateResponseTimeBasedDelay(stats);
+      case 'error_rate_based':
+        return this.calculateErrorRateBasedDelay(stats);
+      case 'domain_health_based':
+        return this.calculateDomainHealthBasedDelay(stats);
+      default:
+        return this.currentDelayMs;
+    }
+  }
+
+  private calculateSuccessRateBasedDelay(stats: any): number {
+    const targetSuccessRate = 0.85;
+    const currentSuccessRate = stats.successRate;
+
+    if (currentSuccessRate < targetSuccessRate) {
+      const deficit = targetSuccessRate - currentSuccessRate;
+      const increaseFactor = 1 + (deficit * 3);
+      return this.currentDelayMs * increaseFactor;
+    } else if (currentSuccessRate > 0.95) {
+      return this.currentDelayMs * 0.8; // 成功率很高时可以减少延迟
+    }
+
+    return this.currentDelayMs;
+  }
+
+  private calculateResponseTimeBasedDelay(stats: any): number {
+    const targetResponseTime = 5000; // 5秒
+    const currentResponseTime = stats.averageResponseTime;
+
+    if (currentResponseTime > targetResponseTime) {
+      const excess = currentResponseTime - targetResponseTime;
+      const increaseFactor = 1 + (excess / targetResponseTime);
+      return this.currentDelayMs * increaseFactor;
+    } else if (currentResponseTime < 2000) {
+      return this.currentDelayMs * 0.9; // 响应很快时可以稍微减少延迟
+    }
+
+    return this.currentDelayMs;
+  }
+
+  private calculateErrorRateBasedDelay(stats: any): number {
+    const recentErrors = this.getRecentFailureCount(5);
+    const totalRecent = this.requests.filter(r =>
+      r.timestamp >= Date.now() - 5 * 60 * 1000
+    ).length;
+
+    const errorRate = totalRecent > 0 ? recentErrors / totalRecent : 0;
+
+    if (errorRate > 0.3) {
+      return this.currentDelayMs * 2.5; // 错误率很高时大幅增加延迟
+    } else if (errorRate > 0.15) {
+      return this.currentDelayMs * 1.8;
+    } else if (errorRate > 0.05) {
+      return this.currentDelayMs * 1.3;
+    }
+
+    return this.currentDelayMs;
+  }
+
+  private calculateDomainHealthBasedDelay(stats: any): number {
+    let domainHealthFactor = 1.0;
+
+    for (const [domain, rule] of this.domainThrottlingRules) {
+      const domainRequests = this.requests.filter(r => r.domain === domain);
+      const recentDomainRequests = domainRequests.filter(r =>
+        r.timestamp >= Date.now() - 60000
+      );
+
+      const domainRPS = recentDomainRequests.length;
+      const utilizationRate = domainRPS / rule.maxRequestsPerSecond;
+
+      if (utilizationRate > 0.8) {
+        domainHealthFactor *= 1.5; // 域名使用率高时增加延迟
+      } else if (utilizationRate < 0.3) {
+        domainHealthFactor *= 0.9; // 域名使用率低时可以减少延迟
+      }
+    }
+
+    return this.currentDelayMs * domainHealthFactor;
+  }
+
+  private calculateIntelligentBackoff(errorType: string, retryCount: number): number {
+    if (!this.intelligentBackoffConfig.enabled) {
+      return this.currentDelayMs * 2;
+    }
+
+    const multiplier = this.intelligentBackoffConfig.errorTypeMultipliers.get(errorType) || 1.0;
+    const baseDelay = this.intelligentBackoffConfig.strategies.exponential.base;
+    const maxDelay = this.intelligentBackoffConfig.strategies.exponential.max;
+    const factor = this.intelligentBackoffConfig.strategies.exponential.factor;
+
+    const exponentialDelay = Math.min(baseDelay * Math.pow(factor, retryCount) * multiplier, maxDelay);
+
+    return Math.round(exponentialDelay);
+  }
+
+  private updatePerformanceHistory(): void {
+    const stats = this.getCurrentIntelligentStats();
+
+    this.performanceHistory.push({
+      timestamp: Date.now(),
+      delay: this.currentDelayMs,
+      successRate: stats.successRate,
+      averageResponseTime: stats.averageResponseTime,
+      requestsPerSecond: stats.requestsPerSecond
+    });
+
+    // 保持性能历史大小
+    if (this.performanceHistory.length > 1000) {
+      this.performanceHistory = this.performanceHistory.slice(-500);
+    }
+  }
+
+  private getCurrentIntelligentStats(): RateStats {
+    const now = Date.now();
+    const windowStart = now - this.crawlerConfig.rateMonitoring.windowSizeMs;
+
+    const windowRequests = this.requests.filter(r => r.timestamp >= windowStart);
+    const windowSize = this.crawlerConfig.rateMonitoring.windowSizeMs / 1000;
+
+    const successCount = windowRequests.filter(r => r.success).length;
+    const errorCount = windowRequests.filter(r => !r.success).length;
+    const totalDuration = windowRequests.reduce((sum, r) => sum + r.duration, 0);
+
+    const requestsPerSecond = windowRequests.length / windowSize;
+    const successRate = windowRequests.length > 0 ? successCount / windowRequests.length : 1;
+    const averageResponseTime = windowRequests.length > 0 ? totalDuration / windowRequests.length : 0;
+
+    const isThrottling = windowRequests.length >= this.crawlerConfig.rateMonitoring.maxRequestsPerWindow;
+
+    // 计算域名分布
+    const domainDistribution = new Map<string, number>();
+    windowRequests.forEach(request => {
+      const count = domainDistribution.get(request.domain) || 0;
+      domainDistribution.set(request.domain, count + 1);
+    });
+
+    // 计算性能评分
+    const performanceScore = this.calculatePerformanceScore(successRate, averageResponseTime, requestsPerSecond);
+
+    // 分析趋势方向
+    const trendDirection = this.analyzeTrendDirection();
+
+    // 推荐下一个延迟
+    const nextRecommendedDelay = this.calculateNextRecommendedDelay(successRate, averageResponseTime);
+
+    // 生成推荐动作
+    const recommendedActions = this.generateRecommendedActions(successRate, averageResponseTime, isThrottling);
+
+    return {
+      currentDelayMs: this.currentDelayMs,
+      requestsPerSecond,
+      successRate,
+      averageResponseTime,
+      windowSize,
+      maxRequestsPerWindow: this.crawlerConfig.rateMonitoring.maxRequestsPerWindow,
+      isThrottling,
+      domainDistribution,
+      performanceScore,
+      trendDirection,
+      nextRecommendedDelay,
+      recommendedActions
+    };
+  }
+
+  private calculatePerformanceScore(successRate: number, averageResponseTime: number, requestsPerSecond: number): number {
+    const successScore = successRate * 40;
+    const responseScore = Math.max(0, (1 - Math.min(averageResponseTime / 10000, 1))) * 30;
+    const throughputScore = Math.min(requestsPerSecond / 10, 1) * 30;
+
+    return Math.round(successScore + responseScore + throughputScore);
+  }
+
+  private analyzeTrendDirection(): 'improving' | 'stable' | 'degrading' {
+    if (this.performanceHistory.length < 10) {
+      return 'stable';
+    }
+
+    const recent = this.performanceHistory.slice(-5);
+    const older = this.performanceHistory.slice(-10, -5);
+
+    const recentSuccessRate = recent.reduce((sum, h) => sum + h.successRate, 0) / recent.length;
+    const olderSuccessRate = older.reduce((sum, h) => sum + h.successRate, 0) / older.length;
+
+    const recentResponseTime = recent.reduce((sum, h) => sum + h.averageResponseTime, 0) / recent.length;
+    const olderResponseTime = older.reduce((sum, h) => sum + h.averageResponseTime, 0) / older.length;
+
+    const successRateImprovement = recentSuccessRate - olderSuccessRate;
+    const responseTimeImprovement = olderResponseTime - recentResponseTime;
+
+    if (successRateImprovement > 0.05 && responseTimeImprovement > 500) {
+      return 'improving';
+    } else if (successRateImprovement < -0.05 || responseTimeImprovement < -500) {
+      return 'degrading';
+    }
+
+    return 'stable';
+  }
+
+  private calculateNextRecommendedDelay(successRate: number, averageResponseTime: number): number {
+    let recommendedDelay = this.currentDelayMs;
+
+    if (successRate < 0.8) {
+      recommendedDelay *= 1.5;
+    } else if (successRate > 0.95 && averageResponseTime < 3000) {
+      recommendedDelay *= 0.8;
+    }
+
+    if (averageResponseTime > 10000) {
+      recommendedDelay *= 1.3;
+    }
+
+    return Math.max(
+      this.crawlerConfig.rateMonitoring.adaptiveDelay.minDelayMs,
+      Math.min(this.crawlerConfig.rateMonitoring.adaptiveDelay.maxDelayMs, recommendedDelay)
+    );
+  }
+
+  private generateRecommendedActions(successRate: number, averageResponseTime: number, isThrottling: boolean): string[] {
+    const actions: string[] = [];
+
+    if (successRate < 0.7) {
+      actions.push('成功率较低，建议检查网络连接和目标网站状态');
+    }
+
+    if (averageResponseTime > 10000) {
+      actions.push('响应时间过长，考虑增加延迟或优化网络');
+    }
+
+    if (isThrottling) {
+      actions.push('当前处于限流状态，请耐心等待或减少请求频率');
+    }
+
+    if (this.currentDelayMs > this.crawlerConfig.rateMonitoring.adaptiveDelay.maxDelayMs * 0.8) {
+      actions.push('延迟接近上限，可能存在严重的访问限制');
+    }
+
+    if (actions.length === 0 && successRate > 0.9) {
+      actions.push('当前状态良好，保持现有策略');
+    }
+
+    return actions;
+  }
+
+  private logRequestIntelligently(record: RequestRecord, stats: RateStats): void {
+    const logLevel = this.determineLogLevel(record, stats);
+    const logData = {
+      url: this.sanitizeUrl(record.url),
+      domain: record.domain,
+      success: record.success,
+      duration: record.duration,
+      statusCode: record.statusCode,
+      errorType: record.errorType,
+      retryCount: record.retryCount,
+      currentDelayMs: this.currentDelayMs,
+      performanceScore: stats.performanceScore,
+      trendDirection: stats.trendDirection,
+      recommendedActions: stats.recommendedActions.slice(0, 2) // 只显示前两个推荐动作
+    };
+
+    if (logLevel === 'error') {
+      this.logger.error(`❌ 请求失败`, logData);
+    } else if (logLevel === 'warn') {
+      this.logger.warn(`⚠️ 请求警告`, logData);
+    } else if (logLevel === 'debug' && !record.success) {
+      this.logger.debug(`📊 请求记录`, logData);
+    }
+  }
+
+  private determineLogLevel(record: RequestRecord, stats: RateStats): 'error' | 'warn' | 'debug' {
+    if (!record.success) {
+      if (record.errorType === 'authentication_error' || record.errorType === 'rate_limited') {
+        return 'error';
+      }
+      if (stats.performanceScore < 30 || record.retryCount > 2) {
+        return 'warn';
+      }
+    }
+
+    if (record.duration > 15000 || stats.isThrottling) {
+      return 'warn';
+    }
+
+    return 'debug';
+  }
+
+  private triggerIntelligentAlerts(record: RequestRecord, stats: RateStats): void {
+    // 连续失败预警
+    const consecutiveFailures = this.getConsecutiveFailures();
+    if (consecutiveFailures >= 5) {
+      this.logger.error(`🚨 连续失败预警`, {
+        consecutiveFailures,
+        domain: record.domain,
+        lastErrorType: record.errorType,
+        recommendedAction: '建议暂停请求，检查账户状态和网站访问政策'
+      });
+    }
+
+    // 性能严重下降预警
+    if (stats.performanceScore < 20 && stats.trendDirection === 'degrading') {
+      this.logger.error(`📉 性能严重下降`, {
+        performanceScore: stats.performanceScore,
+        trendDirection: stats.trendDirection,
+        successRate: Math.round(stats.successRate * 100),
+        averageResponseTime: Math.round(stats.averageResponseTime),
+        recommendedAction: '立即检查系统状态，考虑大幅增加延迟或暂停请求'
+      });
+    }
+
+    // 域名特定错误预警
+    const criticalErrors = Array.from(this.errorPatterns.entries())
+      .filter(([, pattern]) => pattern.severity === 'critical');
+
+    if (criticalErrors.length > 0) {
+      this.logger.error(`🚨 关键错误模式检测`, {
+        criticalErrorCount: criticalErrors.length,
+        errors: criticalErrors.map(([key, pattern]) => ({
+          pattern: key,
+          severity: pattern.severity,
+          frequency: pattern.frequency,
+          recommendedAction: pattern.recommendedAction
+        })),
+        recommendedAction: '存在关键错误模式，建议立即调整策略或暂停相关域名的请求'
+      });
+    }
+  }
+
+  // 公共API方法
+
+  getIntelligentBackoffDelay(errorType?: string, retryCount?: number): number {
+    return this.calculateIntelligentBackoff(errorType || 'unknown', retryCount || 0);
+  }
+
+  getDomainThrottlingStatus(): Array<{
+    domain: string;
+    currentRPS: number;
+    maxRPS: number;
+    utilizationRate: number;
+    healthStatus: 'healthy' | 'warning' | 'critical';
+  }> {
+    const now = Date.now();
+    const status: Array<{
+      domain: string;
+      currentRPS: number;
+      maxRPS: number;
+      utilizationRate: number;
+      healthStatus: 'healthy' | 'warning' | 'critical';
+    }> = [];
+
+    for (const [domain, rule] of this.domainThrottlingRules) {
+      const recentRequests = this.requests.filter(r =>
+        r.domain === domain && r.timestamp >= now - 1000
+      );
+
+      const currentRPS = recentRequests.length;
+      const utilizationRate = currentRPS / rule.maxRequestsPerSecond;
+
+      let healthStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
+      if (utilizationRate >= 0.9) {
+        healthStatus = 'critical';
+      } else if (utilizationRate >= 0.7) {
+        healthStatus = 'warning';
+      }
+
+      status.push({
+        domain,
+        currentRPS,
+        maxRPS: rule.maxRequestsPerSecond,
+        utilizationRate: Math.round(utilizationRate * 100) / 100,
+        healthStatus
+      });
+    }
+
+    return status.sort((a, b) => b.utilizationRate - a.utilizationRate);
+  }
+
+  getErrorPatterns(): Array<{
+    pattern: string;
+    domain: string;
+    errorType: string;
+    count: number;
+    frequency: number;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    recommendedAction: string;
+  }> {
+    return Array.from(this.errorPatterns.entries())
+      .map(([key, pattern]) => {
+        const [domain, errorType] = key.split(':');
+        return {
+          pattern: key,
+          domain,
+          errorType,
+          count: pattern.count,
+          frequency: pattern.frequency,
+          severity: pattern.severity,
+          recommendedAction: pattern.recommendedAction
+        };
+      })
+      .sort((a, b) => b.severity.localeCompare(a.severity) || b.frequency - a.frequency);
+  }
+
+  optimizeStrategies(): void {
+    for (const [name, strategy] of this.adaptiveStrategies) {
+      const recentPerformance = this.evaluateStrategyPerformance(name);
+
+      if (recentPerformance.successRateImprovement < 0) {
+        strategy.weight = Math.max(0.1, strategy.weight - 0.1);
+        this.logger.debug(`降低策略权重`, {
+          strategy: name,
+          oldWeight: strategy.weight + 0.1,
+          newWeight: strategy.weight,
+          reason: 'performance_degradation'
+        });
+      } else if (recentPerformance.successRateImprovement > 0.1) {
+        strategy.weight = Math.min(0.5, strategy.weight + 0.05);
+        this.logger.debug(`提高策略权重`, {
+          strategy: name,
+          oldWeight: strategy.weight - 0.05,
+          newWeight: strategy.weight,
+          reason: 'performance_improvement'
+        });
+      }
+
+      strategy.lastAdjustment = Date.now();
+    }
+
+    this.logger.log(`策略优化完成`, {
+      optimizedStrategies: this.adaptiveStrategies.size,
+      totalWeight: Array.from(this.adaptiveStrategies.values()).reduce((sum, s) => sum + s.weight, 0)
+    });
+  }
+
+  private evaluateStrategyPerformance(strategyName: string): {
+    successRateImprovement: number;
+    responseTimeImprovement: number;
+    errorReduction: number;
+  } {
+    // 基于历史数据评估策略性能
+    const recentHistory = this.performanceHistory.slice(-20);
+    const olderHistory = this.performanceHistory.slice(-40, -20);
+
+    if (recentHistory.length === 0 || olderHistory.length === 0) {
+      return { successRateImprovement: 0, responseTimeImprovement: 0, errorReduction: 0 };
+    }
+
+    const recentSuccessRate = recentHistory.reduce((sum, h) => sum + h.successRate, 0) / recentHistory.length;
+    const olderSuccessRate = olderHistory.reduce((sum, h) => sum + h.successRate, 0) / olderHistory.length;
+
+    const recentResponseTime = recentHistory.reduce((sum, h) => sum + h.averageResponseTime, 0) / recentHistory.length;
+    const olderResponseTime = olderHistory.reduce((sum, h) => sum + h.averageResponseTime, 0) / olderHistory.length;
+
+    return {
+      successRateImprovement: recentSuccessRate - olderSuccessRate,
+      responseTimeImprovement: olderResponseTime - recentResponseTime,
+      errorReduction: 0 // 可以基于错误率历史计算
     };
   }
 }
