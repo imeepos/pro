@@ -8,6 +8,7 @@ export interface CleanedDataEvent {
   dataId: number;
   dataType: 'post' | 'comment' | 'user';
   content: string;
+  platform?: string;
   metadata?: Record<string, any>;
 }
 

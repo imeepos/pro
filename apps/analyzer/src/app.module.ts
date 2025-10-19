@@ -10,6 +10,7 @@ import { AnalysisQueueConsumer } from './consumers/analysis-queue.consumer';
 import { SentimentAnalysisService } from './services/sentiment-analysis.service';
 import { NLPAnalysisService } from './services/nlp-analysis.service';
 import { LLMAnalysisService } from './services/llm-analysis.service';
+import { PerformanceMonitorService } from './services/performance-monitor.service';
 import analyzerConfig from './config/analyzer.config';
 import { createDatabaseConfig } from '@pro/entities';
 
@@ -37,6 +38,7 @@ import { createDatabaseConfig } from '@pro/entities';
     AppService,
     RabbitMQService,
     AnalysisQueueConsumer,
+    PerformanceMonitorService,
     SentimentAnalysisService,
     NLPAnalysisService,
     LLMAnalysisService,
