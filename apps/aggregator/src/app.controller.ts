@@ -3,6 +3,9 @@ import { AppService } from './app.service';
 import { HourlyAggregatorService } from './services/hourly-aggregator.service';
 import { DailyAggregatorService } from './services/daily-aggregator.service';
 import { WindowAggregatorService } from './services/window-aggregator.service';
+import { MessageIdempotencyService } from './services/message-idempotency.service';
+import { AnalysisResultConsumer } from './consumers/analysis-result.consumer';
+import { CacheService } from './services/cache.service';
 
 @Controller()
 export class AppController {
@@ -11,6 +14,9 @@ export class AppController {
     private readonly hourlyAggregator: HourlyAggregatorService,
     private readonly dailyAggregator: DailyAggregatorService,
     private readonly windowAggregator: WindowAggregatorService,
+    private readonly messageIdempotency: MessageIdempotencyService,
+    private readonly analysisConsumer: AnalysisResultConsumer,
+    private readonly cacheService: CacheService,
   ) {}
 
   @Get('health')
@@ -84,6 +90,71 @@ export class AppController {
       success: true,
       data: metrics,
       timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('monitoring/consumer')
+  getConsumerStatistics() {
+    const consumerStats = this.analysisConsumer.getStatistics();
+
+    return {
+      success: true,
+      data: {
+        consumer: consumerStats,
+        lastUpdated: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Get('monitoring/idempotency')
+  getIdempotencyMetrics() {
+    const idempotencyMetrics = this.messageIdempotency.getMetrics();
+
+    return {
+      success: true,
+      data: {
+        idempotency: idempotencyMetrics,
+        lastUpdated: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Get('monitoring/cache')
+  getCacheMetrics() {
+    const cacheMetrics = this.cacheService.getMetrics();
+
+    return {
+      success: true,
+      data: {
+        cache: cacheMetrics,
+        lastUpdated: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Get('monitoring/overview')
+  getSystemOverview() {
+    const consumerStats = this.analysisConsumer.getStatistics();
+    const idempotencyMetrics = this.messageIdempotency.getMetrics();
+    const cacheMetrics = this.cacheService.getMetrics();
+
+    return {
+      success: true,
+      data: {
+        system: {
+          uptime: process.uptime(),
+          memory: process.memoryUsage(),
+          timestamp: new Date().toISOString(),
+        },
+        consumer: consumerStats,
+        idempotency: idempotencyMetrics,
+        cache: cacheMetrics,
+        health: {
+          overall: consumerStats.errorRate < 5 && cacheMetrics.hitRate > 80 ? 'healthy' : 'degraded',
+          consumerHealth: consumerStats.errorRate < 5 ? 'healthy' : 'unhealthy',
+          cacheHealth: cacheMetrics.hitRate > 80 ? 'healthy' : 'poor',
+        },
+      },
     };
   }
 }

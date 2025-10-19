@@ -13,6 +13,7 @@ import { HourlyAggregatorService } from './services/hourly-aggregator.service';
 import { DailyAggregatorService } from './services/daily-aggregator.service';
 import { WindowAggregatorService } from './services/window-aggregator.service';
 import { AnalysisResultConsumer } from './consumers/analysis-result.consumer';
+import { MessageIdempotencyService } from './services/message-idempotency.service';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { AnalysisResultConsumer } from './consumers/analysis-result.consumer';
     AppService,
     RabbitMQService,
     CacheService,
+    MessageIdempotencyService,
     HourlyAggregatorService,
     DailyAggregatorService,
     WindowAggregatorService,

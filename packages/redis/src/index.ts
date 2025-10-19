@@ -116,6 +116,28 @@ export class RedisClient {
     return await this.client.ttl(key);
   }
 
+  // Set operations
+  async sadd(key: string, ...members: string[]): Promise<number> {
+    return await this.client.sadd(key, ...members);
+  }
+
+  async sismember(key: string, member: string): Promise<boolean> {
+    const result = await this.client.sismember(key, member);
+    return result === 1;
+  }
+
+  async srem(key: string, ...members: string[]): Promise<number> {
+    return await this.client.srem(key, ...members);
+  }
+
+  async scard(key: string): Promise<number> {
+    return await this.client.scard(key);
+  }
+
+  async smembers(key: string): Promise<string[]> {
+    return await this.client.smembers(key);
+  }
+
   // Key operations
   async keys(pattern: string): Promise<string[]> {
     return await this.client.keys(pattern);

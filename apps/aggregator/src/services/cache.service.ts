@@ -4,7 +4,7 @@ import { RedisClient, RedisPipeline, redisConfigFactory } from '@pro/redis';
 import { Logger } from '@pro/logger';
 import { createHash } from 'crypto';
 
-interface CacheMetrics {
+export interface CacheMetrics {
   hits: number;
   misses: number;
   operations: number;
