@@ -1,11 +1,23 @@
-import { Controller, Get, Post, Param, Body, HttpStatus } from '@nestjs/common';
-// import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Param } from '@nestjs/common';
 import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
 import { TaskMonitor } from './weibo/task-monitor.service';
 import { DiagnosticService } from './weibo/diagnostic.service';
 import { PinoLogger } from '@pro/logger';
 
-// @ApiTags('broker')
+/**
+ * Broker 控制器 - API的优雅之门
+ *
+ * 设计理念：
+ * - 每个端点都有其独特的使命
+ * - 响应格式统一且富有意义
+ * - 错误处理优雅且信息丰富
+ *
+ * 提供的服务：
+ * - 任务扫描的手动触发
+ * - 系统状态的实时监控
+ * - 任务管理的精细操作
+ * - 系统诊断的智能分析
+ */
 @Controller()
 export class AppController {
   constructor(
@@ -17,145 +29,201 @@ export class AppController {
     this.logger.setContext(AppController.name);
   }
 
+  /**
+   * 手动触发任务扫描 - 即时的召唤
+   * 当需要立即执行任务扫描时使用
+   */
   @Post('broker/scan')
-  // @ApiOperation({ summary: '手动触发任务扫描' })
-  // @ApiResponse({ status: HttpStatus.OK, description: '扫描成功' })
   async triggerScan() {
-    this.logger.debug('收到手动触发任务扫描请求');
-    const scanStart = Date.now();
+    const operationStart = Date.now();
+    this.logger.debug('收到任务扫描请求');
 
     try {
       await this.taskScanner.triggerScan();
-      const scanDuration = Date.now() - scanStart;
+      const duration = Date.now() - operationStart;
 
-      this.logger.info(`手动任务扫描完成，耗时 ${scanDuration}ms`);
-      return { message: '任务扫描已触发', scanTimeMs: scanDuration };
+      this.logger.info(`任务扫描完成，耗时 ${duration}ms`);
+      return {
+        success: true,
+        message: '任务扫描已执行',
+        executionTime: duration,
+        timestamp: new Date().toISOString()
+      };
     } catch (error) {
-      const scanDuration = Date.now() - scanStart;
-      this.logger.error('手动任务扫描失败', {
+      const duration = Date.now() - operationStart;
+      this.logger.error('任务扫描失败', {
         error: error.message,
-        scanTimeMs: scanDuration
+        duration
       });
       throw error;
     }
   }
 
+  /**
+   * 手动触发任务监控 - 系统的体检
+   * 检查所有任务的运行状态和健康状况
+   */
   @Post('broker/monitor')
-  // @ApiOperation({ summary: '手动触发任务监控' })
-  // @ApiResponse({ status: HttpStatus.OK, description: '监控成功' })
   async triggerMonitor() {
-    this.logger.debug('收到手动触发任务监控请求');
-    const monitorStart = Date.now();
+    const operationStart = Date.now();
+    this.logger.debug('收到任务监控请求');
 
     try {
       await this.taskMonitor.triggerMonitor();
-      const monitorDuration = Date.now() - monitorStart;
+      const duration = Date.now() - operationStart;
 
-      this.logger.info(`手动任务监控完成，耗时 ${monitorDuration}ms`);
-      return { message: '任务监控已触发', monitorTimeMs: monitorDuration };
+      this.logger.info(`任务监控完成，耗时 ${duration}ms`);
+      return {
+        success: true,
+        message: '任务监控已执行',
+        executionTime: duration,
+        timestamp: new Date().toISOString()
+      };
     } catch (error) {
-      const monitorDuration = Date.now() - monitorStart;
-      this.logger.error('手动任务监控失败', {
+      const duration = Date.now() - operationStart;
+      this.logger.error('任务监控失败', {
         error: error.message,
-        monitorTimeMs: monitorDuration
+        duration
       });
       throw error;
     }
   }
 
+  /**
+   * 获取系统统计信息 - 数据的画卷
+   * 展示任务调度的全景统计和实时状态
+   */
   @Get('broker/stats')
-  // @ApiOperation({ summary: '获取任务统计信息' })
-  // @ApiResponse({ status: HttpStatus.OK, description: '获取成功' })
   async getStats() {
-    this.logger.debug('收到获取任务统计信息请求');
-    const statsStart = Date.now();
+    const operationStart = Date.now();
+    this.logger.debug('收到统计信息请求');
 
     try {
-      const [pendingCount, monitorStats] = await Promise.all([
+      const [pendingCount, monitorStats, taskStats] = await Promise.all([
         this.taskScanner.getPendingTasksCount(),
         this.taskMonitor.getMonitorStats(),
+        this.taskScanner.getTaskStats(),
       ]);
 
-      const taskStats = await this.taskScanner.getTaskStats();
-      const statsDuration = Date.now() - statsStart;
+      const duration = Date.now() - operationStart;
 
-      this.logger.debug(`任务统计信息获取完成，耗时 ${statsDuration}ms`, {
-        pendingCount,
+      this.logger.debug(`统计信息获取完成，耗时 ${duration}ms`, {
+        pendingTasks: pendingCount,
         totalTasks: taskStats.total,
-        runningTasks: taskStats.running,
-        failedTasks: taskStats.failed
+        runningTasks: taskStats.running
       });
 
       return {
-        scanner: {
-          pendingCount,
-          ...taskStats,
+        success: true,
+        data: {
+          scanner: {
+            pendingCount,
+            ...taskStats,
+          },
+          monitor: monitorStats,
         },
-        monitor: monitorStats,
-        queryTimeMs: statsDuration,
+        metadata: {
+          queryTime: duration,
+          timestamp: new Date().toISOString()
+        }
       };
     } catch (error) {
-      const statsDuration = Date.now() - statsStart;
-      this.logger.error('获取任务统计信息失败', {
+      const duration = Date.now() - operationStart;
+      this.logger.error('统计信息获取失败', {
         error: error.message,
-        queryTimeMs: statsDuration
+        duration
       });
       throw error;
     }
   }
 
+  /**
+   * 重置失败任务 - 给予新的机会
+   * 将失败状态的任务重新设置为待执行状态
+   */
   @Post('broker/reset/:taskId')
-  // @ApiOperation({ summary: '重置失败任务' })
-  // @ApiResponse({ status: HttpStatus.OK, description: '重置成功' })
-  // @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '任务不存在或状态不允许重置' })
   async resetTask(@Param('taskId') taskId: number) {
-    this.logger.debug('收到重置任务请求', { taskId });
-    const resetStart = Date.now();
+    const operationStart = Date.now();
+    this.logger.debug('收到任务重置请求', { taskId });
 
     try {
       const success = await this.taskMonitor.resetFailedTask(taskId);
-      const resetDuration = Date.now() - resetStart;
+      const duration = Date.now() - operationStart;
 
       if (success) {
-        this.logger.info(`任务 ${taskId} 重置成功，耗时 ${resetDuration}ms`);
-        return { message: '任务重置成功', taskId, resetTimeMs: resetDuration };
+        this.logger.info(`任务 ${taskId} 重置成功`);
+        return {
+          success: true,
+          message: '任务已重置为待执行状态',
+          taskId,
+          executionTime: duration,
+          timestamp: new Date().toISOString()
+        };
       } else {
-        this.logger.warn(`任务 ${taskId} 重置失败，耗时 ${resetDuration}ms`);
-        return { message: '任务重置失败', taskId, success: false, resetTimeMs: resetDuration };
+        this.logger.warn(`任务 ${taskId} 重置失败`);
+        return {
+          success: false,
+          message: '任务重置失败，可能任务不存在或状态不允许重置',
+          taskId,
+          executionTime: duration,
+          timestamp: new Date().toISOString()
+        };
       }
     } catch (error) {
-      const resetDuration = Date.now() - resetStart;
-      this.logger.error(`重置任务 ${taskId} 失败`, {
+      const duration = Date.now() - operationStart;
+      this.logger.error(`任务 ${taskId} 重置异常`, {
         taskId,
         error: error.message,
-        resetTimeMs: resetDuration
+        duration
       });
       throw error;
     }
   }
 
+  /**
+   * 健康检查 - 系统的心跳
+   * 简单的服务状态检查，用于负载均衡器和服务发现
+   */
   @Get('health')
-  // @ApiOperation({ summary: '健康检查' })
-  // @ApiResponse({ status: HttpStatus.OK, description: '服务正常' })
   async health() {
     return {
-      status: 'ok',
+      status: 'healthy',
       service: 'broker',
+      version: '1.0.0',
+      uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     };
   }
 
+  /**
+   * 系统诊断 - 深度的体检
+   * 全面分析数据库中的任务状态，发现潜在问题
+   */
   @Get('broker/diagnostic')
   async diagnose() {
-    this.logger.info('收到数据库诊断请求');
+    this.logger.info('开始系统诊断');
     const result = await this.diagnostic.diagnoseTaskStatuses();
-    return result;
+
+    return {
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    };
   }
 
+  /**
+   * 修复过期任务 - 时间的校准者
+   * 自动修复那些过期未执行的任务，恢复系统的正常运行
+   */
   @Post('broker/fix-overdue')
   async fixOverdue() {
-    this.logger.info('收到修复过期任务请求');
+    this.logger.info('开始修复过期任务');
     const result = await this.diagnostic.fixOverdueTasks();
-    return result;
+
+    return {
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    };
   }
 }

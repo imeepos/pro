@@ -1,64 +1,72 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
+import { WeiboSearchTaskEntity, createDatabaseConfig } from '@pro/entities';
+
+// 核心服务导入 - 每个导入都有其存在的意义
 import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
 import { TaskMonitor } from './weibo/task-monitor.service';
 import { DiagnosticService } from './weibo/diagnostic.service';
 import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
 import { AggregateSchedulerService } from './services/aggregate-scheduler.service';
-import { WeiboSearchTaskEntity } from '@pro/entities';
-import { createDatabaseConfig } from './config/database.config';
 import { AppController } from './app.controller';
 
 /**
- * Broker 主模块
- * 任务调度中心，负责扫描主任务并生成子任务
+ * Broker 模块 - 任务调度的心脏
+ *
+ * 设计哲学：
+ * - 每个模块导入都有其不可替代的价值
+ * - 依赖关系清晰可见，如同血脉相连
+ * - 配置与业务逻辑分离，各司其职
+ *
+ * 核心使命：
+ * - 成为任务调度的指挥中心
+ * - 协调各个服务优雅地协同工作
+ * - 确保系统的稳定与可靠
  */
 @Module({
   imports: [
-    // 全局配置模块
+    // 配置之基 - 全局配置的源泉
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
 
-    // 日志模块
+    // 日志之魂 - 系统的声音与记忆
     LoggerModule.forRoot(createLoggerConfig({
       serviceName: '@pro/broker',
-      logLevel: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+      logLevel: process.env.LOG_LEVEL ||
+        (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
     })),
 
-    // 数据库配置
+    // 数据之根 - 持久化的基石
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createDatabaseConfig(configService) as TypeOrmModuleOptions,
+      useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
     }),
 
-    // 任务调度模块
+    // 时间之舞 - 定时任务的舞台
     ScheduleModule.forRoot(),
 
-    // 实体模块
+    // 实体之殿 - 数据模型的家园
     TypeOrmModule.forFeature([WeiboSearchTaskEntity]),
   ],
+
+  // 控制之门 - API的入口
   controllers: [AppController],
+
+  // 服务之群 - 业务逻辑的守护者
   providers: [
-    // RabbitMQ 配置服务
-    RabbitMQConfigService,
-
-    // 任务调度服务
-    TaskScannerScheduler,
-
-    // 聚合调度服务
-    AggregateSchedulerService,
-
-    // 任务监控服务
-    TaskMonitor,
-
-    // 诊断服务
-    DiagnosticService,
+    RabbitMQConfigService,        // 消息桥梁的构建者
+    TaskScannerScheduler,         // 任务的唤醒者
+    AggregateSchedulerService,    // 数据聚合的指挥家
+    TaskMonitor,                  // 系统健康的守望者
+    DiagnosticService,            // 异常诊断的医师
   ],
+
+  // 导出之选 - 模块间的礼物
   exports: [
     RabbitMQConfigService,
     TaskScannerScheduler,
