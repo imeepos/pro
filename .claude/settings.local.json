@@ -69,7 +69,9 @@
       "Bash(timeout 10 node dist/main.js)",
       "Bash(git diff --name-only --diff-filter=U)",
       "Bash(pnpm list @nestjs/mongoose)",
-      "Bash(pnpm run --filter=@pro/admin build)"
+      "Bash(pnpm run --filter=@pro/admin build)",
+      "Bash(pnpm list:*)",
+      "Bash(pnpm ls:*)"
     ],
     "deny": [],
     "ask": []

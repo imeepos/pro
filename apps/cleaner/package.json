@@ -25,13 +25,13 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@nestjs/common": "11.0.13",
-    "@nestjs/config": "4.0.2",
-    "@nestjs/core": "11.0.13",
+    "@nestjs/common": "^11.0.13",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.0.13",
     "@nestjs/mongoose": "^10.0.4",
-    "@nestjs/platform-express": "11.0.13",
-    "@nestjs/swagger": "11.0.5",
-    "@nestjs/typeorm": "11.0.0",
+    "@nestjs/platform-express": "^11.0.13",
+    "@nestjs/swagger": "^11.0.5",
+    "@nestjs/typeorm": "^11.0.0",
     "@pro/entities": "workspace:*",
     "@pro/logger": "workspace:*",
     "@pro/minio": "workspace:*",
@@ -42,7 +42,7 @@
     "@pro/utils": "workspace:*",
     "mongoose": "^8.1.0",
     "pg": "^8.11.3",
-    "reflect-metadata": "0.2.2",
+    "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.20"
   },

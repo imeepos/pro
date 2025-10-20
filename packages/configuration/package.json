@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nestjs/common": "^10.0.0",
+    "@nestjs/common": "^11.0.13",
     "@pro/logger": "workspace:*",
     "reflect-metadata": "^0.1.13"
   },
