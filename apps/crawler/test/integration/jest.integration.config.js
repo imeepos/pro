@@ -30,7 +30,10 @@ module.exports = {
 
   // TypeScript转换配置
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    '^.+\\.(t|j)s$': ['ts-jest', {
+      tsconfig: 'tsconfig.json', // 使用主tsconfig文件
+      useESM: false, // 禁用ESM模式避免缓存问题
+    }],
   },
 
   // 模块路径映射 - 支持workspace包引用
@@ -79,14 +82,7 @@ module.exports = {
   detectLeaks: false, // 启用可能导致性能问题，按需开启
   forceExit: true,
 
-  // TypeScript配置 - 优化编译性能
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.build.json',
-      isolatedModules: true, // 提高编译性能
-    },
-  },
-
+  
   // 测试环境变量 - 爬虫测试特定配置
   testEnvironmentOptions: {
     NODE_ENV: 'test',
@@ -94,7 +90,7 @@ module.exports = {
     PLAYWRIGHT_BROWSERS_PATH: '0', // 使用系统安装的浏览器
   },
 
-  // 缓存配置 - 集成测试通常禁用缓存以确保一致性
+  // 缓存配置 - 禁用缓存避免问题
   cache: false,
 
   // 模块加载配置

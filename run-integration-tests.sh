@@ -224,7 +224,7 @@ clean_environment() {
 install_dependencies() {
     log_info "安装项目依赖..."
     cd "$PROJECT_ROOT"
-    pnpm install --frozen-lockfile
+    pnpm install
     log_success "依赖安装完成"
 }
 

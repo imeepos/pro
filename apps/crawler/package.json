@@ -18,15 +18,19 @@
     "pm2:prod": "pm2 start --name pro-crawler pnpm -- run start:prod",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit --project tsconfig.build.json",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:integration": "jest --config test/integration/jest.integration.config.js",
-    "test:integration:watch": "jest --config test/integration/jest.integration.config.js --watch",
-    "test:integration:cov": "jest --config test/integration/jest.integration.config.js --coverage",
-    "test:integration:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --config test/integration/jest.integration.config.js --runInBand",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:cov": "vitest --coverage",
+    "test:debug": "vitest --inspect-brk",
+    "test:e2e": "vitest --config test/e2e/vitest.e2e.config.ts",
+    "test:integration": "vitest --config vitest.config.ts --run test/integration/**/*.integration.test.ts",
+    "test:integration:watch": "vitest --config vitest.config.ts --watch test/integration/**/*.integration.test.ts",
+    "test:integration:cov": "vitest --config vitest.config.ts --coverage --run test/integration/**/*.integration.test.ts",
+    "test:integration:debug": "vitest --config vitest.config.ts --inspect-brk test/integration/**/*.integration.test.ts",
+    "test:unit": "vitest --run src/**/*.spec.ts",
+    "test:unit:watch": "vitest --watch src/**/*.spec.ts",
+    "test:simple": "vitest --config vitest.simple.config.ts",
+    "test:legacy": "jest",
     "test:integration:search": "jest --config test/integration/jest.integration.config.js search-crawler.integration.test.ts",
     "test:integration:detail": "jest --config test/integration/jest.integration.config.js detail-crawler.integration.test.ts",
     "test:integration:account": "jest --config test/integration/jest.integration.config.js account-rotation.integration.test.ts",
@@ -77,6 +81,7 @@
     "@types/supertest": "^6.0.0",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
+    "@vitest/ui": "^3.2.4",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
@@ -89,7 +94,8 @@
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "~5.8.0"
+    "typescript": "~5.8.0",
+    "vitest": "^3.2.4"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -100,7 +106,13 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.json",
+          "useESM": false
+        }
+      ]
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
@@ -109,6 +121,10 @@
     "testEnvironment": "node",
     "setupFilesAfterEnv": [
       "jest-extended/all"
-    ]
+    ],
+    "cache": false,
+    "clearMocks": true,
+    "restoreMocks": true,
+    "resetMocks": true
   }
 }

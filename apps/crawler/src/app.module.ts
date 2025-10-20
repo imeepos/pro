@@ -10,6 +10,10 @@ import { WeiboAccountEntity } from '@pro/entities';
 import { WeiboAccountService } from './weibo/account.service';
 import { BrowserService } from './browser/browser.service';
 import { WeiboSearchCrawlerService } from './weibo/search-crawler.service';
+import { WeiboDetailCrawlerService } from './weibo/detail-crawler.service';
+import { WeiboCommentCrawlerService } from './weibo/comment-crawler.service';
+import { WeiboCreatorCrawlerService } from './weibo/creator-crawler.service';
+import { WeiboMediaDownloaderService } from './weibo/media-downloader.service';
 import { RawDataService } from './raw-data/raw-data.service';
 import { CrawlQueueConsumer } from './crawl-queue.consumer';
 import { RobotsService } from './robots/robots.service';
@@ -103,6 +107,10 @@ import { createDatabaseConfig } from '@pro/entities';
     RobotsService,
     RequestMonitorService,
     WeiboSearchCrawlerService,
+    WeiboDetailCrawlerService,
+    WeiboCommentCrawlerService,
+    WeiboCreatorCrawlerService,
+    WeiboMediaDownloaderService,
     RawDataService,
     CrawlQueueConsumer,
     {
