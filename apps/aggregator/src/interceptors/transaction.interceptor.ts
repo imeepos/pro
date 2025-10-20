@@ -6,7 +6,7 @@ import {
   BadGatewayException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Observable, from, throwError } from 'rxjs';
+import { Observable, from, throwError, of, lastValueFrom } from 'rxjs';
 import { switchMap, catchError } from 'rxjs/operators';
 import { Logger } from '@pro/logger';
 import { TransactionService, TransactionContext } from '../services/transaction.service';
@@ -20,7 +20,7 @@ export class TransactionInterceptor implements NestInterceptor {
     private readonly logger: Logger,
   ) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): ReturnType<CallHandler['handle']> {
     const transactionalConfig = this.reflector.get<TransactionalConfig>(
       TRANSACTIONAL_METADATA_KEY,
       context.getHandler(),
@@ -45,7 +45,8 @@ export class TransactionInterceptor implements NestInterceptor {
           const request = context.switchToHttp().getRequest();
           request.transactionContext = transactionContext;
 
-          return next.handle().toPromise();
+          const handler$ = next.handle() as unknown as Observable<unknown>;
+          return lastValueFrom(handler$);
         },
         transactionalConfig,
       )
@@ -74,7 +75,7 @@ export class TransactionInterceptor implements NestInterceptor {
           duration: result.duration,
         });
 
-        return from([result.data]);
+        return of(result.data);
       }),
       catchError(error => {
         this.logger.error('事务拦截器异常', {
@@ -83,6 +84,6 @@ export class TransactionInterceptor implements NestInterceptor {
         });
         return throwError(() => error);
       })
-    );
+    ) as unknown as ReturnType<CallHandler['handle']>;
   }
 }

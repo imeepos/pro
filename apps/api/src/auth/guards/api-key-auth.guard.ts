@@ -1,5 +1,5 @@
 import { Injectable, ExecutionContext } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { AuthGuard, IAuthGuard } from '@nestjs/passport';
 import { resolveRequest } from '../../common/utils/context.utils';
 
 /**
@@ -12,7 +12,7 @@ export class ApiKeyAuthGuard extends AuthGuard('api-key') {
     return resolveRequest(context);
   }
 
-  canActivate(context: ExecutionContext) {
+  canActivate(context: ExecutionContext): ReturnType<IAuthGuard['canActivate']> {
     return super.canActivate(context);
   }
 
