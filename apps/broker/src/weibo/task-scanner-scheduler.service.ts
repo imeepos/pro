@@ -7,11 +7,7 @@ import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
 import { RabbitMQConfigService } from '../rabbitmq/rabbitmq-config.service';
 import { SubTaskMessage } from './interfaces/sub-task-message.interface';
 
-// 导入增强组件
-import { EnhancedTaskStateTracker, TaskExecutionPhase } from './enhanced-task-state-tracker.service.js';
-import { IntelligentRetryManager } from './intelligent-retry-manager.service.js';
-import { TaskPerformanceCollector } from './task-performance-collector.service.js';
-import { TaskPriorityDependencyManager } from './task-priority-dependency-manager.service.js';
+// 移除冗余的增强组件导入，回归简约之美
 
 /**
  * 时间间隔解析工具
@@ -36,14 +32,13 @@ function parseInterval(interval: string): number {
 
 /**
  * 微博搜索任务扫描调度器
- * 增强版调度器，集成了智能任务管理的数字艺术品
+ * 简约版调度器，专注核心业务逻辑的艺术品
  *
- * 增强特性：
- * - 智能状态追踪：记录任务生命周期的每个重要时刻
- * - 自适应重试：基于失败类型的智能重试策略
- * - 性能监控：实时收集和分析任务执行性能
- * - 优先级管理：动态调整任务执行优先级
- * - 依赖解析：智能处理任务间的依赖关系
+ * 核心职责：
+ * - 扫描待执行的任务
+ * - 生成子任务消息
+ * - 发送到消息队列
+ * - 处理失败重试
  */
 @Injectable()
 export class TaskScannerScheduler {
@@ -52,11 +47,6 @@ export class TaskScannerScheduler {
     @InjectRepository(WeiboSearchTaskEntity)
     private readonly taskRepository: Repository<WeiboSearchTaskEntity>,
     private readonly rabbitMQService: RabbitMQConfigService,
-    // 注入增强组件
-    private readonly stateTracker: EnhancedTaskStateTracker,
-    private readonly retryManager: IntelligentRetryManager,
-    private readonly performanceCollector: TaskPerformanceCollector,
-    private readonly priorityManager: TaskPriorityDependencyManager,
   ) {
     this.logger.setContext(TaskScannerScheduler.name);
   }
@@ -150,8 +140,8 @@ export class TaskScannerScheduler {
   }
 
   /**
-   * 调度单个主任务（增强版）
-   * 集成智能任务管理的艺术性调度逻辑
+   * 调度单个主任务（简约版）
+   * 专注核心业务逻辑的优雅调度
    */
   async dispatchTask(task: WeiboSearchTaskEntity): Promise<void> {
     const dispatchStart = Date.now();
@@ -165,44 +155,6 @@ export class TaskScannerScheduler {
     });
 
     try {
-      // 使用智能调度决策检查是否可以调度
-      const schedulingDecision = await this.priorityManager.canScheduleTask(task.id);
-
-      if (!schedulingDecision.shouldSchedule) {
-        this.logger.debug(`任务 ${task.id} 智能调度检查未通过`, {
-          taskId: task.id,
-          reason: schedulingDecision.reason,
-          blockingFactors: schedulingDecision.blockingFactors,
-          estimatedWaitTime: schedulingDecision.estimatedWaitTime,
-        });
-        return;
-      }
-
-      // 记录任务开始执行的状态变迁
-      await this.stateTracker.recordStateTransition(
-        task.id,
-        task.status,
-        WeiboSearchTaskStatus.RUNNING,
-        '调度器开始执行任务',
-        {
-          schedulingDecision,
-          dispatchStartTime: new Date(dispatchStart),
-        }
-      );
-
-      // 记录任务执行阶段
-      await this.stateTracker.recordTaskPhase(task.id, TaskExecutionPhase.INITIALIZING, {
-        schedulingPriority: schedulingDecision.priority,
-        resourceAllocation: schedulingDecision.resourceAllocation,
-      });
-
-      // 收集初始性能指标
-      await this.performanceCollector.collectMetrics(task.id, {
-        startTime: new Date(dispatchStart),
-        queueTime: schedulingDecision.estimatedWaitTime || 0,
-        memoryUsage: 0, // 初始内存使用
-        cpuUsage: 0,    // 初始CPU使用
-      });
 
       // 使用乐观锁防止并发调度同一任务
       const lockConditions = {
@@ -229,11 +181,6 @@ export class TaskScannerScheduler {
       );
       const lockDuration = Date.now() - lockStart;
 
-      // 记录锁操作性能
-      await this.performanceCollector.collectMetrics(task.id, {
-        lockAcquisitionTime: lockDuration,
-      });
-
       this.logger.debug(`数据库锁操作完成，耗时 ${lockDuration}ms`, {
         taskId: task.id,
         affectedRows: lockResult.affected
@@ -246,12 +193,6 @@ export class TaskScannerScheduler {
 
         if (!currentTask) {
           this.logger.warn(`任务 ${task.id} 已被删除`);
-          await this.stateTracker.recordStateTransition(
-            task.id,
-            WeiboSearchTaskStatus.RUNNING,
-            WeiboSearchTaskStatus.FAILED,
-            '任务在调度过程中被删除'
-          );
           return;
         }
 
@@ -263,11 +204,7 @@ export class TaskScannerScheduler {
           currentUpdatedAt: currentTask.updatedAt.toISOString()
         });
 
-        // 记录锁冲突事件
-        await this.performanceCollector.collectMetrics(task.id, {
-          lockConflict: true,
-          currentTaskState: currentTask.status,
-        });
+        // 锁冲突：记录日志即可，无需冗余的性能收集
 
         // 如果当前状态是 RUNNING，说明其他实例正在处理，无需操作
         if (currentTask.status === WeiboSearchTaskStatus.RUNNING) {
@@ -283,14 +220,6 @@ export class TaskScannerScheduler {
             nextRunAt: new Date(Date.now() + retryDelay),
           });
 
-          await this.stateTracker.recordStateTransition(
-            task.id,
-            task.status,
-            WeiboSearchTaskStatus.PENDING,
-            '锁冲突，重新调度',
-            { retryDelay, nextRetryAt: new Date(Date.now() + retryDelay) }
-          );
-
           this.logger.debug(`任务 ${task.id} 已重新调度，1分钟后重试`);
         }
 
@@ -301,9 +230,6 @@ export class TaskScannerScheduler {
         taskId: task.id,
         statusTransition: `${task.status} -> RUNNING`
       });
-
-      // 记录成功获取锁的事件
-      await this.stateTracker.recordTaskPhase(task.id, TaskExecutionPhase.DISCOVERY);
 
       let subTask: SubTaskMessage;
       let nextRunTime: Date | null = null;
@@ -413,36 +339,6 @@ export class TaskScannerScheduler {
       }
 
       const totalDispatchDuration = Date.now() - dispatchStart;
-      // 记录任务调度完成的状态变迁
-      await this.stateTracker.recordStateTransition(
-        task.id,
-        WeiboSearchTaskStatus.RUNNING,
-        WeiboSearchTaskStatus.PENDING,
-        '任务调度完成，子任务已发送',
-        {
-          subTaskDetails: {
-            start: subTask.start.toISOString(),
-            end: subTask.end.toISOString(),
-            isInitialCrawl: subTask.isInitialCrawl,
-          },
-          nextRunAt: nextRunTime?.toISOString(),
-        }
-      );
-
-      // 记录最终性能指标
-      await this.performanceCollector.collectMetrics(task.id, {
-        endTime: new Date(),
-        executionTime: Date.now() - dispatchStart,
-        phase: TaskExecutionPhase.FINALIZING,
-        subTaskGenerated: true,
-      });
-
-      // 记录任务执行阶段完成
-      await this.stateTracker.recordTaskPhase(task.id, TaskExecutionPhase.FINALIZING, {
-        totalDispatchTime: totalDispatchDuration,
-        subTaskGenerated: true,
-        nextRunAt: nextRunTime?.toISOString(),
-      });
 
       // 记录子任务详细信息，便于追踪时间重叠
       this.logger.info({
@@ -460,34 +356,6 @@ export class TaskScannerScheduler {
     } catch (error) {
       const totalDispatchDuration = Date.now() - dispatchStart;
 
-      // 记录调度失败的状态变迁
-      await this.stateTracker.recordStateTransition(
-        task.id,
-        task.status,
-        WeiboSearchTaskStatus.FAILED,
-        `调度失败: ${error.message}`,
-        {
-          error: error.message,
-          stack: error.stack,
-          totalDispatchTime: totalDispatchDuration,
-        }
-      );
-
-      // 记录失败的性能指标
-      await this.performanceCollector.collectMetrics(task.id, {
-        endTime: new Date(),
-        executionTime: totalDispatchDuration,
-        errorCount: 1,
-        errorMessage: error.message,
-        phase: TaskExecutionPhase.FAILED,
-      });
-
-      // 记录失败阶段
-      await this.stateTracker.recordTaskPhase(task.id, TaskExecutionPhase.FAILED, {
-        error: error.message,
-        dispatchDuration: totalDispatchDuration,
-      });
-
       this.logger.error({
         message: `调度主任务失败`,
         taskId: task.id,
@@ -498,33 +366,22 @@ export class TaskScannerScheduler {
         timestamp: new Date().toISOString()
       });
 
-      // 使用智能重试管理器处理失败
-      const retrySuccess = await this.retryManager.executeRetry(task, error.message);
+      // 使用简约的重试逻辑
+      const retryDelay = this.calculateRetryDelay(task.retryCount);
+      this.logger.debug(`设置任务重试`, {
+        taskId: task.id,
+        currentRetryCount: task.retryCount,
+        newRetryCount: task.retryCount + 1,
+        retryDelayMinutes: retryDelay / 1000 / 60,
+        nextRetryAt: new Date(Date.now() + retryDelay).toISOString()
+      });
 
-      if (!retrySuccess) {
-        // 重试失败，保持原有的重试逻辑作为后备
-        this.logger.debug(`智能重试失败，使用传统重试逻辑`, {
-          taskId: task.id,
-        });
-
-        const retryDelay = this.calculateRetryDelay(task.retryCount);
-        this.logger.debug(`设置任务重试`, {
-          taskId: task.id,
-          currentRetryCount: task.retryCount,
-          newRetryCount: task.retryCount + 1,
-          retryDelayMinutes: retryDelay / 1000 / 60,
-          nextRetryAt: new Date(Date.now() + retryDelay).toISOString()
-        });
-
-        await this.taskRepository.update(task.id, {
-          status: WeiboSearchTaskStatus.FAILED,
-          errorMessage: error.message,
-          retryCount: task.retryCount + 1,
-          nextRunAt: new Date(Date.now() + retryDelay),
-        });
-      } else {
-        this.logger.info(`智能重试管理器已处理任务 ${task.id} 的重试`);
-      }
+      await this.taskRepository.update(task.id, {
+        status: WeiboSearchTaskStatus.FAILED,
+        errorMessage: error.message,
+        retryCount: task.retryCount + 1,
+        nextRunAt: new Date(Date.now() + retryDelay),
+      });
     }
   }
 
@@ -617,7 +474,9 @@ export class TaskScannerScheduler {
 
   /**
    * 计算重试延迟时间
-   * 使用指数退避策略：5分钟, 10分钟, 20分钟, 40分钟
+   * 简约的指数退避策略：5分钟, 10分钟, 20分钟, 40分钟
+   *
+   * 艺术原则：用最简单的方式解决最常见的问题
    */
   private calculateRetryDelay(retryCount: number): number {
     const baseDelay = 5 * 60 * 1000; // 5分钟基础延迟
