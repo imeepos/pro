@@ -159,7 +159,7 @@ export class GraphQLDataAdapter {
 
         const { rawDataList } = response.data;
         return {
-          data: rawDataList.items.map(item => this.transformItemToLegacyFormat(item)),
+          data: rawDataList.items.map((item: any) => this.transformItemToLegacyFormat(item)),
           total: rawDataList.total,
           page: rawDataList.page,
           limit: rawDataList.pageSize,
@@ -231,7 +231,7 @@ export class GraphQLDataAdapter {
           return [];
         }
 
-        return response.data.searchRawData.items.map(item =>
+        return response.data.searchRawData.items.map((item: any) =>
           this.transformItemToLegacyFormat(item)
         );
       }),
@@ -258,7 +258,7 @@ export class GraphQLDataAdapter {
           return [];
         }
 
-        return response.data.rawDataList.items.map(item =>
+        return response.data.rawDataList.items.map((item: any) =>
           this.transformItemToLegacyFormat(item)
         );
       }),
@@ -281,7 +281,7 @@ export class GraphQLDataAdapter {
           return [];
         }
 
-        return response.data.rawDataBySourceType.items.map(item =>
+        return response.data.rawDataBySourceType.items.map((item: any) =>
           this.transformItemToLegacyFormat(item)
         );
       }),
@@ -304,7 +304,7 @@ export class GraphQLDataAdapter {
           return [];
         }
 
-        return response.data.recentRawData.map(item =>
+        return response.data.recentRawData.map((item: any) =>
           this.transformItemToLegacyFormat(item)
         );
       }),
