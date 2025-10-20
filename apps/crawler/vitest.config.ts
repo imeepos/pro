@@ -58,14 +58,11 @@ export default defineConfig({
       },
     },
 
-    // 详细输出
-    verbose: true,
-
     // 监视文件
     watch: false,
 
     // 报告器
-    reporter: ['verbose', 'json', 'html'],
+    reporters: ['verbose', 'json', 'html'],
 
     // 输出目录
     outputFile: {

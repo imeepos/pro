@@ -24,7 +24,6 @@ export default defineConfig({
     ],
 
     globals: true,
-    verbose: true,
     watch: false,
 
     // 超时设置
@@ -37,7 +36,7 @@ export default defineConfig({
     },
 
     // 报告器
-    reporter: ['verbose'],
+    reporters: ['verbose'],
   },
 
   esbuild: {

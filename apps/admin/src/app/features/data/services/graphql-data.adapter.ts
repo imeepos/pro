@@ -394,6 +394,9 @@ export class GraphQLDataAdapter {
       [LegacySourceType.WEIBO_API_JSON]: SourceType.WeiboApiJson,
       [LegacySourceType.WEIBO_COMMENT]: SourceType.WeiboComment,
       [LegacySourceType.WEIBO_KEYWORD_SEARCH]: SourceType.WeiboKeywordSearch,
+      [LegacySourceType.WEIBO_NOTE_DETAIL]: SourceType.Custom, // Map to Custom until GraphQL schema is updated
+      [LegacySourceType.WEIBO_CREATOR_PROFILE]: SourceType.Custom, // Map to Custom until GraphQL schema is updated
+      [LegacySourceType.WEIBO_COMMENTS]: SourceType.Custom, // Map to Custom until GraphQL schema is updated
       [LegacySourceType.JD]: SourceType.Jd,
       [LegacySourceType.CUSTOM]: SourceType.Custom
     };

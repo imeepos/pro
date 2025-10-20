@@ -19,12 +19,6 @@ import { CrawlQueueConsumer } from './crawl-queue.consumer';
 import { RobotsService } from './robots/robots.service';
 import { RequestMonitorService } from './monitoring/request-monitor.service';
 
-// 微博爬虫服务 - 各司其职的数字艺术品
-import { WeiboDetailCrawlerService } from './weibo/detail-crawler.service';
-import { WeiboCreatorCrawlerService } from './weibo/creator-crawler.service';
-import { WeiboCommentCrawlerService } from './weibo/comment-crawler.service';
-import { WeiboMediaDownloaderService } from './weibo/media-downloader.service';
-
 // 微博数据处理服务 - 融合智慧的数字清洗艺术品
 import { WeiboContentParser } from './data-cleaner/weibo-content-parser.service';
 import { WeiboDataCleaner } from './data-cleaner/weibo-data-cleaner.service';
@@ -118,18 +112,12 @@ import { createDatabaseConfig } from '@pro/entities';
     RobotsService,
     RequestMonitorService,
     WeiboSearchCrawlerService,
-    WeiboDetailCrawlerService,
-    WeiboCommentCrawlerService,
-    WeiboCreatorCrawlerService,
-    WeiboMediaDownloaderService,
+    WeiboDetailCrawlerService,     // 负责微博详情页的数据爬取
+    WeiboCommentCrawlerService,    // 负责评论数据的深度挖掘
+    WeiboCreatorCrawlerService,    // 负责博主主页的数据爬取
+    WeiboMediaDownloaderService,   // 负责媒体文件的智能下载
     RawDataService,
     CrawlQueueConsumer,
-
-    // 微博爬虫服务 - 各司其职的数字艺术品
-    WeiboDetailCrawlerService,     // 负责微博详情页的数据爬取
-    WeiboCreatorCrawlerService,    // 负责博主主页的数据爬取
-    WeiboCommentCrawlerService,    // 负责评论数据的深度挖掘
-    WeiboMediaDownloaderService,   // 负责媒体文件的智能下载
 
     // 微博数据处理服务 - 融合智慧的数字清洗艺术品
     WeiboContentParser,           // 微博内容的智能解析器
