@@ -52,7 +52,7 @@ export class CrawlQueueConsumer implements OnModuleInit {
 
       await this.rabbitMQClient.consume(
         this.rabbitmqConfig.queues.crawlQueue,
-        async (message: any) => {
+        async (message: SubTaskMessage) => {
           await this.handleMessage(message);
         },
       );
@@ -76,7 +76,7 @@ export class CrawlQueueConsumer implements OnModuleInit {
     }
   }
 
-  private async handleMessage(message: any): Promise<void> {
+  private async handleMessage(message: SubTaskMessage): Promise<void> {
     const startTime = Date.now();
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -185,33 +185,35 @@ export class CrawlQueueConsumer implements OnModuleInit {
   }
 
   
-  private validateAndParseMessage(message: any): { isValid: boolean; data?: SubTaskMessage; error?: string } {
-    if (!message) {
-      return { isValid: false, error: '消息为空' };
+  private validateAndParseMessage(message: unknown): { isValid: boolean; data?: SubTaskMessage; error?: string } {
+    if (!message || typeof message !== 'object') {
+      return { isValid: false, error: '消息为空或不是对象' };
     }
 
-    if (!message.taskId || typeof message.taskId !== 'number') {
+    const messageObj = message as Record<string, unknown>;
+
+    if (typeof messageObj.taskId !== 'number') {
       return { isValid: false, error: '缺少有效的taskId字段' };
     }
 
-    if (!message.keyword || typeof message.keyword !== 'string') {
+    if (typeof messageObj.keyword !== 'string') {
       return { isValid: false, error: '缺少有效的keyword字段' };
     }
 
-    const subTask = { ...message };
+    const subTask = { ...message } as SubTaskMessage;
 
     // 验证并转换时间字段
-    if (typeof subTask.start === 'string') {
-      subTask.start = new Date(subTask.start);
+    if (typeof messageObj.start === 'string') {
+      subTask.start = new Date(messageObj.start);
       if (isNaN(subTask.start.getTime())) {
-        return { isValid: false, error: `无效的开始时间: ${message.start}` };
+        return { isValid: false, error: `无效的开始时间: ${messageObj.start}` };
       }
     }
 
-    if (typeof subTask.end === 'string') {
-      subTask.end = new Date(subTask.end);
+    if (typeof messageObj.end === 'string') {
+      subTask.end = new Date(messageObj.end);
       if (isNaN(subTask.end.getTime())) {
-        return { isValid: false, error: `无效的结束时间: ${message.end}` };
+        return { isValid: false, error: `无效的结束时间: ${messageObj.end}` };
       }
     }
 
