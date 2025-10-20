@@ -59,14 +59,17 @@
     "@pro/types": "workspace:*",
     "@pro/utils": "workspace:*",
     "amqplib": "^0.10.9",
+    "axios": "1.7.9",
     "cheerio": "^1.1.2",
+    "fs-extra": "^11.3.2",
     "mongoose": "^8.0.0",
     "pg": "8.13.1",
     "playwright": "^1.56.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.20",
-    "undici": "^5.28.0"
+    "undici": "^5.28.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",

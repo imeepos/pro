@@ -105,11 +105,11 @@ describe('PostgresEntitiesIntegrationTest', () => {
       // 更新状态为禁用
       const updatedAccount = await weiboAccountRepository.save({
         ...account,
-        status: WeiboAccountStatus.DISABLED,
+        status: WeiboAccountStatus.INACTIVE,
         lastCheckAt: new Date(),
       });
 
-      expect(updatedAccount.status).toBe(WeiboAccountStatus.DISABLED);
+      expect(updatedAccount.status).toBe(WeiboAccountStatus.INACTIVE);
       expect(updatedAccount.lastCheckAt).toBeInstanceOf(Date);
     });
 
@@ -380,7 +380,7 @@ describe('PostgresEntitiesIntegrationTest', () => {
           userId: user.id,
           weiboUid: `uid_${i}`,
           cookies: JSON.stringify({ session: `test_${i}` }),
-          status: i % 2 === 0 ? WeiboAccountStatus.ACTIVE : WeiboAccountStatus.DISABLED,
+          status: i % 2 === 0 ? WeiboAccountStatus.ACTIVE : WeiboAccountStatus.INACTIVE,
         });
       }
 

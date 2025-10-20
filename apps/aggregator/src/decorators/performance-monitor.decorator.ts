@@ -1,4 +1,3 @@
-import { Injectable, Inject } from '@nestjs/common';
 import { MetricsService } from '../services/metrics.service';
 import { Logger } from '@pro/logger';
 import { MetricType, MetricCategory, MetricDimensions } from '../types/metrics.types';
