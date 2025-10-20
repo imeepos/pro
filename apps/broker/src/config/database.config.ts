@@ -1,1 +1,0 @@
-export { createDatabaseConfig } from '@pro/entities'
