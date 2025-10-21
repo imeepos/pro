@@ -4,8 +4,5 @@
 export interface TaskStats {
   total: number;
   enabled: number;
-  running: number;
-  pending: number;
-  failed: number;
-  paused: number;
+  disabled: number;
 }

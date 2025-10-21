@@ -9,7 +9,6 @@ import {
   ConsumerStats,
 } from './interfaces/weibo-task-status.interface';
 import { HourlyStatsType } from './interfaces/hourly-stats.interface';
-import { WeiboSearchTaskStatus } from '@pro/entities';
 
 /**
  * 微博任务状态消费者服务
@@ -158,17 +157,15 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
     statusMessage: WeiboTaskStatusMessage
   ): Promise<MessageProcessResult> {
     try {
-      const { taskId, status, errorMessage, ...updateData } = statusMessage;
+      const { taskId, status, errorMessage } = statusMessage;
 
-      // 映射状态值
-      const mappedStatus = this.mapStatus(status);
-      if (!mappedStatus) {
+      const normalizedStatus = this.mapStatus(status);
+      if (!normalizedStatus) {
         this.logger.warn(`未知的状态值: ${status}`, { taskId });
         return MessageProcessResult.FAILED;
       }
 
-      // 更新任务状态
-      await this.taskService.updateTaskStatus(taskId, mappedStatus, errorMessage);
+      await this.taskService.updateTaskStatus(taskId, normalizedStatus, errorMessage);
 
       // 更新任务进度（如果有进度数据）
       if (statusMessage.currentCrawlTime || statusMessage.latestCrawlTime ||
@@ -183,7 +180,7 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
 
       this.logger.debug(`任务状态更新成功`, {
         taskId,
-        status: mappedStatus,
+        status: normalizedStatus,
         progress: statusMessage.progress,
       });
 
@@ -207,15 +204,9 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
   /**
    * 映射消息状态到实体状态
    */
-  private mapStatus(messageStatus: string): WeiboSearchTaskStatus | null {
-    const statusMap: Record<string, WeiboSearchTaskStatus> = {
-      'running': WeiboSearchTaskStatus.RUNNING,
-      'completed': WeiboSearchTaskStatus.RUNNING, // 完成状态仍为running，由监控服务判断
-      'failed': WeiboSearchTaskStatus.FAILED,
-      'timeout': WeiboSearchTaskStatus.TIMEOUT,
-    };
-
-    return statusMap[messageStatus] || null;
+  private mapStatus(messageStatus: string): string | null {
+    const allowed = new Set(['running', 'completed', 'failed', 'timeout']);
+    return allowed.has(messageStatus) ? messageStatus : null;
   }
 
   /**

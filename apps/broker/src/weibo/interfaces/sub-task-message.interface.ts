@@ -3,26 +3,20 @@
  * 通过 RabbitMQ 传递给 crawler 执行
  */
 export interface SubTaskMessage {
-  /** 主任务ID */
   taskId: number;
-
-  /** 搜索关键词 */
-  keyword: string;
-
-  /** 时间范围开始 - 小时精度 */
-  start: Date;
-
-  /** 时间范围结束 - 小时精度 */
-  end: Date;
-
-  /** 是否为首次抓取（历史数据回溯） */
-  isInitialCrawl: boolean;
-
-  /** 指定的微博账号ID（可选） */
+  type: string;
+  metadata: {
+    startTime?: string | Date;
+    endTime?: string | Date;
+    keyword?: string;
+    [key: string]: unknown;
+  };
+  keyword?: string;
+  start?: Date;
+  end?: Date;
+  isInitialCrawl?: boolean;
   weiboAccountId?: number;
-
-  /** 是否启用账号轮换 */
-  enableAccountRotation: boolean;
+  enableAccountRotation?: boolean;
 }
 
 /**

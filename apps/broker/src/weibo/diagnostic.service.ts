@@ -57,15 +57,24 @@ export class DiagnosticService {
       .limit(10)
       .getMany();
 
-    const sampleTasksFormatted = sampleTasks.map(task => ({
-      id: task.id,
-      keyword: task.keyword || '',
-      phase: task.taskPhaseDescription,
-      nextRunAt: task.nextRunAt?.toISOString() || 'null',
-      updatedAt: task.updatedAt.toISOString(),
-      enabled: task.enabled,
-      latestCrawlTime: task.latestCrawlTime?.toISOString() || 'null',
-    }));
+    const sampleTasksFormatted = sampleTasks.map(task => {
+      const phase = (() => {
+        if (!task.enabled) return 'disabled';
+        if (!task.latestCrawlTime) return 'awaiting-first-run';
+        if (task.nextRunAt && task.nextRunAt > new Date()) return 'scheduled';
+        return 'due-now';
+      })();
+
+      return {
+        id: task.id,
+        keyword: task.keyword || '',
+        phase,
+        nextRunAt: task.nextRunAt?.toISOString() || 'null',
+        updatedAt: task.updatedAt.toISOString(),
+        enabled: task.enabled,
+        latestCrawlTime: task.latestCrawlTime?.toISOString() || 'null',
+      };
+    });
 
     // 统计需要立即执行的任务数量（基于 nextRunAt 而非 status）
     const pendingTasksCount = await this.taskRepository

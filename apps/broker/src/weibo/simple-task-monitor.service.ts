@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
-import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
+import { WeiboSearchTaskEntity } from '@pro/entities';
 import { PinoLogger } from '@pro/logger';
 
 /**
@@ -54,9 +54,9 @@ export class SimpleTaskMonitor {
 
     const longRunningTasks = await this.taskRepository.find({
       where: {
-        status: WeiboSearchTaskStatus.RUNNING,
-        updatedAt: LessThan(twoHoursAgo)
-      }
+        enabled: true,
+        updatedAt: LessThan(twoHoursAgo),
+      },
     });
 
     if (longRunningTasks.length > 0) {

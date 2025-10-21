@@ -212,16 +212,21 @@ export class RabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
    * 将关键信息提取为结构化格式，便于日志分析
    */
   private extractMessageInfo(message: SubTaskMessage) {
-    const timeRange = message.end.getTime() - message.start.getTime();
+    const start = message.metadata.startTime ? new Date(message.metadata.startTime) : null;
+    const end = message.metadata.endTime ? new Date(message.metadata.endTime) : null;
+    const durationHours = start && end
+      ? Math.round(((end.getTime() - start.getTime()) / 1000 / 60 / 60) * 100) / 100
+      : null;
+
     return {
       taskId: message.taskId,
-      keyword: message.keyword,
+      type: message.type,
+      keyword: message.metadata.keyword,
       queue: WEIBO_CRAWL_QUEUE,
-      isInitialCrawl: message.isInitialCrawl,
       timeRange: {
-        start: message.start.toISOString(),
-        end: message.end.toISOString(),
-        durationHours: Math.round(timeRange / 1000 / 60 / 60 * 100) / 100,
+        start: start?.toISOString() ?? null,
+        end: end?.toISOString() ?? null,
+        durationHours,
       },
       messageSize: JSON.stringify(message).length,
     };

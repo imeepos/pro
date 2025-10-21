@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
-import { WeiboSearchTaskEntity, createDatabaseConfig } from '@pro/entities';
+import { WeiboSearchTaskEntity, WeiboSubTaskEntity, createDatabaseConfig } from '@pro/entities';
 
 // 核心服务导入 - 每个导入都有其存在的意义
 import { SimpleIntervalScheduler } from './weibo/simple-interval-scheduler.service';
@@ -50,7 +50,7 @@ import { AggregateSchedulerService } from './services/aggregate-scheduler.servic
     ScheduleModule.forRoot(),
 
     // 实体之殿 - 数据模型的家园
-    TypeOrmModule.forFeature([WeiboSearchTaskEntity]),
+    TypeOrmModule.forFeature([WeiboSearchTaskEntity, WeiboSubTaskEntity]),
   ],
 
   // 服务之群 - 业务逻辑的守护者
