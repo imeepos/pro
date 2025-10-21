@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { WeiboAccountEntity } from '@pro/entities';
 import { WeiboAccountStatus } from '@pro/types';
 import { BrowserService } from '../browser/browser.service';
+import { WeiboAccountSelector, AccountSelectionAlgorithm } from './account.selector';
 import { DurationFormatter } from '@pro/crawler-utils';
 
 export interface WeiboAccount {
@@ -65,7 +66,7 @@ interface AccountHealthCheckResult {
 
 // 智能轮换策略配置
 interface RotationStrategy {
-  algorithm: 'round_robin' | 'weighted_random' | 'health_based' | 'load_balanced';
+  algorithm: AccountSelectionAlgorithm;
   healthThreshold: number;
   maxConsecutiveFailures: number;
   rotationInterval: number; // 分钟
@@ -90,7 +91,6 @@ interface LoadBalancingMetrics {
 export class WeiboAccountService implements OnModuleInit {
   private readonly logger = new Logger(WeiboAccountService.name);
   private accounts: Map<number, WeiboAccount> = new Map();
-  private currentIndex = 0;
 
   // MediaCrawler风格的智能管理属性
   private rotationStrategy: RotationStrategy = {
@@ -120,6 +120,7 @@ export class WeiboAccountService implements OnModuleInit {
     @InjectRepository(WeiboAccountEntity)
     private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
     private readonly browserService: BrowserService,
+    private readonly accountSelector: WeiboAccountSelector,
   ) {}
 
   async onModuleInit() {
@@ -1224,24 +1225,13 @@ export class WeiboAccountService implements OnModuleInit {
         }
       }
 
-      // 根据轮换策略选择最优账号
-      let selectedAccount: WeiboAccount | null = null;
+      const suitableAccounts = Array.from(this.accounts.values())
+        .filter(account => this.isAccountSuitableForUse(account));
 
-      switch (this.rotationStrategy.algorithm) {
-        case 'health_based':
-          selectedAccount = await this.selectAccountByHealth();
-          break;
-        case 'weighted_random':
-          selectedAccount = await this.selectAccountByWeightedRandom();
-          break;
-        case 'load_balanced':
-          selectedAccount = await this.selectAccountByLoadBalancing();
-          break;
-        case 'round_robin':
-        default:
-          selectedAccount = await this.selectAccountByRoundRobin();
-          break;
-      }
+      const selectedAccount = this.accountSelector.select(
+        suitableAccounts,
+        this.rotationStrategy.algorithm,
+      );
 
       if (selectedAccount) {
         this.recordAccountUsage(selectedAccount);
@@ -1262,7 +1252,7 @@ export class WeiboAccountService implements OnModuleInit {
         this.logger.error('❌ 没有找到合适的账号', {
           algorithm: this.rotationStrategy.algorithm,
           totalAccounts: this.accounts.size,
-          healthyAccounts: Array.from(this.accounts.values()).filter(acc => acc.healthScore >= this.rotationStrategy.healthThreshold).length,
+          healthyAccounts: suitableAccounts.length,
           selectionDuration: Date.now() - requestStartTime
         });
 
@@ -1278,101 +1268,6 @@ export class WeiboAccountService implements OnModuleInit {
 
       return null;
     }
-  }
-
-  /**
-   * 基于健康度选择账号
-   */
-  private async selectAccountByHealth(): Promise<WeiboAccount | null> {
-    const healthyAccounts = Array.from(this.accounts.values())
-      .filter(account => this.isAccountSuitableForUse(account))
-      .sort((a, b) => {
-        // 优先按健康分数排序，然后按优先级排序
-        if (b.healthScore !== a.healthScore) {
-          return b.healthScore - a.healthScore;
-        }
-        return a.priority - b.priority;
-      });
-
-    return healthyAccounts.length > 0 ? healthyAccounts[0] : null;
-  }
-
-  /**
-   * 基于加权随机选择账号
-   */
-  private async selectAccountByWeightedRandom(): Promise<WeiboAccount | null> {
-    const suitableAccounts = Array.from(this.accounts.values())
-      .filter(account => this.isAccountSuitableForUse(account));
-
-    if (suitableAccounts.length === 0) {
-      return null;
-    }
-
-    // 计算权重（基于健康分数和使用频率）
-    const weights = suitableAccounts.map(account => {
-      let weight = account.healthScore;
-
-      // 使用次数越少，权重越高
-      const usagePenalty = Math.min(account.usageCount * 2, 50);
-      weight += Math.max(0, 50 - usagePenalty);
-
-      return Math.max(weight, 1);
-    });
-
-    // 加权随机选择
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    let random = Math.random() * totalWeight;
-
-    for (let i = 0; i < suitableAccounts.length; i++) {
-      random -= weights[i];
-      if (random <= 0) {
-        return suitableAccounts[i];
-      }
-    }
-
-    return suitableAccounts[suitableAccounts.length - 1];
-  }
-
-  /**
-   * 基于负载均衡选择账号
-   */
-  private async selectAccountByLoadBalancing(): Promise<WeiboAccount | null> {
-    const suitableAccounts = Array.from(this.accounts.values())
-      .filter(account => this.isAccountSuitableForUse(account))
-      .sort((a, b) => {
-        // 优先选择使用次数少的账号
-        if (a.usageCount !== b.usageCount) {
-          return a.usageCount - b.usageCount;
-        }
-
-        // 然后按健康分数排序
-        if (a.healthScore !== b.healthScore) {
-          return b.healthScore - a.healthScore;
-        }
-
-        // 最后按优先级排序
-        return a.priority - b.priority;
-      });
-
-    return suitableAccounts.length > 0 ? suitableAccounts[0] : null;
-  }
-
-  /**
-   * 轮询选择账号
-   */
-  private async selectAccountByRoundRobin(): Promise<WeiboAccount | null> {
-    const suitableAccounts = Array.from(this.accounts.values())
-      .filter(account => this.isAccountSuitableForUse(account))
-      .sort((a, b) => a.priority - b.priority);
-
-    if (suitableAccounts.length === 0) {
-      return null;
-    }
-
-    const selectedAccount = suitableAccounts[this.currentIndex % suitableAccounts.length];
-    this.currentIndex = (this.currentIndex + 1) % suitableAccounts.length;
-
-    return selectedAccount;
   }
 
   /**
