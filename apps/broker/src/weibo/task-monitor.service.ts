@@ -146,22 +146,24 @@ export class TaskMonitor {
 
           this.logger.info(`超时任务 ${task.id} 已安排重试，延迟 ${retryDelay / 1000 / 60} 分钟, 状态: RUNNING -> PENDING`);
         } else {
-          // 超过最大重试次数，标记为失败
-          this.logger.debug(`超时任务达到最大重试次数，标记为超时`, {
+          // 超过最大重试次数，重新调度为PENDING状态
+          this.logger.debug(`超时任务达到最大重试次数，重新调度`, {
             taskId: task.id,
             retryCount: task.retryCount,
             maxRetries: task.maxRetries,
             enabled: task.enabled
           });
 
+          // 计算下次执行时间（1小时后）
+          const nextRunAt = new Date(now.getTime() + 60 * 60 * 1000);
+
           await this.taskRepository.update(task.id, {
-            status: WeiboSearchTaskStatus.TIMEOUT,
-            errorMessage: `任务执行超时，已达到最大重试次数 (${task.maxRetries})`,
-            enabled: false, // 禁用任务
-            nextRunAt: null, // 清除下次执行时间
+            status: WeiboSearchTaskStatus.PENDING,
+            errorMessage: `任务执行超时，已达到最大重试次数 (${task.maxRetries})，1小时后重新调度`,
+            nextRunAt: nextRunAt, // 设置下次执行时间
           });
 
-          this.logger.error(`超时任务 ${task.id} 已标记为超时并禁用, 状态: RUNNING -> TIMEOUT, enabled: true -> false`);
+          this.logger.info(`超时任务 ${task.id} 已重新调度, 状态: RUNNING -> PENDING, 将于 ${nextRunAt.toISOString()} 执行`);
         }
       } catch (error) {
         this.logger.error(`处理超时任务 ${task.id} 失败`, {
@@ -278,16 +280,14 @@ export class TaskMonitor {
   async getMonitorStats(): Promise<{
     running: number;
     failed: number;
-    timeout: number;
     paused: number;
     pending: number;
     canRetry: number;
     shouldPause: number;
   }> {
-    const [running, failed, timeout, paused, pending] = await Promise.all([
+    const [running, failed, paused, pending] = await Promise.all([
       this.taskRepository.count({ where: { status: WeiboSearchTaskStatus.RUNNING } }),
       this.taskRepository.count({ where: { status: WeiboSearchTaskStatus.FAILED } }),
-      this.taskRepository.count({ where: { status: WeiboSearchTaskStatus.TIMEOUT } }),
       this.taskRepository.count({ where: { status: WeiboSearchTaskStatus.PAUSED } }),
       this.taskRepository.count({ where: { status: WeiboSearchTaskStatus.PENDING } }),
     ]);
@@ -307,7 +307,6 @@ export class TaskMonitor {
     return {
       running,
       failed,
-      timeout,
       paused,
       pending,
       canRetry,
@@ -330,8 +329,8 @@ export class TaskMonitor {
 
       this.logger.info(`开始重置任务 ${taskId} - 当前状态: ${task.status}, 启用状态: ${task.enabled}, 错误信息: ${task.errorMessage || '无'}`);
 
-      if (task.status !== WeiboSearchTaskStatus.FAILED && task.status !== WeiboSearchTaskStatus.TIMEOUT) {
-        this.logger.warn(`重置失败: 任务 ${taskId} 状态不是失败或超时 (当前: ${task.status})，无需重置`);
+      if (task.status !== WeiboSearchTaskStatus.FAILED) {
+        this.logger.warn(`重置失败: 任务 ${taskId} 状态不是失败 (当前: ${task.status})，无需重置`);
         return false;
       }
 
