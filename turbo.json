@@ -10,10 +10,9 @@
         "^build"
       ],
       "outputs": [
-      "dist/**",
-      "apps/**/dist/**",
-      "packages/**/dist/**",
-      "../sker/nginx/html/**",
+        "dist/**",
+        "apps/**/dist/**",
+        "packages/**/dist/**",
         ".next/**",
         "!.next/cache/**",
         "build/**"
