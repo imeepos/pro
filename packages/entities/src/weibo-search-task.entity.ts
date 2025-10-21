@@ -234,6 +234,7 @@ export class WeiboSearchTaskEntity {
       [WeiboSearchTaskStatus.RUNNING]: '正在执行',
       [WeiboSearchTaskStatus.PAUSED]: '已暂停',
       [WeiboSearchTaskStatus.FAILED]: '执行失败',
+      [WeiboSearchTaskStatus.TIMEOUT]: '执行超时',
     };
     return statusMap[this.status];
   }

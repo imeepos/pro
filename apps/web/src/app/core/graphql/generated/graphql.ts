@@ -22,6 +22,36 @@ export type Scalars = {
   JSONObject: { input: Record<string, unknown>; output: Record<string, unknown>; }
 };
 
+export type AggregateTaskInput = {
+  /** 窗口结束时间 (ISO 8601 格式) */
+  endTime: Scalars['String']['input'];
+  /** 可选：是否强制重新计算 (默认 false) */
+  forceRecalculate?: InputMaybe<Scalars['Boolean']['input']>;
+  /** 可选：过滤关键词 */
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  /** 需要计算的聚合指标列表 */
+  metrics: Array<Scalars['String']['input']>;
+  /** 窗口开始时间 (ISO 8601 格式) */
+  startTime: Scalars['String']['input'];
+  /** 可选：Top N 数量 (默认 10) */
+  topN?: InputMaybe<Scalars['Int']['input']>;
+  /** 时间窗口类型 (hour/day/week/month) */
+  windowType: Scalars['String']['input'];
+};
+
+export type AnalyzeTaskInput = {
+  /** 需要执行的分析类型列表 */
+  analysisTypes: Array<Scalars['String']['input']>;
+  /** 待分析数据的 ID */
+  dataId: Scalars['String']['input'];
+  /** 数据类型 (post/comment/user) */
+  dataType: Scalars['String']['input'];
+  /** 可选：关键词（微博搜索场景） */
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  /** 可选：关联任务ID */
+  taskId?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type ApiKeyConnection = {
   __typename?: 'ApiKeyConnection';
   edges: Array<ApiKeyEdge>;
@@ -267,6 +297,15 @@ export type BugsPaginationModel = {
   __typename?: 'BugsPaginationModel';
   bugs: Array<BugModel>;
   total: Scalars['Int']['output'];
+};
+
+export type CleanTaskInput = {
+  /** 任务优先级 */
+  priority?: Scalars['String']['input'];
+  /** MongoDB 原始数据文档 ID */
+  rawDataId: Scalars['String']['input'];
+  /** 数据源类型 */
+  sourceType: Scalars['String']['input'];
 };
 
 export type ConfigCacheStats = {
@@ -855,6 +894,12 @@ export type Mutation = {
   setDefaultScreen: Screen;
   startJdLogin: JdLoginSession;
   startWeiboLogin: WeiboLoginSession;
+  /** 手动触发数据聚合任务 */
+  triggerAggregateTask: TaskResult;
+  /** 手动触发数据分析任务 */
+  triggerAnalyzeTask: TaskResult;
+  /** 手动触发数据清洗任务 */
+  triggerCleanTask: TaskResult;
   updateApiKey: ApiKeyResponseDto;
   updateBug: BugModel;
   updateBugStatus: BugModel;
@@ -1114,6 +1159,21 @@ export type MutationRunWeiboSearchTaskNowArgs = {
 
 export type MutationSetDefaultScreenArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationTriggerAggregateTaskArgs = {
+  input: AggregateTaskInput;
+};
+
+
+export type MutationTriggerAnalyzeTaskArgs = {
+  input: AnalyzeTaskInput;
+};
+
+
+export type MutationTriggerCleanTaskArgs = {
+  input: CleanTaskInput;
 };
 
 
@@ -1747,8 +1807,11 @@ export enum SourceType {
   Jd = 'JD',
   WeiboApiJson = 'WEIBO_API_JSON',
   WeiboComment = 'WEIBO_COMMENT',
+  WeiboComments = 'WEIBO_COMMENTS',
+  WeiboCreatorProfile = 'WEIBO_CREATOR_PROFILE',
   WeiboHtml = 'WEIBO_HTML',
-  WeiboKeywordSearch = 'WEIBO_KEYWORD_SEARCH'
+  WeiboKeywordSearch = 'WEIBO_KEYWORD_SEARCH',
+  WeiboNoteDetail = 'WEIBO_NOTE_DETAIL'
 }
 
 export type StatsAggregationQueryDto = {
@@ -1798,6 +1861,16 @@ export type TagEdge = {
   __typename?: 'TagEdge';
   cursor: Scalars['String']['output'];
   node: Tag;
+};
+
+export type TaskResult = {
+  __typename?: 'TaskResult';
+  /** 结果消息 */
+  message: Scalars['String']['output'];
+  /** 任务是否成功发布到队列 */
+  success: Scalars['Boolean']['output'];
+  /** 任务ID或相关标识 */
+  taskId?: Maybe<Scalars['String']['output']>;
 };
 
 export type TimeRangeInput = {
@@ -2110,8 +2183,7 @@ export enum WeiboSearchTaskStatus {
   Failed = 'FAILED',
   Paused = 'PAUSED',
   Pending = 'PENDING',
-  Running = 'RUNNING',
-  Timeout = 'TIMEOUT'
+  Running = 'RUNNING'
 }
 
 export type WeiboSessionStats = {

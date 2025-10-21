@@ -49,7 +49,8 @@ export enum WeiboSearchTaskStatus {
   PENDING = 'PENDING',     // 等待执行
   RUNNING = 'RUNNING',     // 正在执行
   PAUSED = 'PAUSED',       // 已暂停
-  FAILED = 'FAILED'        // 执行失败
+  FAILED = 'FAILED',       // 执行失败
+  TIMEOUT = 'TIMEOUT'      // 执行超时
 }
 
 /**
