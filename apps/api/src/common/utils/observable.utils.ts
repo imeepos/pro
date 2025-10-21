@@ -95,3 +95,33 @@ export const observableToAsyncIterator = <T>(observable: Observable<T>): AsyncIt
 
   return iterator;
 };
+
+export const asyncIteratorToObservable = <T>(iterator: AsyncIterator<T>): Observable<T> =>
+  new Observable<T>((observer) => {
+    let active = true;
+
+    const pump = async () => {
+      try {
+        while (active) {
+          const { value, done } = await iterator.next();
+          if (done) {
+            observer.complete();
+            break;
+          }
+          observer.next(value as T);
+        }
+      } catch (error) {
+        observer.error(error);
+      }
+    };
+
+    pump();
+
+    return () => {
+      active = false;
+
+      if (typeof iterator.return === 'function') {
+        iterator.return(undefined).catch(() => undefined);
+      }
+    };
+  });

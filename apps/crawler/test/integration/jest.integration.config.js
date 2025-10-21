@@ -4,6 +4,50 @@
  * 专为微博爬虫系统的集成测试环境精心设计
  */
 
+// 兼容部分依赖对 signal-exit 的旧版调用方式，保证 onExit 始终可用
+const signalExitPath = require.resolve('signal-exit');
+const loadedSignalExit = require(signalExitPath);
+
+const createOnExitShim = (impl) => {
+  const shim = function onExitShim(handler) {
+    if (typeof handler !== 'function') {
+      return () => {};
+    }
+    return impl(handler);
+  };
+
+  shim.onExit = shim;
+  shim.signals = loadedSignalExit?.signals ?? ['exit', 'SIGINT', 'SIGTERM'];
+  shim.load = loadedSignalExit?.load ? loadedSignalExit.load.bind(loadedSignalExit) : () => {};
+  shim.unload = loadedSignalExit?.unload ? loadedSignalExit.unload.bind(loadedSignalExit) : () => {};
+  return shim;
+};
+
+let normalizedSignalExit;
+
+if (typeof loadedSignalExit === 'function') {
+  normalizedSignalExit = loadedSignalExit;
+  if (typeof normalizedSignalExit.onExit !== 'function') {
+    normalizedSignalExit.onExit = normalizedSignalExit;
+  }
+} else if (loadedSignalExit && typeof loadedSignalExit.onExit === 'function') {
+  normalizedSignalExit = createOnExitShim(loadedSignalExit.onExit.bind(loadedSignalExit));
+} else {
+  normalizedSignalExit = createOnExitShim((handler) => {
+    const wrapped = (...args) => {
+      try {
+        handler(...args);
+      } finally {
+        process.removeListener('exit', wrapped);
+      }
+    };
+    process.on('exit', wrapped);
+    return () => process.removeListener('exit', wrapped);
+  });
+}
+
+require.cache[signalExitPath].exports = normalizedSignalExit;
+
 module.exports = {
   // 测试显示名称
   displayName: 'Weibo Crawler Integration Tests',
@@ -33,13 +77,16 @@ module.exports = {
     '^.+\\.(t|j)s$': ['ts-jest', {
       tsconfig: 'tsconfig.json', // 使用主tsconfig文件
       useESM: false, // 禁用ESM模式避免缓存问题
+      diagnostics: false,
+      isolatedModules: true,
     }],
   },
 
   // 模块路径映射 - 支持workspace包引用
   moduleNameMapper: {
-    '^@pro/(.*)$': '<rootDir>/../../packages/$1/src',
-    '^@pro/(.*)/(.*)$': '<rootDir>/../../packages/$1/src/$2',
+    '^@pro/(.*)$': '<rootDir>/../../../../packages/$1/src',
+    '^@pro/(.*)/(.*)$': '<rootDir>/../../../../packages/$1/src/$2',
+    '^signal-exit$': '<rootDir>/signal-exit-shim.js',
   },
 
   // 测试环境设置
@@ -94,7 +141,7 @@ module.exports = {
   cache: false,
 
   // 模块加载配置
-  moduleDirectories: ['node_modules', '<rootDir>/../../packages'],
+  moduleDirectories: ['node_modules', '<rootDir>/../../../../packages'],
 
   // 监视模式忽略模式 - 提高watch性能
   watchPathIgnorePatterns: [

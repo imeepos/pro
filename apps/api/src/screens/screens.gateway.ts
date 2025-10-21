@@ -76,7 +76,7 @@ export class ScreensGateway
 
   /**
    * WebSocket 连接时的 JWT 认证
-   * token 通过握手时的 auth.token 传递
+   * token 支持通过 auth.token 或 Authorization header 传递
    */
   async handleConnection(client: Socket) {
     const connectionStartTime = Date.now();
@@ -87,7 +87,7 @@ export class ScreensGateway
     try {
       this.connectionGatekeeper.assertHandshakeAllowed(clientIp, 'screens');
 
-      const token = client.handshake.auth.token;
+      const { token, source: tokenSource } = this.resolveHandshakeToken(client);
 
       if (!token) {
         this.logger.warn(`Connection rejected: missing token, client: ${client.id}`);
@@ -125,7 +125,9 @@ export class ScreensGateway
       this.setupHeartbeat(client);
 
       const connectionDuration = Date.now() - connectionStartTime;
-      this.logger.log(`Client connected successfully: ${client.id}, userId: ${userId}, ip=${clientIp ?? 'unknown'}, duration=${connectionDuration}ms`);
+      this.logger.log(
+        `Client connected successfully: ${client.id}, userId: ${userId}, ip=${clientIp ?? 'unknown'}, duration=${connectionDuration}ms, tokenSource=${tokenSource}`,
+      );
 
       client.emit('connection:established', {
         clientId: client.id,
@@ -183,6 +185,44 @@ export class ScreensGateway
         }
       }, 2000);
     }
+  }
+
+  private resolveHandshakeToken(client: Socket): { token?: string; source: string } {
+    const auth = client.handshake?.auth ?? {};
+    const headerValue = client.handshake?.headers?.authorization ?? client.handshake?.headers?.Authorization;
+    const queryToken = typeof client.handshake?.query?.token === 'string' ? client.handshake.query.token : undefined;
+
+    const candidates: Array<{ raw?: unknown; source: string }> = [
+      { raw: (auth as Record<string, unknown>)?.token, source: 'handshake.auth.token' },
+      { raw: (auth as Record<string, unknown>)?.authorization, source: 'handshake.auth.authorization' },
+      { raw: (auth as Record<string, unknown>)?.Authorization, source: 'handshake.auth.Authorization' },
+      { raw: headerValue, source: 'headers.authorization' },
+      { raw: queryToken, source: 'query.token' },
+    ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate.raw === 'string' && candidate.raw.trim().length > 0) {
+        const parsed = this.extractBearerToken(candidate.raw);
+        if (parsed) {
+          return { token: parsed, source: candidate.source };
+        }
+      }
+    }
+
+    return { token: undefined, source: 'unavailable' };
+  }
+
+  private extractBearerToken(raw: string): string | undefined {
+    const value = raw.trim();
+    if (!value) {
+      return undefined;
+    }
+
+    if (/^bearer\s+/i.test(value)) {
+      return value.replace(/^bearer\s+/i, '').trim();
+    }
+
+    return value;
   }
 
   handleDisconnect(client: Socket) {

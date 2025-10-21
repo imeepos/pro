@@ -1,5 +1,18 @@
 import { beforeAll, afterAll } from '@jest/globals';
 
+// 兼容老版本 signal-exit 导出的 onExit 接口
+// 在某些测试环境中，require('signal-exit') 返回函数本身而非对象
+// 这里显式补齐 onExit，用于 write-file-atomic 缓存清理逻辑
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const signalExitModule = require('signal-exit');
+const signalExit =
+  typeof signalExitModule === 'function' && typeof signalExitModule.onExit !== 'function'
+    ? Object.assign(signalExitModule, { onExit: signalExitModule })
+    : signalExitModule;
+if (typeof signalExit.onExit !== 'function') {
+  signalExit.onExit = () => {};
+}
+
 /**
  * 微博爬取集成测试环境设置
  * 数字时代的测试基础设施艺术品
@@ -28,7 +41,7 @@ afterAll(async () => {
 });
 
 // 全局错误处理
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   console.error('未处理的Promise拒绝:', reason);
 });
 

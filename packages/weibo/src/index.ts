@@ -48,6 +48,7 @@ export type {
   WeiboCommentBadge,
   WeiboCommentEntity,
   WeiboCommentFansIcon,
+  WeiboCommentFilterGroup,
   WeiboCommentMoreInfo,
   WeiboCommentUser
 } from './types/comment-build.js'

@@ -1,69 +1,103 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { Logger } from '@nestjs/common';
 import { Page } from 'playwright';
 
 import { WeiboCrawlerIntegrationTestBase, TestDataGenerator } from './weibo-crawler-test-base';
 import { WeiboSearchCrawlerService } from '../../src/weibo/search-crawler.service';
 import { WeiboAccountService } from '../../src/weibo/account.service';
 import { RawDataService } from '../../src/raw-data/raw-data.service';
-import { WeiboAccountStatus } from '@pro/types';
-import { SourceType } from '@pro/types';
+import {
+  SourceType,
+  QUEUE_NAMES,
+  TaskPriority,
+  type WeiboDetailCrawlEvent
+} from '@pro/types';
+
+class SearchCrawlerTestHarness extends WeiboCrawlerIntegrationTestBase {
+  public async init(): Promise<void> {
+    await this.createTestingModule();
+  }
+
+  public getSearchService(): WeiboSearchCrawlerService {
+    return this['searchCrawlerService'];
+  }
+
+  public getAccountService(): WeiboAccountService {
+    return this['accountService'];
+  }
+
+  public getRawDataService(): RawDataService {
+    return this['rawDataService'];
+  }
+
+  public getMockPage(): jest.Mocked<Page> {
+    return this['mockPage'];
+  }
+
+  public getRabbitClient(): jest.Mocked<any> {
+    return this['mockRabbitMQClient'];
+  }
+
+  public buildSubTaskMessage(overrides: Record<string, unknown> = {}) {
+    return this['createMockSubTaskMessage'](overrides);
+  }
+
+  public buildSearchHtml(page: number, hasResults: boolean = true) {
+    return this['createMockSearchPageHtml'](page, hasResults);
+  }
+}
 
 /**
  * 搜索爬取集成测试 - 数字时代的搜索验证艺术品
  * 验证微博搜索爬取的完整流程和边界条件
  */
 describe('SearchCrawlerIntegrationTest', () => {
-  let testBase: WeiboCrawlerIntegrationTestBase;
+  let harness: SearchCrawlerTestHarness;
   let searchCrawlerService: WeiboSearchCrawlerService;
-  let accountService: WeiboAccountService;
   let rawDataService: RawDataService;
-  let logger: Logger;
 
   beforeEach(async () => {
-    testBase = new WeiboCrawlerIntegrationTestBase();
-    await testBase.createTestingModule();
+    harness = new SearchCrawlerTestHarness();
+    await harness.init();
 
-    searchCrawlerService = testBase['searchCrawlerService'];
-    accountService = testBase['accountService'];
-    rawDataService = testBase['rawDataService'];
-    logger = testBase['module'].get(Logger);
+    searchCrawlerService = harness.getSearchService();
+    rawDataService = harness.getRawDataService();
 
-    await testBase.setupTestAccounts();
+    await harness.setupTestAccounts();
   });
 
   afterEach(async () => {
-    await testBase.cleanupTestingModule();
+    await harness.cleanupTestingModule();
   });
 
   describe('关键词搜索流程', () => {
     it('应该成功执行完整的关键词搜索流程', async () => {
       // 准备测试数据
       const searchResults = TestDataGenerator.generateWeiboSearchResult(3);
-      const mockMessage = testBase.createMockSubTaskMessage({
+      const mockMessage = harness.buildSubTaskMessage({
         keyword: '测试关键词',
         taskId: 1001
       });
 
       // Mock页面内容
-      const mockPage = testBase['mockPage'] as jest.Mocked<Page>;
+      const mockPage = harness.getMockPage();
       let currentPage = 0;
 
       mockPage.goto.mockImplementation(async (url: string) => {
         currentPage++;
         const pageMatch = url.match(/page=(\d+)/);
-        const pageNum = pageMatch ? parseInt(pageMatch[1]) : currentPage;
+        const pageNum = pageMatch && pageMatch[1] ? parseInt(pageMatch[1], 10) : currentPage;
 
-        if (pageNum <= searchResults.length) {
-          mockPage.content.mockResolvedValue(searchResults[pageNum - 1].html);
-          mockPage.waitForSelector.mockResolvedValue();
+        const pageResult = searchResults[pageNum - 1];
+        if (pageResult) {
+          mockPage.content.mockResolvedValue(pageResult.html);
+          mockPage.waitForSelector.mockResolvedValue(null as any);
         }
 
-        return Promise.resolve();
+        return Promise.resolve(null);
       });
 
       // Mock原始数据保存
-      const createSpy = jest.spyOn(rawDataService, 'create').mockResolvedValue();
+      const createSpy = jest.spyOn(rawDataService, 'create').mockResolvedValue({} as any);
 
       // 执行搜索爬取
       const result = await searchCrawlerService.crawl(mockMessage);
@@ -94,6 +128,143 @@ describe('SearchCrawlerIntegrationTest', () => {
           })
         }));
       }
+    });
+
+    it('应该为搜索结果发布微博详情爬取事件', async () => {
+      const detailHtml = `
+        <html>
+          <body>
+            <div class="WB_feed" mid="12345678901234">
+              <div class="WB_detail" id="M_12345678901234">
+                <div class="WB_text">首条微博</div>
+              </div>
+            </div>
+            <div class="WB_feed" data-mid="23456789012345">
+              <div class="WB_detail" id="M_23456789012345">
+                <div class="WB_text">第二条微博</div>
+              </div>
+              <button action-data="mid=23456789012345">操作</button>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const mockPage = testBase['mockPage'] as jest.Mocked<Page>;
+      mockPage.goto.mockImplementation(async () => {
+        mockPage.content.mockResolvedValue(detailHtml);
+        mockPage.waitForSelector.mockResolvedValue();
+        return Promise.resolve();
+      });
+
+      jest.spyOn(rawDataService, 'create').mockResolvedValue();
+
+      const message = testBase.createMockSubTaskMessage({
+        keyword: '详情发布测试',
+        taskId: 2024
+      });
+
+      const rabbitMQClient = testBase['mockRabbitMQClient'];
+      rabbitMQClient.publish.mockClear();
+
+      await searchCrawlerService.crawl(message);
+
+      const detailCalls = rabbitMQClient.publish.mock.calls.filter(
+        ([queue]) => queue === QUEUE_NAMES.WEIBO_DETAIL_CRAWL
+      );
+
+      expect(detailCalls).toHaveLength(2);
+
+      const events = detailCalls.map(([, payload]) => payload as WeiboDetailCrawlEvent);
+      const statusIds = events.map(event => event.statusId).sort();
+
+      expect(statusIds).toEqual(['12345678901234', '23456789012345']);
+      for (const event of events) {
+        expect(event.priority).toBe(TaskPriority.HIGH);
+        expect(event.sourceContext?.taskId).toBe(2024);
+        expect(event.sourceContext?.keyword).toBe('详情发布测试');
+        expect(event.sourceContext?.page).toBe(1);
+        expect(event.sourceContext?.discoveredAtUrl).toContain('page=1');
+      }
+    });
+
+    it('应该避免重复发布同一微博详情事件', async () => {
+      const firstPageHtml = `
+        <html>
+          <body>
+            <div class="WB_feed" mid="34567890123456">
+              <div class="WB_detail" id="M_34567890123456">
+                <div class="WB_text">第一页首条</div>
+              </div>
+            </div>
+            <div class="WB_feed" mid="45678901234567">
+              <div class="WB_detail" id="M_45678901234567">
+                <div class="WB_text">第一页第二条</div>
+              </div>
+            </div>
+            <div class="m-page">
+              <a class="next" href="/search?page=2&mock=1">下一页</a>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const secondPageHtml = `
+        <html>
+          <body>
+            <div class="WB_feed" mid="45678901234567">
+              <div class="WB_detail" id="M_45678901234567">
+                <div class="WB_text">重复的微博</div>
+              </div>
+            </div>
+            <div class="WB_feed" action-data="mid=56789012345678">
+              <div class="WB_detail" id="M_56789012345678">
+                <div class="WB_text">第二页新微博</div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const pageHtml = new Map<number, string>([
+        [1, firstPageHtml],
+        [2, secondPageHtml]
+      ]);
+
+      const mockPage = testBase['mockPage'] as jest.Mocked<Page>;
+      mockPage.goto.mockImplementation(async (url: string) => {
+        const pageMatch = url.match(/page=(\d+)/);
+        const page = pageMatch ? Number(pageMatch[1]) : 1;
+        mockPage.content.mockResolvedValue(pageHtml.get(page) ?? secondPageHtml);
+        mockPage.waitForSelector.mockResolvedValue();
+        return Promise.resolve();
+      });
+
+      jest.spyOn(rawDataService, 'create').mockResolvedValue();
+
+      const message = testBase.createMockSubTaskMessage({
+        keyword: '重复检测',
+        taskId: 3030
+      });
+
+      const rabbitMQClient = testBase['mockRabbitMQClient'];
+      rabbitMQClient.publish.mockClear();
+
+      await searchCrawlerService.crawl(message);
+
+      const detailCalls = rabbitMQClient.publish.mock.calls.filter(
+        ([queue]) => queue === QUEUE_NAMES.WEIBO_DETAIL_CRAWL
+      );
+      const events = detailCalls.map(([, payload]) => payload as WeiboDetailCrawlEvent);
+
+      expect(events).toHaveLength(3);
+      const duplicateCount = events.filter(event => event.statusId === '45678901234567').length;
+      expect(duplicateCount).toBe(1);
+
+      expect(events.map(event => event.statusId).sort()).toEqual([
+        '34567890123456',
+        '45678901234567',
+        '56789012345678'
+      ]);
     });
 
     it('应该正确处理搜索URL构建和时间范围', async () => {

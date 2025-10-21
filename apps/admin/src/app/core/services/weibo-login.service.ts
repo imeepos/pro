@@ -2,7 +2,9 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { print } from 'graphql';
 import { GraphqlGateway } from '../graphql/graphql-gateway.service';
-import { SubscriptionClient } from '../graphql/subscription-client.service';
+import { SubscriptionClient, SubscriptionConnectionState } from '../graphql/subscription-client.service';
+
+export type { SubscriptionConnectionState } from '../graphql/subscription-client.service';
 import {
   StartWeiboLoginDocument,
   WeiboLoginEventsDocument
@@ -55,5 +57,13 @@ export class WeiboLoginService {
 
       return () => unsubscribe();
     });
+  }
+
+  observeConnectionState(): Observable<SubscriptionConnectionState> {
+    return this.subscriptionClient.connectionStateChanges();
+  }
+
+  reconnect(): void {
+    this.subscriptionClient.reconnect();
   }
 }

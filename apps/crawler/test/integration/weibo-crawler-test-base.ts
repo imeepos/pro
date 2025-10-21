@@ -121,6 +121,7 @@ export abstract class WeiboCrawlerIntegrationTestBase {
     this.robotsService = moduleRef.get(RobotsService);
     this.requestMonitorService = moduleRef.get(RequestMonitorService);
     this.weiboAccountRepo = moduleRef.get<Repository<WeiboAccountEntity>>('WeiboAccountEntityRepository');
+    this.mockRabbitMQClient = moduleRef.get(RabbitMQClient);
 
     await this.setupMockServices();
   }

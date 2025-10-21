@@ -15,6 +15,8 @@ import { Subject, Observable, Subscription } from 'rxjs';
 import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
 import { ScreensGateway } from '../screens/screens.gateway';
 import { WeiboSessionStorage, SessionData } from './weibo-session-storage.service';
+import { PubSubService } from '../common/pubsub/pubsub.service';
+import { SUBSCRIPTION_EVENTS } from '../screens/constants/subscription-events';
 
 /**
  * SSE 消息事件类型
@@ -62,6 +64,13 @@ export interface WeiboLoginSessionSnapshot {
   status: 'active' | 'expired' | 'completed';
 }
 
+export interface WeiboLoginEventEnvelope {
+  sessionId: string;
+  userId: string;
+  event: WeiboLoginEvent;
+  emittedAt: string;
+}
+
 /**
  * 微博登录认证服务
  * 使用 Playwright 控制浏览器完成扫码登录流程
@@ -86,6 +95,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
     @Inject(forwardRef(() => ScreensGateway))
     private readonly screensGateway: ScreensGateway,
+    private readonly pubSub: PubSubService,
     private readonly sessionStorage: WeiboSessionStorage,
   ) {
     this.logger.setContext(WeiboAuthService.name);
@@ -189,7 +199,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
         session.lastEvent = event;
 
         // 通过WebSocket广播事件给前端
-        this.broadcastLoginEvent(sessionId, userId, event);
+        await this.broadcastLoginEvent(sessionId, userId, event);
 
         // 同步事件到 Redis
         await this.sessionStorage.updateSessionEvent(sessionId, event).catch(error => {
@@ -200,7 +210,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
         this.logger.error('会话事件流错误', { sessionId, error });
 
         // 广播错误事件
-        this.broadcastLoginEvent(sessionId, userId, {
+        await this.broadcastLoginEvent(sessionId, userId, {
           type: 'error',
           data: { message: '登录会话发生错误', error: error.message }
         });
@@ -279,63 +289,6 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
       isExpired,
       status: sessionData.status,
     };
-  }
-
-  observeLoginSession(sessionId: string): Observable<WeiboLoginEvent> {
-    const session = this.loginSessions.get(sessionId);
-    if (!session) {
-      throw new NotFoundException('登录会话不存在或已结束');
-    }
-
-    // 检查会话是否已过期
-    if (session.expiresAt.getTime() <= Date.now()) {
-      throw new NotFoundException('登录会话已过期');
-    }
-
-    // 检查Subject是否已关闭
-    if (session.subject.closed) {
-      throw new NotFoundException('登录会话事件流已关闭');
-    }
-
-    return new Observable<WeiboLoginEvent>(subscriber => {
-      // 立即检查会话状态
-      const currentSession = this.loginSessions.get(sessionId);
-      if (!currentSession) {
-        subscriber.error(new NotFoundException('登录会话不存在或已结束'));
-        return;
-      }
-
-      if (currentSession.subject.closed) {
-        subscriber.error(new NotFoundException('登录会话事件流已关闭'));
-        return;
-      }
-
-      // 订阅会话的Subject
-      const subscription = currentSession.subject.subscribe({
-        next: (event) => {
-          try {
-            subscriber.next(event);
-          } catch (error) {
-            this.logger.error('推送登录事件到订阅者失败', { sessionId, error });
-          }
-        },
-        error: (error) => {
-          this.logger.error('会话Subject发生错误', { sessionId, error });
-          subscriber.error(error);
-        },
-        complete: () => {
-          this.logger.debug('会话Subject完成', { sessionId });
-          subscriber.complete();
-        }
-      });
-
-      // 清理函数
-      return () => {
-        if (!subscription.closed) {
-          subscription.unsubscribe();
-        }
-      };
-    });
   }
 
   /**
@@ -744,6 +697,16 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  getLoginEventChannel(sessionId: string): string {
+    return this.buildLoginEventChannel(sessionId);
+  }
+
+  createLoginEventsIterator(sessionId: string): AsyncIterator<WeiboLoginEventEnvelope> {
+    const channel = this.buildLoginEventChannel(sessionId);
+    this.logger.debug('创建微博登录事件迭代器', { sessionId, channel });
+    return this.pubSub.asyncIterator<WeiboLoginEventEnvelope>(channel);
+  }
+
   /**
    * 获取服务会话统计信息
    */
@@ -757,43 +720,79 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  private createLoginEventEnvelope(sessionId: string, userId: string, event: WeiboLoginEvent): WeiboLoginEventEnvelope {
+    return {
+      sessionId,
+      userId,
+      event,
+      emittedAt: new Date().toISOString(),
+    };
+  }
+
+  private buildLoginEventChannel(sessionId: string): string {
+    return `${SUBSCRIPTION_EVENTS.WEIBO_LOGIN_EVENT}:${sessionId}`;
+  }
+
   /**
-   * 通过WebSocket广播登录事件
+   * 通过 PubSub 和 WebSocket 广播登录事件
    */
-  private broadcastLoginEvent(sessionId: string, userId: string, event: WeiboLoginEvent): void {
+  private async broadcastLoginEvent(sessionId: string, userId: string, event: WeiboLoginEvent): Promise<void> {
+    const envelope = this.createLoginEventEnvelope(sessionId, userId, event);
+    const channel = this.buildLoginEventChannel(sessionId);
+
+    this.logger.debug('发布微博登录事件', {
+      sessionId,
+      userId,
+      eventType: event.type,
+      channel,
+    });
+
     try {
-      const eventData = {
+      await this.pubSub.publish(
+        channel,
+        envelope,
+        {
+          description: '微博扫码登录事件流',
+          allowAnonymous: false,
+        },
+      );
+    } catch (error) {
+      this.logger.error('发布微博登录事件到GraphQL失败', {
         sessionId,
         userId,
+        eventType: event.type,
+        error,
+      });
+    }
+
+    try {
+      this.screensGateway.sendToUser(userId, 'weibo:login:event', {
+        sessionId: envelope.sessionId,
+        userId: envelope.userId,
         type: event.type,
         data: event.data,
-        timestamp: new Date().toISOString()
-      };
-
-      // 通过ScreensGateway广播事件
-      this.screensGateway.sendToUser(userId, 'weibo:login:event', eventData);
-
-      // 特殊处理一些关键事件
-      switch (event.type) {
-        case 'qrcode':
-          this.logger.info(`[WebSocket] 二维码事件已广播: ${sessionId}`);
-          break;
-        case 'scanned':
-          this.logger.info(`[WebSocket] 扫码事件已广播: ${sessionId}`);
-          break;
-        case 'success':
-          this.logger.info(`[WebSocket] 登录成功事件已广播: ${sessionId}`);
-          break;
-        case 'error':
-          this.logger.error(`[WebSocket] 登录错误事件已广播: ${sessionId}`, event.data);
-          break;
-        case 'expired':
-          this.logger.warn(`[WebSocket] 登录过期事件已广播: ${sessionId}`);
-          break;
-      }
-
+        timestamp: envelope.emittedAt,
+      });
     } catch (error) {
       this.logger.error(`[WebSocket] 广播登录事件失败: ${sessionId}`, error);
+    }
+
+    switch (event.type) {
+      case 'qrcode':
+        this.logger.info(`[LoginEvent] 二维码事件已广播: ${sessionId}`);
+        break;
+      case 'scanned':
+        this.logger.info(`[LoginEvent] 扫码事件已广播: ${sessionId}`);
+        break;
+      case 'success':
+        this.logger.info(`[LoginEvent] 登录成功事件已广播: ${sessionId}`);
+        break;
+      case 'error':
+        this.logger.error(`[LoginEvent] 登录错误事件已广播: ${sessionId}`, event.data);
+        break;
+      case 'expired':
+        this.logger.warn(`[LoginEvent] 登录过期事件已广播: ${sessionId}`);
+        break;
     }
   }
 

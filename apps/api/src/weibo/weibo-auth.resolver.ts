@@ -1,8 +1,8 @@
 import { ForbiddenException, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver, Subscription, ObjectType, Field, Int, Float, Context } from '@nestjs/graphql';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { WeiboAuthService, WeiboLoginEvent } from './weibo-auth.service';
-import { observableToAsyncIterator } from '../common/utils/observable.utils';
+import { WeiboAuthService, WeiboLoginEvent, WeiboLoginEventEnvelope } from './weibo-auth.service';
+import { observableToAsyncIterator, asyncIteratorToObservable } from '../common/utils/observable.utils';
 import {
   WeiboLoginEventModel,
   WeiboLoginSessionModel,
@@ -156,15 +156,27 @@ export class WeiboAuthResolver {
       const historical$ = snapshot.lastEvent
         ? of<WeiboLoginEventModel>(mapWeiboLoginEventToModel(snapshot.lastEvent))
         : (EMPTY as Observable<WeiboLoginEventModel>);
-      let live$: Observable<WeiboLoginEventModel>;
+      const channel = this.weiboAuthService.getLoginEventChannel(sessionId);
+      this.logger.debug('订阅微博登录事件', { userId, sessionId, channel });
+
+      let liveIterator: AsyncIterator<WeiboLoginEventEnvelope>;
       try {
-        live$ = this.weiboAuthService.observeLoginSession(sessionId).pipe(
-          map((event) => mapWeiboLoginEventToModel(event)),
-          catchError((error): Observable<WeiboLoginEventModel> => of<WeiboLoginEventModel>(errorEvent(error))),
-        );
+        liveIterator = this.weiboAuthService.createLoginEventsIterator(sessionId);
       } catch (error) {
         return fail(error);
       }
+
+      const live$ = asyncIteratorToObservable(liveIterator).pipe(
+        map((payload) => {
+          this.logger.debug('接收微博登录事件', {
+            userId,
+            sessionId,
+            eventType: payload.event.type,
+          });
+          return mapWeiboLoginEventToModel(payload.event);
+        }),
+        catchError((error): Observable<WeiboLoginEventModel> => of<WeiboLoginEventModel>(errorEvent(error))),
+      );
 
       return observableToAsyncIterator(concat(historical$, live$));
     } catch (error) {

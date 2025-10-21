@@ -73,6 +73,7 @@ import { TagLoader } from './events/tag.loader';
         connectionMetrics: ConnectionMetricsService,
       ): ApolloDriverConfig => {
         const isProduction = configService.get<string>('NODE_ENV') === 'production';
+        const graphqlWsInitTimeout = Number(configService.get('GRAPHQL_WS_CONNECTION_INIT_TIMEOUT') ?? 15000);
 
         const wsContextCreator = new GraphqlWsContextCreator(
           wsAuthService,
@@ -93,6 +94,7 @@ import { TagLoader } from './events/tag.loader';
           introspection: !isProduction,
           subscriptions: {
             'graphql-ws': {
+              connectionInitWaitTimeout: graphqlWsInitTimeout,
               onConnect: async (context: any) => {
                 try {
                   const connectionContext = await wsContextCreator.createConnectionContext(

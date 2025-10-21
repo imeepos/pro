@@ -1,7 +1,7 @@
-import { Component, OnDestroy, NgZone } from '@angular/core';
+import { Component, OnDestroy, NgZone, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { WeiboLoginService, WeiboLoginEvent } from '../../core/services/weibo-login.service';
+import { WeiboLoginService, WeiboLoginEvent, SubscriptionConnectionState } from '../../core/services/weibo-login.service';
 
 @Component({
   selector: 'app-weibo-login',
@@ -9,22 +9,33 @@ import { WeiboLoginService, WeiboLoginEvent } from '../../core/services/weibo-lo
   imports: [CommonModule],
   templateUrl: './weibo-login.component.html'
 })
-export class WeiboLoginComponent implements OnDestroy {
+export class WeiboLoginComponent implements OnInit, OnDestroy {
   qrcodeUrl = '';
   status = '';
   isLoading = false;
   showSuccess = false;
   accountInfo: any = null;
+  connectionState: SubscriptionConnectionState = 'disconnected';
+  connectionMessage = '';
 
   private subscription?: Subscription;
+  private connectionSubscription?: Subscription;
 
   constructor(
     private readonly weiboLogin: WeiboLoginService,
     private readonly ngZone: NgZone
   ) {}
 
+  ngOnInit(): void {
+    this.connectionSubscription = this.weiboLogin.observeConnectionState().subscribe(state => {
+      this.ngZone.run(() => this.handleConnectionState(state));
+    });
+  }
+
   ngOnDestroy(): void {
     this.unsubscribe();
+    this.connectionSubscription?.unsubscribe();
+    this.connectionSubscription = undefined;
   }
 
   async startWeiboLogin(): Promise<void> {
@@ -101,6 +112,29 @@ export class WeiboLoginComponent implements OnDestroy {
     if (this.subscription) {
       this.subscription.unsubscribe();
       this.subscription = undefined;
+    }
+  }
+
+  retryConnection(): void {
+    this.weiboLogin.reconnect();
+    this.status = '正在重新建立连接...';
+  }
+
+  private handleConnectionState(state: SubscriptionConnectionState): void {
+    this.connectionState = state;
+
+    switch (state) {
+      case 'connecting':
+        this.connectionMessage = '正在建立实时连接...';
+        break;
+      case 'reconnecting':
+        this.connectionMessage = '连接中断，正在尝试重连...';
+        break;
+      case 'error':
+        this.connectionMessage = '连接异常，请点击重试';
+        break;
+      default:
+        this.connectionMessage = '';
     }
   }
 
