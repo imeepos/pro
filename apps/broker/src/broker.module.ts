@@ -11,7 +11,6 @@ import { TaskMonitor } from './weibo/task-monitor.service';
 import { DiagnosticService } from './weibo/diagnostic.service';
 import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
 import { AggregateSchedulerService } from './services/aggregate-scheduler.service';
-import { AppController } from './app.controller';
 
 /**
  * Broker 模块 - 任务调度的心脏
@@ -53,9 +52,6 @@ import { AppController } from './app.controller';
     // 实体之殿 - 数据模型的家园
     TypeOrmModule.forFeature([WeiboSearchTaskEntity]),
   ],
-
-  // 控制之门 - API的入口
-  controllers: [AppController],
 
   // 服务之群 - 业务逻辑的守护者
   providers: [
