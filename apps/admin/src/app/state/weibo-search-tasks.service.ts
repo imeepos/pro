@@ -423,7 +423,7 @@ export class WeiboSearchTasksService {
       case WeiboSearchTaskStatus.FAILED:
         return GqlWeiboSearchTaskStatus.Failed;
       case WeiboSearchTaskStatus.TIMEOUT:
-        return GqlWeiboSearchTaskStatus.Timeout;
+        return GqlWeiboSearchTaskStatus.Failed; // 临时映射到 Failed，直到 GraphQL schema 更新
       default:
         return undefined;
     }

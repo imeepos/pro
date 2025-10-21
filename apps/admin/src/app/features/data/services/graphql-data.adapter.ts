@@ -394,9 +394,9 @@ export class GraphQLDataAdapter {
       [LegacySourceType.WEIBO_API_JSON]: SourceType.WeiboApiJson,
       [LegacySourceType.WEIBO_COMMENT]: SourceType.WeiboComment,
       [LegacySourceType.WEIBO_KEYWORD_SEARCH]: SourceType.WeiboKeywordSearch,
-      [LegacySourceType.WEIBO_NOTE_DETAIL]: SourceType.Custom, // Map to Custom until GraphQL schema is updated
-      [LegacySourceType.WEIBO_CREATOR_PROFILE]: SourceType.Custom, // Map to Custom until GraphQL schema is updated
-      [LegacySourceType.WEIBO_COMMENTS]: SourceType.Custom, // Map to Custom until GraphQL schema is updated
+      [LegacySourceType.WEIBO_NOTE_DETAIL]: SourceType.WeiboNoteDetail,
+      [LegacySourceType.WEIBO_CREATOR_PROFILE]: SourceType.WeiboCreatorProfile,
+      [LegacySourceType.WEIBO_COMMENTS]: SourceType.WeiboComments,
       [LegacySourceType.JD]: SourceType.Jd,
       [LegacySourceType.CUSTOM]: SourceType.Custom
     };
@@ -408,6 +408,9 @@ export class GraphQLDataAdapter {
       [SourceType.WeiboHtml]: LegacySourceType.WEIBO_HTML,
       [SourceType.WeiboApiJson]: LegacySourceType.WEIBO_API_JSON,
       [SourceType.WeiboComment]: LegacySourceType.WEIBO_COMMENT,
+      [SourceType.WeiboComments]: LegacySourceType.WEIBO_COMMENTS,
+      [SourceType.WeiboCreatorProfile]: LegacySourceType.WEIBO_CREATOR_PROFILE,
+      [SourceType.WeiboNoteDetail]: LegacySourceType.WEIBO_NOTE_DETAIL,
       [SourceType.WeiboKeywordSearch]: LegacySourceType.WEIBO_KEYWORD_SEARCH,
       [SourceType.Jd]: LegacySourceType.JD,
       [SourceType.Custom]: LegacySourceType.CUSTOM
