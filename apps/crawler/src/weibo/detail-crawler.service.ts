@@ -7,6 +7,7 @@ import { WeiboAccountService, WeiboAccount } from './account.service';
 import { RawDataService } from '../raw-data/raw-data.service';
 import { SourceType } from '@pro/types';
 import { WeiboConfig } from '../config/crawler.interface';
+import { TraceContext, TraceGenerator } from './trace.generator';
 
 // 定义接口（临时解决方案）
 export interface VideoInfo {
@@ -45,31 +46,6 @@ export interface WeiboNoteDetail {
   sourceNoteId?: string;
   rawHtml: string;
   crawledAt: Date;
-}
-
-// 追踪上下文接口定义
-export interface TraceContext {
-  traceId: string;
-  taskId: number;
-  keyword: string;
-  startTime: Date;
-}
-
-export class TraceGenerator {
-  static generateTraceId(): string {
-    const timestamp = Date.now().toString(36);
-    const randomStr = Math.random().toString(36).substring(2, 15);
-    return `trace_${timestamp}_${randomStr}`;
-  }
-
-  static createTraceContext(taskId: number, keyword: string): TraceContext {
-    return {
-      traceId: this.generateTraceId(),
-      taskId,
-      keyword,
-      startTime: new Date()
-    };
-  }
 }
 
 /**

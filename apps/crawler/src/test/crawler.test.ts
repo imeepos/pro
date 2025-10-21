@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WeiboSearchCrawlerService, SubTaskMessage } from '../weibo/search-crawler.service';
+import { WeiboMultiModeCrawlerService } from '../weibo/multi-mode-crawler.service';
 import { WeiboAccountService } from '../weibo/account.service';
 import { BrowserService } from '../browser/browser.service';
 import { RawDataService } from '../raw-data/raw-data.service';
@@ -17,6 +18,7 @@ describe('WeiboSearchCrawlerService', () => {
   let mockRobotsService: jest.Mocked<RobotsService>;
   let mockRequestMonitorService: jest.Mocked<RequestMonitorService>;
   let mockConfigService: jest.Mocked<ConfigService>;
+  let mockMultiModeCrawlerService: jest.Mocked<WeiboMultiModeCrawlerService>;
 
   const mockCrawlerConfig: CrawlerConfig = {
     headless: true,
@@ -188,6 +190,10 @@ describe('WeiboSearchCrawlerService', () => {
       get: jest.fn()
     } as any;
 
+    mockMultiModeCrawlerService = {
+      execute: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WeiboSearchCrawlerService,
@@ -210,6 +216,10 @@ describe('WeiboSearchCrawlerService', () => {
         {
           provide: RequestMonitorService,
           useValue: mockRequestMonitorService
+        },
+        {
+          provide: WeiboMultiModeCrawlerService,
+          useValue: mockMultiModeCrawlerService
         },
         {
           provide: ConfigService,

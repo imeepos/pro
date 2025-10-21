@@ -74,7 +74,8 @@
       "Bash(pnpm ls:*)",
       "Bash(lsof:*)",
       "Bash(netstat:*)",
-      "Bash(ss:*)"
+      "Bash(ss:*)",
+      "Bash(sort:*)"
     ],
     "deny": [],
     "ask": []

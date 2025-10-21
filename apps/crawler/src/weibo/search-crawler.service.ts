@@ -1,171 +1,24 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Page } from 'playwright';
 import * as cheerio from 'cheerio';
+import { WeiboAccountService, WeiboAccount } from './account.service';
+import { BrowserService } from '../browser/browser.service';
+import { RawDataService } from '../raw-data/raw-data.service';
+import { RabbitMQClient } from '@pro/rabbitmq';
+import { RobotsService } from '../robots/robots.service';
+import { RequestMonitorService } from '../monitoring/request-monitor.service';
+import { CrawlerConfig, RabbitMQConfig, WeiboConfig } from '../config/crawler.interface';
+import { SourceType, WeiboSearchType } from '@pro/types';
+import { WeiboMultiModeCrawlerService } from './multi-mode-crawler.service';
 import {
-  WeiboAccountService,
-  WeiboAccount
-} from './account.service';
-import {
-  BrowserService
-} from '../browser/browser.service';
-import {
-  RawDataService
-} from '../raw-data/raw-data.service';
-import {
-  RabbitMQClient
-} from '@pro/rabbitmq';
-import {
-  RobotsService
-} from '../robots/robots.service';
-import {
-  RequestMonitorService
-} from '../monitoring/request-monitor.service';
-import {
-  CrawlerConfig,
-  RabbitMQConfig,
-  WeiboConfig
-} from '../config/crawler.interface';
-import {
-  SourceType
-} from '@pro/types';
-import {
-  WeiboSearchType,
-  WeiboCrawlMode
-} from '@pro/types';
-
-// 导入本地定义的接口
-import {
-  WeiboNoteDetail
-} from './detail-crawler.service';
-import {
-  WeiboCreatorDetail
-} from './creator-crawler.service';
-import {
-  WeiboComment
-} from './comment-crawler.service';
-import {
-  MediaDownloadTask
-} from './media-downloader.service';
-
-// 定义本地接口
-export interface EnhancedSubTaskMessage extends SubTaskMessage {
-  searchType?: WeiboSearchType;
-  crawlModes?: WeiboCrawlMode[];
-  targetNoteId?: string;
-  targetCreatorId?: string;
-  maxCommentDepth?: number;
-  enableMediaDownload?: boolean;
-  enableDetailCrawl?: boolean;
-  enableCreatorCrawl?: boolean;
-  enableCommentCrawl?: boolean;
-}
-
-export interface MultiModeCrawlResult {
-  searchResult?: CrawlResult;
-  noteDetails?: WeiboNoteDetail[];
-  creatorDetails?: WeiboCreatorDetail[];
-  comments?: WeiboComment[];
-  mediaDownloads?: MediaDownloadTask[];
-  crawlMetrics: EnhancedCrawlMetrics;
-}
-
-export interface EnhancedCrawlMetrics {
-  totalPages: number;
-  successfulPages: number;
-  failedPages: number;
-  skippedPages: number;
-  totalRequests: number;
-  averagePageLoadTime: number;
-  totalDataSize: number;
-  notesCrawled: number;
-  detailsCrawled: number;
-  creatorsCrawled: number;
-  commentsCrawled: number;
-  mediaFilesDownloaded: number;
-  commentDepthReached: number;
-  totalDuration: number;
-  throughputMBps: number;
-  requestsPerSecond: number;
-  errorRate: number;
-  memoryUsage: number;
-  cpuUsage: number;
-  diskUsage: number;
-}
-import {
-  WeiboDetailCrawlerService
-} from './detail-crawler.service';
-import {
-  WeiboCreatorCrawlerService
-} from './creator-crawler.service';
-import {
-  WeiboCommentCrawlerService
-} from './comment-crawler.service';
-import {
-  WeiboMediaDownloaderService
-} from './media-downloader.service';
-
-/**
- * 可以扩展为更多类型的task支持
- */
-export interface SubTaskMessage {
-  taskId: number;
-  type?: string;
-  metadata?: {
-    startTime?: string | Date;
-    endTime?: string | Date;
-    keyword?: string;
-    [key: string]: unknown;
-  };
-  keyword?: string;
-  start?: Date;
-  end?: Date;
-  isInitialCrawl?: boolean;
-  weiboAccountId?: number;
-  enableAccountRotation?: boolean;
-}
-
-type NormalizedSubTask = SubTaskMessage & {
-  keyword: string;
-  start: Date;
-  end: Date;
-  isInitialCrawl: boolean;
-  enableAccountRotation: boolean;
-  metadata: NonNullable<SubTaskMessage['metadata']>;
-};
-
-export interface CrawlResult {
-  success: boolean;
-  pageCount: number;
-  firstPostTime?: Date;
-  lastPostTime?: Date;
-  gapSubTaskScheduled?: boolean;
-  error?: string;
-}
-
-export interface TraceContext {
-  traceId: string;
-  taskId: number;
-  keyword: string;
-  startTime: Date;
-}
-
-export class TraceGenerator {
-  static generateTraceId(): string {
-    const timestamp = Date.now().toString(36);
-    const randomStr = Math.random().toString(36).substring(2, 15);
-    return `trace_${timestamp}_${randomStr}`;
-  }
-
-  static createTraceContext(taskId: number, keyword: string): TraceContext {
-    return {
-      traceId: this.generateTraceId(),
-      taskId,
-      keyword,
-      startTime: new Date()
-    };
-  }
-}
+  EnhancedSubTaskMessage,
+  MultiModeCrawlResult,
+  EnhancedCrawlMetrics,
+  SubTaskMessage,
+  NormalizedSubTask,
+  CrawlResult,
+} from './search-crawler.types';
+import { TraceGenerator, TraceContext } from './trace.generator';
 
 /**
  * 增强版微博搜索爬取服务 - 数字时代的多模式爬取艺术品
@@ -177,16 +30,12 @@ export class WeiboSearchCrawlerService {
   private rabbitMQClient: RabbitMQClient;
 
   constructor(
-    private readonly configService: ConfigService,
     private readonly accountService: WeiboAccountService,
     private readonly browserService: BrowserService,
     private readonly rawDataService: RawDataService,
     private readonly robotsService: RobotsService,
     private readonly requestMonitorService: RequestMonitorService,
-    private readonly detailCrawlerService: WeiboDetailCrawlerService,
-    private readonly creatorCrawlerService: WeiboCreatorCrawlerService,
-    private readonly commentCrawlerService: WeiboCommentCrawlerService,
-    private readonly mediaDownloaderService: WeiboMediaDownloaderService,
+    private readonly multiModeCrawler: WeiboMultiModeCrawlerService,
     @Inject('CRAWLER_CONFIG') private readonly crawlerConfig: CrawlerConfig,
     @Inject('RABBITMQ_CONFIG') private readonly rabbitmqConfig: RabbitMQConfig,
     @Inject('WEIBO_CONFIG') private readonly weiboConfig: WeiboConfig
@@ -527,7 +376,6 @@ export class WeiboSearchCrawlerService {
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? undefined : parsed;
   }
-
   /**
    * 构建搜索URL - 支持多种搜索类型的智能构建
    */
@@ -542,7 +390,6 @@ export class WeiboSearchCrawlerService {
     const startTime = this.formatDateForWeibo(start);
     const endTime = this.formatDateForWeibo(end);
 
-    // 根据搜索类型构建不同的URL
     const baseUrl = this.getSearchBaseUrl(searchType);
     const searchParams = this.buildSearchParams(searchType, encodedKeyword, startTime, endTime, page);
 
@@ -1155,461 +1002,27 @@ export class WeiboSearchCrawlerService {
    * 集成所有爬取模式，创造微博数据的完整数字档案
    */
   async multiModeCrawl(message: EnhancedSubTaskMessage): Promise<MultiModeCrawlResult> {
-    const startTime = Date.now();
+    const startTimestamp = Date.now();
     const normalizedMessage = this.normalizeSubTask(message);
     const traceContext = TraceGenerator.createTraceContext(normalizedMessage.taskId, normalizedMessage.keyword);
 
-    this.logger.log('🎭 开始多模式爬取任务', {
-      traceId: traceContext.traceId,
-      taskId: normalizedMessage.taskId,
-      keyword: normalizedMessage.keyword,
-      searchType: message.searchType || WeiboSearchType.DEFAULT,
-      crawlModes: message.crawlModes || [WeiboCrawlMode.SEARCH],
-      enableDetailCrawl: message.enableDetailCrawl,
-      enableCreatorCrawl: message.enableCreatorCrawl,
-      enableCommentCrawl: message.enableCommentCrawl,
-      enableMediaDownload: message.enableMediaDownload,
-      startTime: new Date().toISOString()
+    return this.multiModeCrawler.execute({
+      message,
+      normalizedMessage,
+      traceContext,
+      startTimestamp,
+      baseCrawl: () => this.crawl(normalizedMessage),
+      formatDuration: this.formatDuration.bind(this),
     });
-
-    const result: MultiModeCrawlResult = {
-      crawlMetrics: this.initializeEnhancedMetrics(startTime)
-    };
-
-    try {
-      // 1. 执行基础搜索爬取
-      if (this.shouldExecuteMode(WeiboCrawlMode.SEARCH, message.crawlModes)) {
-        this.logger.debug('🔍 执行搜索模式爬取', {
-          traceId: traceContext.traceId
-        });
-
-        const searchResult = await this.crawl(normalizedMessage);
-        result.searchResult = searchResult;
-
-        // 更新基础指标
-        result.crawlMetrics.totalPages = searchResult.pageCount;
-        result.crawlMetrics.successfulPages = searchResult.success ? searchResult.pageCount : 0;
-        result.crawlMetrics.failedPages = searchResult.success ? 0 : 1;
-      }
-
-      // 2. 执行详情爬取
-      if (this.shouldExecuteMode(WeiboCrawlMode.DETAIL, message.crawlModes) || message.enableDetailCrawl) {
-        const noteIds = await this.extractNoteIdsFromSearchResult(normalizedMessage.taskId);
-
-        if (noteIds.length > 0) {
-          this.logger.debug('📄 执行详情模式爬取', {
-            traceId: traceContext.traceId,
-            noteIdsCount: noteIds.length
-          });
-
-          const detailResults = await this.executeDetailCrawl(noteIds, traceContext, normalizedMessage.weiboAccountId);
-          result.noteDetails = detailResults;
-          result.crawlMetrics.detailsCrawled = detailResults.filter(d => d !== null).length;
-        }
-      }
-
-      // 3. 执行创作者爬取
-      if (this.shouldExecuteMode(WeiboCrawlMode.CREATOR, message.crawlModes) || message.enableCreatorCrawl) {
-        const creatorIds = await this.extractCreatorIdsFromResults(result);
-
-        if (creatorIds.length > 0) {
-          this.logger.debug('🎨 执行创作者模式爬取', {
-            traceId: traceContext.traceId,
-            creatorIdsCount: creatorIds.length
-          });
-
-          const creatorResults = await this.executeCreatorCrawl(creatorIds, traceContext, normalizedMessage.weiboAccountId);
-          result.creatorDetails = creatorResults;
-          result.crawlMetrics.creatorsCrawled = creatorResults.filter(c => c !== null).length;
-        }
-      }
-
-      // 4. 执行评论爬取
-      if (this.shouldExecuteMode(WeiboCrawlMode.COMMENT, message.crawlModes) || message.enableCommentCrawl) {
-        const noteIdsForComments = await this.getNoteIdsForCommentCrawl(result);
-
-        if (noteIdsForComments.length > 0) {
-          this.logger.debug('💬 执行评论模式爬取', {
-            traceId: traceContext.traceId,
-            noteIdsCount: noteIdsForComments.length,
-            maxDepth: message.maxCommentDepth || 3
-          });
-
-          const commentResults = await this.executeCommentCrawl(
-            noteIdsForComments,
-            message.maxCommentDepth || 3,
-            traceContext,
-            normalizedMessage.weiboAccountId
-          );
-          result.comments = commentResults;
-          result.crawlMetrics.commentsCrawled = commentResults.length;
-          result.crawlMetrics.commentDepthReached = this.calculateMaxCommentDepth(commentResults);
-        }
-      }
-
-      // 5. 执行媒体下载
-      if (this.shouldExecuteMode(WeiboCrawlMode.MEDIA, message.crawlModes) || message.enableMediaDownload) {
-        const mediaUrls = await this.extractMediaUrlsFromResults(result);
-
-        if (mediaUrls.length > 0) {
-          this.logger.debug('🎨 执行媒体下载', {
-            traceId: traceContext.traceId,
-            mediaUrlsCount: mediaUrls.length
-          });
-
-          const downloadTasks = await this.executeMediaDownload(mediaUrls, traceContext);
-          result.mediaDownloads = downloadTasks;
-          result.crawlMetrics.mediaFilesDownloaded = downloadTasks.filter(t => t.status === 'completed').length;
-        }
-      }
-
-      // 计算最终指标
-      this.calculateFinalMetrics(result.crawlMetrics, startTime);
-
-      const totalDuration = Date.now() - startTime;
-      this.logger.log('🎉 多模式爬取任务完成', {
-        traceId: traceContext.traceId,
-        taskId: normalizedMessage.taskId,
-        keyword: normalizedMessage.keyword,
-        duration: totalDuration,
-        durationFormatted: this.formatDuration(totalDuration),
-        metrics: result.crawlMetrics,
-        modesExecuted: message.crawlModes,
-        finishedAt: new Date().toISOString()
-      });
-
-      return result;
-
-    } catch (error) {
-      const totalDuration = Date.now() - startTime;
-      result.crawlMetrics.totalDuration = totalDuration;
-
-      this.logger.error('💥 多模式爬取任务失败', {
-        traceId: traceContext.traceId,
-        taskId: normalizedMessage.taskId,
-        keyword: normalizedMessage.keyword,
-        duration: totalDuration,
-        error: error instanceof Error ? error.message : '未知错误',
-        errorType: this.classifyMultiModeError(error),
-        finishedAt: new Date().toISOString()
-      });
-
-      return result;
-    }
-  }
-
-  /**
-   * 检查是否应该执行指定的爬取模式
-   */
-  private shouldExecuteMode(mode: WeiboCrawlMode, crawlModes?: WeiboCrawlMode[]): boolean {
-    return !crawlModes || crawlModes.includes(mode);
-  }
-
-  /**
-   * 执行详情爬取
-   */
-  private async executeDetailCrawl(
-    noteIds: string[],
-    traceContext: TraceContext,
-    accountId?: number
-  ): Promise<WeiboNoteDetail[]> {
-    let detailAccount: WeiboAccount | undefined;
-    if (accountId) {
-      detailAccount = await this.accountService.getAvailableAccount(accountId);
-    }
-
-    const detailResults = await this.detailCrawlerService.batchGetNoteDetails(noteIds, detailAccount);
-    return detailResults.map(r => r.detail).filter((d): d is WeiboNoteDetail => d !== null);
-  }
-
-  /**
-   * 执行创作者爬取
-   */
-  private async executeCreatorCrawl(
-    creatorIds: string[],
-    traceContext: TraceContext,
-    accountId?: number
-  ): Promise<WeiboCreatorDetail[]> {
-    const creatorResults: WeiboCreatorDetail[] = [];
-
-    for (const creatorId of creatorIds) {
-      let creatorAccount: WeiboAccount | undefined;
-      if (accountId) {
-        creatorAccount = await this.accountService.getAvailableAccount(accountId);
-      }
-
-      const creatorDetail = await this.creatorCrawlerService.getCreatorInfoById(creatorId, creatorAccount, traceContext);
-      if (creatorDetail) {
-        creatorResults.push(creatorDetail);
-      }
-
-      // 适当延迟避免请求过频
-      await this.multiModeRandomDelay(2000, 4000);
-    }
-
-    return creatorResults;
-  }
-
-  /**
-   * 执行评论爬取
-   */
-  private async executeCommentCrawl(
-    noteIds: string[],
-    maxDepth: number,
-    traceContext: TraceContext,
-    accountId?: number
-  ): Promise<WeiboComment[]> {
-    const allComments: WeiboComment[] = [];
-
-    for (const noteId of noteIds) {
-      let weiboAccount: WeiboAccount | undefined;
-      if (accountId) {
-        weiboAccount = await this.accountService.getAvailableAccount(accountId);
-      }
-
-      const comments = await this.commentCrawlerService.getAllCommentsByNoteId(
-        noteId,
-        maxDepth,
-        500, // 每个帖子最多500条评论
-        weiboAccount
-      );
-      allComments.push(...comments);
-
-      // 适当延迟
-      await this.multiModeRandomDelay(3000, 5000);
-    }
-
-    return allComments;
-  }
-
-  /**
-   * 执行媒体下载
-   */
-  private async executeMediaDownload(
-    mediaUrls: Array<{
-      url: string;
-      type: 'image' | 'video';
-      sourceType: 'note' | 'avatar' | 'background';
-      sourceId: string;
-    }>,
-    traceContext: TraceContext
-  ): Promise<MediaDownloadTask[]> {
-    return await this.mediaDownloaderService.batchDownloadMedia(mediaUrls, 3, true);
-  }
-
-  /**
-   * 从搜索结果中提取帖子ID
-   */
-  private async extractNoteIdsFromSearchResult(taskId: number): Promise<string[]> {
-    // 这里需要从已保存的原始数据中提取帖子ID
-    // 简化实现，返回空数组
-    return [];
-  }
-
-  /**
-   * 从结果中提取创作者ID
-   */
-  private async extractCreatorIdsFromResults(result: MultiModeCrawlResult): Promise<string[]> {
-    const creatorIds = new Set<string>();
-
-    // 从详情中提取作者ID
-    if (result.noteDetails) {
-      result.noteDetails.forEach(detail => {
-        if (detail.authorId) {
-          creatorIds.add(detail.authorId);
-        }
-      });
-    }
-
-    return Array.from(creatorIds);
-  }
-
-  /**
-   * 获取需要爬取评论的帖子ID
-   */
-  private async getNoteIdsForCommentCrawl(result: MultiModeCrawlResult): Promise<string[]> {
-    const noteIds: string[] = [];
-
-    if (result.noteDetails) {
-      result.noteDetails.forEach(detail => {
-        if (detail.commentCount > 0) {
-          noteIds.push(detail.id);
-        }
-      });
-    }
-
-    return noteIds;
-  }
-
-  /**
-   * 从结果中提取媒体URL
-   */
-  private async extractMediaUrlsFromResults(result: MultiModeCrawlResult): Promise<Array<{
-    url: string;
-    type: 'image' | 'video';
-    sourceType: 'note' | 'avatar' | 'background';
-    sourceId: string;
-  }>> {
-    const mediaUrls: Array<{
-      url: string;
-      type: 'image' | 'video';
-      sourceType: 'note' | 'avatar' | 'background';
-      sourceId: string;
-    }> = [];
-
-    // 从帖子详情中提取图片
-    if (result.noteDetails) {
-      result.noteDetails.forEach(detail => {
-        detail.images.forEach(imageUrl => {
-          mediaUrls.push({
-            url: imageUrl,
-            type: 'image',
-            sourceType: 'note',
-            sourceId: detail.id
-          });
-        });
-
-        detail.videos.forEach(video => {
-          mediaUrls.push({
-            url: video.url,
-            type: 'video',
-            sourceType: 'note',
-            sourceId: detail.id
-          });
-        });
-      });
-    }
-
-    // 从创作者信息中提取头像
-    if (result.creatorDetails) {
-      result.creatorDetails.forEach(creator => {
-        if (creator.avatar) {
-          mediaUrls.push({
-            url: creator.avatar,
-            type: 'image',
-            sourceType: 'avatar',
-            sourceId: creator.id
-          });
-        }
-      });
-    }
-
-    return mediaUrls;
-  }
-
-  /**
-   * 初始化增强的爬取指标
-   */
-  private initializeEnhancedMetrics(startTime: number): EnhancedCrawlMetrics {
-    return {
-      // 基础指标
-      totalPages: 0,
-      successfulPages: 0,
-      failedPages: 0,
-      skippedPages: 0,
-      totalRequests: 0,
-      averagePageLoadTime: 0,
-      totalDataSize: 0,
-
-      // 多模式指标
-      notesCrawled: 0,
-      detailsCrawled: 0,
-      creatorsCrawled: 0,
-      commentsCrawled: 0,
-      mediaFilesDownloaded: 0,
-      commentDepthReached: 0,
-
-      // 性能指标
-      totalDuration: 0,
-      throughputMBps: 0,
-      requestsPerSecond: 0,
-      errorRate: 0,
-
-      // 资源使用
-      memoryUsage: 0,
-      cpuUsage: 0,
-      diskUsage: 0
-    };
-  }
-
-  /**
-   * 计算最终指标
-   */
-  private calculateFinalMetrics(metrics: EnhancedCrawlMetrics, startTime: number): void {
-    const totalDuration = Date.now() - startTime;
-    metrics.totalDuration = totalDuration;
-
-    // 计算吞吐量
-    if (totalDuration > 0) {
-      metrics.throughputMBps = Math.round((metrics.totalDataSize / 1024 / 1024) / (totalDuration / 1000) * 100) / 100;
-      metrics.requestsPerSecond = Math.round((metrics.totalRequests / totalDuration) * 1000 * 100) / 100;
-    }
-
-    // 计算错误率
-    const totalAttempts = metrics.successfulPages + metrics.failedPages;
-    if (totalAttempts > 0) {
-      metrics.errorRate = Math.round((metrics.failedPages / totalAttempts) * 100);
-    }
-
-    // 获取资源使用情况（简化实现）
-    metrics.memoryUsage = Math.round(process.memoryUsage().heapUsed / 1024 / 1024 * 100) / 100;
-  }
-
-  /**
-   * 计算最大评论深度
-   */
-  private calculateMaxCommentDepth(comments: WeiboComment[]): number {
-    let maxDepth = 0;
-
-    const calculateDepth = (commentList: WeiboComment[], currentDepth: number) => {
-      maxDepth = Math.max(maxDepth, currentDepth);
-      commentList.forEach(comment => {
-        if (comment.subComments && comment.subComments.length > 0) {
-          calculateDepth(comment.subComments, currentDepth + 1);
-        }
-      });
-    };
-
-    calculateDepth(comments, 1);
-    return maxDepth;
-  }
-
-  /**
-   * 分类多模式爬取错误
-   */
-  private classifyMultiModeError(error: any): string {
-    if (!error) return 'UNKNOWN';
-
-    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
-
-    if (errorMessage.includes('search') || errorMessage.includes('搜索')) {
-      return 'SEARCH_MODE_ERROR';
-    }
-
-    if (errorMessage.includes('detail') || errorMessage.includes('详情')) {
-      return 'DETAIL_MODE_ERROR';
-    }
-
-    if (errorMessage.includes('creator') || errorMessage.includes('创作者')) {
-      return 'CREATOR_MODE_ERROR';
-    }
-
-    if (errorMessage.includes('comment') || errorMessage.includes('评论')) {
-      return 'COMMENT_MODE_ERROR';
-    }
-
-    if (errorMessage.includes('media') || errorMessage.includes('媒体')) {
-      return 'MEDIA_MODE_ERROR';
-    }
-
-    return 'MULTIMODE_UNKNOWN_ERROR';
-  }
-
-  /**
-   * 专用随机延迟方法 - 多模式爬取专用
-   */
-  private async multiModeRandomDelay(minMs: number, maxMs: number): Promise<void> {
-    const delay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-    await new Promise(resolve => setTimeout(resolve, delay));
   }
 }
+
+export type {
+  SubTaskMessage,
+  EnhancedSubTaskMessage,
+  MultiModeCrawlResult,
+  EnhancedCrawlMetrics,
+  CrawlResult,
+  TraceContext,
+} from './search-crawler.types';
+export { TraceGenerator } from './trace.generator';

@@ -10,6 +10,7 @@ import { WeiboAccountEntity } from '@pro/entities';
 import { WeiboAccountService } from './weibo/account.service';
 import { BrowserService } from './browser/browser.service';
 import { WeiboSearchCrawlerService } from './weibo/search-crawler.service';
+import { WeiboMultiModeCrawlerService } from './weibo/multi-mode-crawler.service';
 import { WeiboDetailCrawlerService } from './weibo/detail-crawler.service';
 import { WeiboCommentCrawlerService } from './weibo/comment-crawler.service';
 import { WeiboCreatorCrawlerService } from './weibo/creator-crawler.service';
@@ -112,6 +113,7 @@ import { createDatabaseConfig } from '@pro/entities';
     RobotsService,
     RequestMonitorService,
     WeiboSearchCrawlerService,
+    WeiboMultiModeCrawlerService,
     WeiboDetailCrawlerService,     // 负责微博详情页的数据爬取
     WeiboCommentCrawlerService,    // 负责评论数据的深度挖掘
     WeiboCreatorCrawlerService,    // 负责博主主页的数据爬取

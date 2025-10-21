@@ -1,12 +1,10 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { RawDataSourceService, MongodbModule, RawDataSource, RawDataSourceSchema } from '@pro/mongodb';
 import { RawDataService } from './raw-data.service';
 import { RawDataResolver } from './raw-data.resolver';
-import { RawDataGateway } from './raw-data.gateway';
 import { EnhancedRawDataService } from './enhanced-raw-data.service';
 import { EnhancedRawDataResolver } from './enhanced-raw-data.resolver';
 import { AuthModule } from '../auth/auth.module';
@@ -46,12 +44,6 @@ import { AuthModule } from '../auth/auth.module';
     //   { name: RawDataSource.name, schema: RawDataSourceSchema }
     // ]),
 
-    // JWT模块用于认证和WebSocket认证
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-secret-key',
-      signOptions: { expiresIn: '24h' },
-    }),
-
     // 认证模块（前向引用避免循环依赖）
     forwardRef(() => AuthModule),
   ],
@@ -61,9 +53,6 @@ import { AuthModule } from '../auth/auth.module';
 
     // 原有的GraphQL解析器
     RawDataResolver,
-
-    // 原有的WebSocket Gateway
-    RawDataGateway,
 
     // 增强功能服务
     EnhancedRawDataService,
@@ -77,7 +66,6 @@ import { AuthModule } from '../auth/auth.module';
   exports: [
     // 导出原有服务
     RawDataService,
-    RawDataGateway,
 
     // 导出增强功能服务
     EnhancedRawDataService,

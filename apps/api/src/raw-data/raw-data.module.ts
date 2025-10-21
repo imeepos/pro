@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RawDataSource, RawDataSourceSchema, RawDataSourceService } from '@pro/mongodb';
 import { RawDataService } from './raw-data.service';
 import { RawDataResolver } from './raw-data.resolver';
-import { RawDataGateway } from './raw-data.gateway';
 
 /**
  * 原始数据模块
@@ -21,21 +19,14 @@ import { RawDataGateway } from './raw-data.gateway';
     MongooseModule.forFeature([
       { name: RawDataSource.name, schema: RawDataSourceSchema }
     ]),
-    // JWT模块用于WebSocket认证
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-secret-key',
-      signOptions: { expiresIn: '24h' },
-    }),
   ],
   providers: [
     RawDataSourceService,
     RawDataService,
     RawDataResolver,
-    RawDataGateway,
   ],
   exports: [
     RawDataService,
-    RawDataGateway,
   ],
 })
 export class RawDataModule {}
