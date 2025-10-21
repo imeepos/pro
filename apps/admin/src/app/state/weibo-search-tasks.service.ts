@@ -237,14 +237,18 @@ export class WeiboSearchTasksService {
   }
 
   private buildQueryVariables(filters: WeiboSearchTaskFilters): Record<string, unknown> {
-    return {
-      page: filters.page ?? undefined,
-      limit: filters.limit ?? undefined,
-      keyword: filters.keyword ?? undefined,
-      enabled: filters.enabled ?? undefined,
-      sortBy: filters.sortBy ?? undefined,
-      sortOrder: filters.sortOrder ? filters.sortOrder.toUpperCase() : undefined,
+    const rawVariables = {
+      page: filters.page,
+      limit: filters.limit,
+      keyword: filters.keyword,
+      enabled: filters.enabled,
+      sortBy: filters.sortBy,
+      sortOrder: filters.sortOrder?.toUpperCase(),
     };
+
+    return Object.fromEntries(
+      Object.entries(rawVariables).filter(([_, value]) => value != null)
+    );
   }
 
   private updateTaskInStore(task: WeiboSearchTask): void {
