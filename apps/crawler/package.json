@@ -50,6 +50,7 @@
     "@nestjs/platform-express": "^11.0.13",
     "@nestjs/swagger": "^11.0.5",
     "@nestjs/typeorm": "^11.0.0",
+    "@pro/crawler-utils": "workspace:*",
     "@pro/entities": "workspace:*",
     "@pro/logger": "workspace:*",
     "@pro/minio": "workspace:*",
