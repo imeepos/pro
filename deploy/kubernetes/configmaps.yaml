@@ -59,11 +59,36 @@ data:
   ADAPTIVE_DELAY_MAX_MS: "30000"
   ADAPTIVE_DELAY_MIN_MS: "1000"
 
-  # Browser pool settings
+# Browser pool settings
   BROWSER_POOL_SIZE: "5"
   BROWSER_MAX_REUSE: "100"
   BROWSER_IDLE_TIMEOUT: "300000"
 
+---
+# API configuration for WebSocket & PubSub
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: weibo-crawler
+  labels:
+    app: weibo-crawler
+    component: api
+data:
+  PUBSUB_DRIVER: "redis"
+  PUBSUB_NAMESPACE: "@pro/api"
+  PUBSUB_REDIS_MODE: "standalone"
+  PUBSUB_REDIS_HOST: "redis-service"
+  PUBSUB_REDIS_PORT: "6379"
+  PUBSUB_REDIS_DB: "0"
+  WS_HANDSHAKE_WINDOW_MS: "10000"
+  WS_MAX_HANDSHAKES_PER_IP: "20"
+  WS_HANDSHAKE_COOLDOWN_MS: "15000"
+  WS_FAILURE_WINDOW_MS: "60000"
+  WS_MAX_FAILURES_PER_IP: "5"
+  WS_FAILURE_COOLDOWN_MS: "120000"
+  WS_MAX_CONNECTIONS_PER_USER: "8"
+  WS_MAX_CONNECTIONS_PER_IP: "12"
 ---
 # Redis configuration
 apiVersion: v1
