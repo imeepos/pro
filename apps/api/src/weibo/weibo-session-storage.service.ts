@@ -99,14 +99,17 @@ export class WeiboSessionStorage implements OnModuleInit, OnModuleDestroy {
         return null;
       }
 
+      // 反序列化 Date 字段（Redis 存储后会变成字符串）
+      const normalizedSession = this.normalizeSessionDates(sessionData);
+
       // 检查是否过期
-      if (this.isSessionExpired(sessionData)) {
-        await this.updateSessionStatus(sessionId, 'expired');
+      if (this.isSessionExpired(normalizedSession)) {
+        await this.markSessionExpired(sessionId, normalizedSession);
         this.logger.debug(`会话已过期`, { sessionId });
         return null;
       }
 
-      return sessionData;
+      return normalizedSession;
     } catch (error) {
       this.logger.error(`获取会话失败`, { sessionId, error });
       return null;
@@ -118,22 +121,28 @@ export class WeiboSessionStorage implements OnModuleInit, OnModuleDestroy {
    */
   async updateSessionEvent(sessionId: string, eventData: any): Promise<boolean> {
     try {
-      const session = await this.getSession(sessionId);
+      // 直接从 Redis 获取，避免过期检查（更新事件时允许会话接近过期）
+      const session = await this.redis.get<SessionData>(
+        `${this.SESSION_PREFIX}${sessionId}`
+      );
+
       if (!session) {
         return false;
       }
 
-      session.lastEvent = eventData;
+      // 规范化日期字段
+      const normalizedSession = this.normalizeSessionDates(session);
+      normalizedSession.lastEvent = eventData;
 
       // 计算剩余 TTL
       const remainingTtl = Math.max(
         1,
-        Math.floor((session.expiresAt.getTime() - Date.now()) / 1000)
+        Math.floor((normalizedSession.expiresAt.getTime() - Date.now()) / 1000)
       );
 
       await this.redis.set(
         `${this.SESSION_PREFIX}${sessionId}`,
-        session,
+        normalizedSession,
         remainingTtl
       );
 
@@ -153,12 +162,18 @@ export class WeiboSessionStorage implements OnModuleInit, OnModuleDestroy {
     status: 'active' | 'expired' | 'completed'
   ): Promise<boolean> {
     try {
-      const session = await this.getSession(sessionId);
+      // 直接从 Redis 获取，不经过 getSession（避免递归和过期检查）
+      const session = await this.redis.get<SessionData>(
+        `${this.SESSION_PREFIX}${sessionId}`
+      );
+
       if (!session) {
         return false;
       }
 
-      session.status = status;
+      // 规范化日期字段
+      const normalizedSession = this.normalizeSessionDates(session);
+      normalizedSession.status = status;
 
       // 根据状态设置不同的 TTL
       let ttl: number;
@@ -169,13 +184,13 @@ export class WeiboSessionStorage implements OnModuleInit, OnModuleDestroy {
       } else {
         ttl = Math.max(
           1,
-          Math.floor((session.expiresAt.getTime() - Date.now()) / 1000)
+          Math.floor((normalizedSession.expiresAt.getTime() - Date.now()) / 1000)
         );
       }
 
       await this.redis.set(
         `${this.SESSION_PREFIX}${sessionId}`,
-        session,
+        normalizedSession,
         ttl
       );
 
@@ -260,6 +275,39 @@ export class WeiboSessionStorage implements OnModuleInit, OnModuleDestroy {
    */
   private isSessionExpired(session: SessionData): boolean {
     return Date.now() >= session.expiresAt.getTime();
+  }
+
+  /**
+   * 规范化会话中的 Date 字段
+   * Redis 反序列化后，Date 对象会变成字符串，需要转换回 Date
+   */
+  private normalizeSessionDates(session: any): SessionData {
+    return {
+      ...session,
+      createdAt: session.createdAt instanceof Date
+        ? session.createdAt
+        : new Date(session.createdAt),
+      expiresAt: session.expiresAt instanceof Date
+        ? session.expiresAt
+        : new Date(session.expiresAt),
+    };
+  }
+
+  /**
+   * 直接标记会话为过期状态
+   * 避免通过 updateSessionStatus 造成递归调用
+   */
+  private async markSessionExpired(sessionId: string, session: SessionData): Promise<void> {
+    try {
+      session.status = 'expired';
+      await this.redis.set(
+        `${this.SESSION_PREFIX}${sessionId}`,
+        session,
+        30 // 过期会话保留30秒用于调试
+      );
+    } catch (error) {
+      this.logger.error(`标记会话过期失败`, { sessionId, error });
+    }
   }
 
   /**
