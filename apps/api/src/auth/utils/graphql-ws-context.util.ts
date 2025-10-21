@@ -7,6 +7,45 @@ import { EventTypeLoader } from '../../events/event-type.loader';
 import { IndustryTypeLoader } from '../../events/industry-type.loader';
 import { TagLoader } from '../../events/tag.loader';
 
+export const mapConnectionParamsToHeaders = (connectionParams: Record<string, unknown> | undefined) => {
+  const headers: Record<string, string> = {};
+
+  if (!connectionParams) {
+    return headers;
+  }
+
+  const authorization = extractAuthorizationToken(connectionParams);
+  if (authorization) {
+    headers.authorization = authorization;
+  }
+
+  const apiKey = extractApiKey(connectionParams);
+  if (apiKey) {
+    headers['x-api-key'] = apiKey;
+  }
+
+  return headers;
+};
+
+const extractAuthorizationToken = (connectionParams: Record<string, unknown>) => {
+  const token = connectionParams['authorization'];
+  return typeof token === 'string' ? token : undefined;
+};
+
+const extractApiKey = (connectionParams: Record<string, unknown>) => {
+  const candidates = ['x-api-key', 'apiKey', 'api_key'] as const;
+
+  for (const key of candidates) {
+    const value = connectionParams[key];
+
+    if (typeof value === 'string') {
+      return value;
+    }
+  }
+
+  return undefined;
+};
+
 /**
  * WebSocket 连接上下文创建器
  * 处理 graphql-ws 连接的认证和上下文创建
@@ -32,7 +71,7 @@ export class GraphqlWsContextCreator {
     try {
       // 认证连接，会抛出具体错误信息
       const user = await this.wsAuthService.authenticateConnection(connectionParams);
-      const headers = this.deriveHeadersFromConnectionParams(connectionParams);
+      const headers = mapConnectionParamsToHeaders(connectionParams);
 
       // 创建增强的请求对象
       const request: AugmentedRequest = {
@@ -63,42 +102,4 @@ export class GraphqlWsContextCreator {
     }
   }
 
-  private deriveHeadersFromConnectionParams(connectionParams: Record<string, unknown> | undefined) {
-    const headers: Record<string, string> = {};
-
-    if (!connectionParams) {
-      return headers;
-    }
-
-    const authorization = this.extractAuthorizationToken(connectionParams);
-    if (authorization) {
-      headers.authorization = authorization;
-    }
-
-    const apiKey = this.extractApiKey(connectionParams);
-    if (apiKey) {
-      headers['x-api-key'] = apiKey;
-    }
-
-    return headers;
-  }
-
-  private extractAuthorizationToken(connectionParams: Record<string, unknown>) {
-    const token = connectionParams['authorization'];
-    return typeof token === 'string' ? token : undefined;
-  }
-
-  private extractApiKey(connectionParams: Record<string, unknown>) {
-    const candidates = ['x-api-key', 'apiKey', 'api_key'] as const;
-
-    for (const key of candidates) {
-      const value = connectionParams[key];
-
-      if (typeof value === 'string') {
-        return value;
-      }
-    }
-
-    return undefined;
-  }
 }

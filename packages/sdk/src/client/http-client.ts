@@ -73,8 +73,10 @@ export class HttpClient {
     try {
       const result = JSON.parse(raw);
       return result?.data !== undefined ? result.data : result;
-    } catch (error) {
-      throw new Error('解析响应失败');
+    } catch (parseError) {
+      const reason =
+        parseError instanceof Error ? parseError.message : JSON.stringify(parseError);
+      throw new Error(`解析响应失败: ${reason || '未知错误'}`);
     }
   }
 
@@ -125,8 +127,10 @@ export class HttpClient {
           try {
             const result = JSON.parse(xhr.responseText);
             resolve(result.data !== undefined ? result.data : result);
-          } catch (error) {
-            reject(new Error('解析响应失败'));
+          } catch (parseError) {
+            const reason =
+              parseError instanceof Error ? parseError.message : JSON.stringify(parseError);
+            reject(new Error(`解析响应失败: ${reason || '未知错误'}`));
           }
         } else {
           reject(new Error(`HTTP error! status: ${xhr.status}`));

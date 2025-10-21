@@ -4,6 +4,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { ApiKeyAuthGuard } from './api-key-auth.guard';
 import { resolveRequest } from '../../common/utils/context.utils';
 import { GraphqlWsAuthService } from '../services/graphql-ws-auth.service';
+import { mapConnectionParamsToHeaders } from '../utils/graphql-ws-context.util';
 
 /**
  * 复合认证守卫
@@ -85,47 +86,26 @@ export class CompositeAuthGuard extends AuthGuard('jwt') {
     try {
       const user = await this.wsAuthService.authenticateConnection(request.connectionParams);
       request.user = user;
-      request.headers = this.mergeHeadersFromConnectionParams(request.headers ?? {}, request.connectionParams);
+      const headersFromParams = mapConnectionParamsToHeaders(request.connectionParams);
+      request.headers = this.mergeHeaders(request.headers ?? {}, headersFromParams) as any;
       this.logger.debug('通过 WebSocket 连接参数恢复认证上下文');
     } catch (error) {
       this.logger.debug('WebSocket 连接参数未通过认证校验');
     }
   }
 
-  private mergeHeadersFromConnectionParams(
+  private mergeHeaders(
     currentHeaders: Record<string, any>,
-    connectionParams: Record<string, unknown>,
+    headersFromParams: Record<string, string>,
   ) {
     const headers = { ...currentHeaders };
 
-    const authorization = this.extractAuthorization(connectionParams);
-    if (authorization && !headers.authorization) {
-      headers.authorization = authorization;
-    }
-
-    const apiKey = this.extractApiKey(connectionParams);
-    if (apiKey && !headers['x-api-key']) {
-      headers['x-api-key'] = apiKey;
-    }
-
-    return headers;
-  }
-
-  private extractAuthorization(connectionParams: Record<string, unknown>) {
-    const token = connectionParams?.['authorization'];
-    return typeof token === 'string' ? token : undefined;
-  }
-
-  private extractApiKey(connectionParams: Record<string, unknown>) {
-    const candidates = ['x-api-key', 'apiKey', 'api_key'] as const;
-
-    for (const key of candidates) {
-      const value = connectionParams?.[key];
-      if (typeof value === 'string') {
-        return value;
+    for (const [key, value] of Object.entries(headersFromParams)) {
+      if (value && !headers[key]) {
+        headers[key] = value;
       }
     }
 
-    return undefined;
+    return headers;
   }
 }
