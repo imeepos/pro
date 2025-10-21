@@ -84,8 +84,8 @@ module.exports = {
 
   // 模块路径映射 - 支持workspace包引用
   moduleNameMapper: {
-    '^@pro/(.*)$': '<rootDir>/../../../../packages/$1/src',
-    '^@pro/(.*)/(.*)$': '<rootDir>/../../../../packages/$1/src/$2',
+    '^@pro/(.*)$': '<rootDir>/../../../../packages/$1/dist',
+    '^@pro/(.*)/(.*)$': '<rootDir>/../../../../packages/$1/dist/$2',
     '^signal-exit$': '<rootDir>/signal-exit-shim.js',
   },
 
