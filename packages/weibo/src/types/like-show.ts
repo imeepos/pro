@@ -108,8 +108,8 @@ export interface WeiboLikeUser extends Record<string, unknown> {
   readonly video_mark: number
   readonly live_status: number
   readonly user_ability_extend: number
-  readonly status_total_counter: WeiboLikeUserStatusTotals
-  readonly video_total_counter: WeiboLikeUserVideoTotals
+  readonly status_total_counter?: WeiboLikeUserStatusTotals
+  readonly video_total_counter?: WeiboLikeUserVideoTotals
   readonly brand_account: number
   readonly hongbaofei: number
   readonly reward_status: number

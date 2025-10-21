@@ -1,6 +1,6 @@
 export { WeiboModule } from './weibo.module.js'
 export { WeiboStatusService } from './weibo.service.js'
-export type { WeiboStatusLikesOptions } from './weibo.service.js'
+export type { WeiboStatusLikesOptions, WeiboStatusCommentsOptions } from './weibo.service.js'
 export {
   DEFAULT_WEIBO_BASE_URL,
   DEFAULT_WEIBO_HEADERS,
@@ -39,3 +39,11 @@ export type {
   WeiboStatusAttitude,
   WeiboStatusLikeShowResponse
 } from './types/like-show.js'
+export type {
+  WeiboBuildCommentsResponse,
+  WeiboCommentBadge,
+  WeiboCommentEntity,
+  WeiboCommentFansIcon,
+  WeiboCommentMoreInfo,
+  WeiboCommentUser
+} from './types/comment-build.js'

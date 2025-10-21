@@ -909,6 +909,97 @@ export class WeiboSearchCrawlerService {
     }
   }
 
+  private async publishDetailCrawlEvents(
+    statusIds: string[],
+    context: {
+      traceId: string;
+      taskId: number;
+      keyword: string;
+      page: number;
+      sourceUrl: string;
+      isInitialCrawl: boolean;
+    },
+    publishedSet: Set<string>
+  ): Promise<void> {
+    if (!this.rabbitMQClient) {
+      this.logger.warn('RabbitMQ 未初始化，无法发布微博详情事件', {
+        traceId: context.traceId,
+        taskId: context.taskId,
+        keyword: context.keyword,
+        page: context.page
+      });
+      return;
+    }
+
+    const discoveredAt = new Date().toISOString();
+    const published: string[] = [];
+
+    for (const statusId of statusIds) {
+      if (publishedSet.has(statusId)) {
+        continue;
+      }
+
+      const event: WeiboDetailCrawlEvent = {
+        statusId,
+        priority: this.determineDetailPriority(context.page, context.isInitialCrawl),
+        sourceContext: {
+          taskId: context.taskId,
+          keyword: context.keyword,
+          page: context.page,
+          discoveredAtUrl: context.sourceUrl,
+          traceId: context.traceId
+        },
+        discoveredAt,
+        retryCount: 0,
+        createdAt: new Date().toISOString()
+      };
+
+      try {
+        await this.rabbitMQClient.publish(QUEUE_NAMES.WEIBO_DETAIL_CRAWL, event);
+        publishedSet.add(statusId);
+        published.push(statusId);
+      } catch (error) {
+        publishedSet.delete(statusId);
+        this.logger.error('❌ 发布微博详情爬取事件失败', {
+          traceId: context.traceId,
+          taskId: context.taskId,
+          keyword: context.keyword,
+          page: context.page,
+          statusId,
+          queue: QUEUE_NAMES.WEIBO_DETAIL_CRAWL,
+          error: error instanceof Error ? error.message : '未知错误'
+        });
+      }
+    }
+
+    if (published.length > 0) {
+      this.logger.debug('📬 已发布微博详情爬取事件', {
+        traceId: context.traceId,
+        taskId: context.taskId,
+        keyword: context.keyword,
+        page: context.page,
+        statusIds: published,
+        queue: QUEUE_NAMES.WEIBO_DETAIL_CRAWL
+      });
+    }
+  }
+
+  private determineDetailPriority(page: number, isInitialCrawl: boolean): TaskPriority {
+    if (!isInitialCrawl && page === 1) {
+      return TaskPriority.URGENT;
+    }
+
+    if (page <= 2) {
+      return TaskPriority.HIGH;
+    }
+
+    if (page <= 5) {
+      return TaskPriority.NORMAL;
+    }
+
+    return TaskPriority.LOW;
+  }
+
   private async notifyCleanerForRawData(
     rawData: RawDataSource,
     context: {
