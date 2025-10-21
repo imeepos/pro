@@ -1,7 +1,7 @@
 {
   "name": "@pro/weibo",
   "version": "1.0.0",
-  "description": "NestJS service wrapper for fetching Weibo post details",
+  "description": "NestJS service wrapper for Weibo status and profile retrieval",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

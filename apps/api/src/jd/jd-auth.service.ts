@@ -1,9 +1,22 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
 import { Subject, Observable, Subscription } from 'rxjs';
 import { JdAccountEntity } from '@pro/entities';
 import { JdAccountService } from './jd-account.service';
+import { PinoLogger } from '@pro/logger';
+import { PubSubService } from '../common/pubsub/pubsub.service';
+import { SUBSCRIPTION_EVENTS } from '../screens/constants/subscription-events';
+import { ScreensGateway } from '../screens/screens.gateway';
+import { JdSessionStorage, JdSessionState } from './jd-session-storage.service';
 
 /**
  * SSE 消息事件类型
@@ -13,9 +26,9 @@ export type JdLoginEventType = 'qrcode' | 'status' | 'scanned' | 'success' | 'ex
 /**
  * SSE 消息事件接口
  */
-export interface JdLoginEvent {
+export interface JdLoginEvent extends Record<string, unknown> {
   type: JdLoginEventType;
-  data: any;
+  data?: Record<string, unknown>;
 }
 
 /**
@@ -48,6 +61,14 @@ export interface JdLoginSessionSnapshot {
   lastEvent?: JdLoginEvent;
   expiresAt: Date;
   isExpired: boolean;
+  status: JdSessionState;
+}
+
+export interface JdLoginEventEnvelope {
+  sessionId: string;
+  userId: string;
+  event: JdLoginEvent;
+  emittedAt: string;
 }
 
 /**
@@ -56,7 +77,6 @@ export interface JdLoginSessionSnapshot {
  */
 @Injectable()
 export class JdAuthService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(JdAuthService.name);
   private browser: Browser;
   private loginSessions = new Map<string, LoginSession>();
 
@@ -75,23 +95,33 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
   // 页面加载配置
   private readonly PAGE_LOAD_TIMEOUT = 60000; // 60秒超时
   private readonly MAX_RETRY_ATTEMPTS = 2; // 最大重试次数
+  private readonly DEFAULT_USER_AGENT =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
   constructor(
+    private readonly logger: PinoLogger,
     private readonly jdAccountService: JdAccountService,
     private readonly httpService: HttpService,
-  ) {}
+    private readonly pubSub: PubSubService,
+    private readonly sessionStorage: JdSessionStorage,
+    @Inject(forwardRef(() => ScreensGateway))
+    private readonly screensGateway: ScreensGateway,
+  ) {
+    this.logger.setContext(JdAuthService.name);
+  }
 
   /**
    * 模块初始化时启动浏览器实例
    */
   async onModuleInit() {
     try {
-      this.logger.log('正在启动 Playwright 浏览器实例...');
+      this.logger.info('正在启动 Playwright 浏览器实例...');
       this.browser = await chromium.launch({
         headless: true, // 生产环境使用无头模式
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
       });
-      this.logger.log('Playwright 浏览器启动成功');
+      this.logger.info('Playwright 浏览器启动成功');
+      await this.cleanupOrphanedSessions();
     } catch (error) {
       this.logger.warn('Playwright 浏览器启动失败，京东登录功能将不可用', error.message);
       this.browser = null;
@@ -102,7 +132,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
    * 模块销毁时关闭浏览器实例和所有会话
    */
   async onModuleDestroy() {
-    this.logger.log('正在关闭所有登录会话...');
+    this.logger.info('正在关闭所有登录会话...');
 
     // 关闭所有活动会话
     const sessionIds = Array.from(this.loginSessions.keys());
@@ -113,7 +143,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
     // 关闭浏览器
     if (this.browser) {
       await this.browser.close();
-      this.logger.log('Playwright 浏览器已关闭');
+      this.logger.info('Playwright 浏览器已关闭');
     }
   }
 
@@ -145,18 +175,25 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
       throw new ServiceUnavailableException('Playwright浏览器未就绪，京东登录功能暂时不可用');
     }
 
-    const sessionId = `${userId}_${Date.now()}`;
-    this.logger.log(`启动京东登录会话: ${sessionId}`);
+    let sessionRecord: Awaited<ReturnType<JdSessionStorage['createSession']>>;
+    try {
+      sessionRecord = await this.sessionStorage.createSession(userId, {
+        userAgent: this.DEFAULT_USER_AGENT,
+      });
+    } catch (error) {
+      this.logger.error('创建京东登录会话失败', { userId, error });
+      throw new ServiceUnavailableException('无法初始化京东登录会话，请稍后再试');
+    }
+
+    const { sessionId, expiresAt, createdAt } = sessionRecord;
+    this.logger.info(`启动京东登录会话`, { sessionId, userId, expiresAt });
 
     const context = await this.browser.newContext({
-      userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      userAgent: this.DEFAULT_USER_AGENT,
     });
 
     const page = await context.newPage();
     const subject = new Subject<JdLoginEvent>();
-    const createdAt = new Date();
-    const expiresAt = new Date(createdAt.getTime() + this.SESSION_TIMEOUT);
 
     const session: LoginSession = {
       context,
@@ -167,20 +204,39 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
       expiresAt,
     };
 
-    session.eventsSubscription = subject.subscribe((event) => {
-      session.lastEvent = event;
+    session.eventsSubscription = subject.subscribe({
+      next: (event) => {
+        session.lastEvent = event;
+        void this.sessionStorage.updateSessionEvent(sessionId, event).catch((error) => {
+          this.logger.error('同步京东登录事件到Redis失败', { sessionId, eventType: event.type, error });
+        });
+        void this.broadcastLoginEvent(sessionId, userId, event).catch((error) => {
+          this.logger.error('广播京东登录事件失败', { sessionId, eventType: event.type, error });
+        });
+      },
+      error: (error) => {
+        this.logger.error('登录会话事件流异常', { sessionId, error });
+        void this.sessionStorage.updateSessionStatus(sessionId, 'expired').catch((storageError) => {
+          this.logger.error('标记京东登录会话过期失败', { sessionId, storageError });
+        });
+      },
+      complete: () => {
+        void this.sessionStorage.updateSessionStatus(sessionId, 'completed').catch((storageError) => {
+          this.logger.error('标记京东登录会话完成失败', { sessionId, storageError });
+        });
+      },
     });
 
     this.loginSessions.set(sessionId, session);
 
     const timer = setTimeout(() => {
-      this.logger.warn(`登录会话超时: ${sessionId}`);
+      this.logger.warn(`登录会话超时`, { sessionId, userId });
       subject.next({
         type: 'error',
         data: { message: '登录超时,请重新尝试' },
       });
       subject.complete();
-      this.cleanupSession(sessionId);
+      void this.cleanupSession(sessionId, 'expired');
     }, this.SESSION_TIMEOUT);
 
     session.timer = timer;
@@ -199,28 +255,26 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  getLoginSessionSnapshot(sessionId: string): JdLoginSessionSnapshot {
-    const session = this.loginSessions.get(sessionId);
-    if (!session) {
+  async getLoginSessionSnapshot(sessionId: string): Promise<JdLoginSessionSnapshot> {
+    const stored = await this.sessionStorage.getSession(sessionId);
+    if (!stored) {
       throw new NotFoundException('登录会话不存在或已结束');
     }
+
+    const session = this.loginSessions.get(sessionId);
+    const persistedEvent = stored.lastEvent ? (stored.lastEvent as unknown as JdLoginEvent) : undefined;
+    const lastEvent = session?.lastEvent ?? persistedEvent;
+    const expiresAt = stored.expiresAt instanceof Date ? stored.expiresAt : new Date(stored.expiresAt);
+    const isExpired = Date.now() >= expiresAt.getTime();
 
     return {
       sessionId,
-      userId: session.userId,
-      lastEvent: session.lastEvent,
-      expiresAt: session.expiresAt,
-      isExpired: session.expiresAt.getTime() <= Date.now(),
+      userId: stored.userId,
+      lastEvent,
+      expiresAt,
+      isExpired,
+      status: stored.status,
     };
-  }
-
-  observeLoginSession(sessionId: string): Observable<JdLoginEvent> {
-    const session = this.loginSessions.get(sessionId);
-    if (!session) {
-      throw new NotFoundException('登录会话不存在或已结束');
-    }
-
-    return session.subject.asObservable();
   }
 
   /**
@@ -234,7 +288,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
     attempt: number = 1,
   ): Promise<void> {
     try {
-      this.logger.log(`正在导航到京东登录页面 (尝试 ${attempt}/${this.MAX_RETRY_ATTEMPTS}): ${sessionId}`);
+      this.logger.info(`正在导航到京东登录页面 (尝试 ${attempt}/${this.MAX_RETRY_ATTEMPTS}): ${sessionId}`);
 
       // 使用 domcontentloaded 策略，更快且更稳定
       await page.goto(this.JD_LOGIN_URL, {
@@ -242,14 +296,14 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
         timeout: this.PAGE_LOAD_TIMEOUT,
       });
 
-      this.logger.log(`京东登录页面导航成功: ${sessionId}`);
+      this.logger.info(`京东登录页面导航成功: ${sessionId}`);
 
       // 额外等待确保关键资源加载完成
       await page.waitForTimeout(2000).catch(() => {
         this.logger.debug(`页面等待超时，继续执行: ${sessionId}`);
       });
 
-      this.logger.log(`京东登录页面准备完成: ${sessionId}`);
+      this.logger.info(`京东登录页面准备完成: ${sessionId}`);
 
     } catch (error) {
       const errorMessage = this.extractPageLoadErrorMessage(error);
@@ -257,7 +311,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
 
       // 判断是否应该重试
       if (attempt < this.MAX_RETRY_ATTEMPTS && this.shouldRetryPageLoad(error)) {
-        this.logger.log(`准备重试页面导航: ${sessionId}`);
+        this.logger.info(`准备重试页面导航: ${sessionId}`);
 
         // 等待一段时间后重试
         await page.waitForTimeout(3000);
@@ -276,7 +330,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
         },
       });
       subject.complete();
-      await this.cleanupSession(sessionId);
+      await this.cleanupSession(sessionId, 'expired');
     }
   }
 
@@ -357,7 +411,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
         const imageData = await this.extractQrImageData(response);
 
         if (imageData) {
-          this.logger.log(`二维码数据提取成功: ${sessionId}`);
+          this.logger.info(`二维码数据提取成功: ${sessionId}`);
 
           subject.next({
             type: 'qrcode',
@@ -446,7 +500,17 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
             const jsonStr = text.replace(/^jQuery\d+\(/, '').replace(/\)$/, '');
             const statusData = JSON.parse(jsonStr);
 
-            this.logger.log(`[京东状态] 响应数据: ${JSON.stringify(statusData)}, session: ${sessionId}`);
+            this.logger.debug(`[京东状态] 响应数据: ${JSON.stringify(statusData)}, session: ${sessionId}`);
+
+            subject.next({
+              type: 'status',
+              data: {
+                code: statusData.code,
+                message: statusData.msg,
+                ticket: statusData.ticket,
+                raw: statusData,
+              },
+            });
 
             switch (statusData.code) {
               case 201:
@@ -455,7 +519,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
                 break;
 
               case 202:
-                this.logger.log(`已扫码,等待确认: ${sessionId}`);
+                this.logger.info(`已扫码,等待确认: ${sessionId}`);
                 subject.next({
                   type: 'scanned',
                   data: { message: '请手机客户端确认登录' }
@@ -469,7 +533,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
                   data: { message: '二维码失效了，先刷新二维码再试试吧' }
                 });
                 subject.complete();
-                await this.cleanupSession(sessionId);
+                await this.cleanupSession(sessionId, 'expired');
                 break;
 
               case 204:
@@ -479,7 +543,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
                   data: { message: '二维码已过期，请重新扫描' }
                 });
                 subject.complete();
-                await this.cleanupSession(sessionId);
+                await this.cleanupSession(sessionId, 'expired');
                 break;
 
               case 205:
@@ -489,11 +553,11 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
                   data: { message: '二维码已取消授权' }
                 });
                 subject.complete();
-                await this.cleanupSession(sessionId);
+                await this.cleanupSession(sessionId, 'expired');
                 break;
 
               case 206:
-                this.logger.log(`登录确认成功,正在跳转: ${sessionId}`);
+                this.logger.info(`登录确认成功,正在跳转: ${sessionId}`);
                 subject.next({
                   type: 'scanned',
                   data: { message: '登录确认成功，正在跳转...' }
@@ -523,7 +587,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
 
         // 检测登录成功：跳转到京东首页
         if (url.startsWith('https://www.jd.com/') || url.startsWith('https://hk.jd.com/')) {
-          this.logger.log(`登录成功,正在提取 Cookie 和用户信息: ${sessionId}`);
+          this.logger.info(`登录成功,正在提取 Cookie 和用户信息: ${sessionId}`);
 
           try {
             // 提取 Cookie
@@ -546,10 +610,10 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
               },
             });
 
-            this.logger.log(`京东账号保存成功: ${sessionId}, accountId: ${account.id}`);
+            this.logger.info(`京东账号保存成功: ${sessionId}, accountId: ${account.id}`);
 
             subject.complete();
-            await this.cleanupSession(sessionId);
+            await this.cleanupSession(sessionId, 'completed');
           } catch (error) {
             this.logger.error(`处理登录成功失败: ${sessionId}`, error);
             subject.next({
@@ -557,7 +621,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
               data: { message: '保存账号信息失败' },
             });
             subject.complete();
-            await this.cleanupSession(sessionId);
+            await this.cleanupSession(sessionId, 'expired');
           }
         }
       });
@@ -579,7 +643,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
 
     const apiUserInfo = await this.requestUserInfoByApi(cookies);
     if (apiUserInfo) {
-      this.logger.log(`通过接口获取京东用户信息成功: ${apiUserInfo.uid}`);
+      this.logger.info(`通过接口获取京东用户信息成功: ${apiUserInfo.uid}`);
       return apiUserInfo;
     }
 
@@ -644,7 +708,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
       };
     });
 
-    this.logger.log(`用户信息提取结果: ${JSON.stringify(userInfo)}`);
+    this.logger.info(`用户信息提取结果: ${JSON.stringify(userInfo)}`);
 
     if (!userInfo.uid) {
       // 如果没有提取到uid，使用默认值
@@ -760,7 +824,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
     cookies: Cookie[],
     userInfo: JdUserInfo,
   ): Promise<JdAccountEntity> {
-    this.logger.log(`保存京东账号: userId=${userId}, jdUid=${userInfo.uid}`);
+    this.logger.info(`保存京东账号: userId=${userId}, jdUid=${userInfo.uid}`);
 
     // 将Cookie转换为字符串格式
     const cookieString = JSON.stringify(cookies);
@@ -768,31 +832,197 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
     return await this.jdAccountService.saveAccount(userId, cookieString, userInfo);
   }
 
+  getLoginEventChannel(sessionId: string): string {
+    return this.buildLoginEventChannel(sessionId);
+  }
+
+  createLoginEventsIterator(sessionId: string): AsyncIterator<JdLoginEventEnvelope> {
+    const channel = this.buildLoginEventChannel(sessionId);
+    this.registerLoginEventChannel(channel);
+    return this.pubSub.asyncIterator<JdLoginEventEnvelope>(channel);
+  }
+
+  async getServiceStats(): Promise<{
+    memorySessions: number;
+    redisStats: Awaited<ReturnType<JdSessionStorage['getStats']>>;
+  }> {
+    return {
+      memorySessions: this.loginSessions.size,
+      redisStats: await this.sessionStorage.getStats(),
+    };
+  }
+
+  getWebSocketStats(): any {
+    try {
+      return this.screensGateway.getConnectionStats();
+    } catch (error) {
+      this.logger.error('获取京东WebSocket统计信息失败', { error });
+      return {
+        totalConnections: 0,
+        connectionsByUser: [],
+        averageConnectionDuration: 0,
+      };
+    }
+  }
+
+  async checkWebSocketHealth(): Promise<void> {
+    try {
+      const stats = this.getWebSocketStats();
+      this.logger.info('京东登录WebSocket健康检查', stats);
+      if (stats.totalConnections === 0) {
+        this.logger.warn('没有活跃的京东登录WebSocket连接，可能影响实时体验');
+      }
+    } catch (error) {
+      this.logger.error('京东登录WebSocket健康检查失败', { error });
+    }
+  }
+
+  sendToUser(userId: string, event: string, data: unknown): boolean {
+    try {
+      return this.screensGateway.sendToUser(userId, event, data);
+    } catch (error) {
+      this.logger.error('发送WebSocket消息失败', { userId, event, error });
+      return false;
+    }
+  }
+
+  private createLoginEventEnvelope(sessionId: string, userId: string, event: JdLoginEvent): JdLoginEventEnvelope {
+    return {
+      sessionId,
+      userId,
+      event,
+      emittedAt: new Date().toISOString(),
+    };
+  }
+
+  private buildLoginEventChannel(sessionId: string): string {
+    return `${SUBSCRIPTION_EVENTS.JD_LOGIN_EVENT}:${sessionId}`;
+  }
+
+  private registerLoginEventChannel(channel: string): void {
+    this.pubSub.registerChannel(channel, {
+      description: 'jd login event stream',
+      allowAnonymous: false,
+    });
+  }
+
+  private async broadcastLoginEvent(sessionId: string, userId: string, event: JdLoginEvent): Promise<void> {
+    const envelope = this.createLoginEventEnvelope(sessionId, userId, event);
+    const channel = this.buildLoginEventChannel(sessionId);
+    this.registerLoginEventChannel(channel);
+
+    this.logger.debug('发布京东登录事件', {
+      sessionId,
+      userId,
+      eventType: event.type,
+      channel,
+    });
+
+    try {
+      await this.pubSub.publish(
+        channel,
+        envelope,
+        {
+          description: '京东扫码登录事件流',
+          allowAnonymous: false,
+        },
+      );
+    } catch (error) {
+      this.logger.error('发布京东登录事件到GraphQL失败', { sessionId, userId, eventType: event.type, error });
+    }
+
+    this.sendToUser(userId, 'jd:login:event', {
+      sessionId,
+      event,
+    });
+
+    if (event.type === 'success') {
+      await this.notifyJdAccountStats(userId);
+    }
+  }
+
+  private async broadcastLoginStatusUpdate(
+    sessionId: string,
+    userId: string,
+    status: JdSessionState,
+    lastEventType?: JdLoginEventType,
+  ): Promise<void> {
+    this.sendToUser(userId, 'jd:status:update', {
+      sessionId,
+      status,
+      lastEventType,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  private async notifyJdAccountStats(userId: string): Promise<void> {
+    try {
+      const stats = await this.jdAccountService.getLoggedInUsersStats();
+      this.sendToUser(userId, 'jd:accounts:stats', {
+        ...stats,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      this.logger.error('推送京东账号统计失败', { error });
+    }
+  }
+
+  private async cleanupOrphanedSessions(): Promise<void> {
+    try {
+      const stats = await this.sessionStorage.getStats();
+      if (stats.active > 0) {
+        this.logger.info('Redis 中存在活跃的京东登录会话，可能来自其他实例', {
+          activeCount: stats.active,
+        });
+      }
+    } catch (error) {
+      this.logger.error('清理Redis中孤立的京东登录会话失败', { error });
+    }
+  }
+
   /**
    * 清理登录会话
    */
-  private async cleanupSession(sessionId: string): Promise<void> {
+  private async cleanupSession(sessionId: string, finalStatus: JdSessionState = 'completed'): Promise<void> {
     const session = this.loginSessions.get(sessionId);
-    if (!session) return;
 
-    this.logger.debug(`清理登录会话: ${sessionId}`);
+    this.logger.debug('清理登录会话', { sessionId, finalStatus });
 
-    // 清除定时器
-    if (session.timer) {
-      clearTimeout(session.timer);
+    if (session) {
+      this.loginSessions.delete(sessionId);
+
+      if (session.timer) {
+        clearTimeout(session.timer);
+        session.timer = undefined;
+      }
+
+      try {
+        session.eventsSubscription?.unsubscribe();
+      } catch (error) {
+        this.logger.error('清理京东登录事件订阅失败', { sessionId, error });
+      }
+
+      if (!session.subject.closed) {
+        setTimeout(() => {
+          if (!session.subject.closed) {
+            session.subject.complete();
+          }
+        }, 0);
+      }
+
+      try {
+        await session.context.close();
+      } catch (error) {
+        this.logger.error('关闭浏览器上下文失败', { sessionId, error });
+      }
+
+      await this.broadcastLoginStatusUpdate(sessionId, session.userId, finalStatus, session.lastEvent?.type).catch(
+        (error) => this.logger.error('广播京东登录状态失败', { sessionId, error }),
+      );
     }
 
-    session.eventsSubscription?.unsubscribe();
-    session.subject.complete();
-
-    // 关闭浏览器上下文
-    try {
-      await session.context.close();
-    } catch (error) {
-      this.logger.error(`关闭浏览器上下文失败: ${sessionId}`, error);
-    }
-
-    // 移除会话
-    this.loginSessions.delete(sessionId);
+    await this.sessionStorage.updateSessionStatus(sessionId, finalStatus).catch((error) => {
+      this.logger.error('更新Redis会话状态失败', { sessionId, finalStatus, error });
+    });
   }
 }

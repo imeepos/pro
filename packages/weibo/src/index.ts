@@ -4,6 +4,8 @@ export {
   type BatchFetchOptions,
   type SaveStatusDetailContext
 } from './weibo.service.js'
+export { WeiboProfileService } from './weibo-profile.service.js'
+export type { WeiboProfileTimelineOptions } from './weibo-profile.service.js'
 export type { WeiboStatusLikesOptions, WeiboStatusCommentsOptions } from './weibo.service.js'
 export {
   DEFAULT_WEIBO_BASE_URL,
@@ -35,6 +37,16 @@ export type {
   WeiboVisibility
 } from './types/status-detail.js'
 export type {
+  WeiboProfileDetail,
+  WeiboProfileDetailResponse,
+  WeiboProfileFollowers,
+  WeiboProfileFollower,
+  WeiboProfileLabelDescriptor,
+  WeiboProfileLabelPalette,
+  WeiboProfileRealName,
+  WeiboProfileSunshineCredit
+} from './types/profile-detail.js'
+export type {
   WeiboLikeUserStatusTotals,
   WeiboLikeUserVideoTotals,
   WeiboLikeUserIcon,
@@ -52,3 +64,22 @@ export type {
   WeiboCommentMoreInfo,
   WeiboCommentUser
 } from './types/comment-build.js'
+export type {
+  WeiboProfileIconBadge,
+  WeiboProfileInfoData,
+  WeiboProfileInfoResponse,
+  WeiboProfileTab,
+  WeiboProfileUser
+} from './types/profile-info.js'
+export type {
+  WeiboMixedMediaInfo,
+  WeiboMixedMediaInfoItem,
+  WeiboTimelineData,
+  WeiboTimelinePictureFocus,
+  WeiboTimelinePictureInfo,
+  WeiboTimelinePictureMap,
+  WeiboTimelinePictureVariant,
+  WeiboTimelineResponse,
+  WeiboTimelineStatus,
+  WeiboTimelineTopic
+} from './types/timeline.js'

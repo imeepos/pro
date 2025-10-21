@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { HttpService } from '@nestjs/axios'
-import type { AxiosError } from 'axios'
+import { isAxiosError } from 'axios'
 import { firstValueFrom } from 'rxjs'
 
 import { RawDataSourceService, type RawDataSourceDoc } from '@pro/mongodb'
 import { SourceType, type CreateRawDataSourceDto } from '@pro/types'
+
 import type { WeiboStatusDetailResponse } from './types/status-detail.js'
 import type { WeiboStatusLikeShowResponse } from './types/like-show.js'
 import type { WeiboBuildCommentsResponse } from './types/comment-build.js'
@@ -237,6 +238,46 @@ export class WeiboStatusService {
     }
   }
 
+  async saveStatusDetailToMongoDB(
+    statusId: string,
+    detail: WeiboStatusDetailResponse,
+    context: SaveStatusDetailContext = {}
+  ): Promise<RawDataSourceDoc | null> {
+    const sourceUrl = context.sourceUrl ?? `https://weibo.com/status/${statusId}`
+
+    // Check if already exists using findWithFilters
+    const existing = await this.rawDataSourceService.findWithFilters({
+      sourceType: SourceType.WEIBO_API_JSON,
+      page: 1,
+      pageSize: 1
+    })
+
+    const existingDoc = existing.items.find(item =>
+      item.sourceUrl === sourceUrl ||
+      item.metadata?.statusId === statusId
+    )
+
+    if (existingDoc) {
+      return null
+    }
+
+    const createDto: CreateRawDataSourceDto = {
+      sourceType: SourceType.WEIBO_API_JSON,
+      sourceUrl,
+      rawContent: JSON.stringify(detail),
+      metadata: {
+        statusId,
+        discoveredAt: context.discoveredAt ?? new Date().toISOString(),
+        traceId: context.traceId,
+        keyword: context.keyword,
+        taskId: context.taskId,
+        ...context
+      }
+    }
+
+    return this.rawDataSourceService.create(createDto)
+  }
+
   private ensureWeiboError(
     error: unknown,
     statusId: string,
@@ -303,8 +344,4 @@ export interface SaveStatusDetailContext {
   readonly keyword?: string
   readonly taskId?: number
   readonly sourceUrl?: string
-}
-
-const isAxiosError = (input: unknown): input is AxiosError => {
-  return typeof input === 'object' && input !== null && 'isAxiosError' in input
 }

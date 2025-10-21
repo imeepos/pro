@@ -373,6 +373,14 @@ export class ScreensGateway
       }
     });
 
+    // 京东扫码登录订阅
+    client.on('jd:login:subscribe', (data, callback) => {
+      this.logger.debug(`Client ${client.id} subscribed to JD login events`);
+      if (typeof callback === 'function') {
+        callback({ success: true, message: 'Subscribed to JD login events' });
+      }
+    });
+
     // 错误处理
     client.on('error', (error) => {
       this.logger.error(`Client error: ${client.id}`, error);
