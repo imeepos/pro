@@ -2,7 +2,8 @@ import { Injectable, Inject } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Logger } from '@pro/logger';
 import { Model } from 'mongoose';
-import { createHash, randomBytes } from 'crypto';
+import { createHash } from 'crypto';
+import { IdGenerator } from '@pro/crawler-utils';
 import { RabbitMQClient } from '@pro/rabbitmq';
 import { QUEUE_NAMES, RawDataReadyEvent, SourcePlatform } from '@pro/types';
 
@@ -119,7 +120,7 @@ export class RawDataService {
     metadata: Record<string, any>;
   }): Promise<RawDataSource> {
     const operationStartTime = Date.now();
-    const traceId = data.metadata.traceId || this.generateTraceId();
+    const traceId = data.metadata.traceId || IdGenerator.generateTraceId();
 
     this.logger.log('🎨 开始创作数据存储艺术品', {
       traceId,
@@ -1520,15 +1521,6 @@ export class RawDataService {
         error: error instanceof Error ? error.message : '未知错误'
       }, 'RawDataService');
     }
-  }
-
-  /**
-   * 生成追踪ID
-   */
-  private generateTraceId(): string {
-    const timestamp = Date.now().toString(36);
-    const random = randomBytes(4).toString('hex');
-    return `trace_${timestamp}_${random}`;
   }
 
   /**

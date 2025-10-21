@@ -7,7 +7,8 @@ import { WeiboAccountService, WeiboAccount } from './account.service';
 import { RawDataService } from '../raw-data/raw-data.service';
 import { SourceType } from '@pro/types';
 import { WeiboConfig } from '../config/crawler.interface';
-import { TraceGenerator, TraceContext } from './trace.generator';
+import { TraceGenerator } from './trace.generator';
+import { TraceContext } from './types';
 
 // 定义接口（临时解决方案）
 export interface WeiboNoteSummary {

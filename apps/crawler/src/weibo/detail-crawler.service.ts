@@ -7,7 +7,9 @@ import { WeiboAccountService, WeiboAccount } from './account.service';
 import { RawDataService } from '../raw-data/raw-data.service';
 import { SourceType } from '@pro/types';
 import { WeiboConfig } from '../config/crawler.interface';
-import { TraceContext, TraceGenerator } from './trace.generator';
+import { TextParser } from '@pro/crawler-utils';
+import { TraceGenerator } from './trace.generator';
+import { TraceContext } from './types';
 
 // 定义接口（临时解决方案）
 export interface VideoInfo {
@@ -378,26 +380,14 @@ export class WeiboDetailCrawlerService {
    * 提取话题标签
    */
   private extractTopics(content: string): string[] {
-    const topicRegex = /#([^#]+)#/g;
-    const topics: string[] = [];
-    let match;
-    while ((match = topicRegex.exec(content)) !== null) {
-      topics.push(match[1]);
-    }
-    return topics;
+    return TextParser.extractHashtags(content);
   }
 
   /**
    * 提取用户提及
    */
   private extractMentions(content: string): string[] {
-    const mentionRegex = /@([^\s@]+)/g;
-    const mentions: string[] = [];
-    let match;
-    while ((match = mentionRegex.exec(content)) !== null) {
-      mentions.push(match[1]);
-    }
-    return mentions;
+    return TextParser.extractMentions(content);
   }
 
   /**

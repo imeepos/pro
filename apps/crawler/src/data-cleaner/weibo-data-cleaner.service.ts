@@ -1,5 +1,6 @@
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { Logger } from '@pro/logger';
+import { IdGenerator } from '@pro/crawler-utils';
 import { RabbitMQClient } from '@pro/rabbitmq';
 import { QUEUE_NAMES, RawDataReadyEvent } from '@pro/types';
 import { WeiboContentParser, ParsedWeiboContent } from './weibo-content-parser.service';
@@ -910,18 +911,14 @@ export class WeiboDataCleaner {
    * 生成清洗ID
    */
   private generateCleaningId(): string {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    return `clean_${timestamp}_${random}`;
+    return IdGenerator.generate('clean');
   }
 
   /**
    * 生成批次ID
    */
   private generateBatchId(): string {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    return `batch_${timestamp}_${random}`;
+    return IdGenerator.generate('batch');
   }
 
   /**

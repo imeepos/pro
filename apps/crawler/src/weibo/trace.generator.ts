@@ -1,15 +1,9 @@
-export interface TraceContext {
-  traceId: string;
-  taskId: number;
-  keyword: string;
-  startTime: Date;
-}
+import { IdGenerator } from '@pro/crawler-utils';
+import { TraceContext } from './types';
 
 export class TraceGenerator {
   static generateTraceId(): string {
-    const timestamp = Date.now().toString(36);
-    const randomStr = Math.random().toString(36).substring(2, 15);
-    return `trace_${timestamp}_${randomStr}`;
+    return IdGenerator.generateTraceId();
   }
 
   static createTraceContext(taskId: number, keyword: string): TraceContext {

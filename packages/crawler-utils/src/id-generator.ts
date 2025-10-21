@@ -5,16 +5,20 @@ const SESSION_PREFIX = 'session';
 const PARSE_PREFIX = 'parse';
 
 export class IdGenerator {
+  static generate(prefix: string): string {
+    return this.compose(prefix);
+  }
+
   static generateTraceId(): string {
-    return this.compose(TRACE_PREFIX);
+    return this.generate(TRACE_PREFIX);
   }
 
   static generateSessionId(): string {
-    return this.compose(SESSION_PREFIX);
+    return this.generate(SESSION_PREFIX);
   }
 
   static generateParseId(): string {
-    return this.compose(PARSE_PREFIX);
+    return this.generate(PARSE_PREFIX);
   }
 
   private static compose(prefix: string): string {

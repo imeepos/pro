@@ -1,11 +1,9 @@
 import { Injectable, OnModuleInit, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ErrorClassifier, IdGenerator } from '@pro/crawler-utils';
 import { RabbitMQClient } from '@pro/rabbitmq';
-import {
-  WeiboSearchCrawlerService,
-  SubTaskMessage,
-  CrawlResult,
-} from './weibo/search-crawler.service';
+import { WeiboSearchCrawlerService, CrawlResult } from './weibo/search-crawler.service';
+import { SubTaskMessage } from './weibo/types';
 import { RabbitMQConfig } from './config/crawler.interface';
 
 interface CrawlMetrics {
@@ -78,7 +76,7 @@ export class CrawlQueueConsumer implements OnModuleInit {
 
   private async handleMessage(message: SubTaskMessage): Promise<void> {
     const startTime = Date.now();
-    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const messageId = IdGenerator.generate('message');
 
     // 消息验证和预处理
     const validationResult = this.validateAndParseMessage(message);
@@ -154,7 +152,7 @@ export class CrawlQueueConsumer implements OnModuleInit {
           keyword: subTask.keyword,
           duration: metrics.duration,
           error: result.error,
-          errorType: this.classifyError(result.error)
+          errorType: ErrorClassifier.classify(result.error)
         });
 
         // 抛出异常触发 RabbitMQ 重试机制
@@ -172,7 +170,7 @@ export class CrawlQueueConsumer implements OnModuleInit {
         keyword: subTask.keyword,
         duration: metrics.duration,
         error: metrics.error,
-        errorType: this.classifyError(metrics.error),
+        errorType: ErrorClassifier.classify(metrics.error),
         stack: error instanceof Error ? error.stack : undefined
       });
 
@@ -256,49 +254,6 @@ export class CrawlQueueConsumer implements OnModuleInit {
     }
 
     return null;
-  }
-
-  private classifyError(error?: string): string {
-    if (!error) return 'UNKNOWN';
-
-    const errorLower = error.toLowerCase();
-
-    if (errorLower.includes('timeout') || errorLower.includes('超时')) {
-      return 'TIMEOUT';
-    }
-
-    if (errorLower.includes('network') || errorLower.includes('网络') ||
-        errorLower.includes('connection') || errorLower.includes('连接')) {
-      return 'NETWORK';
-    }
-
-    if (errorLower.includes('account') || errorLower.includes('账号') ||
-        errorLower.includes('login') || errorLower.includes('登录') ||
-        errorLower.includes('banned') || errorLower.includes('封禁')) {
-      return 'ACCOUNT';
-    }
-
-    if (errorLower.includes('robots') || errorLower.includes('403') ||
-        errorLower.includes('forbidden')) {
-      return 'ACCESS_DENIED';
-    }
-
-    if (errorLower.includes('rate') || errorLower.includes('限流') ||
-        errorLower.includes('frequency')) {
-      return 'RATE_LIMIT';
-    }
-
-    if (errorLower.includes('parse') || errorLower.includes('解析') ||
-        errorLower.includes('selector') || errorLower.includes('element')) {
-      return 'PARSE_ERROR';
-    }
-
-    if (errorLower.includes('browser') || errorLower.includes('page') ||
-        errorLower.includes('crash') || errorLower.includes('崩溃')) {
-      return 'BROWSER_ERROR';
-    }
-
-    return 'UNKNOWN';
   }
 
   private async handleCrawlResult(

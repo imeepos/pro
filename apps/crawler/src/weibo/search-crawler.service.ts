@@ -17,8 +17,9 @@ import {
   SubTaskMessage,
   NormalizedSubTask,
   CrawlResult,
-} from './search-crawler.types';
-import { TraceGenerator, TraceContext } from './trace.generator';
+  TraceContext,
+} from './types';
+import { TraceGenerator } from './trace.generator';
 
 /**
  * 增强版微博搜索爬取服务 - 数字时代的多模式爬取艺术品
@@ -1024,5 +1025,5 @@ export type {
   EnhancedCrawlMetrics,
   CrawlResult,
   TraceContext,
-} from './search-crawler.types';
+} from './types';
 export { TraceGenerator } from './trace.generator';

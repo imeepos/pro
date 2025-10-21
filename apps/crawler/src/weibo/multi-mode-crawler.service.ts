@@ -6,22 +6,14 @@ import { WeiboCommentCrawlerService, WeiboComment } from './comment-crawler.serv
 import { WeiboMediaDownloaderService, MediaDownloadTask } from './media-downloader.service';
 import { WeiboCrawlMode } from '@pro/types';
 import {
+  CrawlResult,
   EnhancedCrawlMetrics,
   EnhancedSubTaskMessage,
   MultiModeCrawlResult,
   NormalizedSubTask,
-  CrawlResult,
-} from './search-crawler.types';
-import { TraceContext } from './trace.generator';
-
-interface MultiModeExecutionContext {
-  message: EnhancedSubTaskMessage;
-  normalizedMessage: NormalizedSubTask;
-  traceContext: TraceContext;
-  startTimestamp: number;
-  baseCrawl: () => Promise<CrawlResult>;
-  formatDuration: (milliseconds: number) => string;
-}
+  MultiModeExecutionContext,
+  TraceContext,
+} from './types';
 
 @Injectable()
 export class WeiboMultiModeCrawlerService {

@@ -4,7 +4,7 @@ import { createWriteStream } from 'fs';
 import { join } from 'path';
 import { ensureDir } from 'fs-extra';
 import axios, { AxiosResponse } from 'axios';
-import { v4 as uuidv4 } from 'uuid';
+import { IdGenerator } from '@pro/crawler-utils';
 
 // 定义MediaDownloadTask接口（临时解决方案）
 export interface MediaDownloadTask {
@@ -52,7 +52,7 @@ export class WeiboMediaDownloaderService {
     sourceId: string,
     customFilename?: string
   ): Promise<MediaDownloadTask> {
-    const taskId = uuidv4();
+    const taskId = IdGenerator.generate('media_task');
     const startTime = Date.now();
 
     // 创建下载任务
@@ -318,10 +318,10 @@ export class WeiboMediaDownloaderService {
   private generateFilename(url: string, type: 'image' | 'video', sourceId: string): string {
     const urlObj = new URL(url);
     const extension = this.getFileExtension(urlObj.pathname, type);
-    const timestamp = Date.now();
-    const randomSuffix = Math.random().toString(36).substring(2, 8);
 
-    return `${sourceId}_${timestamp}_${randomSuffix}${extension}`;
+    const uniqueToken = IdGenerator.generate('media');
+
+    return `${sourceId}_${uniqueToken}${extension}`;
   }
 
   /**

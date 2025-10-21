@@ -1,5 +1,6 @@
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { Logger } from '@pro/logger';
+import { IdGenerator } from '@pro/crawler-utils';
 import { createHash } from 'crypto';
 import * as cheerio from 'cheerio';
 
@@ -1749,9 +1750,7 @@ export class WeiboContentParser {
    * 生成解析ID
    */
   private generateParseId(): string {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    return `parse_${timestamp}_${random}`;
+    return IdGenerator.generateParseId();
   }
 
   /**
