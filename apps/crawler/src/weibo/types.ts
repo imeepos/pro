@@ -98,5 +98,4 @@ export interface MultiModeExecutionContext {
   traceContext: TraceContext;
   startTimestamp: number;
   baseCrawl: () => Promise<CrawlResult>;
-  formatDuration: (milliseconds: number) => string;
 }

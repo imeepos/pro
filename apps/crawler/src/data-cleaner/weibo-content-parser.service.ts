@@ -1,6 +1,6 @@
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { Logger } from '@pro/logger';
-import { IdGenerator } from '@pro/crawler-utils';
+import { IdGenerator, TextParser } from '@pro/crawler-utils';
 import { createHash } from 'crypto';
 import * as cheerio from 'cheerio';
 
@@ -410,9 +410,6 @@ export class WeiboContentParser {
   private readonly CONTENT_SIMILARITY_THRESHOLD = 0.85;
   private readonly MAX_CONTENT_LENGTH = 100000;
   private readonly DEFAULT_TIMEZONE = 'Asia/Shanghai';
-  private readonly HASHTAG_PATTERN = /#([^#\s]+)#/g;
-  private readonly MENTION_PATTERN = /@([^\s\u4e00-\u9fa5]+)/g;
-  private readonly URL_PATTERN = /https?:\/\/[^\s]+/g;
   private readonly EMOJI_PATTERN = /\[[^\]]+\]/g;
 
   constructor(
@@ -849,24 +846,21 @@ export class WeiboContentParser {
    * 提取话题标签
    */
   private extractHashtags(text: string): string[] {
-    const matches = text.match(this.HASHTAG_PATTERN);
-    return matches ? matches.map(tag => tag.replace(/#/g, '')) : [];
+    return TextParser.extractHashtags(text);
   }
 
   /**
    * 提取提及用户
    */
   private extractMentions(text: string): string[] {
-    const matches = text.match(this.MENTION_PATTERN);
-    return matches ? matches.map(mention => mention.substring(1)) : [];
+    return TextParser.extractMentions(text);
   }
 
   /**
    * 提取链接
    */
   private extractLinks(text: string): string[] {
-    const matches = text.match(this.URL_PATTERN);
-    return matches || [];
+    return TextParser.extractLinks(text);
   }
 
   /**

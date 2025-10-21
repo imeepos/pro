@@ -10,6 +10,7 @@ import { RequestMonitorService } from '../monitoring/request-monitor.service';
 import { CrawlerConfig, RabbitMQConfig, WeiboConfig } from '../config/crawler.interface';
 import { SourceType, WeiboSearchType } from '@pro/types';
 import { WeiboMultiModeCrawlerService } from './multi-mode-crawler.service';
+import { DurationFormatter } from '@pro/crawler-utils';
 import {
   EnhancedSubTaskMessage,
   MultiModeCrawlResult,
@@ -262,7 +263,7 @@ export class WeiboSearchCrawlerService {
         taskId,
         keyword,
         duration: totalDuration,
-        durationFormatted: this.formatDuration(totalDuration),
+        durationFormatted: DurationFormatter.format(totalDuration),
         metrics: {
           ...crawlMetrics,
           averagePageLoadTimeFormatted: `${crawlMetrics.averagePageLoadTime}ms`,
@@ -300,7 +301,7 @@ export class WeiboSearchCrawlerService {
         taskId,
         keyword,
         duration: totalDuration,
-        durationFormatted: this.formatDuration(totalDuration),
+        durationFormatted: DurationFormatter.format(totalDuration),
         metrics: {
           ...crawlMetrics,
           totalDataSizeMB: Math.round(crawlMetrics.totalDataSize / 1024 / 1024 * 100) / 100,
@@ -925,23 +926,6 @@ export class WeiboSearchCrawlerService {
   }
 
   /**
-   * 格式化持续时间显示
-   */
-  private formatDuration(milliseconds: number): string {
-    const seconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  }
-
-  /**
    * 获取详细的任务执行摘要
    */
   private getTaskSummary(traceContext: TraceContext, crawlMetrics: any, totalDuration: number): {
@@ -990,7 +974,7 @@ export class WeiboSearchCrawlerService {
       keyword: traceContext.keyword,
       startTime: traceContext.startTime,
       duration: totalDuration,
-      durationFormatted: this.formatDuration(totalDuration),
+      durationFormatted: DurationFormatter.format(totalDuration),
       performance,
       efficiency
     };
@@ -1013,7 +997,6 @@ export class WeiboSearchCrawlerService {
       traceContext,
       startTimestamp,
       baseCrawl: () => this.crawl(normalizedMessage),
-      formatDuration: this.formatDuration.bind(this),
     });
   }
 }
