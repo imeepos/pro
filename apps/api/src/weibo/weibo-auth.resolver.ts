@@ -9,7 +9,7 @@ import {
   mapWeiboLoginEventToModel,
   mapWeiboLoginSnapshotToModel,
 } from './models/weibo-login.model';
-import { EMPTY, concat, of } from 'rxjs';
+import { EMPTY, Observable, concat, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PinoLogger } from '@pro/logger';
@@ -128,7 +128,8 @@ export class WeiboAuthResolver {
       };
       return mapWeiboLoginEventToModel(payload);
     };
-    const fail = (cause: unknown, code?: string) => observableToAsyncIterator(of(errorEvent(cause, code)));
+    const fail = (cause: unknown, code?: string): AsyncIterableIterator<WeiboLoginEventModel> =>
+      observableToAsyncIterator(of<WeiboLoginEventModel>(errorEvent(cause, code)));
 
     if (context?.authenticationError) {
       return fail(new Error(`WebSocket认证失败: ${context.error ?? '未知错误'}`), 'AUTHENTICATION_FAILED');
@@ -149,12 +150,14 @@ export class WeiboAuthResolver {
         return fail(new ForbiddenException('登录会话已过期，请重新开始'));
       }
 
-      const historical$ = snapshot.lastEvent ? of(mapWeiboLoginEventToModel(snapshot.lastEvent)) : EMPTY;
-      let live$;
+      const historical$ = snapshot.lastEvent
+        ? of<WeiboLoginEventModel>(mapWeiboLoginEventToModel(snapshot.lastEvent))
+        : (EMPTY as Observable<WeiboLoginEventModel>);
+      let live$: Observable<WeiboLoginEventModel>;
       try {
         live$ = this.weiboAuthService.observeLoginSession(sessionId).pipe(
-          map(event => mapWeiboLoginEventToModel(event)),
-          catchError(error => of(errorEvent(error))),
+          map((event) => mapWeiboLoginEventToModel(event)),
+          catchError((error): Observable<WeiboLoginEventModel> => of<WeiboLoginEventModel>(errorEvent(error))),
         );
       } catch (error) {
         return fail(error);
