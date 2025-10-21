@@ -248,6 +248,7 @@ export class WeiboSearchCrawlerService {
       let firstPostTime: Date | null = null;
       let lastPostTime: Date | null = null;
       const pageLoadTimes: number[] = [];
+      let hasScheduledGapSubTask = false;
 
       // 初始化第一页URL
       let currentUrl: string | null = this.buildSearchUrl(keyword, start, end, 1);
@@ -303,12 +304,55 @@ export class WeiboSearchCrawlerService {
 
           lastPostTime = this.extractLastPostTime(html);
 
+          const reachedLastPage = this.isLastPage(html);
+
+          if (
+            reachedLastPage &&
+            !hasScheduledGapSubTask &&
+            isInitialCrawl &&
+            currentPage === this.crawlerConfig.maxPages &&
+            lastPostTime
+          ) {
+            const gapDurationMs = lastPostTime.getTime() - start.getTime();
+            if (gapDurationMs > 60 * 60 * 1000 && lastPostTime.getTime() > start.getTime()) {
+              try {
+                await this.triggerNextSubTask(
+                  taskId,
+                  keyword,
+                  start,
+                  lastPostTime,
+                  true
+                );
+                hasScheduledGapSubTask = true;
+                this.logger.log('🪜 检测到历史数据缺口，发布新的回溯子任务', {
+                  traceId: traceContext.traceId,
+                  taskId,
+                  keyword,
+                  originalRangeStart: start.toISOString(),
+                  gapEndTime: lastPostTime.toISOString(),
+                  pagesProcessed: currentPage,
+                  gapDurationHours: Math.round((gapDurationMs / (60 * 60 * 1000)) * 100) / 100
+                });
+              } catch (gapTaskError) {
+                this.logger.error('⚠️ 发布历史缺口子任务失败', {
+                  traceId: traceContext.traceId,
+                  taskId,
+                  keyword,
+                  rangeStart: start.toISOString(),
+                  gapEndTime: lastPostTime.toISOString(),
+                  error: gapTaskError instanceof Error ? gapTaskError.message : '未知错误'
+                });
+              }
+            }
+          }
+
           // 检查是否到最后一页
-          if (this.isLastPage(html)) {
+          if (reachedLastPage) {
             this.logger.log('🏁 检测到最后一页，停止抓取', {
               traceId: traceContext.traceId,
               finalPage: currentPage,
-              totalPagesProcessed: crawlMetrics.successfulPages + crawlMetrics.failedPages
+              totalPagesProcessed: crawlMetrics.successfulPages + crawlMetrics.failedPages,
+              gapSubTaskScheduled: hasScheduledGapSubTask
             });
             break;
           }
@@ -388,7 +432,8 @@ export class WeiboSearchCrawlerService {
         success: true,
         pageCount: crawlMetrics.successfulPages,
         firstPostTime: firstPostTime || undefined,
-        lastPostTime: lastPostTime || undefined
+        lastPostTime: lastPostTime || undefined,
+        gapSubTaskScheduled: hasScheduledGapSubTask
       };
 
       // 处理任务结果和状态更新
@@ -816,7 +861,9 @@ export class WeiboSearchCrawlerService {
   private async handleInitialCrawlResult(message: NormalizedSubTask, result: CrawlResult): Promise<void> {
     const { taskId, start } = message;
 
-    if (result.pageCount === 50 && result.lastPostTime) {
+    const hitPageLimit = result.pageCount === this.crawlerConfig.maxPages;
+
+    if (hitPageLimit && result.lastPostTime && !result.gapSubTaskScheduled) {
       // 抓满50页，需要继续回溯历史数据
       this.logger.log(`抓满50页，触发下一个子任务: taskId=${taskId}, 新结束时间=${result.lastPostTime.toISOString()}`);
 
@@ -832,21 +879,28 @@ export class WeiboSearchCrawlerService {
         updatedAt: new Date()
       });
 
-    } else {
-      // 不足50页，历史数据回溯完成
-      this.logger.log(`历史数据回溯完成: taskId=${taskId}, 抓取${result.pageCount}页`);
-
-      // 发布任务完成消息，进入增量模式
-      await this.publishTaskStatusUpdate({
-        taskId,
-        status: 'running',
-        currentCrawlTime: start, // 设置为 startDate，表示历史回溯完成
-        latestCrawlTime: result.firstPostTime,
-        nextRunAt: new Date(Date.now() + this.parseInterval('1h')), // 1小时后开始增量抓取
-        progress: 100,
-        updatedAt: new Date()
-      });
+      return;
     }
+
+    if (hitPageLimit && !result.lastPostTime) {
+      this.logger.warn(`抓满${this.crawlerConfig.maxPages}页但无法获取末条时间: taskId=${taskId}`);
+    }
+
+    // 历史数据回溯完成或缺口子任务已安排，更新状态进入增量模式
+    this.logger.log(`历史数据回溯完成: taskId=${taskId}, 抓取${result.pageCount}页`, {
+      gapSubTaskScheduled: result.gapSubTaskScheduled === true
+    });
+
+    // 发布任务完成消息，进入增量模式
+    await this.publishTaskStatusUpdate({
+      taskId,
+      status: 'running',
+      currentCrawlTime: start, // 设置为 startDate，表示历史回溯完成
+      latestCrawlTime: result.firstPostTime,
+      nextRunAt: new Date(Date.now() + this.parseInterval('1h')), // 1小时后开始增量抓取
+      progress: 100,
+      updatedAt: new Date()
+    });
   }
 
   private async handleIncrementalCrawlResult(message: NormalizedSubTask, result: CrawlResult): Promise<void> {
