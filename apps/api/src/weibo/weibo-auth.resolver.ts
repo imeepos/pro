@@ -117,18 +117,38 @@ export class WeiboAuthResolver {
   ) {
     // 创建可观测的事件流，使用from来处理异步验证
     const events$ = new Observable<WeiboLoginEventModel>(subscriber => {
+      const emitErrorAndClose = (error: unknown) => {
+        const rootCause = error instanceof Error ? error : new Error('未知的登录事件错误');
+        const payload: WeiboLoginEvent = {
+          type: 'error',
+          data: {
+            message: rootCause.message,
+          },
+        };
+
+        try {
+          subscriber.next(mapWeiboLoginEventToModel(payload));
+        } catch (mappingError) {
+          this.logger.error('映射错误事件失败', { sessionId, mappingError });
+        } finally {
+          subscriber.complete();
+        }
+      };
+
       // 使用异步IIFE来处理async/await
       (async () => {
         try {
           // 验证会话存在性和权限
           const snapshot = await this.weiboAuthService.getLoginSessionSnapshot(sessionId);
           if (snapshot.userId !== userId) {
-            throw new ForbiddenException('无权访问该登录会话');
+            emitErrorAndClose(new ForbiddenException('无权访问该登录会话'));
+            return;
           }
 
           // 检查会话是否已过期
           if (snapshot.isExpired) {
-            throw new ForbiddenException('登录会话已过期，请重新开始');
+            emitErrorAndClose(new ForbiddenException('登录会话已过期，请重新开始'));
+            return;
           }
 
           // 如果有最后一个事件，先推送它
@@ -143,12 +163,12 @@ export class WeiboAuthResolver {
                 subscriber.next(mapWeiboLoginEventToModel(event));
               } catch (error) {
                 this.logger.error('推送登录事件失败', { sessionId, error });
-                subscriber.error(error);
+                emitErrorAndClose(error);
               }
             },
             error: (error) => {
               this.logger.error('登录会话事件流异常', { sessionId, error });
-              subscriber.error(error);
+              emitErrorAndClose(error);
             },
             complete: () => {
               this.logger.debug('登录会话事件流完成', { sessionId });
@@ -164,7 +184,7 @@ export class WeiboAuthResolver {
           };
         } catch (error) {
           this.logger.error('创建登录事件订阅失败', { sessionId, error });
-          subscriber.error(error);
+          emitErrorAndClose(error);
         }
       })();
     });
