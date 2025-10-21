@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PinoLogger } from '@pro/logger';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual, MoreThanOrEqual, Not, IsNull } from 'typeorm';
-import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
+import { Repository, LessThanOrEqual, MoreThanOrEqual, IsNull } from 'typeorm';
+import { WeiboSearchTaskEntity } from '@pro/entities';
 import { RabbitMQConfigService } from '../rabbitmq/rabbitmq-config.service';
 import { SubTaskMessage } from './interfaces/sub-task-message.interface';
 
@@ -24,16 +24,16 @@ const parseInterval = (interval: string): number => {
 };
 
 /**
- * 微博搜索任务调度器 - 任务扫描与分发的艺术
+ * 微博搜索任务调度器 - 配置与执行分离的艺术
  *
- * 使命：将静态的任务配置转化为动态的执行指令
+ * 使命：将静态的任务配置转化为动态的子任务执行指令
  * 原则：简约而不简单，每个操作都有其存在的意义
  *
  * 核心职责：
- * - 发现待执行的任务并赋予其生命
- * - 将宏大的任务分解为可执行的子任务
+ * - 发现需要执行的任务配置并生成子任务
+ * - 将宏大的监控任务分解为可执行的子任务片段
  * - 通过消息队列传递执行的火种
- * - 以优雅的方式处理失败与重试
+ * - 维护任务调度的时间韵律
  */
 @Injectable()
 export class TaskScannerScheduler {
@@ -83,8 +83,8 @@ export class TaskScannerScheduler {
   }
 
   /**
-   * 查找待执行的任务
-   * 包括 nextRunAt 为 null 的任务（视为立即执行）
+   * 查找需要执行的任务
+   * 基于 enabled 和 nextRunAt 判断，不依赖执行状态
    */
   private async findPendingTasks(now: Date): Promise<WeiboSearchTaskEntity[]> {
     return this.taskRepository.find({
@@ -92,13 +92,11 @@ export class TaskScannerScheduler {
         // 情况1：nextRunAt 为 null，视为立即执行
         {
           enabled: true,
-          status: WeiboSearchTaskStatus.PENDING,
           nextRunAt: IsNull(),
         },
         // 情况2：nextRunAt 小于等于当前时间
         {
           enabled: true,
-          status: WeiboSearchTaskStatus.PENDING,
           nextRunAt: LessThanOrEqual(now),
         },
       ],
@@ -112,7 +110,7 @@ export class TaskScannerScheduler {
   private validateTaskCount(tasks: WeiboSearchTaskEntity[]): void {
     if (tasks.length > 10) {
       const sampleTasks = tasks.slice(0, 5).map(task =>
-        `任务 ${task.id} [${task.keyword}]: ${task.status}, ${task.nextRunAt?.toISOString()}`
+        `任务 ${task.id} [${task.keyword}]: ${task.taskPhaseDescription}, ${task.nextRunAt?.toISOString()}`
       ).join('\n  ');
 
       this.logger.warn(
@@ -179,21 +177,33 @@ export class TaskScannerScheduler {
   }
 
   /**
-   * 获取任务执行锁 - 简化版本
+   * 获取任务执行锁 - 通过更新下次执行时间避免重复调度
    */
   private async acquireTaskLock(task: WeiboSearchTaskEntity): Promise<boolean> {
+    // 计算下次执行时间，避免重复调度
+    const intervalMs = parseInterval(task.crawlInterval);
+    const nextRunAt = new Date(Date.now() + intervalMs);
+
     const lockResult = await this.taskRepository.update(
-      { id: task.id, status: WeiboSearchTaskStatus.PENDING },
-      { status: WeiboSearchTaskStatus.RUNNING, errorMessage: null }
+      {
+        id: task.id,
+        // 确保 nextRunAt 没有被其他实例修改
+        nextRunAt: task.nextRunAt
+      },
+      {
+        nextRunAt,
+        // 如果是首次执行，设置 latestCrawlTime
+        latestCrawlTime: task.latestCrawlTime || new Date()
+      }
     );
 
     if (lockResult.affected === 0) {
-      // 任务状态不是 PENDING，可能已被其他实例处理
-      this.logger.debug(`任务 ${task.id} 锁获取失败，任务状态可能已变更`);
+      // nextRunAt 已被修改，可能已被其他实例处理
+      this.logger.debug(`任务 ${task.id} 锁获取失败，调度时间可能已变更`);
       return false;
     }
 
-    this.logger.debug(`任务 ${task.id} 获得执行权`);
+    this.logger.debug(`任务 ${task.id} 获得执行权，下次执行: ${nextRunAt.toISOString()}`);
     return true;
   }
 
@@ -208,19 +218,21 @@ export class TaskScannerScheduler {
     let subTask: SubTaskMessage;
     let nextRunTime: Date | null = null;
 
+    const isHistoricalCrawlCompleted = task.latestCrawlTime ? task.latestCrawlTime <= task.startDate : false;
+
     this.logger.info({
       message: '开始创建子任务',
       taskId: task.id,
       keyword: task.keyword,
       needsInitialCrawl: task.needsInitialCrawl,
-      isHistoricalCrawlCompleted: task.isHistoricalCrawlCompleted
+      isHistoricalCrawlCompleted
     });
 
     if (task.needsInitialCrawl) {
       subTask = this.createInitialSubTask(task);
       nextRunTime = new Date(Date.now() + parseInterval(task.crawlInterval));
       this.logger.info(`任务 ${task.id} 开始首次抓取`);
-    } else if (task.isHistoricalCrawlCompleted) {
+    } else if (isHistoricalCrawlCompleted) {
       subTask = this.createIncrementalSubTask(task);
       nextRunTime = new Date(Date.now() + parseInterval(task.crawlInterval));
       this.logger.info(`任务 ${task.id} 开始增量更新`);
@@ -236,9 +248,8 @@ export class TaskScannerScheduler {
    * 处理异常任务状态
    */
   private async handleAbnormalTaskState(task: WeiboSearchTaskEntity): Promise<void> {
+    this.logger.warn(`任务 ${task.id} 状态异常，延迟5分钟后重试`);
     await this.taskRepository.update(task.id, {
-      status: WeiboSearchTaskStatus.FAILED,
-      errorMessage: '任务状态异常：历史回溯中但被调度器扫描到',
       nextRunAt: new Date(Date.now() + 5 * 60000) // 5分钟后重试
     });
   }
@@ -271,10 +282,10 @@ export class TaskScannerScheduler {
 
       const retryDelay = this.calculateRetryDelay(0);
       await this.taskRepository.update(taskId, {
-        status: WeiboSearchTaskStatus.PENDING,
-        errorMessage: `消息发布失败: ${error.message}`,
         nextRunAt: new Date(Date.now() + retryDelay)
       });
+
+      this.logger.error(`消息发布失败，${Math.round(retryDelay/60000)}分钟后重试: ${error.message}`);
 
       return false;
     }
@@ -308,13 +319,12 @@ export class TaskScannerScheduler {
       error: error.message
     });
 
-    const retryDelay = this.calculateRetryDelay(task.retryCount);
+    const retryDelay = this.calculateRetryDelay(0);
     await this.taskRepository.update(task.id, {
-      status: WeiboSearchTaskStatus.FAILED,
-      errorMessage: error.message,
-      retryCount: task.retryCount + 1,
       nextRunAt: new Date(Date.now() + retryDelay)
     });
+
+    this.logger.error(`任务调度失败，${Math.round(retryDelay/60000)}分钟后重试: ${error.message}`);
   }
 
   /**
@@ -330,8 +340,7 @@ export class TaskScannerScheduler {
       start,
       end,
       isInitialCrawl: true,
-      weiboAccountId: task.weiboAccountId,
-      enableAccountRotation: task.enableAccountRotation,
+      enableAccountRotation: false, // 默认不启用账号轮换
     };
   }
 
@@ -349,8 +358,7 @@ export class TaskScannerScheduler {
       start,
       end,
       isInitialCrawl: false,
-      weiboAccountId: task.weiboAccountId,
-      enableAccountRotation: task.enableAccountRotation,
+      enableAccountRotation: false, // 默认不启用账号轮换
     };
   }
 
@@ -425,13 +433,11 @@ export class TaskScannerScheduler {
         // nextRunAt 为 null 的任务
         {
           enabled: true,
-          status: WeiboSearchTaskStatus.PENDING,
           nextRunAt: IsNull(),
         },
         // nextRunAt 小于等于当前时间的任务
         {
           enabled: true,
-          status: WeiboSearchTaskStatus.PENDING,
           nextRunAt: LessThanOrEqual(now),
         },
       ],
@@ -439,139 +445,179 @@ export class TaskScannerScheduler {
   }
 
   /**
-   * 获取任务统计信息 - 任务的生态全景
+   * 获取任务统计信息 - 基于配置的任务生态全景
    */
   async getTaskStats(): Promise<{
     total: number;
     enabled: number;
     disabled: number;
-    running: number;
-    failed: number;
-    pending: number;
-    overdue: number;
-    recentlyCompleted: number;
-    averageExecutionTime: number;
+    pending: number;      // 需要立即执行的任务
+    scheduled: number;    // 已调度的任务
+    overdue: number;      // 逾期未执行的任务
+    neverRun: number;     // 从未执行过的任务
+    averageInterval: number; // 平均抓取间隔（分钟）
   }> {
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
-    const [total, enabled, disabled, running, failed, pending] = await Promise.all([
+    const [total, enabled, disabled] = await Promise.all([
       this.taskRepository.count(),
       this.taskRepository.count({ where: { enabled: true } }),
       this.taskRepository.count({ where: { enabled: false } }),
-      this.taskRepository.count({ where: { status: WeiboSearchTaskStatus.RUNNING } }),
-      this.taskRepository.count({ where: { status: WeiboSearchTaskStatus.FAILED } }),
-      this.taskRepository.count({ where: { status: WeiboSearchTaskStatus.PENDING } }),
     ]);
 
     const overdueThreshold = new Date(now.getTime() - 5 * 60 * 1000);
-    const [overdue, recentlyCompleted] = await Promise.all([
-      this.taskRepository.count({
-        where: [
-          // nextRunAt 为 null 的任务（视为立即过期）
-          {
-            enabled: true,
-            status: WeiboSearchTaskStatus.PENDING,
-            nextRunAt: IsNull(),
-          },
-          // nextRunAt 小于等于过期阈值的任务
-          {
-            enabled: true,
-            status: WeiboSearchTaskStatus.PENDING,
-            nextRunAt: LessThanOrEqual(overdueThreshold),
-          },
-        ],
-      }),
+    const [pending, scheduled, overdue, neverRun] = await Promise.all([
+      // 需要立即执行的任务
       this.taskRepository.count({
         where: {
-          updatedAt: MoreThanOrEqual(oneHourAgo),
-          status: Not(WeiboSearchTaskStatus.RUNNING),
+          enabled: true,
+          nextRunAt: LessThanOrEqual(now),
+        },
+      }),
+      // 已调度（nextRunAt在未来）的任务
+      this.taskRepository.count({
+        where: {
+          enabled: true,
+          nextRunAt: MoreThanOrEqual(now),
+        },
+      }),
+      // 逾期未执行的任务
+      this.taskRepository.count({
+        where: {
+          enabled: true,
+          nextRunAt: LessThanOrEqual(overdueThreshold),
+        },
+      }),
+      // 从未执行过的任务
+      this.taskRepository.count({
+        where: {
+          enabled: true,
+          latestCrawlTime: IsNull(),
         },
       }),
     ]);
 
-    const runningTasks = await this.taskRepository.find({
-      where: { status: WeiboSearchTaskStatus.RUNNING },
-      select: ['updatedAt'],
+    // 获取所有启用的任务来计算平均抓取间隔
+    const enabledTasks = await this.taskRepository.find({
+      where: { enabled: true },
+      select: ['crawlInterval'],
     });
 
-    let averageExecutionTime = 0;
-    if (runningTasks.length > 0) {
-      const totalExecutionTime = runningTasks.reduce((sum, task) => {
-        return sum + (now.getTime() - new Date(task.updatedAt).getTime());
+    let averageInterval = 0;
+    if (enabledTasks.length > 0) {
+      const totalIntervalMinutes = enabledTasks.reduce((sum, task) => {
+        return sum + this.parseIntervalToMinutes(task.crawlInterval);
       }, 0);
-      averageExecutionTime = Math.round(totalExecutionTime / runningTasks.length / 1000 / 60);
+      averageInterval = Math.round(totalIntervalMinutes / enabledTasks.length);
     }
 
     return {
-      total, enabled, disabled, running, failed, pending, overdue, recentlyCompleted, averageExecutionTime,
+      total,
+      enabled,
+      disabled,
+      pending,      // 需要立即执行的任务
+      scheduled,    // 已调度的任务
+      overdue,      // 逾期未执行的任务
+      neverRun,     // 从未执行过的任务
+      averageInterval, // 平均抓取间隔（分钟）
     };
   }
 
   /**
-   * 获取详细的任务执行报告 - 任务的深度洞察
+   * 解析抓取间隔为分钟数（私有辅助方法）
+   */
+  private parseIntervalToMinutes(interval: string): number {
+    const match = interval.match(/^(\d+)([hmd])$/);
+    if (!match) return 60; // 默认1小时
+
+    const value = parseInt(match[1]);
+    const unit = match[2];
+
+    switch (unit) {
+      case 'm': return value;
+      case 'h': return value * 60;
+      case 'd': return value * 60 * 24;
+      default: return 60;
+    }
+  }
+
+  /**
+   * 获取详细的任务配置报告 - 任务的深度洞察
    */
   async getTaskExecutionReport(): Promise<{
     summary: any;
-    longRunningTasks: Array<{
+    overdueTasks: Array<{
       id: number;
       keyword: string;
-      status: string;
-      runningTimeMinutes: number;
-      lastUpdate: string;
+      nextRunAt: string;
+      overdueMinutes: number;
+      phaseDescription: string;
     }>;
-    overdueTasksByInterval: Record<string, number>;
+    neverRunTasks: Array<{
+      id: number;
+      keyword: string;
+      startDate: string;
+      crawlInterval: string;
+    }>;
+    tasksByInterval: Record<string, number>;
   }> {
     const now = new Date();
     const summary = await this.getTaskStats();
 
-    const longRunningThreshold = new Date(now.getTime() - 30 * 60 * 1000);
-    const longRunningTasksData = await this.taskRepository.find({
+    // 获取逾期任务（超过5分钟未执行）
+    const overdueThreshold = new Date(now.getTime() - 5 * 60 * 1000);
+    const overdueTasksData = await this.taskRepository.find({
       where: {
-        status: WeiboSearchTaskStatus.RUNNING,
-        updatedAt: LessThanOrEqual(longRunningThreshold),
+        enabled: true,
+        nextRunAt: LessThanOrEqual(overdueThreshold),
       },
-      select: ['id', 'keyword', 'status', 'updatedAt'],
-      order: { updatedAt: 'ASC' },
+      select: ['id', 'keyword', 'nextRunAt'],
+      order: { nextRunAt: 'ASC' },
     });
 
-    const longRunningTasks = longRunningTasksData.map(task => ({
+    const overdueTasks = overdueTasksData.map(task => ({
       id: task.id,
       keyword: task.keyword,
-      status: task.status,
-      runningTimeMinutes: Math.round((now.getTime() - new Date(task.updatedAt).getTime()) / 1000 / 60),
-      lastUpdate: task.updatedAt.toISOString(),
+      nextRunAt: task.nextRunAt?.toISOString() || '未设置',
+      overdueMinutes: Math.round((now.getTime() - new Date(task.nextRunAt).getTime()) / 1000 / 60),
+      phaseDescription: '执行逾期',
     }));
 
-    const overdueTasksByInterval: Record<string, number> = {};
-    const overdueThreshold = new Date(now.getTime() - 5 * 60 * 1000);
-    const overdueTasks = await this.taskRepository.find({
-      where: [
-        // nextRunAt 为 null 的任务（视为立即过期）
-        {
-          enabled: true,
-          status: WeiboSearchTaskStatus.PENDING,
-          nextRunAt: IsNull(),
-        },
-        // nextRunAt 小于等于过期阈值的任务
-        {
-          enabled: true,
-          status: WeiboSearchTaskStatus.PENDING,
-          nextRunAt: LessThanOrEqual(overdueThreshold),
-        },
-      ],
+    // 获取从未执行过的任务
+    const neverRunTasksData = await this.taskRepository.find({
+      where: {
+        enabled: true,
+        latestCrawlTime: IsNull(),
+      },
+      select: ['id', 'keyword', 'startDate', 'crawlInterval'],
+      order: { createdAt: 'ASC' },
+    });
+
+    const neverRunTasks = neverRunTasksData.map(task => ({
+      id: task.id,
+      keyword: task.keyword,
+      startDate: task.startDate.toISOString(),
+      crawlInterval: task.crawlInterval,
+    }));
+
+    // 统计任务按抓取间隔的分布
+    const tasksByInterval: Record<string, number> = {};
+    const allTasks = await this.taskRepository.find({
+      where: { enabled: true },
       select: ['crawlInterval'],
     });
 
-    overdueTasks.forEach(task => {
+    allTasks.forEach(task => {
       const interval = task.crawlInterval || 'unknown';
-      overdueTasksByInterval[interval] = (overdueTasksByInterval[interval] || 0) + 1;
+      tasksByInterval[interval] = (tasksByInterval[interval] || 0) + 1;
     });
 
     return {
       summary,
-      longRunningTasks,
-      overdueTasksByInterval,
+      overdueTasks,
+      neverRunTasks,
+      tasksByInterval,
     };
   }
 }

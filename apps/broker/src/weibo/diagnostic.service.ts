@@ -27,26 +27,20 @@ export class DiagnosticService {
     sampleTasks: Array<{
       id: number;
       keyword: string;
-      status: string;
-      statusType: string;
+      phase: string;
       nextRunAt: string;
       updatedAt: string;
       enabled: boolean;
+      latestCrawlTime: string;
     }>;
     pendingTasksCount: number;
-    PENDING_TasksCount: number;
     overdueTasksCount: number;
     recommendation: string;
   }> {
     this.logger.info('开始数据库状态诊断');
 
-    // 获取所有不同的状态值
-    const distinctStatusesResult = await this.taskRepository
-      .createQueryBuilder('task')
-      .select('DISTINCT task.status', 'status')
-      .getRawMany();
-
-    const distinctStatuses = distinctStatusesResult.map(r => r.status);
+    // 由于主任务不再有 status 字段，我们使用空数组
+    const distinctStatuses: string[] = [];
 
     // 获取样本任务
     const sampleTasks = await this.taskRepository
@@ -54,10 +48,10 @@ export class DiagnosticService {
       .select([
         'task.id',
         'task.keyword',
-        'task.status',
         'task.nextRunAt',
         'task.updatedAt',
         'task.enabled',
+        'task.latestCrawlTime',
       ])
       .orderBy('task.nextRunAt', 'ASC')
       .limit(10)
@@ -66,22 +60,19 @@ export class DiagnosticService {
     const sampleTasksFormatted = sampleTasks.map(task => ({
       id: task.id,
       keyword: task.keyword || '',
-      status: task.status,
-      statusType: typeof task.status,
+      phase: task.taskPhaseDescription,
       nextRunAt: task.nextRunAt?.toISOString() || 'null',
       updatedAt: task.updatedAt.toISOString(),
       enabled: task.enabled,
+      latestCrawlTime: task.latestCrawlTime?.toISOString() || 'null',
     }));
 
-    // 统计小写 'pending' 的任务数量
+    // 统计需要立即执行的任务数量（基于 nextRunAt 而非 status）
     const pendingTasksCount = await this.taskRepository
       .createQueryBuilder('task')
-      .where("task.status = 'pending'")
-      .andWhere('task.enabled = true')
+      .where('task.enabled = true')
+      .andWhere('(task.nextRunAt IS NULL OR task.nextRunAt <= NOW())')
       .getCount();
-
-    // 注意：不查询大写PENDING，因为数据库使用小写枚举
-    const PENDING_TasksCount = 0;
 
     // 统计过期任务数量（nextRunAt 在5分钟前）
     const overdueTasksCount = await this.taskRepository
@@ -92,21 +83,16 @@ export class DiagnosticService {
 
     // 生成建议
     let recommendation = '';
-    if (PENDING_TasksCount > 0 && pendingTasksCount === 0) {
-      recommendation = '数据库使用大写 PENDING，需要修改 WeiboSearchTaskStatus 枚举为大写';
-    } else if (pendingTasksCount > 0 && PENDING_TasksCount === 0) {
-      recommendation = '数据库使用小写 pending，当前枚举定义正确';
-    } else if (PENDING_TasksCount > 0 && pendingTasksCount > 0) {
-      recommendation = '数据库中同时存在大小写不一致的状态值，需要统一';
+    if (pendingTasksCount > 0) {
+      recommendation = `发现 ${pendingTasksCount} 个需要立即执行的任务，建议检查调度系统是否正常运行`;
     } else {
-      recommendation = '没有发现 pending/PENDING 状态的任务';
+      recommendation = '当前没有需要立即执行的任务，调度系统状态正常';
     }
 
     const result = {
       distinctStatuses,
       sampleTasks: sampleTasksFormatted,
       pendingTasksCount,
-      PENDING_TasksCount,
       overdueTasksCount,
       recommendation,
     };
@@ -130,10 +116,8 @@ export class DiagnosticService {
       .update(WeiboSearchTaskEntity)
       .set({
         nextRunAt: () => "NOW() + INTERVAL '30 seconds'",
-        errorMessage: '系统检测到时间戳异常，已自动重置',
       })
       .where('enabled = true')
-      .andWhere("status = 'pending'")
       .andWhere("nextRunAt < NOW() - INTERVAL '5 minutes'")
       .execute();
 

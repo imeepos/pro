@@ -14,6 +14,7 @@ export * from './event-attachment.entity.js';
 export * from './tag.entity.js';
 export * from './event-tag.entity.js';
 export * from './weibo-search-task.entity.js';
+export * from './weibo-sub-task.entity.js';
 export * from './media-type.entity.js';
 export * from './api-key.entity.js';
 export * from './bug.entity.js';
@@ -39,6 +40,7 @@ import { WeiboPostEntity } from './weibo-post.entity.js';
 import { WeiboCommentEntity } from './weibo-comment.entity.js';
 import { WeiboUserEntity } from './weibo-user.entity.js';
 import { WeiboSearchTaskEntity } from './weibo-search-task.entity.js';
+import { WeiboSubTaskEntity } from './weibo-sub-task.entity.js';
 import { JdAccountEntity } from './jd-account.entity.js';
 import { ScreenPageEntity } from './screen-page.entity.js';
 import { IndustryTypeEntity } from './industry-type.entity.js';
@@ -72,6 +74,7 @@ const entities = [
   WeiboCommentEntity,
   WeiboUserEntity,
   WeiboSearchTaskEntity,
+  WeiboSubTaskEntity,
   JdAccountEntity,
   ScreenPageEntity,
   IndustryTypeEntity,
