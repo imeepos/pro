@@ -14,6 +14,8 @@ export interface GraphqlContext {
   req: AugmentedRequest;
   res: Response;
   loaders: GraphqlLoaders;
+  authenticationError?: boolean;
+  error?: string;
 }
 
 export const resolveRequest = (context: ExecutionContext): AugmentedRequest => {

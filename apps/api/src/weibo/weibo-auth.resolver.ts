@@ -178,7 +178,9 @@ export class WeiboAuthResolver {
         return observableToAsyncIterator(of(toErrorEvent(error)));
       }
 
-      return observableToAsyncIterator(concat(historical$, live$));
+      return observableToAsyncIterator(concat(historical$, live$).pipe(
+        map(events => events as WeiboLoginEventModel)
+      ));
     } catch (error) {
       this.logger.error('创建登录事件订阅失败', { sessionId, error });
       return observableToAsyncIterator(of(toErrorEvent(error)));
