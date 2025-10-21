@@ -95,6 +95,7 @@ describe('历史数据回溯E2E测试', () => {
               queues: {
                 crawlQueue: 'test.crawl.queue',
                 statusQueue: 'test.status.queue',
+                detailQueue: 'test.detail.queue',
                 historicalQueue: 'test.historical.queue'
               }
             }

@@ -92,6 +92,7 @@ describe('WeiboSearchCrawlerService', () => {
     queues: {
       crawlQueue: 'test_crawl_queue',
       statusQueue: 'test_status_queue',
+      detailQueue: 'test_detail_queue',
       retryQueue: 'test_retry_queue'
     },
     options: {

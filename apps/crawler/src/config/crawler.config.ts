@@ -93,6 +93,7 @@ export const createRabbitMQConfig = (configService: ConfigService): RabbitMQConf
   queues: {
     crawlQueue: 'weibo_crawl_queue',
     statusQueue: 'weibo_task_status_queue',
+    detailQueue: 'weibo_detail_crawl_queue',
     retryQueue: 'weibo_crawl_retry_queue'
   },
   options: {

@@ -59,7 +59,8 @@ export abstract class WeiboCrawlerIntegrationTestBase {
                 url: 'mock://rabbitmq',
                 queues: {
                   crawlQueue: 'crawl.queue',
-                  statusQueue: 'status.queue'
+                  statusQueue: 'status.queue',
+                  detailQueue: 'detail.queue'
                 }
               })
             },

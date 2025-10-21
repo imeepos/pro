@@ -99,6 +99,7 @@ describe('增量监控E2E测试', () => {
               queues: {
                 crawlQueue: 'test.crawl.queue',
                 incrementalQueue: 'test.incremental.queue',
+                detailQueue: 'test.detail.queue',
                 changeNotificationQueue: 'test.change.notification.queue'
               }
             }

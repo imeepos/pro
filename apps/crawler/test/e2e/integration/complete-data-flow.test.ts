@@ -81,7 +81,8 @@ describe('完整数据流程集成测试', () => {
               url: 'amqp://test:test@localhost:5672',
               queues: {
                 crawlQueue: 'test.crawl.queue',
-                statusQueue: 'test.status.queue'
+                statusQueue: 'test.status.queue',
+                detailQueue: 'test.detail.queue'
               }
             }
           })]

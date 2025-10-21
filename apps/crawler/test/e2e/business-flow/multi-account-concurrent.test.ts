@@ -100,6 +100,7 @@ describe('多账号并发E2E测试', () => {
               queues: {
                 crawlQueue: 'test.crawl.queue',
                 concurrentQueue: 'test.concurrent.queue',
+                detailQueue: 'test.detail.queue',
                 loadBalanceQueue: 'test.loadbalance.queue'
               }
             }

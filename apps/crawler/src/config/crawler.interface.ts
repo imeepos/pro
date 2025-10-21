@@ -90,6 +90,7 @@ export interface RabbitMQConfig {
   queues: {
     crawlQueue: string;
     statusQueue: string;
+    detailQueue: string;
     retryQueue: string;
   };
   options: {
