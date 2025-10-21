@@ -4,6 +4,7 @@ import { Logger } from '@pro/logger';
 import { chromium, Browser, BrowserContext, Page, BrowserType } from 'playwright';
 import * as path from 'path';
 import * as fs from 'fs';
+import { DurationFormatter } from '@pro/crawler-utils';
 
 export interface BrowserConfig {
   headless: boolean;
@@ -756,7 +757,7 @@ export class BrowserService implements OnModuleDestroy {
       accountId,
       contextKey,
       contextAge,
-      contextAgeFormatted: typeof contextAge === 'number' ? this.formatDuration(contextAge) : 'unknown'
+      contextAgeFormatted: typeof contextAge === 'number' ? DurationFormatter.format(contextAge) : 'unknown'
     });
 
     try {
@@ -775,7 +776,7 @@ export class BrowserService implements OnModuleDestroy {
         contextKey,
         closeTimeMs: closeDuration,
         contextAge,
-        contextAgeFormatted: typeof contextAge === 'number' ? this.formatDuration(contextAge) : 'unknown',
+        contextAgeFormatted: typeof contextAge === 'number' ? DurationFormatter.format(contextAge) : 'unknown',
         remainingContextsCount: this.contexts.size,
         totalContextsClosed: this.metrics.totalContextsClosed,
         successRate: this.metrics.totalContextsCreated > 0
@@ -1128,7 +1129,7 @@ export class BrowserService implements OnModuleDestroy {
         accountId,
         contextKey,
         age,
-        ageFormatted: this.formatDuration(age)
+        ageFormatted: DurationFormatter.format(age)
       };
     }).sort((a, b) => b.age - a.age);
 

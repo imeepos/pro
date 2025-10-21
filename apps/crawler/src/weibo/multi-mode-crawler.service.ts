@@ -5,6 +5,7 @@ import { WeiboCreatorCrawlerService, WeiboCreatorDetail } from './creator-crawle
 import { WeiboCommentCrawlerService, WeiboComment } from './comment-crawler.service';
 import { WeiboMediaDownloaderService, MediaDownloadTask } from './media-downloader.service';
 import { WeiboCrawlMode } from '@pro/types';
+import { DurationFormatter } from '@pro/crawler-utils';
 import {
   CrawlResult,
   EnhancedCrawlMetrics,
@@ -33,7 +34,6 @@ export class WeiboMultiModeCrawlerService {
     traceContext,
     startTimestamp,
     baseCrawl,
-    formatDuration,
   }: MultiModeExecutionContext): Promise<MultiModeCrawlResult> {
     this.logger.log('🎭 开始多模式爬取任务', {
       traceId: traceContext.traceId,
@@ -140,7 +140,7 @@ export class WeiboMultiModeCrawlerService {
         taskId: normalizedMessage.taskId,
         keyword: normalizedMessage.keyword,
         duration: totalDuration,
-        durationFormatted: formatDuration(totalDuration),
+        durationFormatted: DurationFormatter.format(totalDuration),
         metrics: result.crawlMetrics,
         modesExecuted: message.crawlModes,
         finishedAt: new Date().toISOString(),

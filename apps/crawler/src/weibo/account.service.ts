@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { WeiboAccountEntity } from '@pro/entities';
 import { WeiboAccountStatus } from '@pro/types';
 import { BrowserService } from '../browser/browser.service';
+import { DurationFormatter } from '@pro/crawler-utils';
 
 export interface WeiboAccount {
   id: number;
@@ -144,7 +145,7 @@ export class WeiboAccountService implements OnModuleInit {
 
       this.logger.log('✅ 微博账号服务初始化完成', {
         initTimeMs: initDuration,
-        initTimeFormatted: this.formatDuration(initDuration),
+        initTimeFormatted: DurationFormatter.format(initDuration),
         stats,
         health: {
           healthyAccounts: healthStatus.healthyAccounts,
@@ -182,7 +183,7 @@ export class WeiboAccountService implements OnModuleInit {
       const initDuration = Date.now() - initStartTime;
       this.logger.error('💥 微博账号服务初始化失败', {
         initTimeMs: initDuration,
-        initTimeFormatted: this.formatDuration(initDuration),
+        initTimeFormatted: DurationFormatter.format(initDuration),
         error: error instanceof Error ? error.message : '未知错误',
         errorType: this.classifyInitError(error),
         stack: error instanceof Error ? error.stack : undefined,
@@ -636,24 +637,6 @@ export class WeiboAccountService implements OnModuleInit {
       healthDetails
     };
   }
-
-  /**
-   * 格式化持续时间
-   */
-  private formatDuration(milliseconds: number): string {
-    const seconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  }
-
   /**
    * 计算使用平衡度
    */
