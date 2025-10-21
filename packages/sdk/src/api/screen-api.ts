@@ -7,6 +7,46 @@ import {
   normalizeScreenPageData
 } from '../types/screen.types.js';
 
+const SCREEN_PAGE_FIELDS = `
+  id
+  name
+  description
+  layout {
+    width
+    height
+    background
+    grid {
+      enabled
+      size
+    }
+    cols
+    rows
+  }
+  components {
+    id
+    type
+    position {
+      x
+      y
+      width
+      height
+      zIndex
+    }
+    config
+    dataSource {
+      type
+      url
+      data
+      refreshInterval
+    }
+  }
+  status
+  isDefault
+  createdBy
+  createdAt
+  updatedAt
+`;
+
 interface ScreenEdge {
   node: ScreenPage;
   cursor: string;
@@ -85,16 +125,7 @@ export class ScreenApi {
         screens(page: $page, limit: $limit) {
           edges {
             node {
-              id
-              name
-              description
-              layout
-              components
-              status
-              isDefault
-              createdBy
-              createdAt
-              updatedAt
+              ${SCREEN_PAGE_FIELDS}
             }
           }
           pageInfo {

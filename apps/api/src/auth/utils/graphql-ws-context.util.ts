@@ -1,6 +1,5 @@
 import { GraphqlWsAuthService } from '../services/graphql-ws-auth.service';
 import { AugmentedRequest, GraphqlContext } from '../../common/utils/context.utils';
-import { JwtPayload } from '@pro/types';
 import { GraphqlLoaders } from '../../common/dataloaders/types';
 import { UserLoader } from '../../user/user.loader';
 import { ApiKeyLoader } from '../api-key.loader';
@@ -33,10 +32,11 @@ export class GraphqlWsContextCreator {
     try {
       // 认证连接，会抛出具体错误信息
       const user = await this.wsAuthService.authenticateConnection(connectionParams);
+      const headers = this.deriveHeadersFromConnectionParams(connectionParams);
 
       // 创建增强的请求对象
       const request: AugmentedRequest = {
-        headers: {},
+        headers,
         user,
         websocket,
         connectionParams,
@@ -61,5 +61,44 @@ export class GraphqlWsContextCreator {
       // 重新抛出认证错误，让上层处理
       throw error;
     }
+  }
+
+  private deriveHeadersFromConnectionParams(connectionParams: Record<string, unknown> | undefined) {
+    const headers: Record<string, string> = {};
+
+    if (!connectionParams) {
+      return headers;
+    }
+
+    const authorization = this.extractAuthorizationToken(connectionParams);
+    if (authorization) {
+      headers.authorization = authorization;
+    }
+
+    const apiKey = this.extractApiKey(connectionParams);
+    if (apiKey) {
+      headers['x-api-key'] = apiKey;
+    }
+
+    return headers;
+  }
+
+  private extractAuthorizationToken(connectionParams: Record<string, unknown>) {
+    const token = connectionParams['authorization'];
+    return typeof token === 'string' ? token : undefined;
+  }
+
+  private extractApiKey(connectionParams: Record<string, unknown>) {
+    const candidates = ['x-api-key', 'apiKey', 'api_key'] as const;
+
+    for (const key of candidates) {
+      const value = connectionParams[key];
+
+      if (typeof value === 'string') {
+        return value;
+      }
+    }
+
+    return undefined;
   }
 }
