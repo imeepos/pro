@@ -2,6 +2,46 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+input AggregateTaskInput {
+  """窗口结束时间 (ISO 8601 格式)"""
+  endTime: String!
+
+  """可选：是否强制重新计算 (默认 false)"""
+  forceRecalculate: Boolean
+
+  """可选：过滤关键词"""
+  keyword: String
+
+  """需要计算的聚合指标列表"""
+  metrics: [String!]!
+
+  """窗口开始时间 (ISO 8601 格式)"""
+  startTime: String!
+
+  """可选：Top N 数量 (默认 10)"""
+  topN: Int
+
+  """时间窗口类型 (hour/day/week/month)"""
+  windowType: String!
+}
+
+input AnalyzeTaskInput {
+  """需要执行的分析类型列表"""
+  analysisTypes: [String!]!
+
+  """待分析数据的 ID"""
+  dataId: String!
+
+  """数据类型 (post/comment/user)"""
+  dataType: String!
+
+  """可选：关键词（微博搜索场景）"""
+  keyword: String
+
+  """可选：关联任务ID"""
+  taskId: String
+}
+
 type ApiKeyConnection {
   edges: [ApiKeyEdge!]!
   pageInfo: PageInfo!
@@ -232,6 +272,17 @@ type BugStatusStatistics {
 type BugsPaginationModel {
   bugs: [BugModel!]!
   total: Int!
+}
+
+input CleanTaskInput {
+  """任务优先级"""
+  priority: String! = "normal"
+
+  """MongoDB 原始数据文档 ID"""
+  rawDataId: String!
+
+  """数据源类型"""
+  sourceType: String!
 }
 
 type ConfigCacheStats {
@@ -826,6 +877,15 @@ type Mutation {
   setDefaultScreen(id: ID!): Screen!
   startJdLogin: JdLoginSession!
   startWeiboLogin: WeiboLoginSession!
+
+  """手动触发数据聚合任务"""
+  triggerAggregateTask(input: AggregateTaskInput!): TaskResult!
+
+  """手动触发数据分析任务"""
+  triggerAnalyzeTask(input: AnalyzeTaskInput!): TaskResult!
+
+  """手动触发数据清洗任务"""
+  triggerCleanTask(input: CleanTaskInput!): TaskResult!
   updateApiKey(id: Int!, input: UpdateApiKeyDto!): ApiKeyResponseDto!
   updateBug(id: ID!, input: UpdateBugInput!): BugModel!
   updateBugStatus(id: ID!, input: UpdateBugStatusInput!): BugModel!
@@ -1229,8 +1289,11 @@ enum SourceType {
   JD
   WEIBO_API_JSON
   WEIBO_COMMENT
+  WEIBO_COMMENTS
+  WEIBO_CREATOR_PROFILE
   WEIBO_HTML
   WEIBO_KEYWORD_SEARCH
+  WEIBO_NOTE_DETAIL
 }
 
 input StatsAggregationQueryDto {
@@ -1266,6 +1329,17 @@ type TagConnection {
 type TagEdge {
   cursor: String!
   node: Tag!
+}
+
+type TaskResult {
+  """结果消息"""
+  message: String!
+
+  """任务是否成功发布到队列"""
+  success: Boolean!
+
+  """任务ID或相关标识"""
+  taskId: String
 }
 
 input TimeRangeInput {
@@ -1567,7 +1641,6 @@ enum WeiboSearchTaskStatus {
   PAUSED
   PENDING
   RUNNING
-  TIMEOUT
 }
 
 type WeiboSessionStats {

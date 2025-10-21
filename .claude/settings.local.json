@@ -71,7 +71,10 @@
       "Bash(pnpm list @nestjs/mongoose)",
       "Bash(pnpm run --filter=@pro/admin build)",
       "Bash(pnpm list:*)",
-      "Bash(pnpm ls:*)"
+      "Bash(pnpm ls:*)",
+      "Bash(lsof:*)",
+      "Bash(netstat:*)",
+      "Bash(ss:*)"
     ],
     "deny": [],
     "ask": []

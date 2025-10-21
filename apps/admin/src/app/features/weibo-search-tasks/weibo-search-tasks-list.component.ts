@@ -54,8 +54,7 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
     { value: WeiboSearchTaskStatus.PENDING, label: '等待中' },
     { value: WeiboSearchTaskStatus.RUNNING, label: '运行中' },
     { value: WeiboSearchTaskStatus.PAUSED, label: '已暂停' },
-    { value: WeiboSearchTaskStatus.FAILED, label: '失败' },
-    { value: WeiboSearchTaskStatus.TIMEOUT, label: '超时' }
+    { value: WeiboSearchTaskStatus.FAILED, label: '失败' }
   ];
 
   enabledOptions: SelectOption[] = [
@@ -229,8 +228,6 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
         return 'warning';
       case WeiboSearchTaskStatus.FAILED:
         return 'error';
-      case WeiboSearchTaskStatus.TIMEOUT:
-        return 'error';
       default:
         return 'default';
     }
@@ -247,8 +244,6 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
         return '已暂停';
       case WeiboSearchTaskStatus.FAILED:
         return '失败';
-      case WeiboSearchTaskStatus.TIMEOUT:
-        return '超时';
       default:
         return '未知';
     }
