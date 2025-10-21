@@ -42,18 +42,6 @@ export enum WeiboAccountStatus {
 }
 
 /**
- * 微博搜索任务状态枚举
- * 统一管理微博搜索任务的执行状态
- */
-export enum WeiboSearchTaskStatus {
-  PENDING = 'PENDING',     // 等待执行
-  RUNNING = 'RUNNING',     // 正在执行
-  PAUSED = 'PAUSED',       // 已暂停
-  FAILED = 'FAILED',       // 执行失败
-  TIMEOUT = 'TIMEOUT'      // 执行超时
-}
-
-/**
  * 微博子任务类型枚举 - 精细化的任务分解艺术
  * 将复杂的搜索任务分解为具体可执行的原子操作
  */
@@ -92,7 +80,6 @@ export enum WeiboSubTaskStatus {
 export const WEIBO_SEARCH_TYPE_VALUES = Object.values(WeiboSearchType) as readonly string[];
 export const WEIBO_CRAWL_MODE_VALUES = Object.values(WeiboCrawlMode) as readonly string[];
 export const WEIBO_ACCOUNT_STATUS_VALUES = Object.values(WeiboAccountStatus) as readonly string[];
-export const WEIBO_SEARCH_TASK_STATUS_VALUES = Object.values(WeiboSearchTaskStatus) as readonly string[];
 export const WEIBO_SUB_TASK_TYPE_VALUES = Object.values(WeiboSubTaskType) as readonly string[];
 export const WEIBO_SUB_TASK_STATUS_VALUES = Object.values(WeiboSubTaskStatus) as readonly string[];
 
@@ -112,10 +99,6 @@ export class WeiboEnumValidator {
     return WEIBO_ACCOUNT_STATUS_VALUES.includes(status);
   }
 
-  static isValidSearchTaskStatus(status: string): status is WeiboSearchTaskStatus {
-    return WEIBO_SEARCH_TASK_STATUS_VALUES.includes(status);
-  }
-
   static isValidSubTaskType(type: string): type is WeiboSubTaskType {
     return WEIBO_SUB_TASK_TYPE_VALUES.includes(type);
   }
@@ -133,7 +116,6 @@ export class WeiboEnumValidator {
       ...WEIBO_SEARCH_TYPE_VALUES,
       ...WEIBO_CRAWL_MODE_VALUES,
       ...WEIBO_ACCOUNT_STATUS_VALUES,
-      ...WEIBO_SEARCH_TASK_STATUS_VALUES,
       ...WEIBO_SUB_TASK_TYPE_VALUES,
       ...WEIBO_SUB_TASK_STATUS_VALUES
     ];

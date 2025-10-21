@@ -132,14 +132,5 @@ class WeiboSearchTaskStatsModel {
   enabled: number;
 
   @Field(() => Int)
-  running: number;
-
-  @Field(() => Int)
-  paused: number;
-
-  @Field(() => Int)
-  failed: number;
-
-  @Field(() => Int)
-  completed: number;
+  disabled: number;
 }

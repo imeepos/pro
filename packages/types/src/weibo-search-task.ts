@@ -2,45 +2,18 @@
  * 微博搜索任务接口定义 - 支持多模式爬取的数字艺术品
  * 枚举值统一从 enums/weibo.ts 导入，确保类型安全的统一性
  */
-import { WeiboSearchTaskStatus, WeiboSearchType, WeiboCrawlMode } from './enums/weibo.js';
+import { WeiboSearchType, WeiboCrawlMode } from './enums/weibo.js';
 
-// 重新导出枚举，保持向后兼容性
-export { WeiboSearchTaskStatus, WeiboSearchType, WeiboCrawlMode } from './enums/weibo.js';
+export { WeiboSearchType, WeiboCrawlMode } from './enums/weibo.js';
 
 export interface WeiboSearchTask {
   id: number;
   keyword: string;
   startDate: Date;
-  currentCrawlTime?: Date;
   latestCrawlTime?: Date;
   crawlInterval: string;
   nextRunAt?: Date;
-  weiboAccountId?: number;
-  enableAccountRotation: boolean;
-  status: WeiboSearchTaskStatus;
   enabled: boolean;
-  progress: number;
-  totalSegments: number;
-  noDataCount: number;
-  noDataThreshold: number;
-  retryCount: number;
-  maxRetries: number;
-  errorMessage?: string;
-  longitude?: number;
-  latitude?: number;
-  locationAddress?: string;
-  locationName?: string;
-
-  // 多模式爬取配置 - 每个配置都有其不可替代的存在理由
-  searchType?: WeiboSearchType;        // 搜索类型，决定数据发现的策略
-  crawlModes?: WeiboCrawlMode[];       // 爬取模式数组，支持多维度数据采集
-  enableDetailCrawl?: boolean;         // 是否启用详情爬取
-  enableCreatorCrawl?: boolean;        // 是否启用创作者信息爬取
-  enableCommentCrawl?: boolean;        // 是否启用评论爬取
-  enableMediaDownload?: boolean;       // 是否启用媒体文件下载
-  maxCommentDepth?: number;            // 评论爬取的最大深度
-  maxMediaSize?: number;               // 单个媒体文件最大尺寸(MB)
-
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,34 +22,21 @@ export interface CreateWeiboSearchTaskDto {
   keyword: string;
   startDate: string;
   crawlInterval?: string;
-  weiboAccountId?: number;
-  enableAccountRotation?: boolean;
-  longitude?: number;
-  latitude?: number;
-  locationAddress?: string;
-  locationName?: string;
 }
 
 export interface UpdateWeiboSearchTaskDto {
   keyword?: string;
   startDate?: string;
   crawlInterval?: string;
-  weiboAccountId?: number;
-  enableAccountRotation?: boolean;
   enabled?: boolean;
-  longitude?: number;
-  latitude?: number;
-  locationAddress?: string;
-  locationName?: string;
 }
 
 export interface WeiboSearchTaskFilters {
   keyword?: string;
-  status?: WeiboSearchTaskStatus;
   enabled?: boolean;
   page?: number;
   limit?: number;
-  sortBy?: 'createdAt' | 'updatedAt' | 'nextRunAt' | 'progress';
+  sortBy?: 'createdAt' | 'updatedAt' | 'nextRunAt' | 'startDate';
   sortOrder?: 'asc' | 'desc';
 }
 
@@ -89,10 +49,23 @@ export interface WeiboSearchTaskListResponse {
 }
 
 export interface RunWeiboTaskNowInput {
-  weiboAccountId?: number;
-  forceRestart?: boolean;
   searchType?: WeiboSearchType;
   crawlModes?: WeiboCrawlMode[];
+}
+
+export interface WeiboSubTask {
+  id: number;
+  taskId: number;
+  metadata: {
+    startTime?: string | Date;
+    endTime?: string | Date;
+    keyword?: string;
+    [key: string]: unknown;
+  };
+  type: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // 多模式爬取的子任务消息扩展 - 继承原有结构，赋予新的生命

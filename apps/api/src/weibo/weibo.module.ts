@@ -1,8 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
-import { WeiboAccountEntity } from '@pro/entities';
-import { WeiboSearchTaskEntity } from '@pro/entities';
+import { WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity } from '@pro/entities';
 import { WeiboAccountService } from './weibo-account.service';
 import { WeiboAuthService } from './weibo-auth.service';
 import { WeiboHealthCheckService } from './weibo-health-check.service';
@@ -32,6 +31,7 @@ import { ConfigService } from '@nestjs/config';
     TypeOrmModule.forFeature([
       WeiboAccountEntity,
       WeiboSearchTaskEntity,
+      WeiboSubTaskEntity,
     ]),
     // ScheduleModule.forRoot(), // 已移至全局模块
     forwardRef(() => ScreensModule),
