@@ -4,6 +4,46 @@ import { Observable, BehaviorSubject, firstValueFrom, of, throwError } from 'rxj
 import { map, catchError, tap, shareReplay } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 
+const SCREEN_FIELD_SELECTION = `
+  id
+  name
+  description
+  layout {
+    width
+    height
+    background
+    cols
+    rows
+    grid {
+      size
+      enabled
+    }
+  }
+  components {
+    id
+    type
+    position {
+      x
+      y
+      width
+      height
+      zIndex
+    }
+    config
+    dataSource {
+      type
+      url
+      data
+      refreshInterval
+    }
+  }
+  status
+  isDefault
+  createdBy
+  createdAt
+  updatedAt
+`;
+
 export interface GraphQLResponse<T = any> {
   data?: T;
   errors?: Array<{
@@ -212,6 +252,22 @@ export class GraphQLService {
   }
 
   createData(entity: string, data: Record<string, any>): Observable<GraphQLResponse> {
+    const normalizedEntity = entity.trim().toLowerCase();
+
+    if (normalizedEntity === 'screen' || normalizedEntity === 'screens') {
+      const mutation = `
+        mutation CreateScreen($input: CreateScreenInput!) {
+          createScreen(input: $input) {
+            ${SCREEN_FIELD_SELECTION}
+          }
+        }
+      `;
+
+      return this.mutate(mutation, {
+        variables: { input: data }
+      });
+    }
+
     const mutation = `
       mutation Create${entity.charAt(0).toUpperCase() + entity.slice(1)}($input: ${entity}Input!) {
         create${entity.charAt(0).toUpperCase() + entity.slice(1)}(input: $input) {
@@ -228,6 +284,22 @@ export class GraphQLService {
   }
 
   updateData(entity: string, id: string, data: Record<string, any>): Observable<GraphQLResponse> {
+    const normalizedEntity = entity.trim().toLowerCase();
+
+    if (normalizedEntity === 'screen' || normalizedEntity === 'screens') {
+      const mutation = `
+        mutation UpdateScreen($id: ID!, $input: UpdateScreenInput!) {
+          updateScreen(id: $id, input: $input) {
+            ${SCREEN_FIELD_SELECTION}
+          }
+        }
+      `;
+
+      return this.mutate(mutation, {
+        variables: { id, input: data }
+      });
+    }
+
     const mutation = `
       mutation Update${entity.charAt(0).toUpperCase() + entity.slice(1)}($id: ID!, $input: ${entity}Input!) {
         update${entity.charAt(0).toUpperCase() + entity.slice(1)}(id: $id, input: $input) {

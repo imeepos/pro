@@ -11,17 +11,18 @@ interface ChannelMetadata {
   description?: string;
 }
 
-type PubSubEngine = {
-  publish<T>(triggerName: string, payload: T): Promise<void>;
-  subscribe(triggerName: string, onMessage: (...args: unknown[]) => void): Promise<number>;
+type PubSubLike = {
+  publish(triggerName: string, payload: unknown): Promise<void>;
+  subscribe(triggerName: string, onMessage: (...args: unknown[]) => void, options?: object): Promise<number>;
   unsubscribe(subId: number): void;
-  asyncIterator<T>(triggers: string | string[]): AsyncIterator<T>;
+  asyncIterableIterator<T>(triggers: string | readonly string[]): AsyncIterator<T>;
+  asyncIterator?<T>(triggers: string | string[]): AsyncIterator<T>;
 };
 
 @Injectable()
 export class PubSubService implements OnModuleDestroy {
   private readonly logger = new Logger(PubSubService.name);
-  private readonly engine: PubSubEngine;
+  private readonly engine: PubSubLike;
   private readonly namespace: string;
   private readonly driver: PubSubModuleConfig['driver'];
   private readonly teardownCallbacks: Array<() => Promise<void>> = [];
@@ -51,12 +52,16 @@ export class PubSubService implements OnModuleDestroy {
   }
 
   asyncIterator<T>(triggers: string | string[]): AsyncIterator<T> {
-    if (Array.isArray(triggers)) {
-      const qualified = triggers.map(trigger => this.qualifyTrigger(trigger));
+    const qualified = Array.isArray(triggers)
+      ? triggers.map(trigger => this.qualifyTrigger(trigger))
+      : this.qualifyTrigger(triggers);
+
+    if (this.engine.asyncIterator) {
       return this.engine.asyncIterator<T>(qualified);
     }
 
-    return this.engine.asyncIterator<T>(this.qualifyTrigger(triggers));
+    const normalized = Array.isArray(qualified) ? qualified : [qualified];
+    return this.engine.asyncIterableIterator<T>(normalized);
   }
 
   registerChannel(trigger: string, metadata: Omit<ChannelMetadata, 'trigger'> = {}): void {
@@ -76,10 +81,10 @@ export class PubSubService implements OnModuleDestroy {
     return this.driver;
   }
 
-  private bootstrapEngine(config: PubSubModuleConfig): PubSubEngine {
+  private bootstrapEngine(config: PubSubModuleConfig): PubSubLike {
     if (config.driver !== 'redis' || !config.redis) {
       this.logger.log('PubSub operating in in-memory mode');
-      return new PubSub();
+      return new PubSub() as unknown as PubSubLike;
     }
 
     const engine = this.createRedisPubSub(config.redis);
@@ -87,7 +92,7 @@ export class PubSubService implements OnModuleDestroy {
     return engine;
   }
 
-  private createRedisPubSub(config: PubSubRedisConfig): PubSubEngine {
+  private createRedisPubSub(config: PubSubRedisConfig): PubSubLike {
     if (config.mode === 'cluster') {
       const createCluster = () => new Redis.Cluster(config.nodes, config.options);
       const publisher = createCluster();
@@ -100,7 +105,7 @@ export class PubSubService implements OnModuleDestroy {
         await Promise.allSettled([publisher.quit(), subscriber.quit()]);
       });
 
-      return new RedisPubSub({ publisher, subscriber });
+      return new RedisPubSub({ publisher, subscriber }) as unknown as PubSubLike;
     }
 
     const createClient = () => (typeof config.options === 'string' ? new Redis(config.options) : new Redis(config.options));
@@ -114,7 +119,7 @@ export class PubSubService implements OnModuleDestroy {
       await Promise.allSettled([publisher.quit(), subscriber.quit()]);
     });
 
-    return new RedisPubSub({ publisher, subscriber });
+    return new RedisPubSub({ publisher, subscriber }) as unknown as PubSubLike;
   }
 
   private attachLifecycleLogging(connection: Redis | Cluster, role: string) {

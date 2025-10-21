@@ -8,7 +8,13 @@ import { RabbitMQClient } from '@pro/rabbitmq';
 import { RobotsService } from '../robots/robots.service';
 import { RequestMonitorService } from '../monitoring/request-monitor.service';
 import { CrawlerConfig, RabbitMQConfig, WeiboConfig } from '../config/crawler.interface';
-import { SourceType, WeiboSearchType } from '@pro/types';
+import {
+  QUEUE_NAMES,
+  RawDataReadyEvent,
+  SourcePlatform,
+  SourceType,
+  WeiboSearchType
+} from '@pro/types';
 import { WeiboMultiModeCrawlerService } from './multi-mode-crawler.service';
 import { DurationFormatter } from '@pro/crawler-utils';
 import { CrawlerConfigurationService } from '../config/crawler-configuration.service';
@@ -22,6 +28,7 @@ import {
   TraceContext,
 } from './types';
 import { TraceGenerator } from './trace.generator';
+import type { RawDataSource } from '../raw-data/raw-data.service';
 
 /**
  * 增强版微博搜索爬取服务 - 数字时代的多模式爬取艺术品
@@ -136,7 +143,7 @@ export class WeiboSearchCrawlerService {
           const dataSize = new Blob([html]).size;
           crawlMetrics.totalDataSize += dataSize;
 
-          await this.rawDataService.create({
+          const rawDataRecord = await this.rawDataService.create({
             sourceType: SourceType.WEIBO_KEYWORD_SEARCH,
             sourceUrl: currentUrl,
             rawContent: html,
@@ -152,6 +159,16 @@ export class WeiboSearchCrawlerService {
               dataSizeBytes: dataSize,
               traceId: traceContext.traceId
             }
+          });
+
+          await this.notifyCleanerForRawData(rawDataRecord, {
+            keyword,
+            taskId,
+            page: currentPage,
+            start,
+            end,
+            traceId: traceContext.traceId,
+            dataSize
           });
 
           crawlMetrics.successfulPages++;
@@ -815,6 +832,81 @@ export class WeiboSearchCrawlerService {
       this.logger.log(`已发布任务状态更新: taskId=${statusUpdate.taskId}, status=${statusUpdate.status}`);
     } catch (error) {
       this.logger.error(`发布任务状态更新失败: taskId=${statusUpdate.taskId}`, error);
+    }
+  }
+
+  private async notifyCleanerForRawData(
+    rawData: RawDataSource,
+    context: {
+      keyword: string;
+      taskId: number;
+      page: number;
+      start: Date;
+      end: Date;
+      traceId: string;
+      dataSize: number;
+    }
+  ): Promise<void> {
+    if (!this.rabbitMQClient) {
+      this.logger.warn('RabbitMQ 未初始化，无法通知清洗服务', {
+        traceId: context.traceId,
+        taskId: context.taskId,
+        keyword: context.keyword,
+        page: context.page
+      });
+      return;
+    }
+
+    const rawDataId = rawData._id?.toString();
+
+    if (!rawDataId) {
+      this.logger.warn('原始数据缺少ID，跳过清洗通知', {
+        traceId: context.traceId,
+        taskId: context.taskId,
+        keyword: context.keyword,
+        page: context.page
+      });
+      return;
+    }
+
+    const event: RawDataReadyEvent = {
+      rawDataId,
+      sourceType: rawData.sourceType as SourceType,
+      sourcePlatform: SourcePlatform.WEIBO,
+      sourceUrl: rawData.sourceUrl,
+      contentHash: rawData.contentHash,
+      metadata: {
+        taskId: context.taskId,
+        keyword: context.keyword,
+        timeRange: {
+          start: context.start.toISOString(),
+          end: context.end.toISOString()
+        },
+        fileSize: context.dataSize
+      },
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      await this.rabbitMQClient.publish(QUEUE_NAMES.RAW_DATA_READY, event);
+
+      this.logger.debug('📨 已向Cleaner发布原始数据就绪事件', {
+        traceId: context.traceId,
+        taskId: context.taskId,
+        keyword: context.keyword,
+        page: context.page,
+        rawDataId,
+        queue: QUEUE_NAMES.RAW_DATA_READY
+      });
+    } catch (error) {
+      this.logger.error('❌ 发布原始数据清洗通知失败', {
+        traceId: context.traceId,
+        taskId: context.taskId,
+        keyword: context.keyword,
+        page: context.page,
+        rawDataId,
+        error: error instanceof Error ? error.message : '未知错误'
+      });
     }
   }
 
