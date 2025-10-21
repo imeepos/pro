@@ -7,6 +7,7 @@ import { Page } from 'playwright';
 import * as cheerio from 'cheerio';
 
 import { WeiboSearchCrawlerService } from '../../src/weibo/search-crawler.service';
+import { WeiboMultiModeCrawlerService } from '../../src/weibo/multi-mode-crawler.service';
 import { WeiboDetailCrawlerService } from '../../src/weibo/detail-crawler.service';
 import { WeiboAccountService } from '../../src/weibo/account.service';
 import { BrowserService } from '../../src/browser/browser.service';
@@ -97,6 +98,12 @@ export abstract class WeiboCrawlerIntegrationTestBase {
         RawDataService,
         RobotsService,
         RequestMonitorService,
+        {
+          provide: WeiboMultiModeCrawlerService,
+          useValue: {
+            execute: jest.fn(),
+          },
+        },
         Logger
       ]
     })

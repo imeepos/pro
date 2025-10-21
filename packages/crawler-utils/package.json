@@ -1,0 +1,36 @@
+{
+  "name": "@pro/crawler-utils",
+  "version": "1.0.0",
+  "description": "Purposeful utilities shared by crawler services",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "crawler",
+    "utils",
+    "weibo"
+  ],
+  "devDependencies": {
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*",
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.0"
+  }
+}
