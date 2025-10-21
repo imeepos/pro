@@ -189,7 +189,24 @@ export class WeiboAuthResolver {
       })();
     });
 
-    return observableToAsyncIterator(events$);
+    // 确保即使 Observable 创建失败也返回有效的 AsyncIterator
+    try {
+      return observableToAsyncIterator(events$);
+    } catch (error) {
+      this.logger.error('创建异步迭代器失败', { sessionId, error });
+      // 返回一个只包含错误事件的 AsyncIterator
+      const errorEvents$ = new Observable<WeiboLoginEventModel>(subscriber => {
+        const errorEvent: WeiboLoginEvent = {
+          type: 'error',
+          data: {
+            message: '订阅创建失败',
+          },
+        };
+        subscriber.next(mapWeiboLoginEventToModel(errorEvent));
+        subscriber.complete();
+      });
+      return observableToAsyncIterator(errorEvents$);
+    }
   }
 
   /**
