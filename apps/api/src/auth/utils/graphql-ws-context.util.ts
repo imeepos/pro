@@ -7,7 +7,7 @@ import { ApiKeyLoader } from '../api-key.loader';
 import { EventTypeLoader } from '../../events/event-type.loader';
 import { IndustryTypeLoader } from '../../events/industry-type.loader';
 import { TagLoader } from '../../events/tag.loader';
-import { ConnectionGatekeeper } from '../services/connection-gatekeeper.service';
+import { ConnectionGatekeeper, ConnectionRateLimitException } from '../services/connection-gatekeeper.service';
 
 const GATEKEEPER_LEASE_TOKEN = Symbol('graphqlWsLease');
 
@@ -112,7 +112,9 @@ export class GraphqlWsContextCreator {
         } satisfies GraphqlLoaders,
       };
     } catch (error) {
-      this.connectionGatekeeper.recordHandshakeFailure(clientIp, 'graphql');
+      if (!(error instanceof ConnectionRateLimitException)) {
+        this.connectionGatekeeper.recordHandshakeFailure(clientIp, 'graphql');
+      }
       // 重新抛出认证错误，让上层处理
       throw error;
     }

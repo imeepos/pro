@@ -1,4 +1,4 @@
-import { Injectable, Logger, TooManyRequestsException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 type ConnectionNamespace = 'screens' | 'graphql';
@@ -62,7 +62,7 @@ export class ConnectionGatekeeper {
       this.logger.warn(
         `Handshake rejected: ip=${key}, namespace=${namespace}, blockedUntil=${new Date(record.blockedUntil).toISOString()}`,
       );
-      throw new TooManyRequestsException('Handshake rate limit reached');
+      throw new ConnectionRateLimitException('Handshake rate limit reached');
     }
 
     record.attempts = record.attempts.filter((timestamp) => now - timestamp < this.config.handshakeWindowMs);
@@ -72,7 +72,7 @@ export class ConnectionGatekeeper {
       this.logger.warn(
         `Handshake throttled: ip=${key}, namespace=${namespace}, window=${this.config.handshakeWindowMs}ms`,
       );
-      throw new TooManyRequestsException('Too many handshake attempts');
+      throw new ConnectionRateLimitException('Too many handshake attempts');
     }
 
     record.attempts.push(now);
@@ -159,7 +159,7 @@ export class ConnectionGatekeeper {
     const pool = this.ipConnectionIndex.get(ip);
     if (pool && pool.size >= this.config.maxConnectionsPerIp) {
       this.logger.warn(`Connection denied: ip=${ip}, namespace=${namespace}, active=${pool.size}`);
-      throw new TooManyRequestsException('Connection limit per IP reached');
+      throw new ConnectionRateLimitException('Connection limit per IP reached');
     }
   }
 
@@ -167,7 +167,7 @@ export class ConnectionGatekeeper {
     const pool = this.userConnectionIndex.get(userId);
     if (pool && pool.size >= this.config.maxConnectionsPerUser) {
       this.logger.warn(`Connection denied: userId=${userId}, namespace=${namespace}, active=${pool.size}`);
-      throw new TooManyRequestsException('Connection limit per user reached');
+      throw new ConnectionRateLimitException('Connection limit per user reached');
     }
   }
 
@@ -211,5 +211,10 @@ export class ConnectionGatekeeper {
       maxConnectionsPerUser: read('WS_MAX_CONNECTIONS_PER_USER', DEFAULT_CONFIG.maxConnectionsPerUser),
       maxConnectionsPerIp: read('WS_MAX_CONNECTIONS_PER_IP', DEFAULT_CONFIG.maxConnectionsPerIp),
     };
+  }
+}
+export class ConnectionRateLimitException extends HttpException {
+  constructor(message: string) {
+    super(message, HttpStatus.TOO_MANY_REQUESTS);
   }
 }

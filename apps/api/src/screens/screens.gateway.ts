@@ -6,13 +6,13 @@ import {
   OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Injectable, Logger, OnModuleInit, Inject, forwardRef, TooManyRequestsException } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { LoggedInUsersStats } from '@pro/types';
 import { WeiboAccountService } from '../weibo/weibo-account.service';
 import { PubSubService } from '../common/pubsub/pubsub.service';
 import { SUBSCRIPTION_EVENTS } from './constants/subscription-events';
-import { ConnectionGatekeeper } from '../auth/services/connection-gatekeeper.service';
+import { ConnectionGatekeeper, ConnectionRateLimitException } from '../auth/services/connection-gatekeeper.service';
 
 /**
  * 大屏系统 WebSocket Gateway
@@ -43,7 +43,9 @@ export class ScreensGateway
     userId: string;
     connectedAt: Date;
     lastPing: Date;
+    ip: string;
     heartbeatTimer?: NodeJS.Timeout;
+    releaseLease?: () => void;
   }>();
   private readonly heartbeatInterval = 30000; // 30秒心跳间隔
   private readonly connectionTimeout = 120000; // 2分钟连接超时
@@ -51,6 +53,7 @@ export class ScreensGateway
   constructor(
     private readonly jwtService: JwtService,
     private readonly pubSub: PubSubService,
+    private readonly connectionGatekeeper: ConnectionGatekeeper,
     @Inject(forwardRef(() => WeiboAccountService))
     private readonly weiboAccountService: WeiboAccountService,
   ) {}
@@ -73,16 +76,19 @@ export class ScreensGateway
    */
   async handleConnection(client: Socket) {
     const connectionStartTime = Date.now();
+    const clientIp = this.resolveClientIp(client);
+    let releaseLease: (() => void) | null = null;
 
     try {
+      this.connectionGatekeeper.assertHandshakeAllowed(clientIp, 'screens');
+
       const token = client.handshake.auth.token;
 
       if (!token) {
         this.logger.warn(`Connection rejected: missing token, client: ${client.id}`);
+        this.connectionGatekeeper.recordHandshakeFailure(clientIp, 'screens');
         client.emit('auth:error', { message: 'Missing token', code: 'MISSING_TOKEN' });
-        client.emit('connection:rejected', { reason: 'missing_token' });
-
-        // 给客户端足够时间接收错误消息
+        client.emit('connection:rejected', { reason: 'missing_token', code: 'MISSING_TOKEN', timestamp: new Date().toISOString() });
         setTimeout(() => {
           if (client.connected) {
             client.disconnect(true);
@@ -91,54 +97,75 @@ export class ScreensGateway
         return;
       }
 
-      // 验证 JWT token
       const payload = await this.jwtService.verifyAsync(token);
       const userId = payload.userId;
 
+      releaseLease = this.connectionGatekeeper.openLease(client.id, {
+        ip: clientIp,
+        userId,
+        namespace: 'screens',
+      });
+
       client.data.userId = userId;
-      client.data.connectedAt = new Date();
-      client.data.lastPing = new Date();
+      const connectedAt = new Date();
+      client.data.connectedAt = connectedAt;
+      client.data.lastPing = connectedAt;
+      client.data.ip = clientIp;
 
-      // 注册客户端连接信息
-      this.registerClient(client, userId);
-
-      // 设置客户端特定的事件监听器
+      this.registerClient(client, userId, clientIp ?? 'unknown', releaseLease, connectedAt);
       this.setupClientEventHandlers(client);
-
-      // 设置心跳定时器
       this.setupHeartbeat(client);
 
       const connectionDuration = Date.now() - connectionStartTime;
-      this.logger.log(`Client connected successfully: ${client.id}, userId: ${userId}, duration: ${connectionDuration}ms`);
+      this.logger.log(`Client connected successfully: ${client.id}, userId: ${userId}, ip=${clientIp ?? 'unknown'}, duration=${connectionDuration}ms`);
 
-      // 发送连接确认
       client.emit('connection:established', {
         clientId: client.id,
         userId,
         connectedAt: client.data.connectedAt,
-        serverTime: new Date().toISOString()
+        serverTime: new Date().toISOString(),
       });
-
     } catch (error) {
+      if (releaseLease) {
+        releaseLease();
+        releaseLease = null;
+      }
+
       const connectionDuration = Date.now() - connectionStartTime;
       const errorMessage = error?.message || 'Authentication failed';
+      const isRateLimited = error instanceof ConnectionRateLimitException;
 
-      this.logger.error(`WebSocket authentication failed: client=${client.id}, duration=${connectionDuration}ms, error=${errorMessage}`, error.stack);
+      if (isRateLimited) {
+        this.logger.warn(`WebSocket connection throttled: client=${client.id}, ip=${clientIp ?? 'unknown'}, duration=${connectionDuration}ms`);
+        client.emit('connection:rejected', {
+          reason: 'rate_limited',
+          code: 'RATE_LIMITED',
+          timestamp: new Date().toISOString(),
+        });
+        if (client.connected) {
+          client.disconnect(true);
+        }
+        return;
+      }
 
-      // 发送认证失败事件给客户端
+      this.connectionGatekeeper.recordHandshakeFailure(clientIp, 'screens');
+      this.logger.error(
+        `WebSocket authentication failed: client=${client.id}, duration=${connectionDuration}ms, error=${errorMessage}`,
+        error.stack,
+      );
+
       const errorCode = errorMessage.includes('jwt expired') ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN';
       client.emit('auth:error', {
         message: errorMessage,
         code: errorCode,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       client.emit('connection:rejected', {
         reason: 'auth_failed',
         code: errorCode,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
-      // 延迟断开连接，确保客户端收到错误消息
       setTimeout(() => {
         if (client.connected) {
           client.disconnect(true);
@@ -198,7 +225,6 @@ export class ScreensGateway
         if (client) {
           this.logger.warn(`断开不活跃的客户端: ${clientId}`);
           client.socket.disconnect(true);
-          this.connectedClients.delete(clientId);
         }
       });
     }, this.heartbeatInterval);
@@ -207,12 +233,20 @@ export class ScreensGateway
   /**
    * 注册客户端连接
    */
-  private registerClient(client: Socket, userId: string) {
+  private registerClient(
+    client: Socket,
+    userId: string,
+    ip: string,
+    releaseLease: (() => void) | undefined,
+    connectedAt: Date,
+  ) {
     this.connectedClients.set(client.id, {
       socket: client,
       userId,
-      connectedAt: new Date(),
-      lastPing: new Date()
+      connectedAt,
+      lastPing: connectedAt,
+      ip,
+      releaseLease,
     });
   }
 
@@ -222,12 +256,13 @@ export class ScreensGateway
   private unregisterClient(client: Socket) {
     const clientInfo = this.connectedClients.get(client.id);
     if (clientInfo) {
-      // 清理心跳定时器
       if (clientInfo.heartbeatTimer) {
         clearInterval(clientInfo.heartbeatTimer);
       }
 
-      // 离开用户房间
+      clientInfo.releaseLease?.();
+      clientInfo.releaseLease = undefined;
+
       client.leave(`user_${clientInfo.userId}`);
 
       this.connectedClients.delete(client.id);
@@ -244,6 +279,7 @@ export class ScreensGateway
       const clientInfo = this.connectedClients.get(client.id);
       if (clientInfo) {
         clientInfo.lastPing = new Date();
+        this.connectionGatekeeper.markHeartbeat(client.id);
         client.emit('pong');
       }
     });
@@ -253,6 +289,7 @@ export class ScreensGateway
       const clientInfo = this.connectedClients.get(client.id);
       if (clientInfo) {
         clientInfo.lastPing = new Date();
+        this.connectionGatekeeper.markHeartbeat(client.id);
         client.emit('heartbeat:ack', { timestamp: new Date().toISOString() });
       }
     });
@@ -299,9 +336,25 @@ export class ScreensGateway
         client.emit('heartbeat', { timestamp: new Date().toISOString() });
       } else {
         clearInterval(clientInfo.heartbeatTimer);
+        clientInfo.releaseLease?.();
+        clientInfo.releaseLease = undefined;
         this.connectedClients.delete(client.id);
       }
     }, this.heartbeatInterval);
+  }
+
+  private resolveClientIp(client: Socket): string | undefined {
+    const forwarded = client.handshake?.headers?.['x-forwarded-for'];
+    if (typeof forwarded === 'string') {
+      return forwarded.split(',')[0]?.trim();
+    }
+
+    if (Array.isArray(forwarded) && forwarded.length > 0) {
+      return forwarded[0];
+    }
+
+    const address = client.handshake?.address ?? client.conn.remoteAddress;
+    return address ?? undefined;
   }
 
   /**

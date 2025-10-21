@@ -31,7 +31,7 @@ import { GraphqlLoaders } from './common/dataloaders/types';
 import { ApiKeyLoader } from './auth/api-key.loader';
 import { GraphqlWsAuthService } from './auth/services/graphql-ws-auth.service';
 import { GraphqlWsContextCreator } from './auth/utils/graphql-ws-context.util';
-import { ConnectionGatekeeper } from './auth/services/connection-gatekeeper.service';
+import { ConnectionGatekeeper, ConnectionRateLimitException } from './auth/services/connection-gatekeeper.service';
 import { EventTypeLoader } from './events/event-type.loader';
 import { IndustryTypeLoader } from './events/industry-type.loader';
 import { TagLoader } from './events/tag.loader';
@@ -95,22 +95,22 @@ import { TagLoader } from './events/tag.loader';
                     context.socket,
                     context,
                   );
-                  // 返回包含上下文的对象，符合 graphql-ws 的类型要求
                   return {
                     context: connectionContext,
                   };
                 } catch (error) {
-                  // 不抛出异常，而是返回一个包含错误信息的上下文
-                  // 让订阅能够建立，但在 resolver 中处理认证错误
-                  return {
-                    context: {
-                      error: error.message,
-                      req: { user: null },
-                      res: {} as any,
-                      loaders: {} as any,
-                      authenticationError: true,
-                    },
-                  };
+                  const reason =
+                    error instanceof ConnectionRateLimitException
+                      ? error.message
+                      : error?.message ?? 'Authentication failed';
+
+                  const close = context?.extra?.socket?.close?.bind(context.extra.socket);
+                  if (close) {
+                    const code = error instanceof ConnectionRateLimitException ? 4408 : 4401;
+                    close(code, reason);
+                  }
+
+                  throw error;
                 }
               },
             },

@@ -9,6 +9,7 @@ import { WeiboModule } from '../weibo/weibo.module';
 import { createJwtConfig } from '../config';
 import { ScreensResolver } from './screens.resolver';
 import { PubSubModule } from '../common/pubsub/pubsub.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PubSubModule } from '../common/pubsub/pubsub.module';
     JwtModule.registerAsync(createJwtConfig()),
     PubSubModule,
     forwardRef(() => WeiboModule),
+    AuthModule,
   ],
   controllers: [],
   providers: [ScreensService, ScreensGateway, ScreensStatsScheduler, ScreensResolver],
