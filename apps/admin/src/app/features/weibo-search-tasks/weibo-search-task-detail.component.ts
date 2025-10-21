@@ -287,16 +287,12 @@ export class WeiboSearchTaskDetailComponent implements OnInit, OnDestroy {
   formatTime(date?: Date): string {
     if (!date) return '-';
     try {
-      return new Date(date).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
+      const d = new Date(date);
+      // 直接使用UTC时间，避免时区转换
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${d.getUTCFullYear()}/${pad(d.getUTCMonth() + 1)}/${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
     } catch {
-      return new Date(date).toLocaleString();
+      return '-';
     }
   }
 

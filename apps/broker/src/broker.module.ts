@@ -6,8 +6,8 @@ import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { WeiboSearchTaskEntity, createDatabaseConfig } from '@pro/entities';
 
 // 核心服务导入 - 每个导入都有其存在的意义
-import { TaskScannerScheduler } from './weibo/task-scanner-scheduler.service';
-import { TaskMonitor } from './weibo/task-monitor.service';
+import { SimpleIntervalScheduler } from './weibo/simple-interval-scheduler.service';
+import { SimpleTaskMonitor } from './weibo/simple-task-monitor.service';
 import { DiagnosticService } from './weibo/diagnostic.service';
 import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
 import { AggregateSchedulerService } from './services/aggregate-scheduler.service';
@@ -56,18 +56,18 @@ import { AggregateSchedulerService } from './services/aggregate-scheduler.servic
   // 服务之群 - 业务逻辑的守护者
   providers: [
     RabbitMQConfigService,        // 消息桥梁的构建者
-    TaskScannerScheduler,         // 任务的唤醒者
+    SimpleIntervalScheduler,      // 简化的任务调度器
     AggregateSchedulerService,    // 数据聚合的指挥家
-    TaskMonitor,                  // 系统健康的守望者
+    SimpleTaskMonitor,            // 简化的健康守望者
     DiagnosticService,            // 异常诊断的医师
   ],
 
   // 导出之选 - 模块间的礼物
   exports: [
     RabbitMQConfigService,
-    TaskScannerScheduler,
+    SimpleIntervalScheduler,
     AggregateSchedulerService,
-    TaskMonitor,
+    SimpleTaskMonitor,
   ],
 })
 export class BrokerModule {}

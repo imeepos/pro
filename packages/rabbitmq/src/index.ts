@@ -5,6 +5,7 @@ export interface RabbitMQConfig {
   queue?: string;
   maxRetries?: number;
   enableDLQ?: boolean;
+  messageTTL?: number; // 消息TTL，单位毫秒
 }
 
 export interface ConsumeOptions {
@@ -17,10 +18,12 @@ export class RabbitMQClient {
   private channel: any;
   private maxRetries: number;
   private enableDLQ: boolean;
+  private messageTTL: number;
 
   constructor(private config: RabbitMQConfig) {
     this.maxRetries = config.maxRetries ?? 3;
     this.enableDLQ = config.enableDLQ ?? true;
+    this.messageTTL = config.messageTTL ?? 30 * 60 * 1000; // 默认30分钟
   }
 
   async connect(): Promise<void> {
@@ -44,12 +47,19 @@ export class RabbitMQClient {
       await this.channel.assertQueue(dlqQueue, { durable: true });
       await this.channel.bindQueue(dlqQueue, dlxExchange, queue);
 
+      const queueArgs: any = {
+        'x-dead-letter-exchange': dlxExchange,
+        'x-dead-letter-routing-key': queue
+      };
+
+      // 添加TTL配置
+      if (this.messageTTL > 0) {
+        queueArgs['x-message-ttl'] = this.messageTTL;
+      }
+
       await this.channel.assertQueue(queue, {
         durable: true,
-        arguments: {
-          'x-dead-letter-exchange': dlxExchange,
-          'x-dead-letter-routing-key': queue
-        }
+        arguments: queueArgs
       });
     } else {
       await this.channel.assertQueue(queue, { durable: true });

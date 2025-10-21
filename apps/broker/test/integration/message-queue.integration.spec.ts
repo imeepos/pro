@@ -10,7 +10,7 @@ import { WeiboSearchTaskEntity, WeiboSearchTaskStatus } from '@pro/entities';
 
 // 导入要测试的服务
 import { RabbitMQConfigService } from '../../src/rabbitmq/rabbitmq-config.service';
-import { TaskScannerScheduler } from '../../src/weibo/task-scanner-scheduler.service';
+import { SimpleIntervalScheduler } from '../../src/weibo/simple-interval-scheduler.service';
 import { SubTaskMessage, TaskResultMessage, WEIBO_CRAWL_QUEUE, WEIBO_CRAWL_ROUTING_KEY } from '../../src/weibo/interfaces/sub-task-message.interface';
 
 // 导入测试配置
@@ -32,7 +32,7 @@ describe('MessageQueueIntegration', () => {
   let module: TestingModule;
   let rabbitMQService: RabbitMQConfigService;
   let taskRepository: Repository<WeiboSearchTaskEntity>;
-  let taskScanner: TaskScannerScheduler;
+  let taskScheduler: SimpleIntervalScheduler;
 
   // 模拟AMQP连接和通道
   let mockConnection: any;
@@ -99,7 +99,7 @@ describe('MessageQueueIntegration', () => {
             },
           }),
         },
-        TaskScannerScheduler,
+        SimpleIntervalScheduler,
         {
           provide: getRepositoryToken(WeiboSearchTaskEntity),
           useValue: {
@@ -153,7 +153,7 @@ describe('MessageQueueIntegration', () => {
     }).compile();
 
     rabbitMQService = module.get<RabbitMQConfigService>(RabbitMQConfigService);
-    taskScanner = module.get<TaskScannerScheduler>(TaskScannerScheduler);
+    taskScheduler = module.get<SimpleIntervalScheduler>(SimpleIntervalScheduler);
     taskRepository = module.get<Repository<WeiboSearchTaskEntity>>(
       getRepositoryToken(WeiboSearchTaskEntity)
     );

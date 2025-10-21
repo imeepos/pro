@@ -37,6 +37,9 @@ export class RabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
     const config: RabbitMQConfig = {
       url: this.configService.get<string>('RABBITMQ_URL') || 'amqp://localhost:5672',
       queue: WEIBO_CRAWL_QUEUE,
+      messageTTL: 30 * 60 * 1000, // 30分钟TTL，任务超时自动进入死信队列
+      enableDLQ: true, // 启用死信队列
+      maxRetries: 3, // 最大重试3次
     };
 
     this.logger.debug('准备建立 RabbitMQ 连接', {
