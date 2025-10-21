@@ -1,4 +1,4 @@
-import 'jest';
+import { beforeAll, afterAll } from '@jest/globals';
 
 // 全局测试配置
 beforeAll(() => {

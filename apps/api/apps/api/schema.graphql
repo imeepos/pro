@@ -406,9 +406,9 @@ input CreateTagInput {
 }
 
 input CreateWeiboSearchTaskInput {
+  crawlInterval: String
   keyword: String!
   startDate: String!
-  crawlInterval: String
 }
 
 type DashboardActivity {
@@ -1454,10 +1454,10 @@ input UpdateUserDto {
 }
 
 input UpdateWeiboSearchTaskInput {
-  keyword: String
-  startDate: String
   crawlInterval: String
   enabled: Boolean
+  keyword: String
+  startDate: String
 }
 
 type User {
@@ -1566,14 +1566,14 @@ type WeiboLoginSession {
 }
 
 type WeiboSearchTask {
+  crawlInterval: String!
+  createdAt: DateTime!
+  enabled: Boolean!
   id: ID!
   keyword: String!
-  enabled: Boolean!
-  crawlInterval: String!
-  startDate: DateTime!
   latestCrawlTime: DateTime
   nextRunAt: DateTime
-  createdAt: DateTime!
+  startDate: DateTime!
   updatedAt: DateTime!
 }
 
@@ -1589,18 +1589,18 @@ type WeiboSearchTaskEdge {
 }
 
 input WeiboSearchTaskFilterInput {
-  keyword: String
   enabled: Boolean
-  page: Int = 1
+  keyword: String
   limit: Int = 10
+  page: Int = 1
   sortBy: String
   sortOrder: String = "DESC"
 }
 
 type WeiboSearchTaskStats {
-  total: Int!
-  enabled: Int!
   disabled: Int!
+  enabled: Int!
+  total: Int!
 }
 
 type WeiboSessionStats {
