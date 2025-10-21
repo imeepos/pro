@@ -190,45 +190,72 @@ export class CrawlQueueConsumer implements OnModuleInit {
       return { isValid: false, error: '消息为空或不是对象' };
     }
 
-    const messageObj = message as Record<string, unknown>;
+    const rawMessage = message as SubTaskMessage;
 
-    if (typeof messageObj.taskId !== 'number') {
+    if (typeof rawMessage.taskId !== 'number') {
       return { isValid: false, error: '缺少有效的taskId字段' };
     }
 
-    if (typeof messageObj.keyword !== 'string') {
-      return { isValid: false, error: '缺少有效的keyword字段' };
+    try {
+      const normalized = this.normalizeMessage(rawMessage);
+      return { isValid: true, data: normalized };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { isValid: false, error: errorMessage };
+    }
+  }
+
+  private normalizeMessage(message: SubTaskMessage): SubTaskMessage {
+    const metadata = { ...(message.metadata ?? {}) };
+    const keywordCandidate = message.keyword ?? metadata.keyword;
+    const keyword = typeof keywordCandidate === 'string' ? keywordCandidate.trim() : '';
+
+    if (!keyword) {
+      throw new Error('缺少有效的keyword字段');
     }
 
-    const subTask = { ...message } as SubTaskMessage;
+    const start = this.parseDate(message.start ?? metadata.startTime);
+    const end = this.parseDate(message.end ?? metadata.endTime);
 
-    // 验证并转换时间字段
-    if (typeof messageObj.start === 'string') {
-      subTask.start = new Date(messageObj.start);
-      if (isNaN(subTask.start.getTime())) {
-        return { isValid: false, error: `无效的开始时间: ${messageObj.start}` };
-      }
+    if (!start || !end) {
+      throw new Error('缺少或存在无效的时间范围');
     }
 
-    if (typeof messageObj.end === 'string') {
-      subTask.end = new Date(messageObj.end);
-      if (isNaN(subTask.end.getTime())) {
-        return { isValid: false, error: `无效的结束时间: ${messageObj.end}` };
-      }
+    if (start >= end) {
+      throw new Error('开始时间必须早于结束时间');
     }
 
-    // 验证时间范围的合理性
-    if (subTask.start >= subTask.end) {
-      return { isValid: false, error: '开始时间必须早于结束时间' };
-    }
-
-    // 验证时间范围不超过合理限制（比如不超过2年）
     const maxTimeRange = 2 * 365 * 24 * 60 * 60 * 1000; // 2年
-    if (subTask.end.getTime() - subTask.start.getTime() > maxTimeRange) {
-      return { isValid: false, error: '时间范围超过最大限制（2年）' };
+    if (end.getTime() - start.getTime() > maxTimeRange) {
+      throw new Error('时间范围超过最大限制（2年）');
     }
 
-    return { isValid: true, data: subTask };
+    return {
+      ...message,
+      metadata,
+      keyword,
+      start,
+      end,
+      isInitialCrawl: message.isInitialCrawl ?? !metadata.startTime,
+      enableAccountRotation: message.enableAccountRotation ?? false,
+    };
+  }
+
+  private parseDate(value?: unknown): Date | null {
+    if (!value) {
+      return null;
+    }
+
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    return null;
   }
 
   private classifyError(error?: string): string {

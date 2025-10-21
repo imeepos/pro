@@ -1,17 +1,8 @@
-query WeiboSearchTasks(
-  $page: Int
-  $limit: Int
-  $status: WeiboSearchTaskStatus
-  $keyword: String
-  $enabled: Boolean
-  $sortBy: String
-  $sortOrder: String
-) {
+query WeiboSearchTasks($page: Int, $limit: Int, $keyword: String, $enabled: Boolean, $sortBy: String, $sortOrder: String) {
   weiboSearchTasks(
     filter: {
       page: $page
       limit: $limit
-      status: $status
       keyword: $keyword
       enabled: $enabled
       sortBy: $sortBy
@@ -22,19 +13,11 @@ query WeiboSearchTasks(
       node {
         id
         keyword
-        status
         enabled
+        crawlInterval
         startDate
-        progress
-        totalSegments
-        enableAccountRotation
-        weiboAccountId
-        maxRetries
-        retryCount
         nextRunAt
         latestCrawlTime
-        currentCrawlTime
-        errorMessage
         createdAt
         updatedAt
       }
@@ -47,19 +30,11 @@ query WeiboSearchTask($id: Int!) {
   weiboSearchTask(id: $id) {
     id
     keyword
-    status
     enabled
+    crawlInterval
     startDate
-    progress
-    totalSegments
-    enableAccountRotation
-    weiboAccountId
-    maxRetries
-    retryCount
     nextRunAt
     latestCrawlTime
-    currentCrawlTime
-    errorMessage
     createdAt
     updatedAt
   }
@@ -69,10 +44,7 @@ query WeiboSearchTaskStats {
   weiboSearchTaskStats {
     total
     enabled
-    running
-    paused
-    completed
-    failed
+    disabled
   }
 }
 
@@ -80,8 +52,8 @@ mutation CreateWeiboSearchTask($input: CreateWeiboSearchTaskInput!) {
   createWeiboSearchTask(input: $input) {
     id
     keyword
-    status
     enabled
+    crawlInterval
     startDate
     createdAt
   }
@@ -91,11 +63,9 @@ mutation UpdateWeiboSearchTask($id: Int!, $input: UpdateWeiboSearchTaskInput!) {
   updateWeiboSearchTask(id: $id, input: $input) {
     id
     keyword
-    status
     enabled
     startDate
-    progress
-    totalSegments
+    crawlInterval
     updatedAt
   }
 }
@@ -103,7 +73,6 @@ mutation UpdateWeiboSearchTask($id: Int!, $input: UpdateWeiboSearchTaskInput!) {
 mutation PauseWeiboSearchTask($id: Int!, $input: PauseWeiboTaskInput) {
   pauseWeiboSearchTask(id: $id, input: $input) {
     id
-    status
     updatedAt
   }
 }
@@ -111,7 +80,6 @@ mutation PauseWeiboSearchTask($id: Int!, $input: PauseWeiboTaskInput) {
 mutation ResumeWeiboSearchTask($id: Int!, $input: ResumeWeiboTaskInput) {
   resumeWeiboSearchTask(id: $id, input: $input) {
     id
-    status
     updatedAt
   }
 }
@@ -119,7 +87,6 @@ mutation ResumeWeiboSearchTask($id: Int!, $input: ResumeWeiboTaskInput) {
 mutation RunWeiboSearchTaskNow($id: Int!, $input: RunWeiboTaskNowInput) {
   runWeiboSearchTaskNow(id: $id, input: $input) {
     id
-    status
     nextRunAt
     updatedAt
   }

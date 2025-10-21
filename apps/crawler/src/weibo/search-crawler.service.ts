@@ -110,13 +110,29 @@ import {
  */
 export interface SubTaskMessage {
   taskId: number;
+  type?: string;
+  metadata?: {
+    startTime?: string | Date;
+    endTime?: string | Date;
+    keyword?: string;
+    [key: string]: unknown;
+  };
+  keyword?: string;
+  start?: Date;
+  end?: Date;
+  isInitialCrawl?: boolean;
+  weiboAccountId?: number;
+  enableAccountRotation?: boolean;
+}
+
+type NormalizedSubTask = SubTaskMessage & {
   keyword: string;
   start: Date;
   end: Date;
   isInitialCrawl: boolean;
-  weiboAccountId?: number;
   enableAccountRotation: boolean;
-}
+  metadata: NonNullable<SubTaskMessage['metadata']>;
+};
 
 export interface CrawlResult {
   success: boolean;
@@ -191,7 +207,16 @@ export class WeiboSearchCrawlerService {
   }
 
   async crawl(message: SubTaskMessage): Promise<CrawlResult> {
-    const { taskId, keyword, start, end, isInitialCrawl, weiboAccountId, enableAccountRotation } = message;
+    const normalizedMessage = this.normalizeSubTask(message);
+    const {
+      taskId,
+      keyword,
+      start,
+      end,
+      isInitialCrawl,
+      weiboAccountId,
+      enableAccountRotation,
+    } = normalizedMessage;
     // 这里要能处理 不同类型的 任务
     const crawlStartTime = Date.now();
 
@@ -339,7 +364,7 @@ export class WeiboSearchCrawlerService {
       };
 
       // 处理任务结果和状态更新
-      await this.handleTaskResult(message, result);
+      await this.handleTaskResult(normalizedMessage, result);
 
       return result;
 
@@ -388,6 +413,45 @@ export class WeiboSearchCrawlerService {
         error: error instanceof Error ? error.message : '未知错误'
       };
     }
+  }
+
+  private normalizeSubTask(message: SubTaskMessage): NormalizedSubTask {
+    const metadata = { ...(message.metadata || {}) };
+    const keywordCandidate = message.keyword ?? metadata.keyword;
+    const keyword = typeof keywordCandidate === 'string' && keywordCandidate.trim().length > 0
+      ? keywordCandidate.trim()
+      : null;
+
+    if (!keyword) {
+      throw new Error(`子任务缺少关键词: ${JSON.stringify(message)}`);
+    }
+
+    const start = this.ensureDate(message.start ?? metadata.startTime) ?? new Date();
+    const end = this.ensureDate(message.end ?? metadata.endTime) ?? new Date();
+
+    const normalized: NormalizedSubTask = {
+      ...message,
+      metadata: metadata as NormalizedSubTask['metadata'],
+      keyword,
+      start,
+      end,
+      isInitialCrawl: message.isInitialCrawl ?? !metadata.startTime,
+      enableAccountRotation: message.enableAccountRotation ?? false,
+    };
+
+    return normalized;
+  }
+
+  private ensureDate(value?: string | Date | null): Date | undefined {
+    if (!value) {
+      return undefined;
+    }
+    if (value instanceof Date) {
+      return value;
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
   }
 
   /**
@@ -674,7 +738,7 @@ export class WeiboSearchCrawlerService {
     await new Promise(resolve => setTimeout(resolve, finalDelay));
   }
 
-  private async handleTaskResult(message: SubTaskMessage, result: CrawlResult): Promise<void> {
+  private async handleTaskResult(message: NormalizedSubTask, result: CrawlResult): Promise<void> {
     const { taskId, keyword, start, end, isInitialCrawl } = message;
 
     if (!result.success) {
@@ -691,7 +755,7 @@ export class WeiboSearchCrawlerService {
     }
   }
 
-  private async handleInitialCrawlResult(message: SubTaskMessage, result: CrawlResult): Promise<void> {
+  private async handleInitialCrawlResult(message: NormalizedSubTask, result: CrawlResult): Promise<void> {
     const { taskId, start } = message;
 
     if (result.pageCount === 50 && result.lastPostTime) {
@@ -727,7 +791,7 @@ export class WeiboSearchCrawlerService {
     }
   }
 
-  private async handleIncrementalCrawlResult(message: SubTaskMessage, result: CrawlResult): Promise<void> {
+  private async handleIncrementalCrawlResult(message: NormalizedSubTask, result: CrawlResult): Promise<void> {
     const { taskId } = message;
 
     // 增量抓取完成，更新 latestCrawlTime 和下次执行时间
@@ -749,8 +813,16 @@ export class WeiboSearchCrawlerService {
     end: Date,
     isInitialCrawl: boolean
   ): Promise<void> {
+    const metadata = {
+      keyword,
+      startTime: start.toISOString(),
+      endTime: end.toISOString(),
+    };
+
     const nextTask: SubTaskMessage = {
       taskId,
+      type: 'KEYWORD_SEARCH',
+      metadata,
       keyword,
       start,
       end,
@@ -971,12 +1043,13 @@ export class WeiboSearchCrawlerService {
    */
   async multiModeCrawl(message: EnhancedSubTaskMessage): Promise<MultiModeCrawlResult> {
     const startTime = Date.now();
-    const traceContext = TraceGenerator.createTraceContext(message.taskId, message.keyword);
+    const normalizedMessage = this.normalizeSubTask(message);
+    const traceContext = TraceGenerator.createTraceContext(normalizedMessage.taskId, normalizedMessage.keyword);
 
     this.logger.log('🎭 开始多模式爬取任务', {
       traceId: traceContext.traceId,
-      taskId: message.taskId,
-      keyword: message.keyword,
+      taskId: normalizedMessage.taskId,
+      keyword: normalizedMessage.keyword,
       searchType: message.searchType || WeiboSearchType.DEFAULT,
       crawlModes: message.crawlModes || [WeiboCrawlMode.SEARCH],
       enableDetailCrawl: message.enableDetailCrawl,
@@ -997,7 +1070,7 @@ export class WeiboSearchCrawlerService {
           traceId: traceContext.traceId
         });
 
-        const searchResult = await this.crawl(message as SubTaskMessage);
+        const searchResult = await this.crawl(normalizedMessage);
         result.searchResult = searchResult;
 
         // 更新基础指标
@@ -1008,7 +1081,7 @@ export class WeiboSearchCrawlerService {
 
       // 2. 执行详情爬取
       if (this.shouldExecuteMode(WeiboCrawlMode.DETAIL, message.crawlModes) || message.enableDetailCrawl) {
-        const noteIds = await this.extractNoteIdsFromSearchResult(message.taskId);
+        const noteIds = await this.extractNoteIdsFromSearchResult(normalizedMessage.taskId);
 
         if (noteIds.length > 0) {
           this.logger.debug('📄 执行详情模式爬取', {
@@ -1016,7 +1089,7 @@ export class WeiboSearchCrawlerService {
             noteIdsCount: noteIds.length
           });
 
-          const detailResults = await this.executeDetailCrawl(noteIds, traceContext, message.weiboAccountId);
+          const detailResults = await this.executeDetailCrawl(noteIds, traceContext, normalizedMessage.weiboAccountId);
           result.noteDetails = detailResults;
           result.crawlMetrics.detailsCrawled = detailResults.filter(d => d !== null).length;
         }
@@ -1032,7 +1105,7 @@ export class WeiboSearchCrawlerService {
             creatorIdsCount: creatorIds.length
           });
 
-          const creatorResults = await this.executeCreatorCrawl(creatorIds, traceContext, message.weiboAccountId);
+          const creatorResults = await this.executeCreatorCrawl(creatorIds, traceContext, normalizedMessage.weiboAccountId);
           result.creatorDetails = creatorResults;
           result.crawlMetrics.creatorsCrawled = creatorResults.filter(c => c !== null).length;
         }
@@ -1053,7 +1126,7 @@ export class WeiboSearchCrawlerService {
             noteIdsForComments,
             message.maxCommentDepth || 3,
             traceContext,
-            message.weiboAccountId
+            normalizedMessage.weiboAccountId
           );
           result.comments = commentResults;
           result.crawlMetrics.commentsCrawled = commentResults.length;
@@ -1083,8 +1156,8 @@ export class WeiboSearchCrawlerService {
       const totalDuration = Date.now() - startTime;
       this.logger.log('🎉 多模式爬取任务完成', {
         traceId: traceContext.traceId,
-        taskId: message.taskId,
-        keyword: message.keyword,
+        taskId: normalizedMessage.taskId,
+        keyword: normalizedMessage.keyword,
         duration: totalDuration,
         durationFormatted: this.formatDuration(totalDuration),
         metrics: result.crawlMetrics,
@@ -1100,8 +1173,8 @@ export class WeiboSearchCrawlerService {
 
       this.logger.error('💥 多模式爬取任务失败', {
         traceId: traceContext.traceId,
-        taskId: message.taskId,
-        keyword: message.keyword,
+        taskId: normalizedMessage.taskId,
+        keyword: normalizedMessage.keyword,
         duration: totalDuration,
         error: error instanceof Error ? error.message : '未知错误',
         errorType: this.classifyMultiModeError(error),
