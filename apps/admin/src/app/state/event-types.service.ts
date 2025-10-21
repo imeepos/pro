@@ -3,74 +3,14 @@ import { Observable, from, tap, catchError, throwError, finalize, map } from 'rx
 import { EventTypesStore } from './event-types.store';
 import { EventTypesQuery } from './event-types.query';
 import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
-import { graphql } from '../core/graphql/generated';
+import {
+  EventTypesDocument,
+  EventTypeDocument,
+  CreateEventTypeDocument,
+  UpdateEventTypeDocument,
+  RemoveEventTypeDocument
+} from '../core/graphql/generated/graphql';
 import { EventType as DomainEventType } from '@pro/sdk';
-
-const EventTypesDocument = graphql(`
-  query EventTypes {
-    eventTypes {
-      id
-      eventName
-      eventCode
-      description
-      sortOrder
-      status
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const EventTypeDocument = graphql(`
-  query EventType($id: ID!) {
-    eventType(id: $id) {
-      id
-      eventName
-      eventCode
-      description
-      sortOrder
-      status
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const CreateEventTypeDocument = graphql(`
-  mutation CreateEventType($input: CreateEventTypeInput!) {
-    createEventType(input: $input) {
-      id
-      eventName
-      eventCode
-      description
-      sortOrder
-      status
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const UpdateEventTypeDocument = graphql(`
-  mutation UpdateEventType($id: ID!, $input: UpdateEventTypeInput!) {
-    updateEventType(id: $id, input: $input) {
-      id
-      eventName
-      eventCode
-      description
-      sortOrder
-      status
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const RemoveEventTypeDocument = graphql(`
-  mutation RemoveEventType($id: ID!) {
-    removeEventType(id: $id)
-  }
-`);
 
 @Injectable({ providedIn: 'root' })
 export class EventTypesService {

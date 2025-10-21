@@ -1,0 +1,40 @@
+query WeiboAccounts($filter: WeiboAccountFilterInput) {
+  weiboAccounts(filter: $filter) {
+    edges {
+      node {
+        id
+        uid
+        nickname
+        avatar
+        status
+        lastCheckAt
+        createdAt
+        updatedAt
+      }
+    }
+    totalCount
+  }
+}
+
+mutation RemoveWeiboAccount($id: Int!) {
+  removeWeiboAccount(id: $id)
+}
+
+mutation CheckWeiboAccount($id: Int!) {
+  checkWeiboAccount(id: $id)
+}
+
+mutation StartWeiboLogin {
+  startWeiboLogin {
+    sessionId
+    expiresAt
+    expired
+  }
+}
+
+subscription WeiboLoginEvents($sessionId: String!) {
+  weiboLoginEvents(sessionId: $sessionId) {
+    type
+    data
+  }
+}

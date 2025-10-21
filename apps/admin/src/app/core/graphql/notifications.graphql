@@ -1,0 +1,9 @@
+subscription NotificationReceived {
+  notificationReceived {
+    id
+    title
+    message
+    timestamp
+    userId
+  }
+}

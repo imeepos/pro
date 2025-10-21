@@ -3,7 +3,10 @@ import { Observable } from 'rxjs';
 import { print } from 'graphql';
 import { GraphqlGateway } from '../graphql/graphql-gateway.service';
 import { SubscriptionClient } from '../graphql/subscription-client.service';
-import { StartJdLoginMutation, JdLoginEventsSubscription } from '../graphql/jd-account.documents';
+import {
+  StartJdLoginDocument,
+  JdLoginEventsDocument
+} from '../graphql/generated/graphql';
 
 export interface JdLoginSession {
   sessionId: string;
@@ -26,7 +29,7 @@ export class JdLoginService {
   ) {}
 
   async startLogin(): Promise<JdLoginSession> {
-    const response = await this.graphql.request(StartJdLoginMutation, {});
+    const response = await this.graphql.request(StartJdLoginDocument, {});
     return response.startJdLogin;
   }
 
@@ -36,7 +39,7 @@ export class JdLoginService {
 
       const unsubscribe = client.subscribe(
         {
-          query: print(JdLoginEventsSubscription),
+          query: print(JdLoginEventsDocument),
           variables: { sessionId }
         },
         {

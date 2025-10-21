@@ -158,7 +158,7 @@ mutation UpdateScreen($id: ID!, $input: UpdateScreenInput!) {
       config
       dataSource {
         type
-        url
+          url
         data
         refreshInterval
       }
@@ -200,5 +200,13 @@ mutation SetDefaultScreen($id: ID!) {
   setDefaultScreen(id: $id) {
     id
     isDefault
+  }
+}
+
+subscription WeiboLoggedInUsersUpdate {
+  weiboLoggedInUsersUpdate {
+    total
+    todayNew
+    online
   }
 }

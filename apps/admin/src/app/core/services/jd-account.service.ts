@@ -3,10 +3,10 @@ import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { GraphqlGateway } from '../graphql/graphql-gateway.service';
 import {
-  JdAccountsQuery,
-  RemoveJdAccountMutation,
-  CheckJdAccountMutation
-} from '../graphql/jd-account.documents';
+  JdAccountsDocument,
+  RemoveJdAccountDocument,
+  CheckJdAccountDocument
+} from '../graphql/generated/graphql';
 
 export interface JdAccount {
   id: number;
@@ -35,7 +35,7 @@ export class JdAccountService {
   constructor(private readonly graphql: GraphqlGateway) {}
 
   getAccounts(): Observable<{ accounts: JdAccount[] }> {
-    return from(this.graphql.request(JdAccountsQuery, {})).pipe(
+    return from(this.graphql.request(JdAccountsDocument, {})).pipe(
       map(response => ({
         accounts: response.jdAccounts.edges.map(edge => ({
           id: edge.node.id,
@@ -52,13 +52,13 @@ export class JdAccountService {
 
   deleteAccount(accountId: number): Promise<boolean> {
     return this.graphql
-      .request(RemoveJdAccountMutation, { id: accountId })
+      .request(RemoveJdAccountDocument, { id: accountId })
       .then(response => response.removeJdAccount);
   }
 
   checkAccount(accountId: number): Promise<JdAccountCheckResult> {
     return this.graphql
-      .request(CheckJdAccountMutation, { id: accountId })
+      .request(CheckJdAccountDocument, { id: accountId })
       .then(response => response.checkJdAccount as JdAccountCheckResult);
   }
 }

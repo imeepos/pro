@@ -3,10 +3,10 @@ import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { GraphqlGateway } from '../graphql/graphql-gateway.service';
 import {
-  WeiboAccountsQuery,
-  RemoveWeiboAccountMutation,
-  CheckWeiboAccountMutation
-} from '../graphql/weibo-account.documents';
+  WeiboAccountsDocument,
+  RemoveWeiboAccountDocument,
+  CheckWeiboAccountDocument
+} from '../graphql/generated/graphql';
 
 export interface WeiboAccount {
   id: string;
@@ -26,7 +26,7 @@ export class WeiboAccountService {
   constructor(private readonly graphql: GraphqlGateway) {}
 
   getAccounts(): Observable<{ accounts: WeiboAccount[] }> {
-    return from(this.graphql.request(WeiboAccountsQuery, {})).pipe(
+    return from(this.graphql.request(WeiboAccountsDocument, {})).pipe(
       map(response => ({
         accounts: response.weiboAccounts.edges.map(edge => ({
           id: edge.node.id,
@@ -44,13 +44,13 @@ export class WeiboAccountService {
 
   deleteAccount(accountId: number): Promise<boolean> {
     return this.graphql
-      .request(RemoveWeiboAccountMutation, { id: accountId })
+      .request(RemoveWeiboAccountDocument, { id: accountId })
       .then(response => response.removeWeiboAccount);
   }
 
   checkAccount(accountId: number): Promise<boolean> {
     return this.graphql
-      .request(CheckWeiboAccountMutation, { id: accountId })
+      .request(CheckWeiboAccountDocument, { id: accountId })
       .then(response => response.checkWeiboAccount);
   }
 }

@@ -3,7 +3,10 @@ import { Observable } from 'rxjs';
 import { print } from 'graphql';
 import { GraphqlGateway } from '../graphql/graphql-gateway.service';
 import { SubscriptionClient } from '../graphql/subscription-client.service';
-import { StartWeiboLoginMutation, WeiboLoginEventsSubscription } from '../graphql/weibo-account.documents';
+import {
+  StartWeiboLoginDocument,
+  WeiboLoginEventsDocument
+} from '../graphql/generated/graphql';
 
 export interface WeiboLoginSession {
   sessionId: string;
@@ -26,7 +29,7 @@ export class WeiboLoginService {
   ) {}
 
   async startLogin(): Promise<WeiboLoginSession> {
-    const response = await this.graphql.request(StartWeiboLoginMutation, {});
+    const response = await this.graphql.request(StartWeiboLoginDocument, {});
     return response.startWeiboLogin;
   }
 
@@ -36,7 +39,7 @@ export class WeiboLoginService {
 
       const unsubscribe = client.subscribe(
         {
-          query: print(WeiboLoginEventsSubscription),
+          query: print(WeiboLoginEventsDocument),
           variables: { sessionId }
         },
         {

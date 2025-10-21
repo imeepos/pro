@@ -1,0 +1,47 @@
+query JdAccounts($filter: JdAccountFilterInput) {
+  jdAccounts(filter: $filter) {
+    edges {
+      node {
+        id
+        jdUid
+        jdNickname
+        jdAvatar
+        status
+        lastCheckAt
+        createdAt
+      }
+    }
+    totalCount
+  }
+}
+
+mutation RemoveJdAccount($id: Int!) {
+  removeJdAccount(id: $id)
+}
+
+mutation CheckJdAccount($id: Int!) {
+  checkJdAccount(id: $id) {
+    accountId
+    jdUid
+    oldStatus
+    newStatus
+    statusChanged
+    message
+    checkedAt
+  }
+}
+
+mutation StartJdLogin {
+  startJdLogin {
+    sessionId
+    expiresAt
+    expired
+  }
+}
+
+subscription JdLoginEvents($sessionId: String!) {
+  jdLoginEvents(sessionId: $sessionId) {
+    type
+    data
+  }
+}

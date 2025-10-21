@@ -4,232 +4,19 @@ import { ScreensStore } from './screens.store';
 import { ScreensQuery } from './screens.query';
 import { ScreenPage, CreateScreenDto, UpdateScreenDto } from '@pro/sdk';
 import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
-import { graphql } from '../core/graphql/generated';
+import {
+  ScreensDocument,
+  ScreenDocument,
+  CreateScreenDocument,
+  UpdateScreenDocument,
+  RemoveScreenDocument,
+  CopyScreenDocument,
+  PublishScreenDocument,
+  DraftScreenDocument,
+  SetDefaultScreenDocument,
+  ScreenComponentDataSourceType
+} from '../core/graphql/generated/graphql';
 import { mapScreenToScreenPage } from '../core/utils/screen-mapper';
-import type { ScreenComponentDataSourceType } from '../core/graphql/generated/graphql';
-
-const ScreensQueryDoc = graphql(`
-  query Screens($page: Int, $limit: Int) {
-    screens(page: $page, limit: $limit) {
-      edges {
-        node {
-          id
-          name
-          description
-          layout {
-            width
-            height
-            background
-            cols
-            rows
-            grid {
-              size
-              enabled
-            }
-          }
-          components {
-            id
-            type
-            position {
-              x
-              y
-              width
-              height
-              zIndex
-            }
-            config
-            dataSource {
-              type
-              url
-              data
-              refreshInterval
-            }
-          }
-          status
-          isDefault
-          createdBy
-          createdAt
-          updatedAt
-        }
-      }
-      totalCount
-    }
-  }
-`);
-
-const ScreenQueryDoc = graphql(`
-  query Screen($id: ID!) {
-    screen(id: $id) {
-      id
-      name
-      description
-      layout {
-        width
-        height
-        background
-        cols
-        rows
-        grid {
-          size
-          enabled
-        }
-      }
-      components {
-        id
-        type
-        position {
-          x
-          y
-          width
-          height
-          zIndex
-        }
-        config
-        dataSource {
-          type
-          url
-          data
-          refreshInterval
-        }
-      }
-      status
-      isDefault
-      createdBy
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const CreateScreenMutation = graphql(`
-  mutation CreateScreen($input: CreateScreenInput!) {
-    createScreen(input: $input) {
-      id
-      name
-      description
-      layout {
-        width
-        height
-        background
-        cols
-        rows
-        grid {
-          size
-          enabled
-        }
-      }
-      components {
-        id
-        type
-        position {
-          x
-          y
-          width
-          height
-          zIndex
-        }
-        config
-        dataSource {
-          type
-          url
-          data
-          refreshInterval
-        }
-      }
-      status
-      isDefault
-      createdBy
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const UpdateScreenMutation = graphql(`
-  mutation UpdateScreen($id: ID!, $input: UpdateScreenInput!) {
-    updateScreen(id: $id, input: $input) {
-      id
-      name
-      description
-      layout {
-        width
-        height
-        background
-        cols
-        rows
-        grid {
-          size
-          enabled
-        }
-      }
-      components {
-        id
-        type
-        position {
-          x
-          y
-          width
-          height
-          zIndex
-        }
-        config
-        dataSource {
-          type
-          url
-          data
-          refreshInterval
-        }
-      }
-      status
-      isDefault
-      createdBy
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const RemoveScreenMutation = graphql(`
-  mutation RemoveScreen($id: ID!) {
-    removeScreen(id: $id)
-  }
-`);
-
-const CopyScreenMutation = graphql(`
-  mutation CopyScreen($id: ID!) {
-    copyScreen(id: $id) {
-      id
-      name
-    }
-  }
-`);
-
-const PublishScreenMutation = graphql(`
-  mutation PublishScreen($id: ID!) {
-    publishScreen(id: $id) {
-      id
-      status
-    }
-  }
-`);
-
-const DraftScreenMutation = graphql(`
-  mutation DraftScreen($id: ID!) {
-    draftScreen(id: $id) {
-      id
-      status
-    }
-  }
-`);
-
-const SetDefaultScreenMutation = graphql(`
-  mutation SetDefaultScreen($id: ID!) {
-    setDefaultScreen(id: $id) {
-      id
-      isDefault
-    }
-  }
-`);
 
 @Injectable({ providedIn: 'root' })
 export class ScreensService {
@@ -244,7 +31,7 @@ export class ScreensService {
     this.setError(null);
 
     return from(
-      this.graphql.request(ScreensQueryDoc, { page, limit })
+      this.graphql.request(ScreensDocument, { page, limit })
     ).pipe(
       tap(response => {
         const screens = response.screens.edges.map(edge =>
@@ -298,7 +85,7 @@ export class ScreensService {
     };
 
     return from(
-      this.graphql.request(CreateScreenMutation, { input })
+      this.graphql.request(CreateScreenDocument, { input })
     ).pipe(
       map(response => mapScreenToScreenPage(response.createScreen)),
       tap(screen => {
@@ -343,7 +130,7 @@ export class ScreensService {
     };
 
     return from(
-      this.graphql.request(UpdateScreenMutation, { id, input })
+      this.graphql.request(UpdateScreenDocument, { id, input })
     ).pipe(
       map(response => mapScreenToScreenPage(response.updateScreen)),
       tap(screen => {
@@ -362,7 +149,7 @@ export class ScreensService {
     this.setError(null);
 
     return from(
-      this.graphql.request(RemoveScreenMutation, { id })
+      this.graphql.request(RemoveScreenDocument, { id })
     ).pipe(
       tap(() => {
         this.store.remove(id);
@@ -381,7 +168,7 @@ export class ScreensService {
     this.setError(null);
 
     return from(
-      this.graphql.request(CopyScreenMutation, { id })
+      this.graphql.request(CopyScreenDocument, { id })
     ).pipe(
       switchMap(response => this.loadScreen(response.copyScreen.id)),
       catchError(error => {
@@ -397,7 +184,7 @@ export class ScreensService {
     this.setError(null);
 
     return from(
-      this.graphql.request(PublishScreenMutation, { id })
+      this.graphql.request(PublishScreenDocument, { id })
     ).pipe(
       tap(response => {
         this.store.update(id, {
@@ -421,7 +208,7 @@ export class ScreensService {
     this.setError(null);
 
     return from(
-      this.graphql.request(DraftScreenMutation, { id })
+      this.graphql.request(DraftScreenDocument, { id })
     ).pipe(
       tap(response => {
         this.store.update(id, {
@@ -445,7 +232,7 @@ export class ScreensService {
     this.setError(null);
 
     return from(
-      this.graphql.request(ScreenQueryDoc, { id })
+      this.graphql.request(ScreenDocument, { id })
     ).pipe(
       map(response => mapScreenToScreenPage(response.screen)),
       tap(screen => {
@@ -464,7 +251,7 @@ export class ScreensService {
     this.setError(null);
 
     return from(
-      this.graphql.request(SetDefaultScreenMutation, { id })
+      this.graphql.request(SetDefaultScreenDocument, { id })
     ).pipe(
       tap(() => {
         const screens = this.query.getAll();

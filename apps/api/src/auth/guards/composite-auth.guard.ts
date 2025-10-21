@@ -20,6 +20,11 @@ export class CompositeAuthGuard extends AuthGuard('jwt') {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = resolveRequest(context);
 
+    if (request.user) {
+      this.logger.debug('检测到已认证用户上下文，跳过重复认证');
+      return true;
+    }
+
     try {
       // 尝试 JWT 认证
       const jwtGuard = new JwtAuthGuard();

@@ -13,7 +13,9 @@ const config: CodegenConfig = {
     'src/app/core/graphql/screen.graphql',
     'src/app/core/graphql/weibo-search-task.graphql',
     'src/app/core/graphql/raw-data.graphql',
-    'src/app/**/*.ts'
+    'src/app/core/graphql/jd-account.graphql',
+    'src/app/core/graphql/weibo-account.graphql',
+    'src/app/core/graphql/notifications.graphql'
   ],
   ignoreNoDocuments: false,
   generates: {

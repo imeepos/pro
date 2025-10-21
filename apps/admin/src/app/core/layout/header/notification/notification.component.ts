@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { print } from 'graphql';
 import { SubscriptionClient } from '../../../graphql/subscription-client.service';
-import { NotificationReceivedSubscription } from '../../../graphql/notifications.documents';
+import { NotificationReceivedDocument } from '../../../graphql/generated/graphql';
 import { TokenStorageService } from '../../../services/token-storage.service';
 
 interface Notification {
@@ -83,7 +83,7 @@ export class NotificationComponent implements OnInit, OnDestroy {
     const client = this.subscriptionClient.getClient();
 
     this.unsubscribe = client.subscribe(
-      { query: print(NotificationReceivedSubscription) },
+      { query: print(NotificationReceivedDocument) },
       {
         next: ({ data }: any) => {
           if (data?.notificationReceived) {
