@@ -406,17 +406,9 @@ input CreateTagInput {
 }
 
 input CreateWeiboSearchTaskInput {
-  crawlInterval: String
-  enableAccountRotation: Boolean
   keyword: String!
-  latitude: Float
-  locationAddress: String
-  locationName: String
-  longitude: Float
-  maxRetries: Int
-  noDataThreshold: Int
   startDate: String!
-  weiboAccountId: Int
+  crawlInterval: String
 }
 
 type DashboardActivity {
@@ -1462,22 +1454,10 @@ input UpdateUserDto {
 }
 
 input UpdateWeiboSearchTaskInput {
-  crawlInterval: String
-  enableAccountRotation: Boolean
-  enabled: Boolean
   keyword: String
-  latitude: Float
-  locationAddress: String
-  locationName: String
-  longitude: Float
-  maxRetries: Int
-  noDataThreshold: Int
-  resetNoDataCount: Boolean
-  resetRetryCount: Boolean
   startDate: String
-  status: WeiboSearchTaskStatus
-  totalSegments: Int
-  weiboAccountId: Int
+  crawlInterval: String
+  enabled: Boolean
 }
 
 type User {
@@ -1586,23 +1566,15 @@ type WeiboLoginSession {
 }
 
 type WeiboSearchTask {
-  createdAt: DateTime!
-  currentCrawlTime: DateTime
-  enableAccountRotation: Boolean!
-  enabled: Boolean!
-  errorMessage: String
   id: ID!
   keyword: String!
-  latestCrawlTime: DateTime
-  maxRetries: Int!
-  nextRunAt: DateTime
-  progress: Int!
-  retryCount: Int!
+  enabled: Boolean!
+  crawlInterval: String!
   startDate: DateTime!
-  status: WeiboSearchTaskStatus!
-  totalSegments: Int!
+  latestCrawlTime: DateTime
+  nextRunAt: DateTime
+  createdAt: DateTime!
   updatedAt: DateTime!
-  weiboAccountId: Int
 }
 
 type WeiboSearchTaskConnection {
@@ -1617,30 +1589,18 @@ type WeiboSearchTaskEdge {
 }
 
 input WeiboSearchTaskFilterInput {
-  enabled: Boolean
   keyword: String
-  limit: Int = 10
+  enabled: Boolean
   page: Int = 1
+  limit: Int = 10
   sortBy: String
   sortOrder: String = "DESC"
-  status: WeiboSearchTaskStatus
 }
 
 type WeiboSearchTaskStats {
-  completed: Int!
-  enabled: Int!
-  failed: Int!
-  paused: Int!
-  running: Int!
   total: Int!
-}
-
-"""微博搜索任务状态"""
-enum WeiboSearchTaskStatus {
-  FAILED
-  PAUSED
-  PENDING
-  RUNNING
+  enabled: Int!
+  disabled: Int!
 }
 
 type WeiboSessionStats {
