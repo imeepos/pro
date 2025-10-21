@@ -313,8 +313,9 @@ export class WeiboSearchCrawlerService {
             currentPage === this.crawlerConfig.maxPages &&
             lastPostTime
           ) {
+            const oneHourMs = 60 * 60 * 1000;
             const gapDurationMs = lastPostTime.getTime() - start.getTime();
-            if (gapDurationMs > 60 * 60 * 1000 && lastPostTime.getTime() > start.getTime()) {
+            if (gapDurationMs > oneHourMs && lastPostTime.getTime() > start.getTime()) {
               try {
                 await this.triggerNextSubTask(
                   taskId,
@@ -331,7 +332,7 @@ export class WeiboSearchCrawlerService {
                   originalRangeStart: start.toISOString(),
                   gapEndTime: lastPostTime.toISOString(),
                   pagesProcessed: currentPage,
-                  gapDurationHours: Math.round((gapDurationMs / (60 * 60 * 1000)) * 100) / 100
+                  gapDurationHours: Math.round((gapDurationMs / oneHourMs) * 100) / 100
                 });
               } catch (gapTaskError) {
                 this.logger.error('⚠️ 发布历史缺口子任务失败', {

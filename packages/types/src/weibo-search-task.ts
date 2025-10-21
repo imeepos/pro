@@ -243,6 +243,7 @@ export interface CrawlResult {
   pageCount: number;
   firstPostTime?: Date;
   lastPostTime?: Date;
+  gapSubTaskScheduled?: boolean;
   error?: string;
 }
 
