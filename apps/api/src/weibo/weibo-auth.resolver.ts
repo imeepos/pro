@@ -1,4 +1,4 @@
-import { ForbiddenException, UseGuards, Inject } from '@nestjs/common';
+import { ForbiddenException, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver, Subscription, ObjectType, Field, Int, Float, Context } from '@nestjs/graphql';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { WeiboAuthService, WeiboLoginEvent } from './weibo-auth.service';
@@ -111,116 +111,58 @@ export class WeiboAuthResolver {
     return mapWeiboLoginSnapshotToModel(snapshot);
   }
 
-  @Subscription(() => WeiboLoginEventModel, {
-    name: 'weiboLoginEvents',
-    resolve: (event: WeiboLoginEventModel) => event,
-  })
+  @Subscription(() => WeiboLoginEventModel, { name: 'weiboLoginEvents' })
   async weiboLoginEvents(
     @CurrentUser('userId') userId: string,
     @Args('sessionId', { type: () => String }) sessionId: string,
     @Context() context: GraphqlContext,
   ): Promise<AsyncIterableIterator<WeiboLoginEventModel>> {
-    this.logger.info('GraphQL 订阅 weiboLoginEvents 被调用', {
-      sessionId,
-      userId,
-      hasContext: !!context,
-      authenticationError: context?.authenticationError,
-      contextError: context?.error,
-    });
-
-    const toErrorEvent = (cause: unknown, code?: string): WeiboLoginEventModel => {
+    const errorEvent = (cause: unknown, code?: string): WeiboLoginEventModel => {
       const rootCause = cause instanceof Error ? cause : new Error('未知的登录事件错误');
       const payload: WeiboLoginEvent = {
         type: 'error',
         data: {
           message: rootCause.message,
-          ...(code && { code })
+          ...(code ? { code } : {}),
         },
       };
       return mapWeiboLoginEventToModel(payload);
     };
+    const fail = (cause: unknown, code?: string) => observableToAsyncIterator(of(errorEvent(cause, code)));
 
-    // 检查是否存在认证错误
     if (context?.authenticationError) {
-      this.logger.warn('WebSocket认证失败，返回认证错误事件', {
-        sessionId,
-        error: context.error
-      });
-
-      return observableToAsyncIterator(of(toErrorEvent(
-        new Error('WebSocket认证失败: ' + (context.error || '未知认证错误')),
-        'AUTHENTICATION_FAILED'
-      )));
+      return fail(new Error(`WebSocket认证失败: ${context.error ?? '未知错误'}`), 'AUTHENTICATION_FAILED');
     }
 
-    // 检查用户是否为 null（认证失败的另一种情况）
     if (!userId) {
-      this.logger.warn('WebSocket用户信息缺失，返回认证错误事件', { sessionId });
-
-      return observableToAsyncIterator(of(toErrorEvent(
-        new Error('WebSocket认证信息缺失'),
-        'MISSING_USER_INFO'
-      )));
+      return fail(new Error('WebSocket认证信息缺失'), 'MISSING_USER_INFO');
     }
-
-    this.logger.debug('通过认证检查，开始处理订阅', { sessionId, userId });
 
     try {
-      this.logger.debug('获取登录会话快照', { sessionId, userId });
       const snapshot = await this.weiboAuthService.getLoginSessionSnapshot(sessionId);
-
-      if (!snapshot) {
-        this.logger.error('登录会话不存在', { sessionId, userId });
-        return observableToAsyncIterator(of(toErrorEvent(
-          new Error('登录会话不存在或已结束'),
-          'SESSION_NOT_FOUND'
-        )));
-      }
-
-      this.logger.debug('验证会话权限', {
-        sessionUserId: snapshot.userId,
-        requestUserId: userId,
-        isExpired: snapshot.isExpired,
-        status: snapshot.status
-      });
 
       if (snapshot.userId !== userId) {
         throw new ForbiddenException('无权访问该登录会话');
       }
 
       if (snapshot.isExpired) {
-        this.logger.warn('登录会话已过期', { sessionId, userId, expiresAt: snapshot.expiresAt });
-        return observableToAsyncIterator(of(toErrorEvent(new ForbiddenException('登录会话已过期，请重新开始'))));
+        return fail(new ForbiddenException('登录会话已过期，请重新开始'));
       }
 
       const historical$ = snapshot.lastEvent ? of(mapWeiboLoginEventToModel(snapshot.lastEvent)) : EMPTY;
-      this.logger.debug('创建历史事件流', { hasLastEvent: !!snapshot.lastEvent });
-
       let live$;
       try {
-        this.logger.debug('创建实时事件流', { sessionId });
         live$ = this.weiboAuthService.observeLoginSession(sessionId).pipe(
-          map((event) => {
-            this.logger.debug('推送实时事件', { sessionId, eventType: event.type });
-            return mapWeiboLoginEventToModel(event);
-          }),
-          catchError((error) => {
-            this.logger.error('登录会话事件流异常', { sessionId, error });
-            return of(toErrorEvent(error));
-          }),
+          map(event => mapWeiboLoginEventToModel(event)),
+          catchError(error => of(errorEvent(error))),
         );
       } catch (error) {
-        this.logger.error('启动登录会话事件流失败', { sessionId, error });
-        return observableToAsyncIterator(of(toErrorEvent(error)));
+        return fail(error);
       }
 
-      const combined$ = concat(historical$, live$);
-
-      this.logger.info('成功创建 GraphQL 订阅事件流', { sessionId, userId });
-      return observableToAsyncIterator(combined$);
+      return observableToAsyncIterator(concat(historical$, live$));
     } catch (error) {
-      this.logger.error('创建登录事件订阅失败', { sessionId, userId, error });
-      return observableToAsyncIterator(of(toErrorEvent(error)));
+      return fail(error);
     }
   }
 

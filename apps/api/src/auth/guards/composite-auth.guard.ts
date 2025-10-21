@@ -2,9 +2,10 @@ import { Injectable, ExecutionContext, Logger, UnauthorizedException } from '@ne
 import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ApiKeyAuthGuard } from './api-key-auth.guard';
-import { resolveRequest } from '../../common/utils/context.utils';
+import { resolveRequest, GraphqlContext } from '../../common/utils/context.utils';
 import { GraphqlWsAuthService } from '../services/graphql-ws-auth.service';
 import { mapConnectionParamsToHeaders } from '../utils/graphql-ws-context.util';
+import { GqlExecutionContext, GqlContextType } from '@nestjs/graphql';
 
 /**
  * 复合认证守卫
@@ -22,7 +23,23 @@ export class CompositeAuthGuard extends AuthGuard('jwt') {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const gqlContext = context.getType<GqlContextType>() === 'graphql'
+      ? GqlExecutionContext.create(context).getContext<GraphqlContext>()
+      : undefined;
+
+    if (gqlContext?.authenticationError) {
+      this.logger.debug('检测到认证失败上下文，交由 resolver 输出错误事件');
+      return true;
+    }
+
     const request = resolveRequest(context);
+
+    this.logger.debug('处理认证请求', {
+      type: context.getType(),
+      hasUser: Boolean(request?.user),
+      hasConnectionParams: Boolean((request as any)?.connectionParams),
+      hasAuthorizationHeader: Boolean(request?.headers?.authorization),
+    });
 
     await this.tryRestoreWebsocketContext(request);
 
@@ -88,7 +105,10 @@ export class CompositeAuthGuard extends AuthGuard('jwt') {
       request.user = user;
       const headersFromParams = mapConnectionParamsToHeaders(request.connectionParams);
       request.headers = this.mergeHeaders(request.headers ?? {}, headersFromParams) as any;
-      this.logger.debug('通过 WebSocket 连接参数恢复认证上下文');
+      this.logger.debug('通过 WebSocket 连接参数恢复认证上下文', {
+        hasAuthorizationHeader: Boolean(request.headers?.authorization),
+        hasApiKeyHeader: Boolean(request.headers?.['x-api-key']),
+      });
     } catch (error) {
       this.logger.debug('WebSocket 连接参数未通过认证校验');
     }

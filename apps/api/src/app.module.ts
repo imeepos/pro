@@ -6,7 +6,6 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { MongooseModule } from '@nestjs/mongoose';
 import { join } from 'path';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
-import { PinoLogger } from '@pro/logger';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { HealthResolver } from './health.resolver';
 import { AuthModule } from './auth/auth.module';
@@ -66,13 +65,8 @@ import { TagLoader } from './events/tag.loader';
         tagLoader: TagLoader,
         wsAuthService: GraphqlWsAuthService,
       ): ApolloDriverConfig => {
-        const isProduction = configService.get<string>('NODE_ENV') === 'production');
+        const isProduction = configService.get<string>('NODE_ENV') === 'production';
 
-        // 创建 logger 实例用于日志记录
-        const logger = new PinoLogger();
-        logger.setContext('GraphQLModule');
-
-        // 创建 WebSocket 上下文处理器
         const wsContextCreator = new GraphqlWsContextCreator(
           wsAuthService,
           userLoader,
@@ -91,36 +85,17 @@ import { TagLoader } from './events/tag.loader';
           subscriptions: {
             'graphql-ws': {
               onConnect: async (context: any) => {
-                logger.info('WebSocket 连接尝试', {
-                  connectionParams: context.connectionParams,
-                  socketId: context.socket?.id,
-                });
-
                 try {
-                  logger.debug('开始创建 WebSocket 认证上下文');
                   const connectionContext = await wsContextCreator.createConnectionContext(
                     context.connectionParams,
                     context.socket,
                     context,
                   );
-
-                  logger.info('WebSocket 认证成功', {
-                    userId: connectionContext.req?.user?.userId,
-                    socketId: context.socket?.id,
-                  });
-
                   // 返回包含上下文的对象，符合 graphql-ws 的类型要求
                   return {
                     context: connectionContext,
                   };
                 } catch (error) {
-                  logger.error('WebSocket 连接认证失败', {
-                    error: error.message,
-                    stack: error.stack,
-                    connectionParams: context.connectionParams,
-                    socketId: context.socket?.id,
-                  });
-
                   // 不抛出异常，而是返回一个包含错误信息的上下文
                   // 让订阅能够建立，但在 resolver 中处理认证错误
                   return {
