@@ -308,12 +308,11 @@ export class WeiboSearchTaskService {
       throw new NotFoundException('关联的微博搜索任务不存在');
     }
 
-    const subTask = this.subTaskRepo.create({
-      taskId,
-      metadata: payload.metadata ?? {},
-      type: payload.type ?? 'KEYWORD_SEARCH',
-      status: payload.status ?? 'PENDING',
-    });
+    const subTask = new WeiboSubTaskEntity();
+    subTask.taskId = taskId;
+    subTask.metadata = payload.metadata ?? {};
+    subTask.type = payload.type ?? 'KEYWORD_SEARCH';
+    subTask.status = payload.status ?? 'PENDING';
 
     return this.subTaskRepo.save(subTask);
   }
