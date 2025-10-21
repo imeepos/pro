@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { GraphqlWsAuthService } from '../services/graphql-ws-auth.service';
 import { AugmentedRequest, GraphqlContext } from '../../common/utils/context.utils';
 import { GraphqlLoaders } from '../../common/dataloaders/types';
@@ -6,6 +7,9 @@ import { ApiKeyLoader } from '../api-key.loader';
 import { EventTypeLoader } from '../../events/event-type.loader';
 import { IndustryTypeLoader } from '../../events/industry-type.loader';
 import { TagLoader } from '../../events/tag.loader';
+import { ConnectionGatekeeper } from '../services/connection-gatekeeper.service';
+
+const GATEKEEPER_LEASE_TOKEN = Symbol('graphqlWsLease');
 
 export const mapConnectionParamsToHeaders = (connectionParams: Record<string, unknown> | undefined) => {
   const headers: Record<string, string> = {};
@@ -58,6 +62,7 @@ export class GraphqlWsContextCreator {
     private readonly eventTypeLoader: EventTypeLoader,
     private readonly industryTypeLoader: IndustryTypeLoader,
     private readonly tagLoader: TagLoader,
+    private readonly connectionGatekeeper: ConnectionGatekeeper,
   ) {}
 
   /**
@@ -68,10 +73,20 @@ export class GraphqlWsContextCreator {
     websocket: any,
     context: any,
   ): Promise<GraphqlContext> {
+    const clientIp = this.resolveClientIp(websocket, context);
+    this.connectionGatekeeper.assertHandshakeAllowed(clientIp, 'graphql');
+
     try {
       // 认证连接，会抛出具体错误信息
       const user = await this.wsAuthService.authenticateConnection(connectionParams);
       const headers = mapConnectionParamsToHeaders(connectionParams);
+      const connectionId = this.ensureConnectionId(websocket);
+      const release = this.connectionGatekeeper.openLease(connectionId, {
+        ip: clientIp,
+        userId: user?.userId,
+        namespace: 'graphql',
+      });
+      this.attachReleaseHook(websocket, release);
 
       // 创建增强的请求对象
       const request: AugmentedRequest = {
@@ -97,9 +112,56 @@ export class GraphqlWsContextCreator {
         } satisfies GraphqlLoaders,
       };
     } catch (error) {
+      this.connectionGatekeeper.recordHandshakeFailure(clientIp, 'graphql');
       // 重新抛出认证错误，让上层处理
       throw error;
     }
   }
 
+  private resolveClientIp(websocket: any, context: any): string | undefined {
+    const forwarded = context?.connectionParams?.['x-forwarded-for'];
+    if (typeof forwarded === 'string') {
+      return forwarded.split(',')[0]?.trim();
+    }
+
+    const requestIp = context?.extra?.request?.headers?.['x-forwarded-for'];
+    if (typeof requestIp === 'string') {
+      return requestIp.split(',')[0]?.trim();
+    }
+
+    const socketAddress =
+      context?.extra?.socket?.remoteAddress ??
+      websocket?.socket?.remoteAddress ??
+      websocket?._socket?.remoteAddress;
+
+    return socketAddress ?? undefined;
+  }
+
+  private ensureConnectionId(websocket: any): string {
+    if (websocket?.[GATEKEEPER_LEASE_TOKEN]?.connectionId) {
+      return websocket[GATEKEEPER_LEASE_TOKEN].connectionId;
+    }
+
+    const connectionId = randomUUID();
+
+    if (!websocket[GATEKEEPER_LEASE_TOKEN]) {
+      websocket[GATEKEEPER_LEASE_TOKEN] = {};
+    }
+
+    websocket[GATEKEEPER_LEASE_TOKEN].connectionId = connectionId;
+    return connectionId;
+  }
+
+  private attachReleaseHook(websocket: any, release: () => void): void {
+    const container = websocket[GATEKEEPER_LEASE_TOKEN] ?? {};
+
+    if (!container.releaseAttached) {
+      websocket.once?.('close', release);
+      websocket.once?.('error', release);
+      container.releaseAttached = true;
+    }
+
+    container.release = release;
+    websocket[GATEKEEPER_LEASE_TOKEN] = container;
+  }
 }

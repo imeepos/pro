@@ -6,12 +6,13 @@ import {
   OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Injectable, UnauthorizedException, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef, TooManyRequestsException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { LoggedInUsersStats } from '@pro/types';
 import { WeiboAccountService } from '../weibo/weibo-account.service';
 import { PubSubService } from '../common/pubsub/pubsub.service';
 import { SUBSCRIPTION_EVENTS } from './constants/subscription-events';
+import { ConnectionGatekeeper } from '../auth/services/connection-gatekeeper.service';
 
 /**
  * 大屏系统 WebSocket Gateway

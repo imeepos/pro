@@ -65,9 +65,11 @@ export class WeiboLoginComponent implements OnDestroy {
 
   private handleLoginEvent(event: WeiboLoginEvent): void {
     this.ngZone.run(() => {
-      switch (event.type) {
+      const type = (event.type ?? '').toLowerCase();
+
+      switch (type) {
         case 'qrcode':
-          this.qrcodeUrl = event.data.image;
+          this.qrcodeUrl = event.data?.image ?? '';
           this.status = '请使用微博扫描二维码';
           break;
 
@@ -88,7 +90,7 @@ export class WeiboLoginComponent implements OnDestroy {
           break;
 
         case 'error':
-          this.status = `错误: ${event.data.message}`;
+          this.status = `错误: ${event.data?.message ?? '发生未知错误'}`;
           this.isLoading = false;
           break;
       }
