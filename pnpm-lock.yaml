@@ -2104,6 +2104,37 @@ importers:
         specifier: ~5.8.0
         version: 5.8.3
 
+  packages/weibo:
+    dependencies:
+      '@nestjs/axios':
+        specifier: ^4.0.1
+        version: 4.0.1(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(axios@1.7.9)(rxjs@7.8.1)
+      '@nestjs/common':
+        specifier: ^11.0.13
+        version: 11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      axios:
+        specifier: 1.7.9
+        version: 1.7.9
+      rxjs:
+        specifier: 7.8.1
+        version: 7.8.1
+    devDependencies:
+      '@pro/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@pro/prettier-config':
+        specifier: workspace:*
+        version: link:../prettier-config
+      '@types/node':
+        specifier: ^20.3.1
+        version: 20.19.23
+      tsup:
+        specifier: ^8.5.0
+        version: 8.5.0(@swc/core@1.13.5)(jiti@2.6.1)(postcss@8.5.6)(typescript@5.8.3)(yaml@2.8.1)
+      typescript:
+        specifier: ~5.8.0
+        version: 5.8.3
+
 packages:
 
   '@adobe/css-tools@4.4.4':

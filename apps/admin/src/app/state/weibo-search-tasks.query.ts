@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
 import { Query } from '@datorama/akita';
-import { WeiboSearchTasksStore, WeiboSearchTasksState } from './weibo-search-tasks.store';
-import { WeiboSearchTask, WeiboSearchTaskFilters, WeiboSearchTaskStatus } from '@pro/types';
 import { Observable } from 'rxjs';
+
+import { WeiboSearchTask, WeiboSearchTaskFilters } from '@pro/types';
+
+import { WeiboSearchTasksState, WeiboSearchTasksStore } from './weibo-search-tasks.store';
 
 @Injectable({ providedIn: 'root' })
 export class WeiboSearchTasksQuery extends Query<WeiboSearchTasksState> {
@@ -14,27 +16,39 @@ export class WeiboSearchTasksQuery extends Query<WeiboSearchTasksState> {
     page: 1,
     limit: 20,
     sortBy: 'createdAt',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
   });
   total$: Observable<number> = this.select(state => state?.total || 0);
   page$: Observable<number> = this.select(state => state?.page || 1);
   limit$: Observable<number> = this.select(state => state?.limit || 20);
   totalPages$: Observable<number> = this.select(state => state?.totalPages || 0);
 
-  // 过滤后的任务列表
-  filteredTasks$: Observable<WeiboSearchTask[]> = this.select(state => state?.tasks || []);
-
   // 任务统计
   taskStats$ = this.select(state => {
     const tasks = state?.tasks || [];
+    const enabledTasks = tasks.filter(task => task.enabled);
+    const now = Date.now();
+    const toTimestamp = (value?: Date): number | undefined => {
+      if (!value) return undefined;
+      return value instanceof Date ? value.getTime() : new Date(value).getTime();
+    };
+
+    const dueTasks = enabledTasks.filter(task => {
+      const nextRun = toTimestamp(task.nextRunAt);
+      return !nextRun || nextRun <= now;
+    });
+
+    const upcomingTasks = enabledTasks.filter(task => {
+      const nextRun = toTimestamp(task.nextRunAt);
+      return !!nextRun && nextRun > now;
+    });
+
     return {
       total: tasks.length,
-      enabled: tasks.filter(t => t.enabled).length,
-      disabled: tasks.filter(t => !t.enabled).length,
-      running: tasks.filter(t => t.status === WeiboSearchTaskStatus.RUNNING).length,
-      pending: tasks.filter(t => t.status === WeiboSearchTaskStatus.PENDING).length,
-      failed: tasks.filter(t => t.status === WeiboSearchTaskStatus.FAILED).length,
-      paused: tasks.filter(t => t.status === WeiboSearchTaskStatus.PAUSED).length
+      enabled: enabledTasks.length,
+      disabled: tasks.length - enabledTasks.length,
+      due: dueTasks.length,
+      upcoming: upcomingTasks.length,
     };
   });
 
@@ -89,7 +103,7 @@ export class WeiboSearchTasksQuery extends Query<WeiboSearchTasksState> {
         page: 1,
         limit: 20,
         sortBy: 'createdAt',
-        sortOrder: 'desc'
+        sortOrder: 'desc',
       };
     } catch (error) {
       console.warn('Failed to get filters from query:', error);
@@ -97,7 +111,7 @@ export class WeiboSearchTasksQuery extends Query<WeiboSearchTasksState> {
         page: 1,
         limit: 20,
         sortBy: 'createdAt',
-        sortOrder: 'desc'
+        sortOrder: 'desc',
       };
     }
   }
@@ -142,17 +156,10 @@ export class WeiboSearchTasksQuery extends Query<WeiboSearchTasksState> {
     }
   }
 
-  // 根据ID查找任务
   selectTaskById(id: number): Observable<WeiboSearchTask | undefined> {
     return this.select(state => (state?.tasks || []).find(task => task.id === id));
   }
 
-  // 根据状态筛选任务
-  selectTasksByStatus(status: WeiboSearchTaskStatus): Observable<WeiboSearchTask[]> {
-    return this.select(state => (state?.tasks || []).filter(task => task.status === status));
-  }
-
-  // 检查任务是否存在
   hasTask(id: number): boolean {
     try {
       const state = this.getValue();
@@ -163,7 +170,6 @@ export class WeiboSearchTasksQuery extends Query<WeiboSearchTasksState> {
     }
   }
 
-  // 获取错误信息
   getErrorMessage(): string | null {
     try {
       const state = this.getValue();
@@ -174,3 +180,4 @@ export class WeiboSearchTasksQuery extends Query<WeiboSearchTasksState> {
     }
   }
 }
+

@@ -1,14 +1,16 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { Subject, takeUntil, combineLatest } from 'rxjs';
-import { WeiboSearchTasksService } from '../../state/weibo-search-tasks.service';
-import { WeiboSearchTasksQuery } from '../../state/weibo-search-tasks.query';
-import { WeiboSearchTask, WeiboSearchTaskStatus, WeiboSearchTaskFilters } from '@pro/types';
-import { ToastService } from '../../shared/services/toast.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
+
+import { WeiboSearchTask, WeiboSearchTaskFilters } from '@pro/types';
+
 import { SelectComponent } from '../../shared/components/select';
 import type { SelectOption } from '../../shared/components/select';
+import { ToastService } from '../../shared/services/toast.service';
+import { WeiboSearchTasksQuery } from '../../state/weibo-search-tasks.query';
+import { WeiboSearchTasksService } from '../../state/weibo-search-tasks.service';
 
 @Component({
   selector: 'app-weibo-search-tasks-list',
@@ -16,15 +18,14 @@ import type { SelectOption } from '../../shared/components/select';
   imports: [
     CommonModule,
     FormsModule,
-    SelectComponent
+    SelectComponent,
   ],
   templateUrl: './weibo-search-tasks-list.component.html',
-  styleUrls: ['./weibo-search-tasks-list.component.scss']
+  styleUrls: ['./weibo-search-tasks-list.component.scss'],
 })
 export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
 
-  // 数据流
   tasks$ = this.query.tasks$;
   loading$ = this.query.loading$;
   error$ = this.query.error$;
@@ -34,41 +35,26 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
   totalPages$ = this.query.totalPages$;
   filters$ = this.query.filters$;
 
-  // 本地状态
   total = 0;
   page = 1;
   limit = 20;
   totalPages = 0;
 
-  // 组件状态
   searchKeyword = '';
-  selectedStatus: WeiboSearchTaskStatus | '' = '';
-  selectedEnabled: boolean | '' = '';
-
-  // 枚举
-  taskStatus = WeiboSearchTaskStatus;
-
-  // 下拉选择选项
-  statusOptions: SelectOption[] = [
-    { value: '', label: '全部状态' },
-    { value: WeiboSearchTaskStatus.PENDING, label: '等待中' },
-    { value: WeiboSearchTaskStatus.RUNNING, label: '运行中' },
-    { value: WeiboSearchTaskStatus.PAUSED, label: '已暂停' },
-    { value: WeiboSearchTaskStatus.FAILED, label: '失败' }
-  ];
+  selectedEnabled: '' | 'true' | 'false' = '';
 
   enabledOptions: SelectOption[] = [
     { value: '', label: '全部' },
     { value: 'true', label: '启用' },
-    { value: 'false', label: '禁用' }
+    { value: 'false', label: '禁用' },
   ];
 
   constructor(
-    private service: WeiboSearchTasksService,
-    private query: WeiboSearchTasksQuery,
-    private router: Router,
-    private route: ActivatedRoute,
-    private toastService: ToastService
+    private readonly service: WeiboSearchTasksService,
+    private readonly query: WeiboSearchTasksQuery,
+    private readonly router: Router,
+    private readonly route: ActivatedRoute,
+    private readonly toast: ToastService,
   ) {}
 
   ngOnInit(): void {
@@ -81,39 +67,30 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // 初始化订阅
   private initializeSubscriptions(): void {
-    // 监听路由参数变化
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
-      if (params['keyword']) this.searchKeyword = params['keyword'];
-      if (params['status']) this.selectedStatus = params['status'] as WeiboSearchTaskStatus;
-      if (params['enabled'] !== undefined) this.selectedEnabled = params['enabled'] === 'true' ? true : params['enabled'] === 'false' ? false : '';
+      if (typeof params['keyword'] === 'string') {
+        this.searchKeyword = params['keyword'];
+      }
+      if (typeof params['enabled'] === 'string') {
+        this.selectedEnabled = params['enabled'] === 'true'
+          ? 'true'
+          : params['enabled'] === 'false'
+            ? 'false'
+            : '';
+      }
     });
 
-    // 监听分页变化
-    this.total$.pipe(takeUntil(this.destroy$)).subscribe(total => {
-      this.total = total;
-    });
-
-    this.page$.pipe(takeUntil(this.destroy$)).subscribe(page => {
-      this.page = page;
-    });
-
-    this.limit$.pipe(takeUntil(this.destroy$)).subscribe(limit => {
-      this.limit = limit;
-    });
-
-    this.totalPages$.pipe(takeUntil(this.destroy$)).subscribe(totalPages => {
-      this.totalPages = totalPages;
-    });
+    this.total$.pipe(takeUntil(this.destroy$)).subscribe(total => (this.total = total));
+    this.page$.pipe(takeUntil(this.destroy$)).subscribe(page => (this.page = page));
+    this.limit$.pipe(takeUntil(this.destroy$)).subscribe(limit => (this.limit = limit));
+    this.totalPages$.pipe(takeUntil(this.destroy$)).subscribe(pages => (this.totalPages = pages));
   }
 
-  // 加载任务列表
   loadTasks(): void {
     this.service.findAll().pipe(takeUntil(this.destroy$)).subscribe();
   }
 
-  // 应用筛选条件
   applyFilters(): void {
     const filters: Partial<WeiboSearchTaskFilters> = {};
 
@@ -121,141 +98,105 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
       filters.keyword = this.searchKeyword.trim();
     }
 
-    if (this.selectedStatus) {
-      filters.status = this.selectedStatus;
-    }
-
-    if (this.selectedEnabled !== '') {
-      filters.enabled = this.selectedEnabled as boolean;
+    if (this.selectedEnabled === 'true') {
+      filters.enabled = true;
+    } else if (this.selectedEnabled === 'false') {
+      filters.enabled = false;
     }
 
     this.service.updateFilters(filters);
     this.loadTasks();
   }
 
-  // 重置筛选条件
   resetFilters(): void {
     this.searchKeyword = '';
-    this.selectedStatus = '';
     this.selectedEnabled = '';
     this.service.resetFilters();
     this.loadTasks();
   }
 
-  // 分页变化
   onPageChange(page: number): void {
     this.service.updateFilters({ page });
     this.loadTasks();
   }
 
-  // 每页条数变化
   onPageSizeChange(limit: number): void {
     this.service.updateFilters({ page: 1, limit });
     this.loadTasks();
   }
 
-  // 创建任务
   createTask(): void {
     this.router.navigate(['/weibo-search-tasks/create']);
   }
 
-  // 查看任务详情
   viewTask(task: WeiboSearchTask): void {
     this.router.navigate(['/weibo-search-tasks', task.id]);
   }
 
-  // 编辑任务
   editTask(task: WeiboSearchTask): void {
     this.router.navigate(['/weibo-search-tasks', task.id, 'edit']);
   }
 
-  // 暂停任务
   pauseTask(task: WeiboSearchTask): void {
     this.service.pause(task.id).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        // 成功处理在 service 中完成
-      },
-      error: (error) => {
+      error: error => {
         console.error('暂停任务失败:', error);
-      }
+        this.toast.error(error.message || '暂停任务失败');
+      },
     });
   }
 
-  // 恢复任务
   resumeTask(task: WeiboSearchTask): void {
     this.service.resume(task.id).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        // 成功处理在 service 中完成
-      },
-      error: (error) => {
+      error: error => {
         console.error('恢复任务失败:', error);
-      }
+        this.toast.error(error.message || '恢复任务失败');
+      },
     });
   }
 
-  // 立即执行任务
   runTaskNow(task: WeiboSearchTask): void {
     this.service.runNow(task.id).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        // 成功处理在 service 中完成
-      },
-      error: (error) => {
+      error: error => {
         console.error('执行任务失败:', error);
-      }
+        this.toast.error(error.message || '执行任务失败');
+      },
     });
   }
 
-  // 删除任务
   deleteTask(task: WeiboSearchTask): void {
     this.service.delete(task.id).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        // 成功处理在 service 中完成
-      },
-      error: (error) => {
+      error: error => {
         console.error('删除任务失败:', error);
-      }
+        this.toast.error(error.message || '删除任务失败');
+      },
     });
   }
 
-  // 获取状态标签颜色
-  getStatusColor(status: WeiboSearchTaskStatus): string {
-    switch (status) {
-      case WeiboSearchTaskStatus.RUNNING:
-        return 'processing';
-      case WeiboSearchTaskStatus.PENDING:
-        return 'default';
-      case WeiboSearchTaskStatus.PAUSED:
-        return 'warning';
-      case WeiboSearchTaskStatus.FAILED:
-        return 'error';
-      default:
-        return 'default';
-    }
+  canPauseTask(task: WeiboSearchTask): boolean {
+    return task.enabled;
   }
 
-  // 获取状态文本
-  getStatusText(status: WeiboSearchTaskStatus): string {
-    switch (status) {
-      case WeiboSearchTaskStatus.RUNNING:
-        return '运行中';
-      case WeiboSearchTaskStatus.PENDING:
-        return '等待中';
-      case WeiboSearchTaskStatus.PAUSED:
-        return '已暂停';
-      case WeiboSearchTaskStatus.FAILED:
-        return '失败';
-      default:
-        return '未知';
-    }
+  canResumeTask(task: WeiboSearchTask): boolean {
+    return !task.enabled;
   }
 
-  // 格式化时间
+  canRunNowTask(task: WeiboSearchTask): boolean {
+    return task.enabled;
+  }
+
+  isTaskDue(task: WeiboSearchTask): boolean {
+    if (!task.enabled) return false;
+    if (!task.nextRunAt) return true;
+    const nextRun = task.nextRunAt instanceof Date ? task.nextRunAt : new Date(task.nextRunAt);
+    return !Number.isNaN(nextRun.getTime()) && nextRun.getTime() <= Date.now();
+  }
+
   formatTime(date?: Date): string {
     if (!date) return '-';
     try {
-      const now = new Date();
-      const targetDate = new Date(date);
-      const diffMs = now.getTime() - targetDate.getTime();
+      const target = date instanceof Date ? date : new Date(date);
+      const diffMs = Date.now() - target.getTime();
       const diffMinutes = Math.floor(diffMs / (1000 * 60));
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -265,68 +206,36 @@ export class WeiboSearchTasksListComponent implements OnInit, OnDestroy {
       if (diffHours < 24) return `${diffHours}小时前`;
       if (diffDays < 7) return `${diffDays}天前`;
 
-      return targetDate.toLocaleString('zh-CN', {
+      return target.toLocaleString('zh-CN', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
     } catch {
-      return new Date(date).toLocaleString();
+      return '-';
     }
   }
 
-  // 格式化日期时间
   formatDateTime(date?: Date): string {
     if (!date) return '-';
     try {
-      return new Date(date).toLocaleString('zh-CN', {
+      const target = date instanceof Date ? date : new Date(date);
+      return target.toLocaleString('zh-CN', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
     } catch {
-      return new Date(date).toLocaleString();
+      return '-';
     }
   }
 
-  // 格式化进度
-  formatProgress(current: number, total: number): string {
-    if (total === 0) return '0%';
-    return Math.round((current / total) * 100) + '%';
-  }
-
-  // 检查是否可以暂停
-  canPauseTask(task: WeiboSearchTask): boolean {
-    return task.enabled && task.status !== WeiboSearchTaskStatus.PAUSED;
-  }
-
-  // 检查是否可以恢复
-  canResumeTask(task: WeiboSearchTask): boolean {
-    return !task.enabled || task.status === WeiboSearchTaskStatus.PAUSED;
-  }
-
-  // 检查是否可以立即执行
-  canRunNowTask(task: WeiboSearchTask): boolean {
-    return task.enabled && task.status !== WeiboSearchTaskStatus.RUNNING;
-  }
-
-  // trackBy函数
   trackByTaskId(index: number, task: WeiboSearchTask): number {
     return task.id;
   }
-
-  // 计算完成率
-  getCompletionRate(current: number, total: number): number {
-    if (total === 0) return 0;
-    return Math.round((current / total) * 100);
-  }
-
-  // 最小值函数
-  min(a: number, b: number): number {
-    return Math.min(a, b);
-  }
 }
+

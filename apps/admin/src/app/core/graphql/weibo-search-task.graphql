@@ -73,6 +73,13 @@ mutation UpdateWeiboSearchTask($id: Int!, $input: UpdateWeiboSearchTaskInput!) {
 mutation PauseWeiboSearchTask($id: Int!, $input: PauseWeiboTaskInput) {
   pauseWeiboSearchTask(id: $id, input: $input) {
     id
+    keyword
+    enabled
+    crawlInterval
+    startDate
+    nextRunAt
+    latestCrawlTime
+    createdAt
     updatedAt
   }
 }
@@ -80,6 +87,13 @@ mutation PauseWeiboSearchTask($id: Int!, $input: PauseWeiboTaskInput) {
 mutation ResumeWeiboSearchTask($id: Int!, $input: ResumeWeiboTaskInput) {
   resumeWeiboSearchTask(id: $id, input: $input) {
     id
+    keyword
+    enabled
+    crawlInterval
+    startDate
+    nextRunAt
+    latestCrawlTime
+    createdAt
     updatedAt
   }
 }
@@ -87,7 +101,13 @@ mutation ResumeWeiboSearchTask($id: Int!, $input: ResumeWeiboTaskInput) {
 mutation RunWeiboSearchTaskNow($id: Int!, $input: RunWeiboTaskNowInput) {
   runWeiboSearchTaskNow(id: $id, input: $input) {
     id
+    keyword
+    enabled
+    crawlInterval
+    startDate
     nextRunAt
+    latestCrawlTime
+    createdAt
     updatedAt
   }
 }

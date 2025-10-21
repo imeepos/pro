@@ -1,184 +1,98 @@
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-semibold text-gray-900 m-0">{{ isEditMode ? '编辑任务' : '创建任务' }}</h1>
-    <div class="flex gap-3">
-      <button class="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors" (click)="cancel()">取消</button>
-      <button class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed" (click)="submitForm()" [disabled]="!validateForm.valid">
-        {{ isEditMode ? '保存' : '创建' }}
+<div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+      {{ isEditMode ? '编辑微博搜索任务' : '创建微博搜索任务' }}
+    </h1>
+    <button
+      type="button"
+      class="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+      (click)="cancel()"
+    >
+      返回列表
+    </button>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">关键词</label>
+      <input
+        type="text"
+        formControlName="keyword"
+        placeholder="请输入需要监控的关键词"
+        class="w-full px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <div
+        *ngIf="keywordControl.invalid && keywordControl.touched"
+        class="mt-1 text-xs text-red-500"
+      >
+        关键词长度需在 1-100 个字符之间
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">监控起始日期</label>
+        <input
+          type="date"
+          formControlName="startDate"
+          [max]="maxDate"
+          class="w-full px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <div
+          *ngIf="startDateControl.invalid && startDateControl.touched"
+          class="mt-1 text-xs text-red-500"
+        >
+          请选择有效的起始日期
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">抓取间隔</label>
+        <select
+          formControlName="crawlInterval"
+          class="w-full px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option *ngFor="let option of crawlIntervalOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-4 py-3 rounded-lg">
+      <div>
+        <div class="text-sm font-medium text-gray-700 dark:text-gray-200">启用状态</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400">
+          控制任务是否参与调度执行
+        </div>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" class="sr-only peer" formControlName="enabled" />
+        <div
+          class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer dark:bg-gray-600 peer-checked:bg-blue-600 transition-colors"
+        ></div>
+        <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+          {{ enabledControl.value ? '已启用' : '已禁用' }}
+        </span>
+      </label>
+    </div>
+
+    <div class="flex justify-end gap-3">
+      <button
+        type="button"
+        class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
+        (click)="reset()"
+      >
+        重置
+      </button>
+      <button
+        type="submit"
+        class="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+        [disabled]="form.invalid"
+      >
+        {{ isEditMode ? '保存修改' : '创建任务' }}
       </button>
     </div>
-  </div>
-
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-    <div class="flex justify-center items-center py-12" *ngIf="loading">
-      <div class="text-gray-500">处理中...</div>
-    </div>
-
-    <form [formGroup]="validateForm" *ngIf="!loading">
-      <!-- 基本信息 -->
-      <div class="mb-8 pb-6 border-b border-gray-200 last:border-b-0 last:mb-0 last:pb-0">
-        <h3 class="text-lg font-semibold text-gray-900 mb-6 relative pl-3 before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-4 before:bg-blue-600 before:rounded">基本信息</h3>
-
-        <!-- 搜索关键词 -->
-        <div class="mb-6">
-          <label for="keyword" class="block text-sm font-medium text-gray-700 mb-2 before:content-['*'] before:text-red-500 before:mr-1">搜索关键词</label>
-          <input
-            id="keyword"
-            type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            formControlName="keyword"
-            placeholder="请输入要搜索的关键词，如：热点事件、科技新闻等"
-          />
-          <div class="mt-1 text-xs text-gray-500">
-            关键词将用于在微博搜索相关内容，支持中英文、数字和常见符号
-          </div>
-          <div class="mt-1 text-sm text-red-600" *ngIf="validateForm.get('keyword')?.invalid && validateForm.get('keyword')?.touched">
-            {{ getFormErrorMessage('keyword') }}
-          </div>
-        </div>
-
-        <!-- 起始日期 -->
-        <div class="mb-6">
-          <label for="startDate" class="block text-sm font-medium text-gray-700 mb-2 before:content-['*'] before:text-red-500 before:mr-1">监控起始日期</label>
-          <pro-date-picker
-            id="startDate"
-            formControlName="startDate"
-            [maxDate]="maxDateObj"
-            placeholder="请选择监控起始日期"
-            [showQuickPresets]="true"
-          ></pro-date-picker>
-          <div class="mt-1 text-xs text-gray-500">
-            系统将从这个日期开始回溯历史数据，然后进行持续监控。支持快捷选择常用时间范围。
-          </div>
-          <div class="mt-1 text-sm text-red-600" *ngIf="validateForm.get('startDate')?.invalid && validateForm.get('startDate')?.touched">
-            {{ getFormErrorMessage('startDate') }}
-          </div>
-        </div>
-
-        <!-- 抓取间隔 -->
-        <div class="mb-6">
-          <label for="crawlInterval" class="block text-sm font-medium text-gray-700 mb-2 before:content-['*'] before:text-red-500 before:mr-1">抓取间隔</label>
-          <app-select
-            id="crawlInterval"
-            [options]="crawlIntervalOptions"
-            [formControl]="crawlIntervalControl"
-            placeholder="请选择抓取间隔"
-          ></app-select>
-          <div class="mt-1 text-xs text-gray-500">
-            完成历史数据回溯后，系统将按照此间隔进行增量更新
-          </div>
-          <div class="mt-1 text-sm text-red-600" *ngIf="validateForm.get('crawlInterval')?.invalid && validateForm.get('crawlInterval')?.touched">
-            {{ getFormErrorMessage('crawlInterval') }}
-          </div>
-        </div>
-      </div>
-
-      <!-- 账号配置 -->
-      <div class="mb-8 pb-6 border-b border-gray-200 last:border-b-0 last:mb-0 last:pb-0">
-        <h3 class="text-lg font-semibold text-gray-900 mb-6 relative pl-3 before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-4 before:bg-blue-600 before:rounded">账号配置</h3>
-
-        <!-- 指定微博账号 -->
-        <div class="mb-6">
-          <label for="weiboAccountId" class="block text-sm font-medium text-gray-700 mb-2">指定微博账号</label>
-          <app-select
-            id="weiboAccountId"
-            [options]="weiboAccountOptions"
-            [formControl]="weiboAccountIdControl"
-            placeholder="选择微博账号（可选）"
-          ></app-select>
-          <div class="mt-1 text-xs text-gray-500">
-            不选择时将随机使用可用账号，选择后将优先使用指定账号
-          </div>
-        </div>
-
-        <!-- 启用账号轮换 -->
-        <div class="mb-6">
-          <label for="enableAccountRotation" class="block text-sm font-medium text-gray-700 mb-2">账号轮换</label>
-          <div class="flex items-center gap-2">
-            <input
-              id="enableAccountRotation"
-              type="checkbox"
-              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              formControlName="enableAccountRotation"
-            />
-            <label for="enableAccountRotation" class="text-sm text-gray-700">
-              {{ validateForm.get('enableAccountRotation')?.value ? '开启' : '关闭' }}
-            </label>
-          </div>
-          <div class="mt-1 text-xs text-gray-500">
-            开启后将自动轮换账号，降低单个账号的使用频率，减少被限制的风险
-          </div>
-        </div>
-      </div>
-
-      <!-- 任务设置（编辑模式） -->
-      <div class="mb-8 pb-6 border-b border-gray-200 last:border-b-0 last:mb-0 last:pb-0" *ngIf="isEditMode">
-        <h3 class="text-lg font-semibold text-gray-900 mb-6 relative pl-3 before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-4 before:bg-blue-600 before:rounded">任务设置</h3>
-
-        <!-- 启用任务 -->
-        <div class="mb-6">
-          <label for="enabled" class="block text-sm font-medium text-gray-700 mb-2">启用状态</label>
-          <div class="flex items-center gap-2">
-            <input
-              id="enabled"
-              type="checkbox"
-              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              formControlName="enabled"
-            />
-            <label for="enabled" class="text-sm text-gray-700">
-              {{ validateForm.get('enabled')?.value ? '启用' : '禁用' }}
-            </label>
-          </div>
-          <div class="mt-1 text-xs text-gray-500">
-            禁用后任务将暂停执行，但会保留历史数据和配置
-          </div>
-        </div>
-      </div>
-
-      <!-- 表单错误提示 -->
-      <div *ngIf="error$ | async">
-        <div class="p-4 rounded-md mb-4 bg-red-50 border border-red-200 text-red-800">
-          {{ error$ | async }}
-        </div>
-      </div>
-
-      <!-- 操作按钮 -->
-      <div class="mt-8 pt-6 border-t border-gray-200 text-center">
-        <div class="flex justify-center gap-3">
-          <button class="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors" type="button" (click)="resetForm()">重置</button>
-          <button class="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors" type="button" (click)="cancel()">取消</button>
-          <button
-            class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-            type="submit"
-            (click)="submitForm()"
-            [disabled]="!validateForm.valid"
-          >
-            {{ isEditMode ? '保存修改' : '创建任务' }}
-          </button>
-        </div>
-      </div>
-    </form>
-  </div>
-
-  <!-- 提示信息 -->
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">使用说明</h3>
-    <div class="prose prose-sm max-w-none">
-      <h4 class="text-sm font-semibold text-gray-900 mt-4 mb-3 first:mt-0">任务执行流程：</h4>
-      <ol class="m-0 pl-5">
-        <li class="mb-2 text-sm text-gray-600 last:mb-0"><strong>历史数据回溯：</strong>系统将从起始日期开始，智能拆分时间段抓取历史微博数据</li>
-        <li class="mb-2 text-sm text-gray-600 last:mb-0"><strong>增量更新：</strong>完成历史回溯后，按照设定的间隔定期抓取新的微博数据</li>
-        <li class="mb-2 text-sm text-gray-600 last:mb-0"><strong>智能拆分：</strong>自动根据数据量调整时间段，确保抓取完整不遗漏</li>
-        <li class="mb-2 text-sm text-gray-600 last:mb-0"><strong>状态监控：</strong>实时监控任务状态，支持暂停、恢复和立即执行</li>
-      </ol>
-
-      <h4 class="text-sm font-semibold text-gray-900 mt-4 mb-3 first:mt-0">注意事项：</h4>
-      <ul class="m-0 pl-5">
-        <li class="mb-2 text-sm text-gray-600 last:mb-0">起始日期越早，历史数据回溯时间越长</li>
-        <li class="mb-2 text-sm text-gray-600 last:mb-0">建议首次创建时选择较近的日期进行测试</li>
-        <li class="mb-2 text-sm text-gray-600 last:mb-0">抓取间隔不宜过短，避免对微博服务器造成压力</li>
-        <li class="mb-2 text-sm text-gray-600 last:mb-0">账号轮换可以提高抓取成功率，建议开启</li>
-      </ul>
-    </div>
-  </div>
+  </form>
 </div>
+

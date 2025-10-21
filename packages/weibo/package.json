@@ -1,0 +1,44 @@
+{
+  "name": "@pro/weibo",
+  "version": "1.0.0",
+  "description": "NestJS service wrapper for fetching Weibo post details",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup && tsc --project tsconfig.types.json",
+    "build:js": "tsup",
+    "build:types": "tsc --project tsconfig.types.json",
+    "clean": "rimraf dist",
+    "dev": "tsup --watch",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "weibo",
+    "nestjs",
+    "client"
+  ],
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/node": "^20.3.1",
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.0",
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*"
+  },
+  "dependencies": {
+    "@nestjs/axios": "^4.0.1",
+    "@nestjs/common": "^11.0.13",
+    "axios": "1.7.9",
+    "rxjs": "^7.8.1"
+  }
+}

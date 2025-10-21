@@ -1,15 +1,20 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormControl, Validators } from '@angular/forms';
-import { Router, ActivatedRoute, ParamMap } from '@angular/router';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
-import { WeiboSearchTasksService } from '../../state/weibo-search-tasks.service';
-import { WeiboSearchTasksQuery } from '../../state/weibo-search-tasks.query';
+
+import { CreateWeiboSearchTaskDto, UpdateWeiboSearchTaskDto, WeiboSearchTask } from '@pro/types';
+
 import { ToastService } from '../../shared/services/toast.service';
-import { DatePickerComponent } from '../../shared/components/date-picker';
-import { SelectComponent } from '../../shared/components/select';
-import type { SelectOption } from '../../shared/components/select';
-import { WeiboSearchTask, CreateWeiboSearchTaskDto, UpdateWeiboSearchTaskDto } from '@pro/types';
+import { WeiboSearchTasksQuery } from '../../state/weibo-search-tasks.query';
+import { WeiboSearchTasksService } from '../../state/weibo-search-tasks.service';
+
+interface SelectOption {
+  label: string;
+  value: string;
+}
 
 @Component({
   selector: 'app-weibo-search-task-form',
@@ -18,63 +23,44 @@ import { WeiboSearchTask, CreateWeiboSearchTaskDto, UpdateWeiboSearchTaskDto } f
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    DatePickerComponent,
-    SelectComponent
   ],
   templateUrl: './weibo-search-task-form.component.html',
-  styleUrls: ['./weibo-search-task-form.component.scss']
+  styleUrls: ['./weibo-search-task-form.component.scss'],
 })
 export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
 
-  // 表单相关
-  validateForm: FormGroup;
+  form: FormGroup;
   isEditMode = false;
   taskId: number | null = null;
   loading = false;
 
-  // 数据流
-  loading$ = this.query.loading$;
-  error$ = this.query.error$;
-  selectedTask$ = this.query.selectedTask$;
-
-  // 微博账号选项
-  weiboAccounts: Array<{ id: number; nickname: string; status: string }> = [];
-
-  // 抓取间隔选项
   crawlIntervalOptions: SelectOption[] = [
+    { label: '30分钟', value: '30m' },
     { label: '1小时', value: '1h' },
     { label: '2小时', value: '2h' },
     { label: '6小时', value: '6h' },
     { label: '12小时', value: '12h' },
-    { label: '24小时', value: '24h' }
+    { label: '24小时', value: '24h' },
   ];
 
-  get weiboAccountOptions(): SelectOption[] {
-    return [
-      { value: '', label: '选择微博账号（可选）' },
-      ...this.weiboAccounts.map(account => ({
-        value: account.id.toString(),
-        label: account.nickname
-      }))
-    ];
-  }
+  loading$ = this.query.loading$;
+  selectedTask$ = this.query.selectedTask$;
 
   constructor(
-    private fb: FormBuilder,
-    private service: WeiboSearchTasksService,
-    private query: WeiboSearchTasksQuery,
-    private router: Router,
-    private route: ActivatedRoute,
-    private toastService: ToastService
+    private readonly fb: FormBuilder,
+    private readonly service: WeiboSearchTasksService,
+    private readonly query: WeiboSearchTasksQuery,
+    private readonly router: Router,
+    private readonly route: ActivatedRoute,
+    private readonly toast: ToastService,
   ) {
-    this.validateForm = this.createForm();
+    this.form = this.createForm();
   }
 
   ngOnInit(): void {
     this.initializeSubscriptions();
-    this.loadWeiboAccounts();
-    this.checkEditMode();
+    this.detectEditMode();
   }
 
   ngOnDestroy(): void {
@@ -82,21 +68,16 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // 创建表单
   private createForm(): FormGroup {
     return this.fb.group({
-      keyword: [null, [Validators.required, Validators.minLength(1), Validators.maxLength(100)]],
+      keyword: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]],
       startDate: [null, [Validators.required]],
       crawlInterval: ['1h', [Validators.required]],
-      weiboAccountId: [null],
-      enableAccountRotation: [true],
-      enabled: [true]
+      enabled: [true],
     });
   }
 
-  // 初始化订阅
   private initializeSubscriptions(): void {
-    // 监听loading状态
     this.loading$.pipe(takeUntil(this.destroy$)).subscribe(loading => {
       if (!this.destroy$.closed) {
         this.loading = loading;
@@ -104,248 +85,121 @@ export class WeiboSearchTaskFormComponent implements OnInit, OnDestroy {
     });
 
     this.selectedTask$.pipe(takeUntil(this.destroy$)).subscribe(task => {
-      if (!this.destroy$.closed && task && this.isEditMode) {
+      if (task && this.isEditMode) {
         this.patchForm(task);
       }
     });
   }
 
-  // 检查是否为编辑模式
-  private checkEditMode(): void {
+  private detectEditMode(): void {
     this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe((params: ParamMap) => {
-      if (!this.destroy$.closed) {
-        const id = params.get('id');
-        if (id && this.route.snapshot.url.some(segment => segment.path === 'edit')) {
+      const id = params.get('id');
+      if (id && this.route.snapshot.url.some(segment => segment.path === 'edit')) {
+        const numericId = Number(id);
+        if (!Number.isNaN(numericId)) {
           this.isEditMode = true;
-          this.taskId = +id;
-          this.loadTask(this.taskId);
+          this.taskId = numericId;
+          this.loadTask(numericId);
         }
       }
     });
   }
 
-  // 加载微博账号列表
-  private loadWeiboAccounts(): void {
-    // 这里应该调用微博账号服务获取账号列表
-    // 暂时使用模拟数据
-    this.weiboAccounts = [
-      { id: 1, nickname: '测试账号1', status: 'active' },
-      { id: 2, nickname: '测试账号2', status: 'active' }
-    ];
-  }
-
-  // 加载任务详情（编辑模式）
   private loadTask(id: number): void {
-    this.service.findOne(id);
+    this.service.findOne(id).pipe(takeUntil(this.destroy$)).subscribe({
+      error: error => console.error('加载任务失败:', error),
+    });
   }
 
-  // 填充表单（编辑模式）
   private patchForm(task: WeiboSearchTask): void {
-    if (!this.validateForm || Object.keys(this.validateForm.controls).length === 0) {
-      console.warn('表单已断开连接，无法填充数据');
+    this.form.patchValue({
+      keyword: task.keyword,
+      startDate: task.startDate instanceof Date ? task.startDate : new Date(task.startDate),
+      crawlInterval: task.crawlInterval,
+      enabled: task.enabled,
+    });
+  }
+
+  submit(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
       return;
     }
 
-    try {
-      this.validateForm.patchValue({
-        keyword: task.keyword,
-        startDate: new Date(task.startDate),
-        crawlInterval: task.crawlInterval,
-        weiboAccountId: task.weiboAccountId,
-        enableAccountRotation: task.enableAccountRotation,
-        enabled: task.enabled
+    const value = this.form.value;
+
+    if (this.isEditMode && this.taskId !== null) {
+      const dto: UpdateWeiboSearchTaskDto = {
+        keyword: value.keyword,
+        startDate: this.normalizeDate(value.startDate),
+        crawlInterval: value.crawlInterval,
+        enabled: value.enabled,
+      };
+
+      this.service.update(this.taskId, dto).pipe(takeUntil(this.destroy$)).subscribe({
+        next: () => this.router.navigate(['/weibo-search-tasks']),
+        error: error => this.toast.error(error.message || '更新任务失败'),
       });
-    } catch (error) {
-      console.error('填充表单数据失败:', error);
-    }
-  }
-
-  // 提交表单
-  submitForm(): void {
-    // 检查表单是否仍然连接
-    if (!this.validateForm || Object.keys(this.validateForm.controls).length === 0) {
-      console.warn('表单已断开连接，无法提交');
-      return;
-    }
-
-    if (this.validateForm.valid) {
-      const formValue = this.validateForm.value;
-
-      if (this.isEditMode && this.taskId) {
-        this.updateTask(this.taskId, formValue);
-      } else {
-        this.createTask(formValue);
-      }
     } else {
-      try {
-        Object.values(this.validateForm.controls).forEach(control => {
-          if (control.invalid) {
-            control.markAsDirty();
-            control.updateValueAndValidity({ onlySelf: true });
-          }
-        });
-      } catch (error) {
-        console.error('表单验证失败:', error);
-      }
+      const dto: CreateWeiboSearchTaskDto = {
+        keyword: value.keyword,
+        startDate: this.normalizeDate(value.startDate),
+        crawlInterval: value.crawlInterval,
+      };
+
+      this.service.create(dto).pipe(takeUntil(this.destroy$)).subscribe({
+        next: () => this.router.navigate(['/weibo-search-tasks']),
+        error: error => this.toast.error(error.message || '创建任务失败'),
+      });
     }
   }
 
-  // 创建任务
-  private createTask(formValue: any): void {
-    // 检查表单是否仍然连接
-    if (!this.validateForm || Object.keys(this.validateForm.controls).length === 0) {
-      console.warn('表单已断开连接，无法创建任务');
-      return;
-    }
-
-    const dto: CreateWeiboSearchTaskDto = {
-      keyword: formValue.keyword,
-      startDate: formValue.startDate instanceof Date ?
-        formValue.startDate.toISOString().split('T')[0] :
-        formValue.startDate,
-      crawlInterval: formValue.crawlInterval,
-      weiboAccountId: formValue.weiboAccountId,
-      enableAccountRotation: formValue.enableAccountRotation
-    };
-
-    this.service.create(dto).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        // 检查组件是否仍然存活
-        if (!this.destroy$.closed) {
-          this.router.navigate(['/weibo-search-tasks']);
-        }
-      },
-      error: (error) => {
-        // 检查组件是否仍然存活
-        if (!this.destroy$.closed) {
-          console.error('创建任务失败:', error);
-        }
-      }
-    });
-  }
-
-  // 更新任务
-  private updateTask(id: number, formValue: any): void {
-    // 检查表单是否仍然连接
-    if (!this.validateForm || Object.keys(this.validateForm.controls).length === 0) {
-      console.warn('表单已断开连接，无法更新任务');
-      return;
-    }
-
-    const updates: UpdateWeiboSearchTaskDto = {
-      keyword: formValue.keyword,
-      startDate: formValue.startDate instanceof Date ?
-        formValue.startDate.toISOString().split('T')[0] :
-        formValue.startDate,
-      crawlInterval: formValue.crawlInterval,
-      weiboAccountId: formValue.weiboAccountId,
-      enableAccountRotation: formValue.enableAccountRotation,
-      enabled: formValue.enabled
-    };
-
-    this.service.update(id, updates).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        // 检查组件是否仍然存活
-        if (!this.destroy$.closed) {
-          this.router.navigate(['/weibo-search-tasks']);
-        }
-      },
-      error: (error) => {
-        // 检查组件是否仍然存活
-        if (!this.destroy$.closed) {
-          console.error('更新任务失败:', error);
-        }
-      }
-    });
-  }
-
-  // 取消
   cancel(): void {
     this.router.navigate(['/weibo-search-tasks']);
   }
 
-  // 重置表单
-  resetForm(): void {
-    if (!this.validateForm || Object.keys(this.validateForm.controls).length === 0) {
-      console.warn('表单已断开连接，无法重置');
-      return;
-    }
-
-    try {
-      this.validateForm.reset();
-      this.validateForm.patchValue({
-        crawlInterval: '1h',
-        enableAccountRotation: true,
-        enabled: true
-      });
-    } catch (error) {
-      console.error('表单重置失败:', error);
-    }
+  reset(): void {
+    this.form.reset({
+      keyword: '',
+      startDate: null,
+      crawlInterval: '1h',
+      enabled: true,
+    });
   }
 
-  // 表单验证器
-  // 关键词验证
-  validateKeyword(): string | null {
-    if (!this.validateForm || Object.keys(this.validateForm.controls).length === 0) {
-      return null;
-    }
-    const keyword = this.validateForm.get('keyword')?.value;
-    if (!keyword) return '请输入搜索关键词';
-    if (keyword.length < 1) return '关键词长度至少1个字符';
-    if (keyword.length > 100) return '关键词长度不能超过100个字符';
-    return null;
+  get keywordControl(): FormControl {
+    return this.form.get('keyword') as FormControl;
   }
 
-  // 起始日期验证
-  validateStartDate(): string | null {
-    if (!this.validateForm || Object.keys(this.validateForm.controls).length === 0) {
-      return null;
-    }
-    const startDate = this.validateForm.get('startDate')?.value;
-    if (!startDate) return '请选择起始日期';
-    if (startDate > new Date()) return '起始日期不能大于当前日期';
-    return null;
+  get startDateControl(): FormControl {
+    return this.form.get('startDate') as FormControl;
   }
 
-  // 获取表单错误信息
-  getFormErrorMessage(field: string): string {
-    if (!this.validateForm || Object.keys(this.validateForm.controls).length === 0) {
-      return '';
-    }
-    const control = this.validateForm.get(field);
-    if (!control || !control.errors || !control.touched) return '';
-
-    const errors = control.errors;
-    if (errors['required']) return '此字段为必填项';
-    if (errors['minlength']) return `最少需要 ${errors['minlength'].requiredLength} 个字符`;
-    if (errors['maxlength']) return `最多只能有 ${errors['maxlength'].requiredLength} 个字符`;
-    return '输入格式不正确';
+  get crawlIntervalControl(): FormControl {
+    return this.form.get('crawlInterval') as FormControl;
   }
 
-  // 最大日期（今天）
+  get enabledControl(): FormControl {
+    return this.form.get('enabled') as FormControl;
+  }
+
   get maxDate(): string {
     return new Date().toISOString().split('T')[0];
   }
 
-  // 最大日期对象
   get maxDateObj(): Date {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
     return today;
   }
 
-  // 表单控件 getter 方法，提供正确的类型
-  get crawlIntervalControl(): FormControl {
-    if (!this.validateForm || Object.keys(this.validateForm.controls).length === 0) {
-      return new FormControl();
+  private normalizeDate(value: unknown): string {
+    if (value instanceof Date) {
+      return value.toISOString();
     }
-    return this.validateForm.get('crawlInterval') as FormControl || new FormControl();
-  }
-
-  get weiboAccountIdControl(): FormControl {
-    if (!this.validateForm || Object.keys(this.validateForm.controls).length === 0) {
-      return new FormControl();
+    if (typeof value === 'string') {
+      return new Date(value).toISOString();
     }
-    return this.validateForm.get('weiboAccountId') as FormControl || new FormControl();
+    throw new Error('无效的日期格式');
   }
 }
