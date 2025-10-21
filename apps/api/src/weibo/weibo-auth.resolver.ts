@@ -111,7 +111,10 @@ export class WeiboAuthResolver {
     return mapWeiboLoginSnapshotToModel(snapshot);
   }
 
-  @Subscription(() => WeiboLoginEventModel, { name: 'weiboLoginEvents' })
+  @Subscription(() => WeiboLoginEventModel, {
+    name: 'weiboLoginEvents',
+    resolve: (event: WeiboLoginEventModel) => event,
+  })
   async weiboLoginEvents(
     @CurrentUser('userId') userId: string,
     @Args('sessionId', { type: () => String }) sessionId: string,
