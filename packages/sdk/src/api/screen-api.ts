@@ -160,16 +160,7 @@ export class ScreenApi {
         publishedScreens(page: $page, limit: $limit) {
           edges {
             node {
-              id
-              name
-              description
-              layout
-              components
-              status
-              isDefault
-              createdBy
-              createdAt
-              updatedAt
+              ${SCREEN_PAGE_FIELDS}
             }
           }
           pageInfo {
@@ -202,16 +193,7 @@ export class ScreenApi {
     const query = `
       query Screen($id: ID!) {
         screen(id: $id) {
-          id
-          name
-          description
-          layout
-          components
-          status
-          isDefault
-          createdBy
-          createdAt
-          updatedAt
+          ${SCREEN_PAGE_FIELDS}
         }
       }
     `;
@@ -222,18 +204,9 @@ export class ScreenApi {
 
   async createScreen(dto: CreateScreenDto): Promise<ScreenPage> {
     const mutation = `
-      mutation CreateScreen($input: CreateScreenDto!) {
+      mutation CreateScreen($input: CreateScreenInput!) {
         createScreen(input: $input) {
-          id
-          name
-          description
-          layout
-          components
-          status
-          isDefault
-          createdBy
-          createdAt
-          updatedAt
+          ${SCREEN_PAGE_FIELDS}
         }
       }
     `;
@@ -244,18 +217,9 @@ export class ScreenApi {
 
   async updateScreen(id: string, dto: UpdateScreenDto): Promise<ScreenPage> {
     const mutation = `
-      mutation UpdateScreen($id: ID!, $input: UpdateScreenDto!) {
+      mutation UpdateScreen($id: ID!, $input: UpdateScreenInput!) {
         updateScreen(id: $id, input: $input) {
-          id
-          name
-          description
-          layout
-          components
-          status
-          isDefault
-          createdBy
-          createdAt
-          updatedAt
+          ${SCREEN_PAGE_FIELDS}
         }
       }
     `;
@@ -278,16 +242,7 @@ export class ScreenApi {
     const mutation = `
       mutation CopyScreen($id: ID!) {
         copyScreen(id: $id) {
-          id
-          name
-          description
-          layout
-          components
-          status
-          isDefault
-          createdBy
-          createdAt
-          updatedAt
+          ${SCREEN_PAGE_FIELDS}
         }
       }
     `;
@@ -300,16 +255,7 @@ export class ScreenApi {
     const mutation = `
       mutation PublishScreen($id: ID!) {
         publishScreen(id: $id) {
-          id
-          name
-          description
-          layout
-          components
-          status
-          isDefault
-          createdBy
-          createdAt
-          updatedAt
+          ${SCREEN_PAGE_FIELDS}
         }
       }
     `;
@@ -322,16 +268,7 @@ export class ScreenApi {
     const mutation = `
       mutation DraftScreen($id: ID!) {
         draftScreen(id: $id) {
-          id
-          name
-          description
-          layout
-          components
-          status
-          isDefault
-          createdBy
-          createdAt
-          updatedAt
+          ${SCREEN_PAGE_FIELDS}
         }
       }
     `;
@@ -344,16 +281,7 @@ export class ScreenApi {
     const mutation = `
       mutation SetDefaultScreen($id: ID!) {
         setDefaultScreen(id: $id) {
-          id
-          name
-          description
-          layout
-          components
-          status
-          isDefault
-          createdBy
-          createdAt
-          updatedAt
+          ${SCREEN_PAGE_FIELDS}
         }
       }
     `;
@@ -366,16 +294,7 @@ export class ScreenApi {
     const query = `
       query DefaultScreen {
         defaultScreen {
-          id
-          name
-          description
-          layout
-          components
-          status
-          isDefault
-          createdBy
-          createdAt
-          updatedAt
+          ${SCREEN_PAGE_FIELDS}
         }
       }
     `;
