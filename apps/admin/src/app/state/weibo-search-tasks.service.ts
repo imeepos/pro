@@ -3,159 +3,21 @@ import { Observable, from, tap, catchError, throwError, finalize, map } from 'rx
 
 import { WeiboSearchTask, WeiboSearchTaskFilters } from '@pro/types';
 
+import {
+  CreateWeiboSearchTaskDocument,
+  PauseWeiboSearchTaskDocument,
+  RemoveWeiboSearchTaskDocument,
+  ResumeWeiboSearchTaskDocument,
+  RunWeiboSearchTaskNowDocument,
+  UpdateWeiboSearchTaskDocument,
+  WeiboSearchTaskDocument,
+  WeiboSearchTaskStatsDocument,
+  WeiboSearchTasksDocument,
+} from '../core/graphql/generated/graphql';
+
 import { GraphqlGateway } from '../core/graphql/graphql-gateway.service';
-import { graphql } from '../core/graphql/generated';
 import { WeiboSearchTasksQuery } from './weibo-search-tasks.query';
 import { WeiboSearchTasksStore } from './weibo-search-tasks.store';
-
-const WeiboSearchTasksQueryDoc = graphql(`
-  query WeiboSearchTasks(
-    $page: Int
-    $limit: Int
-    $keyword: String
-    $enabled: Boolean
-    $sortBy: String
-    $sortOrder: String
-  ) {
-    weiboSearchTasks(
-      filter: {
-        page: $page
-        limit: $limit
-        keyword: $keyword
-        enabled: $enabled
-        sortBy: $sortBy
-        sortOrder: $sortOrder
-      }
-    ) {
-      edges {
-        node {
-          id
-          keyword
-          enabled
-          crawlInterval
-          startDate
-          latestCrawlTime
-          nextRunAt
-          createdAt
-          updatedAt
-        }
-      }
-      totalCount
-    }
-  }
-`);
-
-const WeiboSearchTaskQueryDoc = graphql(`
-  query WeiboSearchTask($id: Int!) {
-    weiboSearchTask(id: $id) {
-      id
-      keyword
-      enabled
-      crawlInterval
-      startDate
-      latestCrawlTime
-      nextRunAt
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const WeiboSearchTaskStatsQueryDoc = graphql(`
-  query WeiboSearchTaskStats {
-    weiboSearchTaskStats {
-      total
-      enabled
-      disabled
-    }
-  }
-`);
-
-const CreateWeiboSearchTaskMutation = graphql(`
-  mutation CreateWeiboSearchTask($input: CreateWeiboSearchTaskInput!) {
-    createWeiboSearchTask(input: $input) {
-      id
-      keyword
-      enabled
-      crawlInterval
-      startDate
-      latestCrawlTime
-      nextRunAt
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const UpdateWeiboSearchTaskMutation = graphql(`
-  mutation UpdateWeiboSearchTask($id: Int!, $input: UpdateWeiboSearchTaskInput!) {
-    updateWeiboSearchTask(id: $id, input: $input) {
-      id
-      keyword
-      enabled
-      crawlInterval
-      startDate
-      latestCrawlTime
-      nextRunAt
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const PauseWeiboSearchTaskMutation = graphql(`
-  mutation PauseWeiboSearchTask($id: Int!, $input: PauseWeiboTaskInput) {
-    pauseWeiboSearchTask(id: $id, input: $input) {
-      id
-      keyword
-      enabled
-      crawlInterval
-      startDate
-      latestCrawlTime
-      nextRunAt
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const ResumeWeiboSearchTaskMutation = graphql(`
-  mutation ResumeWeiboSearchTask($id: Int!, $input: ResumeWeiboTaskInput) {
-    resumeWeiboSearchTask(id: $id, input: $input) {
-      id
-      keyword
-      enabled
-      crawlInterval
-      startDate
-      latestCrawlTime
-      nextRunAt
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const RunWeiboSearchTaskNowMutation = graphql(`
-  mutation RunWeiboSearchTaskNow($id: Int!, $input: RunWeiboTaskNowInput) {
-    runWeiboSearchTaskNow(id: $id, input: $input) {
-      id
-      keyword
-      enabled
-      crawlInterval
-      startDate
-      latestCrawlTime
-      nextRunAt
-      createdAt
-      updatedAt
-    }
-  }
-`);
-
-const RemoveWeiboSearchTaskMutation = graphql(`
-  mutation RemoveWeiboSearchTask($id: Int!) {
-    removeWeiboSearchTask(id: $id)
-  }
-`);
 
 @Injectable({ providedIn: 'root' })
 export class WeiboSearchTasksService {
@@ -173,7 +35,7 @@ export class WeiboSearchTasksService {
     const variables = this.buildQueryVariables(currentFilters);
 
     return from(
-      this.graphql.request(WeiboSearchTasksQueryDoc, variables),
+      this.graphql.request(WeiboSearchTasksDocument, variables),
     ).pipe(
       tap(response => {
         const tasks = response.weiboSearchTasks.edges.map(edge => this.adaptTask(edge.node));
@@ -204,7 +66,7 @@ export class WeiboSearchTasksService {
     this.setError(null);
 
     return from(
-      this.graphql.request(WeiboSearchTaskQueryDoc, { id: Number(id) }),
+      this.graphql.request(WeiboSearchTaskDocument, { id: Number(id) }),
     ).pipe(
       map(response => this.adaptTask(response.weiboSearchTask)),
       tap(task => {
@@ -223,7 +85,7 @@ export class WeiboSearchTasksService {
     this.setError(null);
 
     return from(
-      this.graphql.request(CreateWeiboSearchTaskMutation, { input }),
+      this.graphql.request(CreateWeiboSearchTaskDocument, { input }),
     ).pipe(
       map(response => this.adaptTask(response.createWeiboSearchTask)),
       tap(task => {
@@ -246,7 +108,7 @@ export class WeiboSearchTasksService {
     this.setError(null);
 
     return from(
-      this.graphql.request(UpdateWeiboSearchTaskMutation, { id: Number(id), input }),
+      this.graphql.request(UpdateWeiboSearchTaskDocument, { id: Number(id), input }),
     ).pipe(
       map(response => this.adaptTask(response.updateWeiboSearchTask)),
       tap(task => this.updateTaskInStore(task)),
@@ -263,7 +125,7 @@ export class WeiboSearchTasksService {
     this.setError(null);
 
     return from(
-      this.graphql.request(RemoveWeiboSearchTaskMutation, { id: Number(id) }),
+      this.graphql.request(RemoveWeiboSearchTaskDocument, { id: Number(id) }),
     ).pipe(
       tap(() => {
         this.store.update(state => ({
@@ -287,7 +149,7 @@ export class WeiboSearchTasksService {
     const input = reason ? { reason } : undefined;
 
     return from(
-      this.graphql.request(PauseWeiboSearchTaskMutation, { id: Number(id), input }),
+      this.graphql.request(PauseWeiboSearchTaskDocument, { id: Number(id), input }),
     ).pipe(
       tap(response => this.updateTaskInStore(this.adaptTask(response.pauseWeiboSearchTask))),
       catchError(error => {
@@ -306,7 +168,7 @@ export class WeiboSearchTasksService {
     const input = reason ? { reason } : undefined;
 
     return from(
-      this.graphql.request(ResumeWeiboSearchTaskMutation, { id: Number(id), input }),
+      this.graphql.request(ResumeWeiboSearchTaskDocument, { id: Number(id), input }),
     ).pipe(
       tap(response => this.updateTaskInStore(this.adaptTask(response.resumeWeiboSearchTask))),
       catchError(error => {
@@ -325,7 +187,7 @@ export class WeiboSearchTasksService {
     const input = reason ? { reason } : undefined;
 
     return from(
-      this.graphql.request(RunWeiboSearchTaskNowMutation, { id: Number(id), input }),
+      this.graphql.request(RunWeiboSearchTaskNowDocument, { id: Number(id), input }),
     ).pipe(
       tap(response => this.updateTaskInStore(this.adaptTask(response.runWeiboSearchTaskNow))),
       catchError(error => {
@@ -339,7 +201,7 @@ export class WeiboSearchTasksService {
 
   getStats(): Observable<{ total: number; enabled: number; disabled: number }> {
     return from(
-      this.graphql.request(WeiboSearchTaskStatsQueryDoc),
+      this.graphql.request(WeiboSearchTaskStatsDocument),
     ).pipe(
       map(response => response.weiboSearchTaskStats),
     );
@@ -441,4 +303,3 @@ export class WeiboSearchTasksService {
     this.store.update({ error });
   }
 }
-

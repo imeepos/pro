@@ -134,9 +134,6 @@ export const testWeiboConfig = {
     keyword: '测试关键词',
     startDate: '2023-01-01',
     crawlInterval: '1h',
-    enableAccountRotation: true,
-    noDataThreshold: 3,
-    maxRetries: 2,
   },
 };
 

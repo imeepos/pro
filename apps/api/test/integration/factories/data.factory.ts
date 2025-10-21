@@ -4,7 +4,7 @@
  */
 
 import { faker } from '@faker-js/faker/locale/zh_CN';
-import { WeiboAccountStatus, WeiboSearchTaskStatus } from '@pro/entities';
+import { WeiboAccountStatus } from '@pro/entities';
 
 /**
  * 用户数据工厂
@@ -86,14 +86,6 @@ export class WeiboSearchTaskDataFactory {
       keyword: faker.lorem.words({ min: 1, max: 3 }),
       startDate: startDate.toISOString().split('T')[0],
       crawlInterval: faker.helpers.arrayElement(crawlIntervals),
-      weiboAccountId: faker.number.int({ min: 1, max: 100 }),
-      enableAccountRotation: faker.datatype.boolean(),
-      noDataThreshold: faker.number.int({ min: 1, max: 10 }),
-      maxRetries: faker.number.int({ min: 0, max: 5 }),
-      longitude: faker.location.longitude({ min: -180, max: 180 }),
-      latitude: faker.location.latitude({ min: -90, max: 90 }),
-      locationAddress: faker.location.streetAddress(),
-      locationName: faker.location.city(),
     };
   }
 
@@ -105,15 +97,6 @@ export class WeiboSearchTaskDataFactory {
       keyword: faker.lorem.words({ min: 1, max: 3 }),
       crawlInterval: faker.helpers.arrayElement(['1h', '2h', '6h', '12h']),
       enabled: faker.datatype.boolean(),
-      status: faker.helpers.arrayElement(Object.values(WeiboSearchTaskStatus)),
-      noDataThreshold: faker.number.int({ min: 1, max: 10 }),
-      maxRetries: faker.number.int({ min: 0, max: 5 }),
-      resetRetryCount: faker.datatype.boolean(),
-      resetNoDataCount: faker.datatype.boolean(),
-      longitude: faker.location.longitude({ min: -180, max: 180 }),
-      latitude: faker.location.latitude({ min: -90, max: 90 }),
-      locationAddress: faker.location.streetAddress(),
-      locationName: faker.location.city(),
     };
   }
 
@@ -132,7 +115,6 @@ export class WeiboSearchTaskDataFactory {
       page: faker.number.int({ min: 1, max: 5 }),
       limit: faker.number.int({ min: 5, max: 20 }),
       keyword: faker.lorem.word(),
-      status: faker.helpers.arrayElement(Object.values(WeiboSearchTaskStatus)),
       enabled: faker.datatype.boolean(),
       sortBy: faker.helpers.arrayElement(['createdAt', 'updatedAt', 'startDate', 'nextRunAt']),
       sortOrder: faker.helpers.arrayElement(['ASC', 'DESC']),

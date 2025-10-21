@@ -172,18 +172,14 @@ export abstract class WeiboIntegrationTestBase extends IntegrationTestBase {
    */
   protected async createTestSearchTask(accountId?: number): Promise<any> {
     const taskData = TestDataFactory.searchTask.createTaskData();
-    if (accountId) {
-      taskData.weiboAccountId = accountId;
-    }
-
     const mutation = `
-      mutation CreateWeiboSearchTask($input: CreateWeiboSearchTaskDto!) {
+      mutation CreateWeiboSearchTask($input: CreateWeiboSearchTaskInput!) {
         createWeiboSearchTask(input: $input) {
           id
           keyword
           startDate
-          status
           enabled
+          crawlInterval
           createdAt
         }
       }
