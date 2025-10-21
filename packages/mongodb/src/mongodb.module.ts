@@ -15,13 +15,13 @@ export interface MongodbModuleOptions extends Partial<MongooseModuleOptions> {
  * MongoDB 模块
  */
 @Module({})
-export class MongodbModule {
+export class ProMongodbModule {
   /**
    * 根模块配置 - 零配置启动，自动读取环境变量
    */
   static forRoot(options?: MongodbModuleOptions): DynamicModule {
     return {
-      module: MongodbModule,
+      module: ProMongodbModule,
       imports: [
         ConfigModule,
         MongooseModule.forRootAsync({
