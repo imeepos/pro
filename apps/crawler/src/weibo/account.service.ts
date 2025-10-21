@@ -7,6 +7,7 @@ import { WeiboAccountStatus } from '@pro/types';
 import { BrowserService } from '../browser/browser.service';
 import { WeiboAccountSelector, AccountSelectionAlgorithm } from './account.selector';
 import { DurationFormatter } from '@pro/crawler-utils';
+import { WeiboAccountHealthMonitor } from './account.health-monitor';
 
 export interface WeiboAccount {
   id: number;
@@ -37,7 +38,7 @@ interface ApiWeiboAccount {
 }
 
 // Cookie验证结果接口
-interface CookieValidationResult {
+export interface CookieValidationResult {
   isValid: boolean;
   loginStatus: boolean;
   responseTime: number;
@@ -49,7 +50,7 @@ interface CookieValidationResult {
 }
 
 // 账号健康检查结果接口
-interface AccountHealthCheckResult {
+export interface AccountHealthCheckResult {
   accountId: number;
   isHealthy: boolean;
   healthScore: number;
@@ -65,7 +66,7 @@ interface AccountHealthCheckResult {
 }
 
 // 智能轮换策略配置
-interface RotationStrategy {
+export interface RotationStrategy {
   algorithm: AccountSelectionAlgorithm;
   healthThreshold: number;
   maxConsecutiveFailures: number;
@@ -120,6 +121,7 @@ export class WeiboAccountService implements OnModuleInit {
     @InjectRepository(WeiboAccountEntity)
     private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
     private readonly browserService: BrowserService,
+    private readonly healthMonitor: WeiboAccountHealthMonitor,
     private readonly accountSelector: WeiboAccountSelector,
   ) {}
 
@@ -1014,7 +1016,10 @@ export class WeiboAccountService implements OnModuleInit {
 
     for (const account of accounts) {
       try {
-        const healthResult = await this.checkAccountHealth(account);
+        const healthResult = await this.healthMonitor.evaluate(account, {
+          rotationStrategy: this.rotationStrategy,
+          validateCookie: (target) => this.validateCookie(target),
+        });
         healthResults.push(healthResult);
 
         // 更新账号健康度指标
@@ -1063,89 +1068,10 @@ export class WeiboAccountService implements OnModuleInit {
    * 检查单个账号的健康状态
    */
   private async checkAccountHealth(account: WeiboAccount): Promise<AccountHealthCheckResult> {
-    const healthCheckStartTime = Date.now();
-
-    const result: AccountHealthCheckResult = {
-      accountId: account.id,
-      isHealthy: true,
-      healthScore: 100,
-      issues: [],
-      recommendations: [],
-      validationDetails: {
-        cookieStatus: 'valid',
-        lastCheckTime: new Date(),
-        responseTime: 0,
-        consecutiveFailures: account.consecutiveFailures,
-        bannedRiskLevel: account.bannedRiskLevel
-      }
-    };
-
-    // 1. 检查Cookie有效性
-    const cookieValidation = await this.validateCookie(account);
-    result.validationDetails.responseTime = cookieValidation.responseTime;
-
-    if (!cookieValidation.isValid) {
-      result.isHealthy = false;
-      result.healthScore -= 40;
-      result.issues.push(`Cookie验证失败: ${cookieValidation.errorMessage || '未知错误'}`);
-      result.recommendations.push('更新账号Cookie或重新登录');
-
-      if (cookieValidation.errorType === 'expired_cookies') {
-        result.validationDetails.cookieStatus = 'expired';
-      } else if (cookieValidation.errorType === 'missing_cookies') {
-        result.validationDetails.cookieStatus = 'missing';
-      } else {
-        result.validationDetails.cookieStatus = 'invalid';
-      }
-    }
-
-    // 2. 检查连续失败次数
-    if (account.consecutiveFailures > this.rotationStrategy.maxConsecutiveFailures) {
-      result.isHealthy = false;
-      result.healthScore -= 30;
-      result.issues.push(`连续失败次数过多: ${account.consecutiveFailures}`);
-      result.recommendations.push('暂时停用此账号，检查问题原因');
-    }
-
-    // 3. 检查响应时间
-    if (cookieValidation.responseTime > 8000) {
-      result.isHealthy = false;
-      result.healthScore -= 20;
-      result.issues.push(`响应时间过长: ${cookieValidation.responseTime}ms`);
-      result.recommendations.push('检查网络连接或更换账号');
-    }
-
-    // 4. 检查banned风险等级
-    if (account.bannedRiskLevel === 'high' || account.bannedRiskLevel === 'critical') {
-      result.isHealthy = false;
-      result.healthScore -= account.bannedRiskLevel === 'critical' ? 50 : 30;
-      result.issues.push(`账号封禁风险: ${account.bannedRiskLevel}`);
-      result.recommendations.push('降低此账号使用频率或暂停使用');
-    }
-
-    // 5. 检查使用频率
-    if (account.usageCount > 500) {
-      result.healthScore -= 10;
-      result.issues.push('使用频率过高，可能影响账号安全');
-      result.recommendations.push('增加更多账号进行负载均衡');
-    }
-
-    // 确保健康分数在合理范围内
-    result.healthScore = Math.max(0, Math.min(100, result.healthScore));
-
-    const healthCheckDuration = Date.now() - healthCheckStartTime;
-
-    this.logger.debug('账号健康检查完成', {
-      accountId: account.id,
-      nickname: account.nickname,
-      isHealthy: result.isHealthy,
-      healthScore: result.healthScore,
-      issuesCount: result.issues.length,
-      checkDuration: healthCheckDuration,
-      responseTime: cookieValidation.responseTime
+    return this.healthMonitor.evaluate(account, {
+      rotationStrategy: this.rotationStrategy,
+      validateCookie: (target) => this.validateCookie(target),
     });
-
-    return result;
   }
 
   /**

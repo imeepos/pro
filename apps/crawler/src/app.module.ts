@@ -9,6 +9,7 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { WeiboAccountEntity } from '@pro/entities';
 import { WeiboAccountService } from './weibo/account.service';
 import { WeiboAccountSelector } from './weibo/account.selector';
+import { WeiboAccountHealthMonitor } from './weibo/account.health-monitor';
 import { BrowserService } from './browser/browser.service';
 import { WeiboSearchCrawlerService } from './weibo/search-crawler.service';
 import { WeiboMultiModeCrawlerService } from './weibo/multi-mode-crawler.service';
@@ -109,6 +110,7 @@ import { createDatabaseConfig } from '@pro/entities';
   controllers: [AppController],
   providers: [
     AppService,
+    WeiboAccountHealthMonitor,
     WeiboAccountSelector,
     WeiboAccountService,
     BrowserService,
