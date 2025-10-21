@@ -237,57 +237,6 @@ export class WeiboStatusService {
     }
   }
 
-  async saveStatusDetailToMongoDB(
-    statusId: string,
-    payload: WeiboStatusDetailResponse,
-    context: SaveStatusDetailContext = {}
-  ): Promise<RawDataSourceDoc | null> {
-    if (!statusId) {
-      throw new WeiboRequestError('Weibo status id is required before persisting detail payload')
-    }
-
-    const statusData = this.resolveStatusData(payload)
-    const rawContent = JSON.stringify(statusData)
-    const metadata = this.composeDetailMetadata(statusId, statusData, context)
-
-    const dto: CreateRawDataSourceDto = {
-      sourceType: SourceType.WEIBO_NOTE_DETAIL,
-      sourceUrl: this.buildStatusUrl(statusId, statusData, context.sourceUrl),
-      rawContent,
-      metadata
-    }
-
-    try {
-      const record = await this.rawDataSourceService.create(dto)
-      const completed = await this.rawDataSourceService.markCompleted(record.id)
-
-      if (completed) {
-        return completed
-      }
-
-      record.status = 'completed'
-      record.processedAt = new Date()
-      return record
-    } catch (error) {
-      const isDuplicate =
-        error instanceof Error && error.message.toLowerCase().includes('duplicate')
-
-      if (isDuplicate) {
-        this.logger.debug('Detail payload already stored, skipping duplicate', {
-          statusId,
-          sourceUrl: dto.sourceUrl
-        })
-        return null
-      }
-
-      throw new WeiboRequestError(
-        `Failed to persist Weibo status ${statusId} detail payload`,
-        undefined,
-        error
-      )
-    }
-  }
-
   private ensureWeiboError(
     error: unknown,
     statusId: string,
@@ -320,54 +269,6 @@ export class WeiboStatusService {
       undefined,
       error
     )
-  }
-
-  private resolveStatusData(payload: WeiboStatusDetailResponse): Record<string, any> {
-    if (payload && typeof (payload as any).data === 'object' && (payload as any).data !== null) {
-      return (payload as any).data as Record<string, any>
-    }
-
-    return (payload ?? {}) as Record<string, any>
-  }
-
-  private buildStatusUrl(
-    statusId: string,
-    statusData: Record<string, any>,
-    override?: string
-  ): string {
-    if (override) {
-      return override
-    }
-
-    const userId = statusData?.user?.id ?? statusData?.user?.idstr
-    const mblogId = statusData?.mblogid ?? statusData?.bid ?? statusId
-
-    if (userId) {
-      return `https://weibo.com/${userId}/${mblogId}`
-    }
-
-    return `https://weibo.com/status/${mblogId}`
-  }
-
-  private composeDetailMetadata(
-    statusId: string,
-    statusData: Record<string, any>,
-    context: SaveStatusDetailContext
-  ): Record<string, any> {
-    return {
-      statusId,
-      mid: statusData?.mid ?? statusId,
-      mblogId: statusData?.mblogid ?? statusData?.bid ?? statusId,
-      userId: statusData?.user?.id ?? statusData?.user?.idstr,
-      userScreenName: statusData?.user?.screen_name,
-      reposts: statusData?.reposts_count,
-      comments: statusData?.comments_count,
-      attitudes: statusData?.attitudes_count,
-      keyword: context.keyword,
-      taskId: context.taskId,
-      traceId: context.traceId,
-      discoveredAt: context.discoveredAt ?? new Date().toISOString()
-    }
   }
 }
 
