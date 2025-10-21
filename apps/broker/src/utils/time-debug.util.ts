@@ -17,7 +17,7 @@ export class TimeDebugUtil {
 
   formatDateTime = (date: Date): string => {
     const utc = new Date(date.toISOString());
-    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    const local = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
     return `${utc.toISOString()} UTC / ${local.toISOString().replace('T', ' ').substring(0, 19)} Local (${local.getTimezoneOffset() / -60 > 0 ? '+' : ''}${local.getTimezoneOffset() / -60}:00)`;
   };
 
@@ -26,12 +26,9 @@ export class TimeDebugUtil {
 
     const now = new Date();
     const utcNow = new Date(now.toISOString());
-    const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
 
-    this.logger.info(`系统当前时间:`);
-    this.logger.info(`  UTC: ${utcNow.toISOString()}`);
-    this.logger.info(`  Local: ${localNow.toISOString().replace('T', ' ').substring(0, 19)} (${localNow.getTimezoneOffset() / -60 > 0 ? '+' : ''}${localNow.getTimezoneOffset() / -60}:00)`);
-    this.logger.info(`  Timezone Offset: ${now.getTimezoneOffset()} minutes`);
+    this.logger.info(`系统当前时间: ${this.formatDateTime(utcNow)}`);
+    this.logger.info(`  时区偏移: ${now.getTimezoneOffset()} 分钟 (UTC${now.getTimezoneOffset() > 0 ? '-' : '+'}${Math.abs(now.getTimezoneOffset()) / 60}:00)`);
 
     const allTasks = await this.taskRepository.find({
       where: { enabled: true },
@@ -42,17 +39,16 @@ export class TimeDebugUtil {
 
     for (const task of allTasks) {
       this.logger.info(`\n任务 ${task.id} (${task.keyword}):`);
-      this.logger.info(`  状态: ${task.enabled ? '启用' : '禁用'}`);
+      this.logger.info(`  状态: ${task.enabled ? '✓ 启用' : '✗ 禁用'}`);
       this.logger.info(`  爬取间隔: ${task.crawlInterval}`);
 
       if (task.nextRunAt) {
-        this.logger.info(`  nextRunAt (原始): ${task.nextRunAt.toISOString()}`);
-        this.logger.info(`  nextRunAt (格式化): ${this.formatDateTime(task.nextRunAt)}`);
+        this.logger.info(`  下次执行时间: ${this.formatDateTime(task.nextRunAt)}`);
 
         const isOverdue = task.nextRunAt <= utcNow;
         const timeDiff = task.nextRunAt.getTime() - utcNow.getTime();
 
-        this.logger.info(`  是否到期: ${isOverdue ? '✓ 是' : '✗ 否'}`);
+        this.logger.info(`  是否到期: ${isOverdue ? '✓ 是，应立即执行' : '✗ 否，等待中'}`);
 
         if (timeDiff > 0) {
           const hours = Math.floor(timeDiff / (1000 * 60 * 60));
@@ -63,7 +59,7 @@ export class TimeDebugUtil {
           this.logger.info(`  已过期: ${minutes}分钟`);
         }
       } else {
-        this.logger.info(`  nextRunAt: null (任务将立即执行)`);
+        this.logger.info(`  下次执行时间: null (任务将立即执行)`);
       }
     }
 
@@ -85,15 +81,18 @@ export class TimeDebugUtil {
     const now = new Date();
 
     this.logger.info('Node.js 时区信息:');
-    this.logger.info(`  new Date(): ${now.toISOString()}`);
-    this.logger.info(`  getTimezoneOffset(): ${now.getTimezoneOffset()} 分钟`);
-    this.logger.info(`  UTC${now.getTimezoneOffset() > 0 ? '-' : '+'}${Math.abs(now.getTimezoneOffset()) / 60}:00`);
-
-    const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-    this.logger.info(`  本地时间: ${localDate.toISOString().replace('T', ' ').substring(0, 19)}`);
+    this.logger.info(`  当前时间: ${this.formatDateTime(now)}`);
+    this.logger.info(`  时区偏移: ${now.getTimezoneOffset()} 分钟 (UTC${now.getTimezoneOffset() > 0 ? '-' : '+'}${Math.abs(now.getTimezoneOffset()) / 60}:00)`);
 
     this.logger.info('环境变量:');
     this.logger.info(`  TZ: ${process.env.TZ || 'undefined'}`);
+
+    // 验证时区转换函数
+    const testDate = new Date('2025-10-21T12:00:00Z');
+    const convertedLocal = new Date(testDate.getTime() + testDate.getTimezoneOffset() * 60000);
+    this.logger.info('时区转换验证:');
+    this.logger.info(`  测试时间: ${testDate.toISOString()} UTC`);
+    this.logger.info(`  转换后: ${this.formatDateTime(convertedLocal)}`);
 
     this.logger.info('===== 时区设置检查结束 =====\n');
   }

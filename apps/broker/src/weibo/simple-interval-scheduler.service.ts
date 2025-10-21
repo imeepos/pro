@@ -10,12 +10,12 @@ import { RabbitMQConfigService } from '../rabbitmq/rabbitmq-config.service';
 import { SubTaskMessage } from './interfaces/sub-task-message.interface';
 
 const toUTC = (date: Date): Date => {
-  return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
 };
 
 const formatDateTime = (date: Date): string => {
   const utc = new Date(date.toISOString());
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  const local = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
   return `${utc.toISOString()} UTC / ${local.toISOString().replace('T', ' ').substring(0, 19)} Local`;
 };
 
@@ -53,10 +53,9 @@ export class SimpleIntervalScheduler {
   @Cron(CronExpression.EVERY_MINUTE)
   async scheduleTasks(): Promise<void> {
     const now = new Date();
-    const utcNow = new Date(now.toISOString()); // UTC时间
-    const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000); // 本地时间
+    const utcNow = new Date(now.toISOString()); // 统一使用UTC时间
 
-    this.logger.info(`调度器运行 - UTC: ${utcNow.toISOString()}, Local: ${localNow.toISOString().replace('T', ' ').substring(0, 19)} ${localNow.getTimezoneOffset() / -60 > 0 ? '+' : ''}${localNow.getTimezoneOffset() / -60}:00`);
+    this.logger.info(`调度器运行 - 当前时间: ${formatDateTime(utcNow)}`);
 
     const tasks = await this.loadPendingTasks(utcNow);
 
