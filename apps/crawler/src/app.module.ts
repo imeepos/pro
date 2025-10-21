@@ -21,10 +21,13 @@ import { RawDataService } from './raw-data/raw-data.service';
 import { CrawlQueueConsumer } from './crawl-queue.consumer';
 import { RobotsService } from './robots/robots.service';
 import { RequestMonitorService } from './monitoring/request-monitor.service';
+import { WeiboDetailCrawlerConsumer } from './weibo/weibo-detail-crawler.consumer';
 
 // 微博数据处理服务 - 融合智慧的数字清洗艺术品
 import { WeiboContentParser } from './data-cleaner/weibo-content-parser.service';
 import { WeiboDataCleaner } from './data-cleaner/weibo-data-cleaner.service';
+import { WeiboStatusService } from '@pro/weibo';
+import { RawDataSourceService } from '@pro/mongodb';
 
 import {
   createCrawlerConfig,
@@ -89,20 +92,23 @@ import { createDatabaseConfig } from '@pro/entities';
             sourceType: { type: String, required: true, index: true },
             sourceUrl: { type: String, required: true, unique: true },
             rawContent: { type: String, required: true },
-            contentHash: { type: String, required: true, index: true },
+            contentHash: { type: String, required: true, unique: true, sparse: true },
             metadata: { type: Object, default: {} },
             status: {
               type: String,
-              enum: ['pending', 'processed', 'failed'],
+              enum: ['pending', 'processing', 'processed', 'completed', 'failed', 'duplicate'],
               default: 'pending',
               index: true,
             },
+            processedAt: { type: Date },
+            errorMessage: { type: String },
             createdAt: { type: Date, default: Date.now, index: true },
             updatedAt: { type: Date, default: Date.now },
           },
           {
             timestamps: true,
             collection: 'raw_data_sources',
+            strict: false,
           },
         ),
       },
@@ -126,6 +132,9 @@ import { createDatabaseConfig } from '@pro/entities';
     WeiboMediaDownloaderService,   // 负责媒体文件的智能下载
     RawDataService,
     CrawlQueueConsumer,
+    RawDataSourceService,
+    WeiboStatusService,
+    WeiboDetailCrawlerConsumer,
 
     // 微博数据处理服务 - 融合智慧的数字清洗艺术品
     WeiboContentParser,           // 微博内容的智能解析器

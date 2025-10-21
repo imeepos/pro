@@ -1,5 +1,9 @@
 export { WeiboModule } from './weibo.module.js'
-export { WeiboStatusService } from './weibo.service.js'
+export {
+  WeiboStatusService,
+  type BatchFetchOptions,
+  type SaveStatusDetailContext
+} from './weibo.service.js'
 export type { WeiboStatusLikesOptions, WeiboStatusCommentsOptions } from './weibo.service.js'
 export {
   DEFAULT_WEIBO_BASE_URL,

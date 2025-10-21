@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { HttpService } from '@nestjs/axios'
 import type { AxiosError } from 'axios'
 import { firstValueFrom } from 'rxjs'
 
+import { RawDataSourceService, type RawDataSourceDoc } from '@pro/mongodb'
+import { SourceType, type CreateRawDataSourceDto } from '@pro/types'
 import type { WeiboStatusDetailResponse } from './types/status-detail.js'
 import type { WeiboStatusLikeShowResponse } from './types/like-show.js'
 import type { WeiboBuildCommentsResponse } from './types/comment-build.js'
@@ -11,7 +13,67 @@ import { WeiboRequestError } from './weibo.error.js'
 
 @Injectable()
 export class WeiboStatusService {
-  constructor(private readonly httpService: HttpService) {}
+  private readonly logger = new Logger(WeiboStatusService.name)
+
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly rawDataSourceService: RawDataSourceService
+  ) {}
+
+  async fetchStatusDetails(
+    statusIds: readonly string[],
+    options: BatchFetchOptions = {}
+  ): Promise<Map<string, WeiboStatusDetailResponse>> {
+    const uniqueIds = Array.from(
+      new Set(
+        statusIds
+          .map((id) => String(id).trim())
+          .filter((id) => id.length > 0)
+      )
+    )
+
+    if (uniqueIds.length === 0) {
+      return new Map()
+    }
+
+    const {
+      requestOptions = {},
+      concurrency = 3,
+      onError
+    } = options
+
+    const effectiveConcurrency = Math.max(1, Math.min(concurrency, uniqueIds.length))
+    const workQueue = [...uniqueIds]
+    const results = new Map<string, WeiboStatusDetailResponse>()
+
+    const workers = Array.from({ length: effectiveConcurrency }, async () => {
+      while (workQueue.length > 0) {
+        const statusId = workQueue.shift()
+        if (!statusId) {
+          continue
+        }
+
+        try {
+          const detail = await this.fetchStatusDetail(statusId, requestOptions)
+          results.set(statusId, detail)
+        } catch (error) {
+          const enriched = this.ensureWeiboError(error, statusId, 'detail')
+
+          if (onError) {
+            await onError(statusId, enriched)
+          } else {
+            this.logger.warn(`Failed to fetch Weibo status detail`, {
+              statusId,
+              reason: enriched.message
+            })
+          }
+        }
+      }
+    })
+
+    await Promise.all(workers)
+    return results
+  }
 
   async fetchStatusDetail(
     statusId: string,
@@ -50,7 +112,7 @@ export class WeiboStatusService {
 
       return payload
     } catch (error) {
-      throw this.enrichError(error, statusId, 'detail')
+      throw this.ensureWeiboError(error, statusId, 'detail')
     }
   }
 
@@ -100,7 +162,7 @@ export class WeiboStatusService {
 
       return payload
     } catch (error) {
-      throw this.enrichError(error, statusId, 'likes')
+      throw this.ensureWeiboError(error, statusId, 'likes')
     }
   }
 
@@ -171,11 +233,62 @@ export class WeiboStatusService {
 
       return payload
     } catch (error) {
-      throw this.enrichError(error, statusId, 'comments')
+      throw this.ensureWeiboError(error, statusId, 'comments')
     }
   }
 
-  private enrichError(
+  async saveStatusDetailToMongoDB(
+    statusId: string,
+    payload: WeiboStatusDetailResponse,
+    context: SaveStatusDetailContext = {}
+  ): Promise<RawDataSourceDoc | null> {
+    if (!statusId) {
+      throw new WeiboRequestError('Weibo status id is required before persisting detail payload')
+    }
+
+    const statusData = this.resolveStatusData(payload)
+    const rawContent = JSON.stringify(statusData)
+    const metadata = this.composeDetailMetadata(statusId, statusData, context)
+
+    const dto: CreateRawDataSourceDto = {
+      sourceType: SourceType.WEIBO_NOTE_DETAIL,
+      sourceUrl: this.buildStatusUrl(statusId, statusData, context.sourceUrl),
+      rawContent,
+      metadata
+    }
+
+    try {
+      const record = await this.rawDataSourceService.create(dto)
+      const completed = await this.rawDataSourceService.markCompleted(record.id)
+
+      if (completed) {
+        return completed
+      }
+
+      record.status = 'completed'
+      record.processedAt = new Date()
+      return record
+    } catch (error) {
+      const isDuplicate =
+        error instanceof Error && error.message.toLowerCase().includes('duplicate')
+
+      if (isDuplicate) {
+        this.logger.debug('Detail payload already stored, skipping duplicate', {
+          statusId,
+          sourceUrl: dto.sourceUrl
+        })
+        return null
+      }
+
+      throw new WeiboRequestError(
+        `Failed to persist Weibo status ${statusId} detail payload`,
+        undefined,
+        error
+      )
+    }
+  }
+
+  private ensureWeiboError(
     error: unknown,
     statusId: string,
     target: 'detail' | 'likes' | 'comments'
@@ -208,6 +321,60 @@ export class WeiboStatusService {
       error
     )
   }
+
+  private resolveStatusData(payload: WeiboStatusDetailResponse): Record<string, any> {
+    if (payload && typeof (payload as any).data === 'object' && (payload as any).data !== null) {
+      return (payload as any).data as Record<string, any>
+    }
+
+    return (payload ?? {}) as Record<string, any>
+  }
+
+  private buildStatusUrl(
+    statusId: string,
+    statusData: Record<string, any>,
+    override?: string
+  ): string {
+    if (override) {
+      return override
+    }
+
+    const userId = statusData?.user?.id ?? statusData?.user?.idstr
+    const mblogId = statusData?.mblogid ?? statusData?.bid ?? statusId
+
+    if (userId) {
+      return `https://weibo.com/${userId}/${mblogId}`
+    }
+
+    return `https://weibo.com/status/${mblogId}`
+  }
+
+  private composeDetailMetadata(
+    statusId: string,
+    statusData: Record<string, any>,
+    context: SaveStatusDetailContext
+  ): Record<string, any> {
+    return {
+      statusId,
+      mid: statusData?.mid ?? statusId,
+      mblogId: statusData?.mblogid ?? statusData?.bid ?? statusId,
+      userId: statusData?.user?.id ?? statusData?.user?.idstr,
+      userScreenName: statusData?.user?.screen_name,
+      reposts: statusData?.reposts_count,
+      comments: statusData?.comments_count,
+      attitudes: statusData?.attitudes_count,
+      keyword: context.keyword,
+      taskId: context.taskId,
+      traceId: context.traceId,
+      discoveredAt: context.discoveredAt ?? new Date().toISOString()
+    }
+  }
+}
+
+export interface BatchFetchOptions {
+  readonly requestOptions?: WeiboRequestOptions
+  readonly concurrency?: number
+  readonly onError?: (statusId: string, error: WeiboRequestError) => void | Promise<void>
 }
 
 export interface WeiboStatusLikesOptions extends WeiboRequestOptions {
@@ -227,6 +394,14 @@ export interface WeiboStatusCommentsOptions extends WeiboRequestOptions {
   readonly isShowBulletin?: number
   readonly maxId?: number | string
   readonly maxIdType?: number
+}
+
+export interface SaveStatusDetailContext {
+  readonly discoveredAt?: string
+  readonly traceId?: string
+  readonly keyword?: string
+  readonly taskId?: number
+  readonly sourceUrl?: string
 }
 
 const isAxiosError = (input: unknown): input is AxiosError => {

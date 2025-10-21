@@ -58,6 +58,7 @@
     "@pro/rabbitmq": "workspace:*",
     "@pro/redis": "workspace:*",
     "@pro/types": "workspace:*",
+    "@pro/weibo": "workspace:*",
     "@pro/utils": "workspace:*",
     "amqplib": "^0.10.9",
     "axios": "^1.7.9",
