@@ -72,8 +72,9 @@ export class GraphqlWsContextCreator {
     context: any,
   ): Promise<GraphqlContext> {
     const params = this.normalizeParams(connectionParams);
-    const connectionId = this.ensureConnectionId(websocket);
-    const clientIp = this.resolveClientIp(websocket, context);
+    const socket = this.resolveHandshakeSocket(websocket, context);
+    const connectionId = this.ensureConnectionId(socket);
+    const clientIp = this.resolveClientIp(socket, context);
     const sessionFingerprint = this.resolveSessionFingerprint(params);
     this.logger.log(
       `[${connectionId}] connection_init ip=${clientIp ?? 'unknown'} fingerprint=${sessionFingerprint ?? 'unknown'} auth=${
@@ -92,7 +93,7 @@ export class GraphqlWsContextCreator {
         namespace: 'graphql',
       });
       this.connectionMetrics.recordConnectionOpened('graphql', 'graphql-ws');
-      this.attachReleaseHook(websocket, release, connectedAt, user?.userId);
+      this.attachReleaseHook(socket, connectionId, release, connectedAt, user?.userId);
       this.logger.log(
         `[${connectionId}] connection_ack viewer=${user?.userId ?? 'anonymous'} fingerprint=${sessionFingerprint ?? 'unknown'}`,
       );
@@ -135,6 +136,8 @@ export class GraphqlWsContextCreator {
 
     const socketAddress =
       context?.extra?.socket?.remoteAddress ??
+      context?.extra?.request?.socket?.remoteAddress ??
+      context?.extra?.connection?.remoteAddress ??
       websocket?.socket?.remoteAddress ??
       websocket?._socket?.remoteAddress;
 
@@ -142,22 +145,36 @@ export class GraphqlWsContextCreator {
   }
 
   private ensureConnectionId(websocket: any): string {
-    if (websocket?.[GATEKEEPER_LEASE_TOKEN]?.connectionId) {
-      return websocket[GATEKEEPER_LEASE_TOKEN].connectionId;
+    if (this.isSocketLike(websocket) && (websocket as any)[GATEKEEPER_LEASE_TOKEN]?.connectionId) {
+      return (websocket as any)[GATEKEEPER_LEASE_TOKEN].connectionId;
     }
 
     const connectionId = randomUUID();
 
-    if (!websocket[GATEKEEPER_LEASE_TOKEN]) {
-      websocket[GATEKEEPER_LEASE_TOKEN] = {};
+    if (this.isSocketLike(websocket)) {
+      const container = this.resolveLeaseContainer(websocket);
+      container.connectionId = connectionId;
+      (websocket as any)[GATEKEEPER_LEASE_TOKEN] = container;
+    } else {
+      this.logger.warn(`[${connectionId}] GraphQL WS socket reference missing; using ephemeral connection id`);
     }
 
-    websocket[GATEKEEPER_LEASE_TOKEN].connectionId = connectionId;
     return connectionId;
   }
 
-  private attachReleaseHook(websocket: any, release: () => void, connectedAt: number, viewerId?: string): void {
-    const container = websocket[GATEKEEPER_LEASE_TOKEN] ?? {};
+  private attachReleaseHook(
+    websocket: any,
+    connectionId: string,
+    release: () => void,
+    connectedAt: number,
+    viewerId?: string,
+  ): void {
+    if (!this.isSocketLike(websocket)) {
+      this.logger.warn(`[${connectionId}] GraphQL WS socket missing; lease cleanup hook not attached`);
+      return;
+    }
+
+    const container = this.resolveLeaseContainer(websocket);
     container.startedAt = connectedAt;
     container.viewerId = viewerId;
 
@@ -173,7 +190,7 @@ export class GraphqlWsContextCreator {
       this.connectionMetrics.recordConnectionClosed('graphql', 'graphql-ws', durationMs);
       release();
       this.logger.log(
-        `[${container.connectionId ?? 'unknown'}] connection_closed viewer=${container.viewerId ?? 'unknown'} duration=${durationMs}ms`,
+        `[${container.connectionId ?? connectionId}] connection_closed viewer=${container.viewerId ?? viewerId ?? 'unknown'} duration=${durationMs}ms`,
       );
     };
 
@@ -184,7 +201,38 @@ export class GraphqlWsContextCreator {
     }
 
     container.release = finalize;
-    websocket[GATEKEEPER_LEASE_TOKEN] = container;
+    (websocket as any)[GATEKEEPER_LEASE_TOKEN] = container;
+  }
+
+  private resolveHandshakeSocket(websocket: any, context: any): any {
+    if (this.isSocketLike(websocket)) {
+      return websocket;
+    }
+
+    const fallback =
+      context?.extra?.socket ??
+      context?.extra?.connection?.socket ??
+      context?.extra?.ws ??
+      context?.socket ??
+      context?.websocket;
+
+    if (this.isSocketLike(fallback)) {
+      return fallback;
+    }
+
+    return undefined;
+  }
+
+  private isSocketLike(candidate: unknown): candidate is Record<PropertyKey, any> {
+    return typeof candidate === 'object' && candidate !== null;
+  }
+
+  private resolveLeaseContainer(websocket: Record<PropertyKey, any>): Record<PropertyKey, any> {
+    const container = (websocket as any)[GATEKEEPER_LEASE_TOKEN];
+    if (container && typeof container === 'object') {
+      return container;
+    }
+    return {};
   }
 
   private resolveAuthFailureCode(cause: unknown): string {

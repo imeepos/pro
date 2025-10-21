@@ -704,6 +704,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
   createLoginEventsIterator(sessionId: string): AsyncIterator<WeiboLoginEventEnvelope> {
     const channel = this.buildLoginEventChannel(sessionId);
     this.logger.debug('创建微博登录事件迭代器', { sessionId, channel });
+    this.registerLoginEventChannel(channel);
     return this.pubSub.asyncIterator<WeiboLoginEventEnvelope>(channel);
   }
 
@@ -733,12 +734,20 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     return `${SUBSCRIPTION_EVENTS.WEIBO_LOGIN_EVENT}:${sessionId}`;
   }
 
+  private registerLoginEventChannel(channel: string): void {
+    this.pubSub.registerChannel(channel, {
+      description: 'weibo login event stream',
+      allowAnonymous: false,
+    });
+  }
+
   /**
    * 通过 PubSub 和 WebSocket 广播登录事件
    */
   private async broadcastLoginEvent(sessionId: string, userId: string, event: WeiboLoginEvent): Promise<void> {
     const envelope = this.createLoginEventEnvelope(sessionId, userId, event);
     const channel = this.buildLoginEventChannel(sessionId);
+    this.registerLoginEventChannel(channel);
 
     this.logger.debug('发布微博登录事件', {
       sessionId,
@@ -763,18 +772,6 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
         eventType: event.type,
         error,
       });
-    }
-
-    try {
-      this.screensGateway.sendToUser(userId, 'weibo:login:event', {
-        sessionId: envelope.sessionId,
-        userId: envelope.userId,
-        type: event.type,
-        data: event.data,
-        timestamp: envelope.emittedAt,
-      });
-    } catch (error) {
-      this.logger.error(`[WebSocket] 广播登录事件失败: ${sessionId}`, error);
     }
 
     switch (event.type) {

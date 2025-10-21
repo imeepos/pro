@@ -46,6 +46,13 @@ export class WeiboLoginService {
         },
         {
           next: (result: any) => {
+            if (Array.isArray(result?.errors) && result.errors.length > 0) {
+              const [firstError] = result.errors;
+              const message = typeof firstError?.message === 'string' ? firstError.message : 'GraphQL subscription error';
+              observer.error(new Error(message));
+              return;
+            }
+
             if (result.data?.weiboLoginEvents) {
               observer.next(result.data.weiboLoginEvents);
             }
@@ -61,6 +68,10 @@ export class WeiboLoginService {
 
   observeConnectionState(): Observable<SubscriptionConnectionState> {
     return this.subscriptionClient.connectionStateChanges();
+  }
+
+  observeConnectionIssues(): Observable<string | null> {
+    return this.subscriptionClient.connectionIssues();
   }
 
   reconnect(): void {

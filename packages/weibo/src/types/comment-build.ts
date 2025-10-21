@@ -93,6 +93,11 @@ export interface WeiboCommentEntity extends Record<string, unknown> {
   readonly match_ai_play_picture?: boolean
   readonly isLikedByMblogAuthor?: boolean
   readonly isExpand?: boolean
+  readonly reply_comment?: WeiboCommentEntity
+  readonly reply_original_text?: string
+  readonly shouldShowColon?: boolean
+  readonly is_mblog_author?: boolean
+  readonly scheme?: string
   readonly comment_bubble?: WeiboCommentBubble
   readonly vip_button?: Record<string, unknown>
   readonly user: WeiboCommentUser

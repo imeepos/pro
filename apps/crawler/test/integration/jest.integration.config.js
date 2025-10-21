@@ -86,6 +86,7 @@ module.exports = {
   moduleNameMapper: {
     '^@pro/(.*)$': '<rootDir>/../../../../packages/$1/dist',
     '^@pro/(.*)/(.*)$': '<rootDir>/../../../../packages/$1/dist/$2',
+    '^entities/(.*)$': '<rootDir>/../../../../node_modules/entities/$1',
     '^signal-exit$': '<rootDir>/signal-exit-shim.js',
   },
 

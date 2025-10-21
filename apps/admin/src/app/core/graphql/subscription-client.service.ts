@@ -14,12 +14,17 @@ export class SubscriptionClient implements OnDestroy {
   private client: Client | null = null;
   private readonly log = logger.withScope('SubscriptionClient');
   private readonly connectionState = new BehaviorSubject<SubscriptionConnectionState>('disconnected');
+  private readonly connectionIssue = new BehaviorSubject<string | null>(null);
   private manualDisconnect = false;
 
   constructor(private readonly tokenStorage: TokenStorageService) {}
 
   connectionStateChanges(): Observable<SubscriptionConnectionState> {
     return this.connectionState.asObservable();
+  }
+
+  connectionIssues(): Observable<string | null> {
+    return this.connectionIssue.asObservable();
   }
 
   getClient(): Client {
@@ -45,6 +50,7 @@ export class SubscriptionClient implements OnDestroy {
           const connection = socket as WebSocket | undefined;
           const protocol = connection && typeof connection.protocol === 'string' ? connection.protocol : undefined;
           this.connectionState.next('connected');
+          this.connectionIssue.next(null);
           this.log.info('WebSocket 已连接', {
             url: wsUrl,
             protocol,
@@ -54,6 +60,7 @@ export class SubscriptionClient implements OnDestroy {
         closed: (event) => {
           const closeEvent = event as CloseEvent | undefined;
           this.connectionState.next('disconnected');
+          this.connectionIssue.next(this.describeCloseEvent(closeEvent));
           this.log.info('WebSocket 已关闭', {
             code: closeEvent?.code,
             reason: closeEvent?.reason,
@@ -63,6 +70,7 @@ export class SubscriptionClient implements OnDestroy {
         error: (error) => {
           const details = (error ?? {}) as { message?: string };
           this.connectionState.next('error');
+          this.connectionIssue.next(this.describeError(details));
           this.log.error('WebSocket 错误', { message: details.message ?? 'unknown', error });
         }
       },
@@ -79,6 +87,7 @@ export class SubscriptionClient implements OnDestroy {
 
         if (closeEvent?.code === 4401 || closeEvent?.code === 4403) {
           this.connectionState.next('error');
+          this.connectionIssue.next(this.describeCloseEvent(closeEvent));
           this.log.error('WebSocket 认证失败，停止重连', {
             code: closeEvent?.code,
             reason: closeEvent?.reason,
@@ -87,6 +96,7 @@ export class SubscriptionClient implements OnDestroy {
         }
 
         this.connectionState.next('reconnecting');
+        this.connectionIssue.next(this.describeCloseEvent(closeEvent));
         this.log.warn('WebSocket 连接断开，准备重试', {
           code: closeEvent?.code,
           reason: closeEvent?.reason,
@@ -110,6 +120,7 @@ export class SubscriptionClient implements OnDestroy {
   reconnect(): void {
     this.log.info('WebSocket 重连请求已触发');
     if (this.client) {
+      this.connectionIssue.next(null);
       this.disconnect();
     }
     this.client = this.createClient('reconnect');
@@ -121,11 +132,40 @@ export class SubscriptionClient implements OnDestroy {
       this.client.dispose();
       this.client = null;
       this.connectionState.next('disconnected');
+      this.connectionIssue.next(null);
       this.log.info('WebSocket 已断开');
     }
   }
 
   ngOnDestroy(): void {
     this.disconnect();
+  }
+
+  private describeCloseEvent(event?: CloseEvent): string | null {
+    if (!event) {
+      return null;
+    }
+
+    const code = typeof event.code === 'number' ? event.code : undefined;
+    const reason = event.reason?.trim() ? event.reason.trim() : undefined;
+
+    if (!code && !reason) {
+      return null;
+    }
+
+    if (reason && code) {
+      return `连接已关闭 (code=${code}): ${reason}`;
+    }
+
+    if (code) {
+      return `连接已关闭 (code=${code})`;
+    }
+
+    return reason ?? null;
+  }
+
+  private describeError(details: { message?: string }): string {
+    const message = details.message?.trim();
+    return message && message.length > 0 ? message : 'WebSocket 发生未知错误';
   }
 }

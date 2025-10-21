@@ -17,9 +17,11 @@ export class WeiboLoginComponent implements OnInit, OnDestroy {
   accountInfo: any = null;
   connectionState: SubscriptionConnectionState = 'disconnected';
   connectionMessage = '';
+  connectionIssue = '';
 
   private subscription?: Subscription;
   private connectionSubscription?: Subscription;
+  private connectionIssueSubscription?: Subscription;
 
   constructor(
     private readonly weiboLogin: WeiboLoginService,
@@ -30,12 +32,17 @@ export class WeiboLoginComponent implements OnInit, OnDestroy {
     this.connectionSubscription = this.weiboLogin.observeConnectionState().subscribe(state => {
       this.ngZone.run(() => this.handleConnectionState(state));
     });
+    this.connectionIssueSubscription = this.weiboLogin.observeConnectionIssues().subscribe(issue => {
+      this.ngZone.run(() => this.handleConnectionIssue(issue));
+    });
   }
 
   ngOnDestroy(): void {
     this.unsubscribe();
     this.connectionSubscription?.unsubscribe();
     this.connectionSubscription = undefined;
+    this.connectionIssueSubscription?.unsubscribe();
+    this.connectionIssueSubscription = undefined;
   }
 
   async startWeiboLogin(): Promise<void> {
@@ -122,24 +129,37 @@ export class WeiboLoginComponent implements OnInit, OnDestroy {
 
   private handleConnectionState(state: SubscriptionConnectionState): void {
     this.connectionState = state;
-
-    switch (state) {
-      case 'connecting':
-        this.connectionMessage = '正在建立实时连接...';
-        break;
-      case 'reconnecting':
-        this.connectionMessage = '连接中断，正在尝试重连...';
-        break;
-      case 'error':
-        this.connectionMessage = '连接异常，请点击重试';
-        break;
-      default:
-        this.connectionMessage = '';
-    }
+    this.updateConnectionMessage(state, this.connectionIssue);
   }
 
   resetAndStartNew(): void {
     this.unsubscribe();
     this.startWeiboLogin();
+  }
+
+  private handleConnectionIssue(issue: string | null): void {
+    this.connectionIssue = issue ?? '';
+    this.updateConnectionMessage(this.connectionState, this.connectionIssue);
+  }
+
+  private updateConnectionMessage(state: SubscriptionConnectionState, issue: string): void {
+    if (issue) {
+      this.connectionMessage = issue;
+      return;
+    }
+
+    switch (state) {
+      case 'connecting':
+        this.connectionMessage = '正在建立实时连接...';
+        return;
+      case 'reconnecting':
+        this.connectionMessage = '连接中断，正在尝试重连...';
+        return;
+      case 'error':
+        this.connectionMessage = '连接异常，请点击重试';
+        return;
+      default:
+        this.connectionMessage = '';
+    }
   }
 }
