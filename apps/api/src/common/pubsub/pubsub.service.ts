@@ -7,8 +7,10 @@ import { buildPubSubConfig, PubSubModuleConfig, PubSubRedisConfig } from './pubs
 
 interface ChannelMetadata {
   trigger: string;
-  audience?: string[];
   description?: string;
+  requiredScopes?: string[];
+  publishScopes?: string[];
+  allowAnonymous?: boolean;
 }
 
 type PubSubLike = {
@@ -39,7 +41,11 @@ export class PubSubService implements OnModuleDestroy {
     await Promise.allSettled(this.teardownCallbacks.map(callback => callback()));
   }
 
-  publish<T>(triggerName: string, payload: T): Promise<void> {
+  publish<T>(triggerName: string, payload: T, metadata?: Omit<ChannelMetadata, 'trigger'>): Promise<void> {
+    if (metadata) {
+      this.registerChannel(triggerName, metadata);
+    }
+
     return this.engine.publish(this.qualifyTrigger(triggerName), payload);
   }
 
@@ -66,9 +72,14 @@ export class PubSubService implements OnModuleDestroy {
 
   registerChannel(trigger: string, metadata: Omit<ChannelMetadata, 'trigger'> = {}): void {
     const qualified = this.qualifyTrigger(trigger);
+    const current = this.channelRegistry.get(qualified);
     this.channelRegistry.set(qualified, {
       trigger: qualified,
+      ...(current ?? {}),
       ...metadata,
+      requiredScopes: metadata.requiredScopes ?? current?.requiredScopes,
+      publishScopes: metadata.publishScopes ?? current?.publishScopes,
+      allowAnonymous: metadata.allowAnonymous ?? current?.allowAnonymous ?? false,
     });
   }
 

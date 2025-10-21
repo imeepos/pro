@@ -13,6 +13,7 @@ import { WeiboAccountService } from '../weibo/weibo-account.service';
 import { PubSubService } from '../common/pubsub/pubsub.service';
 import { SUBSCRIPTION_EVENTS } from './constants/subscription-events';
 import { ConnectionGatekeeper, ConnectionRateLimitException } from '../auth/services/connection-gatekeeper.service';
+import { ConnectionMetricsService } from '../monitoring/connection-metrics.service';
 
 /**
  * 大屏系统 WebSocket Gateway
@@ -44,8 +45,10 @@ export class ScreensGateway
     connectedAt: Date;
     lastPing: Date;
     ip: string;
+    transport: string;
     heartbeatTimer?: NodeJS.Timeout;
     releaseLease?: () => void;
+    metricsClosed?: boolean;
   }>();
   private readonly heartbeatInterval = 30000; // 30秒心跳间隔
   private readonly connectionTimeout = 120000; // 2分钟连接超时
@@ -54,6 +57,7 @@ export class ScreensGateway
     private readonly jwtService: JwtService,
     private readonly pubSub: PubSubService,
     private readonly connectionGatekeeper: ConnectionGatekeeper,
+    private readonly connectionMetrics: ConnectionMetricsService,
     @Inject(forwardRef(() => WeiboAccountService))
     private readonly weiboAccountService: WeiboAccountService,
   ) {}
@@ -77,6 +81,7 @@ export class ScreensGateway
   async handleConnection(client: Socket) {
     const connectionStartTime = Date.now();
     const clientIp = this.resolveClientIp(client);
+    const transport = this.resolveTransport(client);
     let releaseLease: (() => void) | null = null;
 
     try {
@@ -87,6 +92,7 @@ export class ScreensGateway
       if (!token) {
         this.logger.warn(`Connection rejected: missing token, client: ${client.id}`);
         this.connectionGatekeeper.recordHandshakeFailure(clientIp, 'screens');
+        this.connectionMetrics.recordAuthFailure('screens', 'missing_token');
         client.emit('auth:error', { message: 'Missing token', code: 'MISSING_TOKEN' });
         client.emit('connection:rejected', { reason: 'missing_token', code: 'MISSING_TOKEN', timestamp: new Date().toISOString() });
         setTimeout(() => {
@@ -111,8 +117,10 @@ export class ScreensGateway
       client.data.connectedAt = connectedAt;
       client.data.lastPing = connectedAt;
       client.data.ip = clientIp;
+      client.data.transport = transport;
 
-      this.registerClient(client, userId, clientIp ?? 'unknown', releaseLease, connectedAt);
+      this.registerClient(client, userId, clientIp ?? 'unknown', transport, releaseLease, connectedAt);
+      this.connectionMetrics.recordConnectionOpened('screens', transport);
       this.setupClientEventHandlers(client);
       this.setupHeartbeat(client);
 
@@ -137,6 +145,7 @@ export class ScreensGateway
 
       if (isRateLimited) {
         this.logger.warn(`WebSocket connection throttled: client=${client.id}, ip=${clientIp ?? 'unknown'}, duration=${connectionDuration}ms`);
+        this.connectionMetrics.recordRejection('screens', 'rate_limited');
         client.emit('connection:rejected', {
           reason: 'rate_limited',
           code: 'RATE_LIMITED',
@@ -149,6 +158,8 @@ export class ScreensGateway
       }
 
       this.connectionGatekeeper.recordHandshakeFailure(clientIp, 'screens');
+      this.connectionMetrics.recordAuthFailure('screens', this.resolveAuthFailureCode(error));
+      this.connectionMetrics.recordRejection('screens', 'auth_failed');
       this.logger.error(
         `WebSocket authentication failed: client=${client.id}, duration=${connectionDuration}ms, error=${errorMessage}`,
         error.stack,
@@ -237,6 +248,7 @@ export class ScreensGateway
     client: Socket,
     userId: string,
     ip: string,
+    transport: string,
     releaseLease: (() => void) | undefined,
     connectedAt: Date,
   ) {
@@ -246,7 +258,9 @@ export class ScreensGateway
       connectedAt,
       lastPing: connectedAt,
       ip,
+      transport,
       releaseLease,
+      metricsClosed: false,
     });
   }
 
@@ -256,6 +270,8 @@ export class ScreensGateway
   private unregisterClient(client: Socket) {
     const clientInfo = this.connectedClients.get(client.id);
     if (clientInfo) {
+      this.recordConnectionMetrics(client.id, clientInfo);
+
       if (clientInfo.heartbeatTimer) {
         clearInterval(clientInfo.heartbeatTimer);
       }
@@ -336,9 +352,8 @@ export class ScreensGateway
         client.emit('heartbeat', { timestamp: new Date().toISOString() });
       } else {
         clearInterval(clientInfo.heartbeatTimer);
-        clientInfo.releaseLease?.();
-        clientInfo.releaseLease = undefined;
-        this.connectedClients.delete(client.id);
+        clientInfo.heartbeatTimer = undefined;
+        this.unregisterClient(client);
       }
     }, this.heartbeatInterval);
   }
@@ -355,6 +370,43 @@ export class ScreensGateway
 
     const address = client.handshake?.address ?? client.conn.remoteAddress;
     return address ?? undefined;
+  }
+
+  private resolveTransport(client: Socket): string {
+    const transport = client.conn?.transport?.name ?? client.handshake?.query?.transport;
+    return typeof transport === 'string' ? transport : 'socket.io';
+  }
+
+  private recordConnectionMetrics(clientId: string, clientInfo: {
+    connectedAt: Date;
+    transport: string;
+    metricsClosed?: boolean;
+  }, durationOverrideMs?: number) {
+    if (clientInfo.metricsClosed) {
+      return;
+    }
+
+    const durationMs = durationOverrideMs ?? Math.max(Date.now() - clientInfo.connectedAt.getTime(), 0);
+    this.connectionMetrics.recordConnectionClosed('screens', clientInfo.transport, durationMs);
+    clientInfo.metricsClosed = true;
+  }
+
+  private resolveAuthFailureCode(cause: unknown): string {
+    const message = cause instanceof Error ? cause.message : String(cause ?? 'unknown');
+
+    if (/jwt expired/i.test(message) || /过期/.test(message)) {
+      return 'token_expired';
+    }
+
+    if (/invalid token/i.test(message) || /格式无效/.test(message)) {
+      return 'invalid_token';
+    }
+
+    if (/missing/i.test(message) || /缺少/.test(message)) {
+      return 'missing_credentials';
+    }
+
+    return 'authentication_failed';
   }
 
   /**

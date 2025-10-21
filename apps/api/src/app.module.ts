@@ -32,6 +32,8 @@ import { ApiKeyLoader } from './auth/api-key.loader';
 import { GraphqlWsAuthService } from './auth/services/graphql-ws-auth.service';
 import { GraphqlWsContextCreator } from './auth/utils/graphql-ws-context.util';
 import { ConnectionGatekeeper, ConnectionRateLimitException } from './auth/services/connection-gatekeeper.service';
+import { MonitoringModule } from './monitoring/monitoring.module';
+import { ConnectionMetricsService } from './monitoring/connection-metrics.service';
 import { EventTypeLoader } from './events/event-type.loader';
 import { IndustryTypeLoader } from './events/industry-type.loader';
 import { TagLoader } from './events/tag.loader';
@@ -47,7 +49,7 @@ import { TagLoader } from './events/tag.loader';
     })),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      imports: [LoadersModule, AuthModule],
+      imports: [LoadersModule, AuthModule, MonitoringModule],
       inject: [
         ConfigService,
         UserLoader,
@@ -57,6 +59,7 @@ import { TagLoader } from './events/tag.loader';
         TagLoader,
         GraphqlWsAuthService,
         ConnectionGatekeeper,
+        ConnectionMetricsService,
       ],
       useFactory: (
         configService: ConfigService,
@@ -67,6 +70,7 @@ import { TagLoader } from './events/tag.loader';
         tagLoader: TagLoader,
         wsAuthService: GraphqlWsAuthService,
         connectionGatekeeper: ConnectionGatekeeper,
+        connectionMetrics: ConnectionMetricsService,
       ): ApolloDriverConfig => {
         const isProduction = configService.get<string>('NODE_ENV') === 'production';
 
@@ -78,6 +82,7 @@ import { TagLoader } from './events/tag.loader';
           industryTypeLoader,
           tagLoader,
           connectionGatekeeper,
+          connectionMetrics,
         );
 
         return {
@@ -166,6 +171,7 @@ import { TagLoader } from './events/tag.loader';
     DatabaseModule,
     RabbitMQModule,
     AuthModule,
+    MonitoringModule,
     UserModule,
     WeiboModule,
     JdModule,

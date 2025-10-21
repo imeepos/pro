@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { Logger } from '@nestjs/common';
 import { GraphqlWsAuthService } from '../services/graphql-ws-auth.service';
 import { AugmentedRequest, GraphqlContext } from '../../common/utils/context.utils';
 import { GraphqlLoaders } from '../../common/dataloaders/types';
@@ -8,6 +9,7 @@ import { EventTypeLoader } from '../../events/event-type.loader';
 import { IndustryTypeLoader } from '../../events/industry-type.loader';
 import { TagLoader } from '../../events/tag.loader';
 import { ConnectionGatekeeper, ConnectionRateLimitException } from '../services/connection-gatekeeper.service';
+import { ConnectionMetricsService } from '../../monitoring/connection-metrics.service';
 
 const GATEKEEPER_LEASE_TOKEN = Symbol('graphqlWsLease');
 
@@ -50,11 +52,9 @@ const extractApiKey = (connectionParams: Record<string, unknown>) => {
   return undefined;
 };
 
-/**
- * WebSocket 连接上下文创建器
- * 处理 graphql-ws 连接的认证和上下文创建
- */
 export class GraphqlWsContextCreator {
+  private readonly logger = new Logger('GraphqlWsHandshake');
+
   constructor(
     private readonly wsAuthService: GraphqlWsAuthService,
     private readonly userLoader: UserLoader,
@@ -63,48 +63,53 @@ export class GraphqlWsContextCreator {
     private readonly industryTypeLoader: IndustryTypeLoader,
     private readonly tagLoader: TagLoader,
     private readonly connectionGatekeeper: ConnectionGatekeeper,
+    private readonly connectionMetrics: ConnectionMetricsService,
   ) {}
 
-  /**
-   * 创建 WebSocket 连接上下文
-   */
   async createConnectionContext(
     connectionParams: any,
     websocket: any,
     context: any,
   ): Promise<GraphqlContext> {
+    const params = this.normalizeParams(connectionParams);
+    const connectionId = this.ensureConnectionId(websocket);
     const clientIp = this.resolveClientIp(websocket, context);
-    this.connectionGatekeeper.assertHandshakeAllowed(clientIp, 'graphql');
+    const sessionFingerprint = this.resolveSessionFingerprint(params);
+    this.logger.log(
+      `[${connectionId}] connection_init ip=${clientIp ?? 'unknown'} fingerprint=${sessionFingerprint ?? 'unknown'} auth=${
+        typeof params.authorization === 'string' ? 'present' : 'absent'
+      } apikey=${extractApiKey(params) ? 'present' : 'absent'}`,
+    );
 
     try {
-      // 认证连接，会抛出具体错误信息
-      const user = await this.wsAuthService.authenticateConnection(connectionParams);
-      const headers = mapConnectionParamsToHeaders(connectionParams);
-      const connectionId = this.ensureConnectionId(websocket);
+      this.connectionGatekeeper.assertHandshakeAllowed(clientIp, 'graphql');
+      const user = await this.wsAuthService.authenticateConnection(params);
+      const headers = mapConnectionParamsToHeaders(params);
+      const connectedAt = Date.now();
       const release = this.connectionGatekeeper.openLease(connectionId, {
         ip: clientIp,
         userId: user?.userId,
         namespace: 'graphql',
       });
-      this.attachReleaseHook(websocket, release);
+      this.connectionMetrics.recordConnectionOpened('graphql', 'graphql-ws');
+      this.attachReleaseHook(websocket, release, connectedAt, user?.userId);
+      this.logger.log(
+        `[${connectionId}] connection_ack viewer=${user?.userId ?? 'anonymous'} fingerprint=${sessionFingerprint ?? 'unknown'}`,
+      );
 
-      // 创建增强的请求对象
       const request: AugmentedRequest = {
         headers,
         user,
         websocket,
-        connectionParams,
+        connectionParams: params,
       } as any;
 
-      // 创建 GraphQL 上下文，包含所有必要的 loaders
       return {
         req: request,
-        res: {} as any, // WebSocket 连接没有 Response 对象
+        res: {} as any,
         loaders: {
           userById: this.userLoader.create(),
-          apiKeyById: this.apiKeyLoader.create(() => {
-            return user?.userId;
-          }),
+          apiKeyById: this.apiKeyLoader.create(() => user?.userId),
           eventTypeById: this.eventTypeLoader.create(),
           industryTypeById: this.industryTypeLoader.create(),
           tagById: this.tagLoader.createById(),
@@ -112,10 +117,7 @@ export class GraphqlWsContextCreator {
         } satisfies GraphqlLoaders,
       };
     } catch (error) {
-      if (!(error instanceof ConnectionRateLimitException)) {
-        this.connectionGatekeeper.recordHandshakeFailure(clientIp, 'graphql');
-      }
-      // 重新抛出认证错误，让上层处理
+      this.handleConnectionError(error, connectionId, clientIp, sessionFingerprint);
       throw error;
     }
   }
@@ -154,16 +156,95 @@ export class GraphqlWsContextCreator {
     return connectionId;
   }
 
-  private attachReleaseHook(websocket: any, release: () => void): void {
+  private attachReleaseHook(websocket: any, release: () => void, connectedAt: number, viewerId?: string): void {
     const container = websocket[GATEKEEPER_LEASE_TOKEN] ?? {};
+    container.startedAt = connectedAt;
+    container.viewerId = viewerId;
+
+    let closed = false;
+
+    const finalize = () => {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      const finishedAt = Date.now();
+      const durationMs = Math.max(finishedAt - connectedAt, 0);
+      this.connectionMetrics.recordConnectionClosed('graphql', 'graphql-ws', durationMs);
+      release();
+      this.logger.log(
+        `[${container.connectionId ?? 'unknown'}] connection_closed viewer=${container.viewerId ?? 'unknown'} duration=${durationMs}ms`,
+      );
+    };
 
     if (!container.releaseAttached) {
-      websocket.once?.('close', release);
-      websocket.once?.('error', release);
+      websocket.once?.('close', finalize);
+      websocket.once?.('error', finalize);
       container.releaseAttached = true;
     }
 
-    container.release = release;
+    container.release = finalize;
     websocket[GATEKEEPER_LEASE_TOKEN] = container;
+  }
+
+  private resolveAuthFailureCode(cause: unknown): string {
+    const message = cause instanceof Error ? cause.message : String(cause ?? 'unknown');
+
+    if (/缺少授权|missing authorization/i.test(message)) {
+      return 'missing_authorization';
+    }
+
+    if (/格式无效|invalid format/i.test(message)) {
+      return 'invalid_token_format';
+    }
+
+    if (/过期|expired/i.test(message)) {
+      return 'token_expired';
+    }
+
+    if (/失效|revoked/i.test(message)) {
+      return 'token_revoked';
+    }
+
+    return 'authentication_failed';
+  }
+
+  private handleConnectionError(
+    error: unknown,
+    connectionId: string,
+    clientIp: string | undefined,
+    sessionFingerprint: string | undefined,
+  ) {
+    const message = error instanceof Error ? error.message : String(error ?? 'unknown');
+    this.logger.warn(
+      `[${connectionId}] connection_rejected ip=${clientIp ?? 'unknown'} fingerprint=${sessionFingerprint ?? 'unknown'} reason=${message}`,
+    );
+
+    if (error instanceof ConnectionRateLimitException) {
+      this.connectionMetrics.recordRejection('graphql', 'rate_limited');
+      return;
+    }
+
+    this.connectionGatekeeper.recordHandshakeFailure(clientIp, 'graphql');
+    this.connectionMetrics.recordAuthFailure('graphql', this.resolveAuthFailureCode(error));
+    this.connectionMetrics.recordRejection('graphql', 'auth_failed');
+  }
+
+  private resolveSessionFingerprint(connectionParams: Record<string, unknown>): string | undefined {
+    const fingerprintCandidate = connectionParams['sessionFingerprint'] ?? connectionParams['fingerprint'];
+    if (typeof fingerprintCandidate !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = fingerprintCandidate.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  private normalizeParams(connectionParams: any): Record<string, unknown> {
+    if (connectionParams && typeof connectionParams === 'object') {
+      return connectionParams as Record<string, unknown>;
+    }
+
+    return {};
   }
 }

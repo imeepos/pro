@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { OnModuleInit, UseGuards } from '@nestjs/common';
 import { Args, Context, ID, Int, Mutation, Parent, Query, ResolveField, Resolver, Subscription } from '@nestjs/graphql';
 import { ScreensService } from './screens.service';
 import { CreateScreenDto, UpdateScreenDto } from './dto';
@@ -12,14 +12,24 @@ import { buildOffsetConnection } from '../common/utils/pagination.utils';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PubSubService } from '../common/pubsub/pubsub.service';
 import { SUBSCRIPTION_EVENTS } from './constants/subscription-events';
+import { SubscriptionAccessService } from '../auth/services/subscription-access.service';
+import { GraphqlContext } from '../common/utils/context.utils';
 
 @Resolver(() => ScreenModel)
 @UseGuards(CompositeAuthGuard)
-export class ScreensResolver {
+export class ScreensResolver implements OnModuleInit {
   constructor(
     private readonly screensService: ScreensService,
     private readonly pubSub: PubSubService,
+    private readonly subscriptionAccess: SubscriptionAccessService,
   ) {}
+
+  onModuleInit() {
+    this.pubSub.registerChannel(SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE, {
+      description: 'Weibo logged-in users statistics stream',
+      requiredScopes: ['authenticated'],
+    });
+  }
 
   @Query(() => ScreenConnection, { name: 'screens' })
   async screens(
@@ -152,8 +162,17 @@ export class ScreensResolver {
 
   @Subscription(() => WeiboLoggedInUsersStatsModel, {
     name: 'weiboLoggedInUsersUpdate',
+    filter: (_payload, _variables, context: GraphqlContext) => {
+      try {
+        this.subscriptionAccess.assertCanSubscribe(context, SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE);
+        return true;
+      } catch {
+        return false;
+      }
+    },
   })
-  weiboLoggedInUsersUpdate() {
+  weiboLoggedInUsersUpdate(@Context() context: GraphqlContext) {
+    this.subscriptionAccess.assertCanSubscribe(context, SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE);
     return this.pubSub.asyncIterator(SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE);
   }
 }

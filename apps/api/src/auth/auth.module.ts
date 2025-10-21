@@ -17,6 +17,7 @@ import { ApiKeyResolver } from './api-key.resolver';
 import { ApiKeyLoader } from './api-key.loader';
 import { GraphqlWsAuthService } from './services/graphql-ws-auth.service';
 import { ConnectionGatekeeper } from './services/connection-gatekeeper.service';
+import { SubscriptionAccessService } from './services/subscription-access.service';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ConnectionGatekeeper } from './services/connection-gatekeeper.service';
     ApiKeyLoader,
     GraphqlWsAuthService,
     ConnectionGatekeeper,
+    SubscriptionAccessService,
   ],
   exports: [
     AuthService,
@@ -49,6 +51,7 @@ import { ConnectionGatekeeper } from './services/connection-gatekeeper.service';
     CompositeAuthGuard,
     GraphqlWsAuthService,
     ConnectionGatekeeper,
+    SubscriptionAccessService,
   ],
 })
 export class AuthModule {}

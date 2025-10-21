@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from '@pro/types';
 import { RedisClient } from '@pro/redis';
 import { redisConfigFactory } from '../../config';
 import { ConfigService } from '@nestjs/config';
+import { verifyViewerToken, fingerprintToken } from '../utils/viewer-token.verifier';
+
+export const TOKEN_BLACKLIST_PREFIX = 'blacklist:';
 
 /**
  * WebSocket 连接认证服务
@@ -12,7 +15,8 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class GraphqlWsAuthService {
   private redisClient: RedisClient;
-  private readonly TOKEN_BLACKLIST_PREFIX = 'blacklist:';
+  private readonly logger = new Logger(GraphqlWsAuthService.name);
+  private readonly blacklistPrefix = TOKEN_BLACKLIST_PREFIX;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -29,39 +33,54 @@ export class GraphqlWsAuthService {
     const authorization = connectionParams?.authorization;
 
     if (!authorization) {
+      this.logger.warn('拒绝 WebSocket 握手：缺少授权信息');
       throw new Error('WebSocket连接缺少授权信息');
     }
 
     // 提取 Bearer token
     const token = this.extractBearerToken(authorization);
     if (!token) {
+      this.logger.warn('拒绝 WebSocket 握手：授权格式无效');
       throw new Error('WebSocket连接授权格式无效，期望 Bearer Token');
     }
 
-    // 检查 token 是否在黑名单中
-    const isBlacklisted = await this.redisClient.exists(
-      `${this.TOKEN_BLACKLIST_PREFIX}${token}`,
-    );
-
-    if (isBlacklisted) {
-      throw new Error('Token已失效，请重新登录');
-    }
-
+    const tokenFingerprint = fingerprintToken(token);
+    const secret = this.config.get('JWT_SECRET', 'your-jwt-secret-change-in-production');
+    this.logger.debug(`开始验证 WebSocket Token 指纹=${tokenFingerprint}`);
     try {
-      // 验证 JWT token
-      const payload = this.jwtService.verify<JwtPayload>(token, {
-        secret: this.config.get('JWT_SECRET', 'your-jwt-secret-change-in-production'),
+      const verification = await verifyViewerToken({
+        token,
+        secret,
+        jwtService: this.jwtService,
+        redisClient: this.redisClient,
+        blacklistKeyPrefix: this.blacklistPrefix,
       });
 
-      return payload;
-    } catch (error) {
-      if (error.name === 'TokenExpiredError') {
+      if (verification.status === 'blacklisted') {
+        this.logger.warn(`拒绝 WebSocket 握手：Token 被列入黑名单 指纹=${tokenFingerprint}`);
+        throw new Error('Token已失效，请重新登录');
+      }
+
+      if (verification.status === 'expired') {
+        const expiresAt = verification.expiresAt ? `，过期时间：${verification.expiresAt}` : '';
+        this.logger.warn(`拒绝 WebSocket 握手：Token 已过期 指纹=${tokenFingerprint}${expiresAt}`);
         throw new Error('Token已过期，请重新登录');
-      } else if (error.name === 'JsonWebTokenError') {
-        throw new Error('Token格式无效');
-      } else {
+      }
+
+      if (verification.status === 'invalid' || !verification.payload) {
+        this.logger.warn(`拒绝 WebSocket 握手：Token 无效 指纹=${tokenFingerprint}`);
         throw new Error('Token验证失败');
       }
+
+      this.logger.log(`WebSocket 握手通过：viewerId=${verification.payload.userId ?? 'unknown'} 指纹=${tokenFingerprint}`);
+      return verification.payload;
+    } catch (error) {
+      if (error instanceof Error && /Token已/.test(error.message)) {
+        throw error;
+      }
+
+      this.logger.error(`WebSocket Token 验证异常 指纹=${tokenFingerprint}: ${error instanceof Error ? error.message : error}`);
+      throw new Error('Token验证失败');
     }
   }
 
