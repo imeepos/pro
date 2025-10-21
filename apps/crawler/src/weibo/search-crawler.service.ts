@@ -248,9 +248,12 @@ export class WeiboSearchCrawlerService {
       let lastPostTime: Date | null = null;
       const pageLoadTimes: number[] = [];
 
-      // 逐页处理
-      for (let currentPage = 1; currentPage <= this.crawlerConfig.maxPages; currentPage++) {
-        const url = this.buildSearchUrl(keyword, start, end, currentPage);
+      // 初始化第一页URL
+      let currentUrl: string | null = this.buildSearchUrl(keyword, start, end, 1);
+      let currentPage = 1;
+
+      // 改为while循环，基于DOM提取的下一页链接进行爬取
+      while (currentUrl && currentPage <= this.crawlerConfig.maxPages) {
         const pageStartTime = Date.now();
 
         try {
@@ -258,13 +261,18 @@ export class WeiboSearchCrawlerService {
           crawlMetrics.totalRequests++;
 
           // 检查URL是否已存在（去重）
-          const existingRecord = await this.rawDataService.findBySourceUrl(url);
+          const existingRecord = await this.rawDataService.findBySourceUrl(currentUrl);
           if (existingRecord) {
             crawlMetrics.skippedPages++;
+
+            // 即使跳过，也需要获取HTML来提取下一页链接
+            const html = await this.getPageHtml(page, currentUrl);
+            currentUrl = this.extractNextPageUrl(html);
+            currentPage++;
             continue;
           }
 
-          const html = await this.getPageHtml(page, url);
+          const html = await this.getPageHtml(page, currentUrl);
           const pageLoadTime = Date.now() - pageStartTime;
           pageLoadTimes.push(pageLoadTime);
 
@@ -274,7 +282,7 @@ export class WeiboSearchCrawlerService {
 
           await this.rawDataService.create({
             sourceType: SourceType.WEIBO_KEYWORD_SEARCH,
-            sourceUrl: url,
+            sourceUrl: currentUrl,
             rawContent: html,
             metadata: {
               keyword,
@@ -304,6 +312,19 @@ export class WeiboSearchCrawlerService {
             break;
           }
 
+          // 提取下一页URL
+          currentUrl = this.extractNextPageUrl(html);
+
+          // 如果没有下一页链接，停止爬取
+          if (!currentUrl) {
+            this.logger.log('🏁 未找到下一页链接，停止抓取', {
+              traceId: traceContext.traceId,
+              finalPage: currentPage
+            });
+            break;
+          }
+
+          currentPage++;
           await this.randomDelay(this.crawlerConfig.requestDelay.min, this.crawlerConfig.requestDelay.max);
 
         } catch (error) {
@@ -314,8 +335,14 @@ export class WeiboSearchCrawlerService {
             throw error;
           }
 
-          // 其他页面失败则继续处理下一页
-          continue;
+          // 其他页面失败则停止爬取
+          this.logger.error('页面爬取失败，停止任务', {
+            traceId: traceContext.traceId,
+            page: currentPage,
+            url: currentUrl,
+            error: error instanceof Error ? error.message : '未知错误'
+          });
+          break;
         }
       }
 
@@ -711,21 +738,51 @@ export class WeiboSearchCrawlerService {
   private isLastPage(html: string): boolean {
     const $ = cheerio.load(html);
 
+    // 检查分页列表中 class="cur" 是否是最后一个页码
+    const curItem = $('.m-page .list ul li.cur');
+    if (curItem.length > 0) {
+      const hasNextPageInList = curItem.next('li').length > 0;
+
+      // 如果 cur 是列表中最后一个 li，说明到达最后一页
+      if (!hasNextPageInList) {
+        return true;
+      }
+    }
+
+    // 备用检查：是否有"下一页"按钮
     const nextButton = $(this.weiboConfig.selectors.pagination.nextButton);
     if (nextButton.length === 0) {
       return true;
     }
 
-    const pageInfo = $(this.weiboConfig.selectors.pagination.pageInfo);
-    if (pageInfo.length > 0) {
-      const pageText = pageInfo.text();
-      if (pageText.includes('第1页') && !pageText.includes('共')) {
-        return true;
-      }
-    }
-
+    // 检查是否有"无结果"提示
     const noResult = $(this.weiboConfig.selectors.pagination.noResult);
     return noResult.length > 0;
+  }
+
+  /**
+   * 从页面HTML中提取下一页的URL
+   */
+  private extractNextPageUrl(html: string): string | null {
+    const $ = cheerio.load(html);
+
+    // 查找"下一页"按钮
+    const nextButton = $('.m-page a.next');
+    if (nextButton.length === 0) {
+      return null;
+    }
+
+    const href = nextButton.attr('href');
+    if (!href) {
+      return null;
+    }
+
+    // 构建完整URL（href通常是相对路径，如 /weibo?q=xxx&page=2）
+    if (href.startsWith('http')) {
+      return href;
+    }
+
+    return `${this.weiboConfig.baseUrl}${href}`;
   }
 
   private async randomDelay(minMs: number, maxMs: number): Promise<void> {
