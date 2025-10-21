@@ -66,12 +66,10 @@ import { TagLoader } from './events/tag.loader';
         tagLoader: TagLoader,
         wsAuthService: GraphqlWsAuthService,
       ): ApolloDriverConfig => {
-        const isProduction = configService.get<string>('NODE_ENV') === 'production';
+        const isProduction = configService.get<string>('NODE_ENV') === 'production');
 
         // 创建 logger 实例用于日志记录
-        const logger = new PinoLogger(createLoggerConfig({
-          serviceName: '@pro/api',
-        }).pinoOptions);
+        const logger = new PinoLogger();
         logger.setContext('GraphQLModule');
 
         // 创建 WebSocket 上下文处理器

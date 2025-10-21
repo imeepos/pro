@@ -111,7 +111,10 @@ export class WeiboAuthResolver {
     return mapWeiboLoginSnapshotToModel(snapshot);
   }
 
-  @Subscription(() => WeiboLoginEventModel, { name: 'weiboLoginEvents' })
+  @Subscription(() => WeiboLoginEventModel, {
+    name: 'weiboLoginEvents',
+    resolve: (event: WeiboLoginEventModel) => event,
+  })
   async weiboLoginEvents(
     @CurrentUser('userId') userId: string,
     @Args('sessionId', { type: () => String }) sessionId: string,
@@ -211,9 +214,7 @@ export class WeiboAuthResolver {
         return observableToAsyncIterator(of(toErrorEvent(error)));
       }
 
-      const combined$ = concat(historical$, live$).pipe(
-        map(events => events as WeiboLoginEventModel)
-      );
+      const combined$ = concat(historical$, live$);
 
       this.logger.info('成功创建 GraphQL 订阅事件流', { sessionId, userId });
       return observableToAsyncIterator(combined$);
