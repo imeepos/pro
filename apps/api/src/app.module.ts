@@ -98,8 +98,17 @@ import { TagLoader } from './events/tag.loader';
                   };
                 } catch (error) {
                   console.error('WebSocket connection authentication failed:', error);
-                  // 认证失败时不返回上下文，连接将被拒绝
-                  throw new Error('WebSocket连接认证失败');
+                  // 不抛出异常，而是返回一个包含错误信息的上下文
+                  // 让订阅能够建立，但在 resolver 中处理认证错误
+                  return {
+                    context: {
+                      error: error.message,
+                      req: { user: null },
+                      res: {} as any,
+                      loaders: {} as any,
+                      authenticationError: true,
+                    },
+                  };
                 }
               },
             },

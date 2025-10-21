@@ -1,5 +1,5 @@
-import { ForbiddenException, UseGuards } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver, Subscription, ObjectType, Field, Int, Float } from '@nestjs/graphql';
+import { ForbiddenException, UseGuards, Inject } from '@nestjs/common';
+import { Args, Mutation, Query, Resolver, Subscription, ObjectType, Field, Int, Float, Context } from '@nestjs/graphql';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { WeiboAuthService, WeiboLoginEvent } from './weibo-auth.service';
 import { observableToAsyncIterator } from '../common/utils/observable.utils';
@@ -13,6 +13,7 @@ import { EMPTY, concat, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PinoLogger } from '@pro/logger';
+import { GraphqlContext } from '../common/utils/context.utils';
 
 @ObjectType()
 class UserSessionStats {
@@ -114,15 +115,42 @@ export class WeiboAuthResolver {
   async weiboLoginEvents(
     @CurrentUser('userId') userId: string,
     @Args('sessionId', { type: () => String }) sessionId: string,
+    @Context() context: GraphqlContext,
   ): Promise<AsyncIterableIterator<WeiboLoginEventModel>> {
-    const toErrorEvent = (cause: unknown): WeiboLoginEventModel => {
+    const toErrorEvent = (cause: unknown, code?: string): WeiboLoginEventModel => {
       const rootCause = cause instanceof Error ? cause : new Error('未知的登录事件错误');
       const payload: WeiboLoginEvent = {
         type: 'error',
-        data: { message: rootCause.message },
+        data: {
+          message: rootCause.message,
+          ...(code && { code })
+        },
       };
       return mapWeiboLoginEventToModel(payload);
     };
+
+    // 检查是否存在认证错误
+    if (context?.authenticationError) {
+      this.logger.warn('WebSocket认证失败，返回认证错误事件', {
+        sessionId,
+        error: context.error
+      });
+
+      return observableToAsyncIterator(of(toErrorEvent(
+        new Error('WebSocket认证失败: ' + (context.error || '未知认证错误')),
+        'AUTHENTICATION_FAILED'
+      )));
+    }
+
+    // 检查用户是否为 null（认证失败的另一种情况）
+    if (!userId) {
+      this.logger.warn('WebSocket用户信息缺失，返回认证错误事件', { sessionId });
+
+      return observableToAsyncIterator(of(toErrorEvent(
+        new Error('WebSocket认证信息缺失'),
+        'MISSING_USER_INFO'
+      )));
+    }
 
     try {
       const snapshot = await this.weiboAuthService.getLoginSessionSnapshot(sessionId);
