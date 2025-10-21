@@ -32,3 +32,4 @@ id,task_id,metadata{startTime,endTime,keyword}元数据，不同任务参数不�
 
 broker负责定时生成 WeiboSubTask
 crawler负责处理WeiboSubTask抓取网页数据
+cleaner解析抓取到的网页数据，获取详情链接和时间，发送抓取详情事件到MQ
