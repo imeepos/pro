@@ -11,6 +11,7 @@ import { CrawlerConfig, RabbitMQConfig, WeiboConfig } from '../config/crawler.in
 import { SourceType, WeiboSearchType } from '@pro/types';
 import { WeiboMultiModeCrawlerService } from './multi-mode-crawler.service';
 import { DurationFormatter } from '@pro/crawler-utils';
+import { CrawlerConfigurationService } from '../config/crawler-configuration.service';
 import {
   EnhancedSubTaskMessage,
   MultiModeCrawlResult,
@@ -38,6 +39,7 @@ export class WeiboSearchCrawlerService {
     private readonly robotsService: RobotsService,
     private readonly requestMonitorService: RequestMonitorService,
     private readonly multiModeCrawler: WeiboMultiModeCrawlerService,
+    private readonly crawlerConfiguration: CrawlerConfigurationService,
     @Inject('CRAWLER_CONFIG') private readonly crawlerConfig: CrawlerConfig,
     @Inject('RABBITMQ_CONFIG') private readonly rabbitmqConfig: RabbitMQConfig,
     @Inject('WEIBO_CONFIG') private readonly weiboConfig: WeiboConfig
@@ -71,6 +73,7 @@ export class WeiboSearchCrawlerService {
     } = normalizedMessage;
     // 这里要能处理 不同类型的 任务
     const crawlStartTime = Date.now();
+    const maxPages = this.crawlerConfiguration.getMaxPages();
 
     // 创建链路追踪上下文
     const traceContext = TraceGenerator.createTraceContext(taskId, keyword);
@@ -106,7 +109,7 @@ export class WeiboSearchCrawlerService {
       let currentPage = 1;
 
       // 改为while循环，基于DOM提取的下一页链接进行爬取
-      while (currentUrl && currentPage <= this.crawlerConfig.maxPages) {
+      while (currentUrl && currentPage <= maxPages) {
         const pageStartTime = Date.now();
 
         try {
@@ -161,7 +164,7 @@ export class WeiboSearchCrawlerService {
             reachedLastPage &&
             !hasScheduledGapSubTask &&
             isInitialCrawl &&
-            currentPage === this.crawlerConfig.maxPages &&
+            currentPage === maxPages &&
             lastPostTime
           ) {
             const oneHourMs = 60 * 60 * 1000;
@@ -222,7 +225,7 @@ export class WeiboSearchCrawlerService {
           }
 
           currentPage++;
-          await this.randomDelay(this.crawlerConfig.requestDelay.min, this.crawlerConfig.requestDelay.max);
+          await this.applyRequestDelay();
 
         } catch (error) {
           crawlMetrics.failedPages++;
@@ -483,14 +486,15 @@ export class WeiboSearchCrawlerService {
       // 获取推荐的爬取延迟
       const crawlDelay = await this.robotsService.getCrawlDelay(url);
       const actualDelay = Math.max(crawlDelay * 1000, this.requestMonitorService.getCurrentDelay());
+      const { max } = this.crawlerConfiguration.getRequestDelayRange();
 
-      if (actualDelay > this.crawlerConfig.requestDelay.max) {
+      if (actualDelay > max) {
         this.logger.warn(`根据 robots.txt 或监控规则调整延迟为: ${actualDelay}ms`);
       }
 
       await page.goto(url, {
         waitUntil: 'networkidle',
-        timeout: this.crawlerConfig.pageTimeout
+        timeout: this.crawlerConfiguration.getPageTimeout()
       });
 
       await page.waitForSelector(this.weiboConfig.selectors.feedCard, {
@@ -681,6 +685,11 @@ export class WeiboSearchCrawlerService {
     return `${this.weiboConfig.baseUrl}${href}`;
   }
 
+  private async applyRequestDelay(): Promise<void> {
+    const { min, max } = this.crawlerConfiguration.getRequestDelayRange();
+    await this.randomDelay(min, max);
+  }
+
   private async randomDelay(minMs: number, maxMs: number): Promise<void> {
     // 结合监控系统的自适应延迟和传统的随机延迟
     const adaptiveDelay = this.requestMonitorService.getCurrentDelay();
@@ -710,12 +719,12 @@ export class WeiboSearchCrawlerService {
 
   private async handleInitialCrawlResult(message: NormalizedSubTask, result: CrawlResult): Promise<void> {
     const { taskId, start } = message;
-
-    const hitPageLimit = result.pageCount === this.crawlerConfig.maxPages;
+    const maxPages = this.crawlerConfiguration.getMaxPages();
+    const hitPageLimit = result.pageCount === maxPages;
 
     if (hitPageLimit && result.lastPostTime && !result.gapSubTaskScheduled) {
       // 抓满50页，需要继续回溯历史数据
-      this.logger.log(`抓满50页，触发下一个子任务: taskId=${taskId}, 新结束时间=${result.lastPostTime.toISOString()}`);
+      this.logger.log(`抓满${maxPages}页，触发下一个子任务: taskId=${taskId}, 新结束时间=${result.lastPostTime.toISOString()}`);
 
       await this.triggerNextSubTask(taskId, message.keyword, start, result.lastPostTime, true);
 
@@ -733,7 +742,7 @@ export class WeiboSearchCrawlerService {
     }
 
     if (hitPageLimit && !result.lastPostTime) {
-      this.logger.warn(`抓满${this.crawlerConfig.maxPages}页但无法获取末条时间: taskId=${taskId}`);
+      this.logger.warn(`抓满${maxPages}页但无法获取末条时间: taskId=${taskId}`);
     }
 
     // 历史数据回溯完成或缺口子任务已安排，更新状态进入增量模式

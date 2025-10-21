@@ -9,6 +9,16 @@ import { WeiboSearchTaskEntity, WeiboSubTaskEntity } from '@pro/entities';
 import { RabbitMQConfigService } from '../rabbitmq/rabbitmq-config.service';
 import { SubTaskMessage } from './interfaces/sub-task-message.interface';
 
+const toUTC = (date: Date): Date => {
+  return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+};
+
+const formatDateTime = (date: Date): string => {
+  const utc = new Date(date.toISOString());
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return `${utc.toISOString()} UTC / ${local.toISOString().replace('T', ' ').substring(0, 19)} Local`;
+};
+
 const parseIntervalToMs = (interval: string): number => {
   const match = interval.match(/^(\d+)([smhd])$/);
   if (!match) return 60 * 60 * 1000; // 默认1小时
@@ -43,31 +53,58 @@ export class SimpleIntervalScheduler {
   @Cron(CronExpression.EVERY_MINUTE)
   async scheduleTasks(): Promise<void> {
     const now = new Date();
-    const tasks = await this.loadPendingTasks(now);
+    const utcNow = new Date(now.toISOString()); // UTC时间
+    const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000); // 本地时间
+
+    this.logger.info(`调度器运行 - UTC: ${utcNow.toISOString()}, Local: ${localNow.toISOString().replace('T', ' ').substring(0, 19)} ${localNow.getTimezoneOffset() / -60 > 0 ? '+' : ''}${localNow.getTimezoneOffset() / -60}:00`);
+
+    const tasks = await this.loadPendingTasks(utcNow);
 
     if (tasks.length === 0) {
       this.logger.debug('没有到期的微博搜索任务');
       return;
     }
 
+    this.logger.info(`找到 ${tasks.length} 个到期的微博搜索任务`);
+
     for (const task of tasks) {
-      await this.dispatchSubTask(task, now);
+      this.logger.info(`任务 ${task.id}(${task.keyword}) - nextRunAt: ${task.nextRunAt ? formatDateTime(task.nextRunAt) : 'NULL'} - 开始处理`);
+      await this.dispatchSubTask(task, utcNow);
     }
   }
 
   private async loadPendingTasks(now: Date): Promise<WeiboSearchTaskEntity[]> {
-    return this.taskRepository.find({
+    const tasks = await this.taskRepository.find({
       where: [
         { enabled: true, nextRunAt: IsNull() },
         { enabled: true, nextRunAt: LessThanOrEqual(now) },
       ],
       order: { nextRunAt: 'ASC' },
     });
+
+    this.logger.debug(`数据库查询 - 当前时间: ${formatDateTime(now)}`);
+
+    const allEnabledTasks = await this.taskRepository.find({
+      where: { enabled: true },
+      select: ['id', 'keyword', 'enabled', 'nextRunAt', 'crawlInterval'],
+    });
+
+    this.logger.debug(`所有启用的任务 (${allEnabledTasks.length}):`);
+    for (const task of allEnabledTasks) {
+      const status = task.nextRunAt ?
+        (task.nextRunAt <= now ? '✓ 已到期' : `○ 等待中 (${formatDateTime(task.nextRunAt)})`) :
+        '⚠ 未设置 nextRunAt';
+      this.logger.debug(`  - 任务 ${task.id}(${task.keyword}): ${status}`);
+    }
+
+    return tasks;
   }
 
   private async dispatchSubTask(task: WeiboSearchTaskEntity, now: Date): Promise<void> {
     const start = task.latestCrawlTime ?? task.startDate;
     const end = now;
+
+    this.logger.debug(`任务 ${task.id} - 时间范围: ${start.toISOString()} ~ ${end.toISOString()}`);
 
     const metadata = {
       startTime: start.toISOString(),
@@ -97,13 +134,16 @@ export class SimpleIntervalScheduler {
 
     await this.rabbitMQService.publishSubTask(message);
 
+    const nextRunTime = new Date(now.getTime() + parseIntervalToMs(task.crawlInterval));
+
     await this.taskRepository.update(task.id, {
       latestCrawlTime: end,
-      nextRunAt: new Date(now.getTime() + parseIntervalToMs(task.crawlInterval)),
+      nextRunAt: nextRunTime,
     });
 
     this.logger.info(
       `已为任务 ${task.id}（${task.keyword}）生成子任务 ${subTaskRecord.id}，时间段 ${metadata.startTime} ~ ${metadata.endTime}`,
     );
+    this.logger.info(`任务 ${task.id} 下次执行时间: ${formatDateTime(nextRunTime)} (间隔: ${task.crawlInterval})`);
   }
 }

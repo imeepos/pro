@@ -108,6 +108,9 @@ export const createDatabaseConfig = (configService: ConfigService): DataSourceOp
       entities,
       synchronize: false,
       logging: nodeEnv === 'development',
+      extra: {
+        timezone: 'UTC',
+      },
     };
   }
 
@@ -121,5 +124,8 @@ export const createDatabaseConfig = (configService: ConfigService): DataSourceOp
     entities,
     synchronize: false,
     logging: nodeEnv === 'development',
+    extra: {
+      timezone: 'UTC',
+    },
   };
 };

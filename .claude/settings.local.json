@@ -75,7 +75,10 @@
       "Bash(lsof:*)",
       "Bash(netstat:*)",
       "Bash(ss:*)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(timedatectl:*)",
+      "Bash(echo:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

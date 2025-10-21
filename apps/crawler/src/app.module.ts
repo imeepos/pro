@@ -32,6 +32,7 @@ import {
   createMongoDBConfig,
   createWeiboConfig,
 } from './config/crawler.config';
+import { CrawlerConfigurationService } from './config/crawler-configuration.service';
 import { createDatabaseConfig } from '@pro/entities';
 
 @Module({
@@ -109,6 +110,7 @@ import { createDatabaseConfig } from '@pro/entities';
   ],
   controllers: [AppController],
   providers: [
+    CrawlerConfigurationService,
     AppService,
     WeiboAccountHealthMonitor,
     WeiboAccountSelector,
