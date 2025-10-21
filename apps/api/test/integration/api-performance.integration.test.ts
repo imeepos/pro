@@ -604,7 +604,7 @@ describe('API性能和并发集成测试', () => {
             totalCount
           }
           weiboSearchTasks(filter: { page: 1, limit: 100 }) {
-            edges { node { id keyword status enabled startDate crawlInterval } }
+            edges { node { id keyword enabled startDate crawlInterval latestCrawlTime } }
             totalCount
           }
           rawDataList(filter: { page: 1, pageSize: 100 }) {

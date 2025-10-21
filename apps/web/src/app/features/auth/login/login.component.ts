@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { RouterModule } from '@angular/router';
 import { AuthStateService } from '../../../core/state/auth-state.service';
 import { AuthQuery } from '../../../core/state/auth.query';
-import { validatePassword } from '../../../core/utils/validation';
+import { validatePassword } from '@pro/utils';
 import { SvgIconComponent } from '../../../shared/components/svg-icon';
 
 @Component({

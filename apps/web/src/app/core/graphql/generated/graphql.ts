@@ -428,16 +428,8 @@ export type CreateTagInput = {
 
 export type CreateWeiboSearchTaskInput = {
   crawlInterval?: InputMaybe<Scalars['String']['input']>;
-  enableAccountRotation?: InputMaybe<Scalars['Boolean']['input']>;
   keyword: Scalars['String']['input'];
-  latitude?: InputMaybe<Scalars['Float']['input']>;
-  locationAddress?: InputMaybe<Scalars['String']['input']>;
-  locationName?: InputMaybe<Scalars['String']['input']>;
-  longitude?: InputMaybe<Scalars['Float']['input']>;
-  maxRetries?: InputMaybe<Scalars['Int']['input']>;
-  noDataThreshold?: InputMaybe<Scalars['Int']['input']>;
   startDate: Scalars['String']['input'];
-  weiboAccountId?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type DashboardActivity = {
@@ -1990,21 +1982,9 @@ export type UpdateUserDto = {
 
 export type UpdateWeiboSearchTaskInput = {
   crawlInterval?: InputMaybe<Scalars['String']['input']>;
-  enableAccountRotation?: InputMaybe<Scalars['Boolean']['input']>;
   enabled?: InputMaybe<Scalars['Boolean']['input']>;
   keyword?: InputMaybe<Scalars['String']['input']>;
-  latitude?: InputMaybe<Scalars['Float']['input']>;
-  locationAddress?: InputMaybe<Scalars['String']['input']>;
-  locationName?: InputMaybe<Scalars['String']['input']>;
-  longitude?: InputMaybe<Scalars['Float']['input']>;
-  maxRetries?: InputMaybe<Scalars['Int']['input']>;
-  noDataThreshold?: InputMaybe<Scalars['Int']['input']>;
-  resetNoDataCount?: InputMaybe<Scalars['Boolean']['input']>;
-  resetRetryCount?: InputMaybe<Scalars['Boolean']['input']>;
   startDate?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<WeiboSearchTaskStatus>;
-  totalSegments?: InputMaybe<Scalars['Int']['input']>;
-  weiboAccountId?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type User = {
@@ -2126,23 +2106,15 @@ export type WeiboLoginSession = {
 
 export type WeiboSearchTask = {
   __typename?: 'WeiboSearchTask';
+  crawlInterval: Scalars['String']['output'];
   createdAt: Scalars['DateTime']['output'];
-  currentCrawlTime?: Maybe<Scalars['DateTime']['output']>;
-  enableAccountRotation: Scalars['Boolean']['output'];
   enabled: Scalars['Boolean']['output'];
-  errorMessage?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   keyword: Scalars['String']['output'];
   latestCrawlTime?: Maybe<Scalars['DateTime']['output']>;
-  maxRetries: Scalars['Int']['output'];
   nextRunAt?: Maybe<Scalars['DateTime']['output']>;
-  progress: Scalars['Int']['output'];
-  retryCount: Scalars['Int']['output'];
   startDate: Scalars['DateTime']['output'];
-  status: WeiboSearchTaskStatus;
-  totalSegments: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
-  weiboAccountId?: Maybe<Scalars['Int']['output']>;
 };
 
 export type WeiboSearchTaskConnection = {
@@ -2165,26 +2137,14 @@ export type WeiboSearchTaskFilterInput = {
   page?: InputMaybe<Scalars['Int']['input']>;
   sortBy?: InputMaybe<Scalars['String']['input']>;
   sortOrder?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<WeiboSearchTaskStatus>;
 };
 
 export type WeiboSearchTaskStats = {
   __typename?: 'WeiboSearchTaskStats';
-  completed: Scalars['Int']['output'];
+  disabled: Scalars['Int']['output'];
   enabled: Scalars['Int']['output'];
-  failed: Scalars['Int']['output'];
-  paused: Scalars['Int']['output'];
-  running: Scalars['Int']['output'];
   total: Scalars['Int']['output'];
 };
-
-/** 微博搜索任务状态 */
-export enum WeiboSearchTaskStatus {
-  Failed = 'FAILED',
-  Paused = 'PAUSED',
-  Pending = 'PENDING',
-  Running = 'RUNNING'
-}
 
 export type WeiboSessionStats = {
   __typename?: 'WeiboSessionStats';
