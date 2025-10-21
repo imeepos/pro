@@ -53,12 +53,6 @@ export class NotificationsResolver {
   @Subscription(() => NotificationModel, {
     name: 'notificationReceived',
     filter: (payload: NotificationModel, _variables, context: GraphqlContext) => {
-      try {
-        this.subscriptionAccess.assertCanSubscribe(context, NOTIFICATION_EVENTS.RECEIVED);
-      } catch {
-        return false;
-      }
-
       const userId = context.req?.user?.userId;
       if (!userId) return false;
       return !payload.userId || payload.userId === userId;

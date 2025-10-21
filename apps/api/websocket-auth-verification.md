@@ -100,3 +100,59 @@ const client = createClient({
 - **异步处理**：非阻塞的认证流程
 
 这个修复确保了 WebSocket 连接具有与 HTTP API 相同级别的安全性和一致性，为实时 GraphQL 功能提供了可靠的身份验证基础。
+
+## 连接安全增强
+
+- **连接闸门**：`ConnectionGatekeeper` 在握手阶段即拒绝频繁或并发过高的连接，防止认证失败的连接继续占用资源。
+- **速率限制配置**：默认阈值可通过下列环境变量覆盖：
+  - `WS_HANDSHAKE_WINDOW_MS`
+  - `WS_MAX_HANDSHAKES_PER_IP`
+  - `WS_HANDSHAKE_COOLDOWN_MS`
+  - `WS_FAILURE_WINDOW_MS`
+  - `WS_MAX_FAILURES_PER_IP`
+  - `WS_FAILURE_COOLDOWN_MS`
+  - `WS_MAX_CONNECTIONS_PER_USER`
+  - `WS_MAX_CONNECTIONS_PER_IP`
+- **握手反馈**：认证失败与限流统一通过 `connection:rejected` 事件告知客户端，并在 2 秒后强制断开，保证错误可见。
+
+## PubSub 架构升级
+
+- **Redis 驱动**：`PubSubService` 现优先使用 `graphql-redis-subscriptions`，支持单节点与集群模式，配置项如下：
+  - `PUBSUB_DRIVER`：`memory` | `redis`
+  - `PUBSUB_NAMESPACE`：事件前缀
+  - `PUBSUB_REDIS_MODE`：`standalone` | `cluster`
+  - `PUBSUB_REDIS_URL` / `PUBSUB_REDIS_HOST` + `PUBSUB_REDIS_PORT`
+  - `PUBSUB_REDIS_PASSWORD`、`PUBSUB_REDIS_DB`、`PUBSUB_REDIS_TLS`
+  - `PUBSUB_REDIS_CLUSTER_NODES`（逗号分隔 host:port 列表）
+- **事件元数据**：通过 `registerChannel` 声明事件权限与用途，例如：
+  ```ts
+  this.pubSub.registerChannel(SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE, {
+    description: 'Weibo logged-in users statistics stream',
+    requiredScopes: ['authenticated'],
+  });
+  ```
+
+## 订阅权限控制
+
+- `SubscriptionAccessService` 在订阅解析器中统一校验权限；未授权的订阅会立即抛出 `ForbiddenException`。
+- 内建支持：
+  - `authenticated`：要求已登录用户
+  - `user:self`：仅允许访问自己的资源
+  - 自定义权限字符串：与 API Key 权限对齐，例如 `notifications:read`
+- 使用示例：
+  ```ts
+  this.subscriptionAccess.assertCanSubscribe(context, NOTIFICATION_EVENTS.RECEIVED);
+  ```
+
+## 监控指标
+
+`ConnectionMetricsService` 使用 `prom-client` 暴露以下指标（默认注册在全局 `register`）：
+
+| 指标 | 说明 | 标签 |
+| --- | --- | --- |
+| `websocket_active_connections` | 当前活跃连接数 | `namespace`, `transport` |
+| `websocket_connection_duration_seconds` | 连接存活时间直方图 | `namespace`, `transport` |
+| `websocket_auth_failures_total` | 握手认证失败次数 | `namespace`, `reason` |
+| `websocket_connection_rejections_total` | 握手被拒次数 | `namespace`, `reason` |
+
+可通过现有监控聚合服务采集上述指标，为 Grafana / Prometheus 看板提供数据。

@@ -13,6 +13,8 @@ import {
   RawDataReadyEvent,
   SourcePlatform,
   SourceType,
+  TaskPriority,
+  WeiboDetailCrawlEvent,
   WeiboSearchType
 } from '@pro/types';
 import { WeiboMultiModeCrawlerService } from './multi-mode-crawler.service';
@@ -86,16 +88,17 @@ export class WeiboSearchCrawlerService {
     const traceContext = TraceGenerator.createTraceContext(taskId, keyword);
 
     let account: WeiboAccount | null = null;
-    let page: Page | null = null;
-    const crawlMetrics = {
-      totalPages: 0,
-      skippedPages: 0,
-      successfulPages: 0,
-      failedPages: 0,
-      totalRequests: 0,
-      averagePageLoadTime: 0,
-      totalDataSize: 0
-    };
+   let page: Page | null = null;
+   const crawlMetrics = {
+     totalPages: 0,
+     skippedPages: 0,
+     successfulPages: 0,
+     failedPages: 0,
+     totalRequests: 0,
+     averagePageLoadTime: 0,
+     totalDataSize: 0
+   };
+    const discoveredStatusIds = new Set<string>();
 
     try {
       // 获取可用账号
@@ -170,6 +173,18 @@ export class WeiboSearchCrawlerService {
             traceId: traceContext.traceId,
             dataSize
           });
+
+          const postIds = this.extractPostIdsFromHtml(html);
+          if (postIds.length > 0) {
+            await this.publishDetailCrawlEvents(postIds, {
+              traceId: traceContext.traceId,
+              taskId,
+              keyword,
+              page: currentPage,
+              sourceUrl: currentUrl,
+              isInitialCrawl
+            }, discoveredStatusIds);
+          }
 
           crawlMetrics.successfulPages++;
 
@@ -608,6 +623,65 @@ export class WeiboSearchCrawlerService {
     } catch (error) {
       this.logger.error('提取末条微博时间失败:', error);
       return null;
+    }
+  }
+
+  private extractPostIdsFromHtml(html: string): string[] {
+    try {
+      const $ = cheerio.load(html);
+      const identifiers = new Set<string>();
+      const collectCandidate = (value: unknown) => {
+        if (typeof value !== 'string' && typeof value !== 'number') {
+          return;
+        }
+        const normalized = String(value).trim();
+        if (/^\d{8,}$/.test(normalized)) {
+          identifiers.add(normalized);
+        }
+      };
+
+      $(this.weiboConfig.selectors.feedCard).each((_, element) => {
+        const node = $(element);
+
+        collectCandidate(node.attr('mid') ?? node.attr('data-mid'));
+        const dataMid = node.data('mid');
+        if (dataMid !== undefined) {
+          collectCandidate(dataMid);
+        }
+
+        const actionData = node.attr('action-data');
+        if (typeof actionData === 'string') {
+          const match = actionData.match(/mid=(\d{8,})/);
+          if (match) {
+            collectCandidate(match[1]);
+          }
+        }
+
+        node.find('[action-data]').each((__, child) => {
+          const childActionData = $(child).attr('action-data');
+          if (typeof childActionData === 'string') {
+            const match = childActionData.match(/mid=(\d{8,})/);
+            if (match) {
+              collectCandidate(match[1]);
+            }
+          }
+        });
+      });
+
+      if (identifiers.size === 0) {
+        const fallbackPattern = /mid=(\d{8,})/g;
+        let match: RegExpExecArray | null;
+        while ((match = fallbackPattern.exec(html)) !== null) {
+          collectCandidate(match[1]);
+        }
+      }
+
+      return Array.from(identifiers);
+    } catch (error) {
+      this.logger.error('从搜索页面提取微博帖子ID失败', {
+        error: error instanceof Error ? error.message : '未知错误'
+      });
+      return [];
     }
   }
 

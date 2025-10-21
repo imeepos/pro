@@ -162,14 +162,6 @@ export class ScreensResolver implements OnModuleInit {
 
   @Subscription(() => WeiboLoggedInUsersStatsModel, {
     name: 'weiboLoggedInUsersUpdate',
-    filter: (_payload, _variables, context: GraphqlContext) => {
-      try {
-        this.subscriptionAccess.assertCanSubscribe(context, SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE);
-        return true;
-      } catch {
-        return false;
-      }
-    },
   })
   weiboLoggedInUsersUpdate(@Context() context: GraphqlContext) {
     this.subscriptionAccess.assertCanSubscribe(context, SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE);

@@ -5,11 +5,13 @@ import { NotificationsService } from './notifications.service';
 import { NotificationsResolver } from './notifications.resolver';
 import { createJwtConfig } from '../config';
 import { PubSubModule } from '../common/pubsub/pubsub.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     JwtModule.registerAsync(createJwtConfig()),
     PubSubModule,
+    AuthModule,
   ],
   providers: [NotificationsGateway, NotificationsService, NotificationsResolver],
   exports: [NotificationsGateway, NotificationsService],

@@ -4,6 +4,7 @@ import type { AxiosError } from 'axios'
 import { firstValueFrom } from 'rxjs'
 
 import type { WeiboStatusDetailResponse } from './types/status-detail.js'
+import type { WeiboStatusLikeShowResponse } from './types/like-show.js'
 import { resolveWeiboRequestOptions, type WeiboRequestOptions } from './weibo.options.js'
 import { WeiboRequestError } from './weibo.error.js'
 
@@ -48,11 +49,63 @@ export class WeiboStatusService {
 
       return payload
     } catch (error) {
-      throw this.enrichError(error, statusId)
+      throw this.enrichError(error, statusId, 'detail')
     }
   }
 
-  private enrichError(error: unknown, statusId: string): WeiboRequestError {
+  async fetchStatusLikes(
+    statusId: string,
+    options: WeiboStatusLikesOptions = {}
+  ): Promise<WeiboStatusLikeShowResponse> {
+    if (!statusId) {
+      throw new WeiboRequestError('Weibo status id is required before contacting the API')
+    }
+
+    const {
+      page = 1,
+      count = 20,
+      attitudeType = 0,
+      attitudeEnable = 1
+    } = options
+
+    const context = resolveWeiboRequestOptions(options)
+    const params = new URLSearchParams([
+      ['id', statusId],
+      ['attitude_type', String(attitudeType)],
+      ['attitude_enable', String(attitudeEnable)],
+      ['page', String(page)],
+      ['count', String(count)]
+    ])
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<WeiboStatusLikeShowResponse>('ajax/statuses/likeShow', {
+          headers: context.headers,
+          params,
+          baseURL: context.baseUrl,
+          timeout: context.timeout
+        })
+      )
+
+      const payload = response.data
+
+      if (!payload) {
+        throw new WeiboRequestError('Weibo response payload is empty', response.status)
+      }
+
+      if (typeof payload.ok === 'number' && payload.ok !== 1) {
+        throw new WeiboRequestError(`Weibo responded with status indicator ${payload.ok}`, response.status)
+      }
+
+      return payload
+    } catch (error) {
+      throw this.enrichError(error, statusId, 'likes')
+    }
+  }
+
+  private enrichError(error: unknown, statusId: string, target: 'detail' | 'likes'): WeiboRequestError {
+    const subject = target === 'detail' ? 'detail' : 'likes roster'
+
     if (isAxiosError(error)) {
       const status = error.response?.status
       const reason = error.response?.data as Record<string, unknown> | undefined
@@ -63,7 +116,7 @@ export class WeiboStatusService {
             ? reason.message
             : undefined) ||
         error.message ||
-        `Unexpected Axios error while retrieving Weibo status ${statusId}`
+        `Unexpected Axios error while retrieving Weibo status ${statusId} ${subject}`
 
       return new WeiboRequestError(message, status, error)
     }
@@ -73,11 +126,18 @@ export class WeiboStatusService {
     }
 
     return new WeiboRequestError(
-      `Unexpected error while retrieving Weibo status ${statusId}`,
+      `Unexpected error while retrieving Weibo status ${statusId} ${subject}`,
       undefined,
       error
     )
   }
+}
+
+export interface WeiboStatusLikesOptions extends WeiboRequestOptions {
+  readonly page?: number
+  readonly count?: number
+  readonly attitudeType?: number
+  readonly attitudeEnable?: number
 }
 
 const isAxiosError = (input: unknown): input is AxiosError => {

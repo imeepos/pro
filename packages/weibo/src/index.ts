@@ -1,5 +1,6 @@
 export { WeiboModule } from './weibo.module.js'
 export { WeiboStatusService } from './weibo.service.js'
+export type { WeiboStatusLikesOptions } from './weibo.service.js'
 export {
   DEFAULT_WEIBO_BASE_URL,
   DEFAULT_WEIBO_HEADERS,
@@ -29,3 +30,12 @@ export type {
   WeiboUserTotals,
   WeiboVisibility
 } from './types/status-detail.js'
+export type {
+  WeiboLikeUserStatusTotals,
+  WeiboLikeUserVideoTotals,
+  WeiboLikeUserIcon,
+  WeiboLikeUserInsecurity,
+  WeiboLikeUser,
+  WeiboStatusAttitude,
+  WeiboStatusLikeShowResponse
+} from './types/like-show.js'
