@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Logger } from '@pro/logger';
 import { Model } from 'mongoose';
 import { createHash, randomBytes } from 'crypto';
-import * as cheerio from 'cheerio';
 import { RabbitMQClient } from '@pro/rabbitmq';
 import { QUEUE_NAMES, RawDataReadyEvent, SourcePlatform } from '@pro/types';
 
