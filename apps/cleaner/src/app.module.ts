@@ -19,11 +19,11 @@ import { RawDataConsumer } from './consumers/raw-data.consumer';
 import { RawDataService } from './services/raw-data.service';
 import { WeiboCleanerService } from './services/weibo-cleaner.service';
 import {
-  createDatabaseConfig,
   createMongoDBConfig,
   createRabbitMQConfig,
   createCleanerConfig,
 } from './config';
+import {createDatabaseConfig} from '@pro/entities'
 
 @Module({
   imports: [
