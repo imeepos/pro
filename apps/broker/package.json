@@ -39,6 +39,7 @@
     "@pro/entities": "workspace:*",
     "@pro/logger": "workspace:*",
     "@pro/rabbitmq": "workspace:*",
+    "@pro/redis": "workspace:*",
     "@pro/types": "workspace:*",
     "@pro/utils": "workspace:*",
     "class-transformer": "^0.5.1",
@@ -47,7 +48,8 @@
     "pg": "^8.13.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.20"
+    "typeorm": "^0.3.20",
+    "undici": "^6.21.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
