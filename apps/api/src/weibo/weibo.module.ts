@@ -1,6 +1,13 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity } from '@pro/entities';
+import {
+  WeiboAccountEntity,
+  WeiboSearchTaskEntity,
+  WeiboSubTaskEntity,
+  WeiboCommentEntity,
+  WeiboPostEntity,
+  WeiboInteractionEntity,
+} from '@pro/entities';
 import { WeiboModule as CoreWeiboModule } from '@pro/weibo';
 import { WeiboAccountService } from './weibo-account.service';
 import { WeiboAuthService } from './weibo-auth.service';
@@ -18,6 +25,10 @@ import { WeiboTaskStatusResolver } from './weibo-task-status.resolver';
 import { WeiboStatsRedisService } from './weibo-stats-redis.service';
 import { WeiboHourlyStatsService } from './weibo-hourly-stats.service';
 import { WeiboSessionStorage } from './weibo-session-storage.service';
+import { WeiboCommentDataService } from './weibo-comment-data.service';
+import { WeiboPostDataService } from './weibo-post-data.service';
+import { WeiboInteractionDataService } from './weibo-interaction-data.service';
+import { WeiboDataResolver } from './weibo-data.resolver';
 import { RedisClient } from '@pro/redis';
 import { redisConfigFactory } from '../config';
 import { ConfigService } from '@nestjs/config';
@@ -32,6 +43,9 @@ import { ConfigService } from '@nestjs/config';
       WeiboAccountEntity,
       WeiboSearchTaskEntity,
       WeiboSubTaskEntity,
+      WeiboCommentEntity,
+      WeiboPostEntity,
+      WeiboInteractionEntity,
     ]),
     forwardRef(() => ScreensModule),
     AuthModule,
@@ -51,6 +65,10 @@ import { ConfigService } from '@nestjs/config';
     WeiboStatsRedisService,
     WeiboHourlyStatsService,
     WeiboSessionStorage,
+    WeiboCommentDataService,
+    WeiboPostDataService,
+    WeiboInteractionDataService,
+    WeiboDataResolver,
     WeiboTaskStatusConsumer,
     WeiboTaskStatusResolver,
     {
@@ -70,6 +88,9 @@ import { ConfigService } from '@nestjs/config';
     WeiboRabbitMQConfigService,
     WeiboStatsRedisService,
     WeiboHourlyStatsService,
+    WeiboCommentDataService,
+    WeiboPostDataService,
+    WeiboInteractionDataService,
   ],
 })
 export class WeiboModule {}
