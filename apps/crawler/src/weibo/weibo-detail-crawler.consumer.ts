@@ -165,7 +165,16 @@ export class WeiboDetailCrawlerConsumer implements OnModuleInit, OnModuleDestroy
   }
 
   private isValidEvent(event: WeiboDetailCrawlEvent): boolean {
-    return typeof event.statusId === 'string' && /^\d{8,}$/.test(event.statusId.trim());
+    if (typeof event.statusId !== 'string') {
+      return false;
+    }
+
+    const normalized = event.statusId.trim();
+    if (!normalized) {
+      return false;
+    }
+
+    return /^\d{8,}$/.test(normalized) || /^[0-9A-Za-z]{8,12}$/.test(normalized);
   }
 
   private buildSaveContext(event: WeiboDetailCrawlEvent): SaveStatusDetailContext {

@@ -629,19 +629,52 @@ export class WeiboSearchCrawlerService {
   private extractPostIdsFromHtml(html: string): string[] {
     try {
       const $ = cheerio.load(html);
-      const identifiers = new Set<string>();
+      const base62Identifiers = new Set<string>();
+      const numericIdentifiers = new Set<string>();
+      const base62Pattern = /^[0-9A-Za-z]{8,12}$/;
+      const numericPattern = /^\d{8,}$/;
+
       const collectCandidate = (value: unknown) => {
         if (typeof value !== 'string' && typeof value !== 'number') {
           return;
         }
         const normalized = String(value).trim();
-        if (/^\d{8,}$/.test(normalized)) {
-          identifiers.add(normalized);
+        if (!normalized) {
+          return;
+        }
+
+        if (numericPattern.test(normalized)) {
+          numericIdentifiers.add(normalized);
+          return;
+        }
+
+        if (base62Pattern.test(normalized)) {
+          base62Identifiers.add(normalized);
+        }
+      };
+
+      const collectFromHref = (value: unknown) => {
+        if (typeof value !== 'string') {
+          return;
+        }
+
+        if (!/weibo\.com\//i.test(value)) {
+          return;
+        }
+
+        const match = value.match(/(?:https?:)?\/\/weibo\.com\/[^/?#]+\/([0-9A-Za-z]{8,12})(?:[/?#]|$)/);
+        if (match) {
+          collectCandidate(match[1]);
         }
       };
 
       $(this.weiboConfig.selectors.feedCard).each((_, element) => {
         const node = $(element);
+
+        collectFromHref(node.attr('href'));
+        node.find('a[href]').each((__, anchor) => {
+          collectFromHref($(anchor).attr('href'));
+        });
 
         collectCandidate(node.attr('mid') ?? node.attr('data-mid'));
         const dataMid = node.data('mid');
@@ -668,7 +701,7 @@ export class WeiboSearchCrawlerService {
         });
       });
 
-      if (identifiers.size === 0) {
+      if (base62Identifiers.size === 0 && numericIdentifiers.size === 0) {
         const fallbackPattern = /mid=(\d{8,})/g;
         let match: RegExpExecArray | null;
         while ((match = fallbackPattern.exec(html)) !== null) {
@@ -676,7 +709,8 @@ export class WeiboSearchCrawlerService {
         }
       }
 
-      return Array.from(identifiers);
+      const preferred = base62Identifiers.size > 0 ? base62Identifiers : numericIdentifiers;
+      return Array.from(preferred);
     } catch (error) {
       this.logger.error('从搜索页面提取微博帖子ID失败', {
         error: error instanceof Error ? error.message : '未知错误'

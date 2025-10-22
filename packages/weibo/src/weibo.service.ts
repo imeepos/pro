@@ -245,17 +245,11 @@ export class WeiboStatusService {
   ): Promise<RawDataSourceDoc | null> {
     const sourceUrl = context.sourceUrl ?? `https://weibo.com/status/${statusId}`
 
-    // Check if already exists using findWithFilters
-    const existing = await this.rawDataSourceService.findWithFilters({
+    const existingDoc = await this.rawDataSourceService.findExistingSourceRecord({
       sourceType: SourceType.WEIBO_API_JSON,
-      page: 1,
-      pageSize: 1
+      sourceUrl,
+      statusId
     })
-
-    const existingDoc = existing.items.find(item =>
-      item.sourceUrl === sourceUrl ||
-      item.metadata?.statusId === statusId
-    )
 
     if (existingDoc) {
       return null

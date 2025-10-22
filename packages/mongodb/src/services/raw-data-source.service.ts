@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { FilterQuery, Model } from 'mongoose';
 import { RawDataSource, RawDataSourceDoc } from '../schemas/raw-data-source.schema.js';
 import { CreateRawDataSourceDto, ProcessingStatus, SourceType } from '@pro/types';
 import { calculateContentHash } from '../utils/hash.util.js';
@@ -36,8 +36,8 @@ export class RawDataSourceService {
       return await data.save();
     } catch (error: any) {
       if (error?.code === 11000) {
-        this.logger.warn(`Duplicate content hash: ${contentHash}`);
-        throw new Error('Duplicate content');
+        this.logger.debug(`Content already exists: ${contentHash}`);
+        return null;
       }
       throw error;
     }
@@ -48,6 +48,33 @@ export class RawDataSourceService {
    */
   async findById(id: string) {
     return this.rawDataSourceModel.findById(id).exec();
+  }
+
+  /**
+   * 查找已存在的原始数据记录（按来源标识）
+   */
+  async findExistingSourceRecord(options: {
+    sourceType: SourceType;
+    sourceUrl?: string;
+    statusId?: string;
+  }): Promise<RawDataSourceDoc | null> {
+    const { sourceType, sourceUrl, statusId } = options;
+    const criteria: FilterQuery<RawDataSourceDoc> = { sourceType };
+    const identifiers: FilterQuery<RawDataSourceDoc>[] = [];
+
+    if (sourceUrl) {
+      identifiers.push({ sourceUrl });
+    }
+
+    if (statusId) {
+      identifiers.push({ 'metadata.statusId': statusId });
+    }
+
+    if (identifiers.length > 0) {
+      criteria.$or = identifiers;
+    }
+
+    return this.rawDataSourceModel.findOne(criteria).exec();
   }
 
   /**
