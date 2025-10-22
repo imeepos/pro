@@ -11,8 +11,6 @@ import { WeiboMediaType } from './enums/weibo.enums.js';
 import { WeiboPostEntity } from './weibo-post.entity.js';
 
 @Entity('weibo_media')
-@Index(['postId', 'mediaType'])
-@Index(['postId', 'mediaId'], { unique: true })
 export class WeiboMediaEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint', unsigned: true })
   id!: string;
