@@ -1,152 +1,72 @@
 import { ConfigService } from '@nestjs/config';
-import { CrawlerConfig, RabbitMQConfig, MongoDBConfig, WeiboConfig } from './crawler.interface';
+import { QUEUE_NAMES } from '@pro/types';
 
-export const createCrawlerConfig = (configService: ConfigService): CrawlerConfig => ({
-  headless: configService.get<string>('NODE_ENV') === 'production' || configService.get<boolean>('FORCE_HEADLESS', true),
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  viewport: {
-    width: 1920,
-    height: 1080
-  },
-  timeout: 30000,
+export interface CrawlerRuntimeConfig {
+  userAgent: string;
+  requestTimeoutMs: number;
+}
 
-  requestDelay: {
-    min: 2000,
-    max: 5000
-  },
-  maxRetries: 3,
-  retryDelay: 10000,
-
-  maxPages: 50,
-  pageTimeout: 30000,
-
-  accountRotation: {
-    enabled: true,
-    maxUsagePerAccount: 100,
-    cooldownTime: 30 * 60 * 1000
-  },
-
-  antiDetection: {
-    randomUserAgents: [
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/121.0',
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
-      'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
-      'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
-    ],
-    blockResources: true,
-    simulateHuman: true,
-    stealthScript: configService.get<boolean>('ANTI_DETECTION_STEALTH_SCRIPT', true),
-    advancedFingerprinting: configService.get<boolean>('ANTI_DETECTION_FINGERPRINTING', true),
-    userAgentRotation: configService.get<boolean>('ANTI_DETECTION_UA_ROTATION', true),
-    cdpMode: configService.get<boolean>('ANTI_DETECTION_CDP_MODE', false),
-    cdpConfig: {
-      enabled: configService.get<boolean>('CDP_ENABLED', false),
-      debugPort: configService.get<number>('CDP_DEBUG_PORT', 9222),
-      customBrowserPath: configService.get<string>('CDP_BROWSER_PATH'),
-      autoCloseBrowser: configService.get<boolean>('CDP_AUTO_CLOSE', true)
-    },
-    fingerprinting: {
-      screenResolution: {
-        desktop: { width: 1920, height: 1080 },
-        mobile: { width: 375, height: 667 }
-      },
-      timezone: configService.get<string>('ANTI_DETECTION_TIMEZONE', 'Asia/Shanghai'),
-      languages: {
-        desktop: ['zh-CN', 'zh', 'en'],
-        mobile: ['zh-CN', 'zh']
-      },
-      platforms: {
-        desktop: ['Win32', 'MacIntel', 'Linux x86_64'],
-        mobile: ['iPhone', 'Android']
-      },
-      webglFingerprint: configService.get<boolean>('ANTI_DETECTION_WEBGL', true),
-      canvasFingerprint: configService.get<boolean>('ANTI_DETECTION_CANVAS', true)
-    }
-  },
-
-  robots: {
-    enabled: configService.get<boolean>('ROBOTS_ENABLED', true),
-    userAgent: configService.get<string>('ROBOTS_USER_AGENT', 'ProCrawler'),
-    respectCrawlDelay: configService.get<boolean>('ROBOTS_RESPECT_CRAWL_DELAY', true),
-    fallbackDelay: configService.get<number>('ROBOTS_FALLBACK_DELAY', 3),
-    cacheTimeout: configService.get<number>('ROBOTS_CACHE_TIMEOUT', 3600000) // 1小时
-  },
-
-  rateMonitoring: {
-    enabled: configService.get<boolean>('RATE_MONITORING_ENABLED', true),
-    windowSizeMs: configService.get<number>('RATE_WINDOW_SIZE_MS', 60000), // 1分钟
-    maxRequestsPerWindow: configService.get<number>('RATE_MAX_REQUESTS_PER_WINDOW', 10),
-    adaptiveDelay: {
-      enabled: configService.get<boolean>('ADAPTIVE_DELAY_ENABLED', true),
-      increaseFactor: configService.get<number>('ADAPTIVE_DELAY_INCREASE_FACTOR', 1.5),
-      decreaseFactor: configService.get<number>('ADAPTIVE_DELAY_DECREASE_FACTOR', 0.8),
-      maxDelayMs: configService.get<number>('ADAPTIVE_DELAY_MAX_MS', 30000),
-      minDelayMs: configService.get<number>('ADAPTIVE_DELAY_MIN_MS', 1000)
-    }
-  }
-});
-
-export const createRabbitMQConfig = (configService: ConfigService): RabbitMQConfig => ({
-  url: configService.get<string>('RABBITMQ_URL', 'amqp://localhost:5672'),
+export interface RabbitConfig {
+  url: string;
   queues: {
-    crawlQueue: 'weibo_crawl_queue',
-    statusQueue: 'weibo_task_status_queue',
-    detailQueue: 'weibo_detail_crawl_queue',
-    retryQueue: 'weibo_crawl_retry_queue'
+    crawl: string;
+    rawDataReady: string;
+  };
+}
+
+export interface WeiboTaskConfig {
+  searchEndpoints: {
+    default: string;
+    realTime: string;
+    popular: string;
+    video: string;
+    user: string;
+    topic: string;
+  };
+  detailEndpoint: string;
+  commentsEndpoint: string;
+  userInfoEndpoint: string;
+}
+
+export const createCrawlerRuntimeConfig = (config: ConfigService): CrawlerRuntimeConfig => ({
+  userAgent:
+    config.get<string>('CRAWLER_USER_AGENT') ??
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+  requestTimeoutMs: config.get<number>('CRAWLER_REQUEST_TIMEOUT_MS', 20000),
+});
+
+export const createRabbitConfig = (config: ConfigService): RabbitConfig => ({
+  url: config.get<string>('RABBITMQ_URL', 'amqp://localhost:5672'),
+  queues: {
+    crawl: config.get<string>('CRAWLER_QUEUE', QUEUE_NAMES.CRAWL_TASK),
+    rawDataReady: QUEUE_NAMES.RAW_DATA_READY,
   },
-  options: {
-    persistent: true,
-    durable: true,
-    maxRetries: 3,
-    retryDelay: 5000
-  }
 });
 
-export const createMongoDBConfig = (configService: ConfigService): MongoDBConfig => ({
-  uri: configService.get<string>('MONGODB_URI', 'mongodb://localhost:27017/pro'),
-  database: configService.get<string>('MONGODB_DATABASE', 'pro'),
-  options: {
-    maxPoolSize: 10,
-    minPoolSize: 2,
-    maxIdleTimeMS: 30000,
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000,
-    bufferMaxEntries: 0,
-    bufferCommands: false
-  }
-});
+export const createWeiboTaskConfig = (config: ConfigService): WeiboTaskConfig => {
+  const base = config.get<string>('WEIBO_BASE_URL', 'https://weibo.com');
+  const searchBase = config.get<string>('WEIBO_SEARCH_URL', 'https://s.weibo.com/weibo');
 
-export const createWeiboConfig = (configService: ConfigService): WeiboConfig => ({
-  baseUrl: 'https://weibo.com',
-  searchUrl: 'https://s.weibo.com/weibo',
-
-  timeFormat: 'YYYY-MM-DD-HH',
-  timezone: 'Asia/Shanghai',
-
-  selectors: {
-    feedCard: '.card-wrap',
-    timeElement: '.from time, .from a',
-    contentElement: '.content',
-    authorElement: '.info .name',
-    pagination: {
-      nextButton: '.next:not(.disable)',
-      pageInfo: '.m-page .count',
-      noResult: '.search_no_result'
-    }
-  },
-
-  maxPagesPerSearch: 50,
-  maxSearchResults: 2000,
-
-  account: {
-    cookieValidation: true,
-    loginCheckUrl: 'https://weibo.com',
-    bannedUrls: [
-      'login.weibo.cn',
-      'passport.weibo.com',
-      'weibo.cn/security'
-    ]
-  }
-});
+  return {
+    searchEndpoints: {
+      default: searchBase,
+      realTime: `${base}/search/realtime`,
+      popular: `${base}/search/hot`,
+      video: `${base}/search/video`,
+      user: `${base}/search/user`,
+      topic: `${base}/search/topic`,
+    },
+    detailEndpoint: config.get<string>(
+      'WEIBO_DETAIL_ENDPOINT',
+      `${base}/ajax/statuses/show`,
+    ),
+    commentsEndpoint: config.get<string>(
+      'WEIBO_COMMENTS_ENDPOINT',
+      `${base}/ajax/comments/show`,
+    ),
+    userInfoEndpoint: config.get<string>(
+      'WEIBO_USER_INFO_ENDPOINT',
+      `${base}/ajax/profile/info`,
+    ),
+  };
+};
