@@ -285,6 +285,20 @@ input CleanTaskInput {
   sourceType: String!
 }
 
+input CommentFilterInput {
+  authorNickname: String
+  dateFrom: DateTime
+  dateTo: DateTime
+  hasLikes: Boolean
+  keyword: String
+  postId: String
+}
+
+type CommentStats {
+  totalComments: Int!
+  totalLikes: Int!
+}
+
 type ConfigCacheStats {
   keys: [String!]!
   size: Int!
@@ -704,6 +718,23 @@ type IndustryType {
   updatedAt: DateTime!
 }
 
+input InteractionFilterInput {
+  dateFrom: DateTime
+  dateTo: DateTime
+  interactionType: WeiboInteractionType
+  targetType: WeiboTargetType
+  targetWeiboId: String
+  userWeiboId: String
+}
+
+type InteractionStats {
+  totalComments: Int!
+  totalFavorites: Int!
+  totalInteractions: Int!
+  totalLikes: Int!
+  totalReposts: Int!
+}
+
 """
 The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
 """
@@ -986,8 +1017,30 @@ type PaginatedRawData {
   totalPages: Int!
 }
 
+input PaginationInput {
+  limit: Int = 20
+  page: Int = 1
+}
+
 input PauseWeiboTaskInput {
   reason: String
+}
+
+input PostFilterInput {
+  authorNickname: String
+  dateFrom: DateTime
+  dateTo: DateTime
+  favorited: Boolean
+  isLongText: Boolean
+  isRepost: Boolean
+  keyword: String
+}
+
+type PostStats {
+  totalComments: Int!
+  totalLikes: Int!
+  totalPosts: Int!
+  totalReposts: Int!
 }
 
 """原始数据处理状态"""
@@ -1084,9 +1137,18 @@ type Query {
   weiboAccounts(filter: WeiboAccountFilterInput): WeiboAccountConnection!
   weiboAccountsWithCookies(token: String!): [WeiboAccountWithCookies!]!
   weiboAggregatedStats(query: StatsAggregationQueryDto!): HourlyStatsResponse!
+  weiboComment(id: String!): WeiboComment!
+  weiboCommentStats(filter: CommentFilterInput): CommentStats!
+  weiboComments(filter: CommentFilterInput, pagination: PaginationInput, sort: SortInput): WeiboCommentConnection!
   weiboHourlyStats(query: HourlyStatsQueryDto!): HourlyStatsResponse!
+  weiboInteraction(id: String!): WeiboInteraction!
+  weiboInteractionStats(filter: InteractionFilterInput): InteractionStats!
+  weiboInteractions(filter: InteractionFilterInput, pagination: PaginationInput, sort: SortInput): WeiboInteractionConnection!
   weiboLoginSession(sessionId: String!): WeiboLoginSession!
   weiboMultiTypeHourlyStats(query: MultiTypeStatsQueryDto!): MultiTypeHourlyStats!
+  weiboPost(id: String!): WeiboPost!
+  weiboPostStats(filter: PostFilterInput): PostStats!
+  weiboPosts(filter: PostFilterInput, pagination: PaginationInput, sort: SortInput): WeiboPostConnection!
   weiboSearchTask(id: Int!): WeiboSearchTask!
   weiboSearchTaskStats: WeiboSearchTaskStats!
   weiboSearchTasks(filter: WeiboSearchTaskFilterInput): WeiboSearchTaskConnection!
@@ -1331,6 +1393,16 @@ input ScreenLayoutInput {
 enum ScreenStatus {
   Draft
   Published
+}
+
+input SortInput {
+  field: String!
+  order: SortOrder!
+}
+
+enum SortOrder {
+  ASC
+  DESC
 }
 
 """数据源平台"""
@@ -1602,6 +1674,59 @@ type WeiboAccountWithCookies {
   weiboUid: String!
 }
 
+type WeiboComment {
+  author: WeiboUser!
+  commentId: String!
+  createdAt: DateTime!
+  id: ID!
+  isMblogAuthor: Boolean!
+  likeCounts: Int!
+  liked: Boolean!
+  mid: String!
+  postId: String!
+  replyCommentId: String
+  source: String
+  text: String!
+}
+
+type WeiboCommentConnection {
+  edges: [WeiboCommentEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type WeiboCommentEdge {
+  cursor: String!
+  node: WeiboComment!
+}
+
+type WeiboInteraction {
+  createdAt: DateTime!
+  id: ID!
+  interactionType: WeiboInteractionType!
+  targetType: WeiboTargetType!
+  targetWeiboId: String!
+  userWeiboId: String
+}
+
+type WeiboInteractionConnection {
+  edges: [WeiboInteractionEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type WeiboInteractionEdge {
+  cursor: String!
+  node: WeiboInteraction!
+}
+
+enum WeiboInteractionType {
+  Comment
+  Favorite
+  Like
+  Repost
+}
+
 type WeiboLoggedInUsersStats {
   online: Int!
   todayNew: Int!
@@ -1628,6 +1753,36 @@ type WeiboLoginSession {
   expiresAt: DateTime!
   lastEvent: WeiboLoginEvent
   sessionId: String!
+}
+
+type WeiboPost {
+  attitudesCount: Int!
+  author: WeiboUser!
+  commentsCount: Int!
+  createdAt: DateTime!
+  favorited: Boolean!
+  id: ID!
+  isLongText: Boolean!
+  isRepost: Boolean!
+  mid: String!
+  regionName: String
+  repostsCount: Int!
+  source: String
+  text: String!
+  textLength: Int!
+  visibleType: WeiboVisibleType
+  weiboId: String!
+}
+
+type WeiboPostConnection {
+  edges: [WeiboPostEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type WeiboPostEdge {
+  cursor: String!
+  node: WeiboPost!
 }
 
 type WeiboSearchTask {
@@ -1712,4 +1867,32 @@ input WeiboSubTaskFilterInput {
   type: String
   updatedAfter: String
   updatedBefore: String
+}
+
+enum WeiboTargetType {
+  Comment
+  Post
+}
+
+type WeiboUser {
+  description: String
+  followersCount: Int!
+  friendsCount: Int!
+  gender: String
+  id: ID!
+  location: String
+  profileImageUrl: String
+  screenName: String!
+  statusesCount: Int!
+  verified: Boolean!
+  verifiedReason: String
+  weiboId: String!
+}
+
+enum WeiboVisibleType {
+  Custom
+  Fans
+  Group
+  Private
+  Public
 }
