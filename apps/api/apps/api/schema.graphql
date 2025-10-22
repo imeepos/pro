@@ -1091,6 +1091,8 @@ type Query {
   weiboSearchTaskStats: WeiboSearchTaskStats!
   weiboSearchTasks(filter: WeiboSearchTaskFilterInput): WeiboSearchTaskConnection!
   weiboSessionStats: WeiboSessionStats!
+  weiboSubTask(id: Int!): WeiboSubTask!
+  weiboSubTasks(filter: WeiboSubTaskFilterInput, taskId: Int!): WeiboSubTaskConnection!
   weiboTaskStatusConsumerStats: ConsumerStats!
 }
 
@@ -1675,4 +1677,39 @@ type WeiboSessionStats {
   sessionsByUser: [UserSessionStats!]!
   totalSessions: Int!
   webSocketConnections: Int!
+}
+
+type WeiboSubTask {
+  createdAt: DateTime!
+  id: ID!
+  metadata: JSONObject!
+  status: String!
+  taskId: Int!
+  type: String!
+  updatedAt: DateTime!
+}
+
+type WeiboSubTaskConnection {
+  edges: [WeiboSubTaskEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type WeiboSubTaskEdge {
+  cursor: String!
+  node: WeiboSubTask!
+}
+
+input WeiboSubTaskFilterInput {
+  createdAfter: String
+  createdBefore: String
+  limit: Int = 10
+  page: Int = 1
+  sortBy: String
+  sortOrder: String = "DESC"
+  status: String
+  taskId: Int
+  type: String
+  updatedAfter: String
+  updatedBefore: String
 }
