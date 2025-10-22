@@ -11,6 +11,8 @@ import { SentimentAnalysisService } from './services/sentiment-analysis.service'
 import { NLPAnalysisService } from './services/nlp-analysis.service';
 import { LLMAnalysisService } from './services/llm-analysis.service';
 import { PerformanceMonitorService } from './services/performance-monitor.service';
+import { SegmentTokenizerService } from './services/segment-tokenizer.service';
+import { CorpusStatisticsService } from './services/corpus-statistics.service';
 import analyzerConfig from './config/analyzer.config';
 import { createDatabaseConfig } from '@pro/entities';
 
@@ -40,6 +42,8 @@ import { createDatabaseConfig } from '@pro/entities';
     AnalysisQueueConsumer,
     PerformanceMonitorService,
     SentimentAnalysisService,
+    SegmentTokenizerService,
+    CorpusStatisticsService,
     NLPAnalysisService,
     LLMAnalysisService,
   ],

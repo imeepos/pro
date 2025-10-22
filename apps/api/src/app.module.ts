@@ -39,6 +39,7 @@ import { EventTypeLoader } from './events/event-type.loader';
 import { IndustryTypeLoader } from './events/industry-type.loader';
 import { TagLoader } from './events/tag.loader';
 import { DateTimeScalar } from './common/scalars/date-time.scalar';
+import { McpModule } from './mcp/mcp.module';
 
 @Module({
   imports: [
@@ -188,6 +189,7 @@ import { DateTimeScalar } from './common/scalars/date-time.scalar';
     RawDataModule,
     DlqModule,
     TasksModule,
+    McpModule,
   ],
   controllers: [],
   providers: [HealthResolver, DateTimeScalar],

@@ -1,0 +1,17 @@
+<div class="cloud">
+  @if (cloudWords().length === 0) {
+    <div class="cloud__empty">暂无关键词数据</div>
+  } @else {
+    <div class="cloud__words">
+      @for (word of cloudWords(); track word.keyword) {
+        <span
+          class="cloud__word"
+          [style.font-size.em]="word.fontSize"
+          [style.opacity]="word.opacity"
+        >
+          {{ word.keyword }}
+        </span>
+      }
+    </div>
+  }
+</div>

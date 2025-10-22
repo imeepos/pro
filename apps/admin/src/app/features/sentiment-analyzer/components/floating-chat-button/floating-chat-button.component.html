@@ -1,0 +1,16 @@
+<button
+  type="button"
+  class="bubble"
+  [class.bubble--active]="active"
+  [attr.aria-pressed]="active"
+  aria-haspopup="dialog"
+  (click)="onToggle()"
+>
+  <nz-badge [nzCount]="unreadCount" [nzShowZero]="false" [nzOffset]="[4, -4]">
+    <span class="bubble__core" [class.bubble__core--busy]="busy">
+      <i nz-icon nzType="message" nzTheme="fill"></i>
+      <span class="bubble__glow" aria-hidden="true"></span>
+    </span>
+  </nz-badge>
+  <span class="bubble__label">舆情分析</span>
+</button>

@@ -1,0 +1,44 @@
+<div class="input-shell" [class.input-shell--disabled]="disabled" [class.input-shell--busy]="busy">
+  <textarea
+    class="input-shell__textarea"
+    [(ngModel)]="draft"
+    [placeholder]="placeholder"
+    [disabled]="disabled || busy"
+    (keydown)="onKeyDown($event)"
+    rows="3"
+  ></textarea>
+
+  <div class="input-shell__actions">
+    <div class="input-shell__left">
+      <button
+        type="button"
+        class="input-shell__icon-button"
+        (click)="triggerFileDialog()"
+        [disabled]="disabled || busy"
+        nz-button
+        nzShape="circle"
+      >
+        <i nz-icon nzType="paper-clip"></i>
+      </button>
+      <input #fileInput type="file" class="input-shell__file" (change)="onFileChange($event)" />
+    </div>
+
+    <button
+      type="button"
+      class="input-shell__send"
+      nz-button
+      nzType="primary"
+      [disabled]="disabled || busy || !draft.trim()"
+      (click)="onSend()"
+    >
+      <ng-container *ngIf="!busy; else busyState">
+        <i nz-icon nzType="send"></i>
+        <span>发送</span>
+      </ng-container>
+      <ng-template #busyState>
+        <i nz-icon nzType="loading"></i>
+        <span>分析中...</span>
+      </ng-template>
+    </button>
+  </div>
+</div>

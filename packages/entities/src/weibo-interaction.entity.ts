@@ -30,6 +30,7 @@ export class WeiboInteractionEntity {
     type: 'enum',
     enum: WeiboInteractionType,
     name: 'interaction_type',
+    enumName: 'weibo_interaction_type_enum',
   })
   interactionType!: WeiboInteractionType;
 
@@ -58,6 +59,7 @@ export class WeiboInteractionEntity {
     type: 'enum',
     enum: WeiboTargetType,
     name: 'target_type',
+    enumName: 'weibo_target_type_enum',
   })
   targetType!: WeiboTargetType;
 

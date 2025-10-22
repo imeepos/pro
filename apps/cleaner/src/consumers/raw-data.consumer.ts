@@ -2,19 +2,19 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PinoLogger } from '@pro/logger';
 import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 import { RawDataService } from '../services/raw-data.service';
-import { WeiboCleanerService } from '../services/weibo-cleaner.service';
 import {
   RawDataReadyEvent,
   CleanedDataEvent,
-  SourceType,
 } from '@pro/types';
+import { CleanerService } from '../services/cleaner.service';
+import { fromRawDataEvent } from '../tasks/clean-task-message';
 
 @Injectable()
 export class RawDataConsumer implements OnModuleInit {
   constructor(
     private readonly rabbitMQService: RabbitMQService,
     private readonly rawDataService: RawDataService,
-    private readonly weiboCleanerService: WeiboCleanerService,
+    private readonly cleanerService: CleanerService,
     private readonly logger: PinoLogger,
   ) {}
 
@@ -81,22 +81,8 @@ export class RawDataConsumer implements OnModuleInit {
         return;
       }
 
-      let cleanedData;
-
-      if (event.sourceType === SourceType.WEIBO_KEYWORD_SEARCH) {
-        cleanedData = await this.weiboCleanerService.cleanWeiboData(rawData);
-      } else {
-        this.logger.warn('不支持的数据源类型', {
-          rawDataId: event.rawDataId,
-          sourceType: event.sourceType,
-        });
-        await this.rawDataService.updateStatus(
-          event.rawDataId,
-          'failed',
-          'Unsupported source type',
-        );
-        return;
-      }
+      const message = fromRawDataEvent(event);
+      let cleanedData = await this.cleanerService.execute(message);
 
       await this.rawDataService.updateStatus(event.rawDataId, 'processed');
 
@@ -106,19 +92,19 @@ export class RawDataConsumer implements OnModuleInit {
         rawDataId: event.rawDataId,
         sourceType: event.sourceType,
         extractedEntities: {
-          postIds: cleanedData.posts.map((p) => String(p.id)),
-          commentIds: cleanedData.comments.map((c) => String(c.id)),
-          userIds: cleanedData.users.map((u) => String(u.id)),
+          postIds: cleanedData.postIds,
+          commentIds: cleanedData.commentIds,
+          userIds: cleanedData.userIds,
         },
         stats: {
           totalRecords:
-            cleanedData.posts.length +
-            cleanedData.comments.length +
-            cleanedData.users.length,
+            cleanedData.postIds.length +
+            cleanedData.commentIds.length +
+            cleanedData.userIds.length,
           successCount:
-            cleanedData.posts.length +
-            cleanedData.comments.length +
-            cleanedData.users.length,
+            cleanedData.postIds.length +
+            cleanedData.commentIds.length +
+            cleanedData.userIds.length,
           skippedCount: 0,
           processingTimeMs: processingTime,
         },
@@ -129,9 +115,9 @@ export class RawDataConsumer implements OnModuleInit {
 
       this.logger.info('原始数据处理完成', {
         rawDataId: event.rawDataId,
-        posts: cleanedData.posts.length,
-        comments: cleanedData.comments.length,
-        users: cleanedData.users.length,
+        posts: cleanedData.postIds.length,
+        comments: cleanedData.commentIds.length,
+        users: cleanedData.userIds.length,
         processingTimeMs: processingTime,
       });
     } catch (error) {

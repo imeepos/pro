@@ -156,4 +156,55 @@ export class WeiboUserEntity {
 
   @OneToMany(() => WeiboPostMentionEntity, (mention) => mention.mentionedUser)
   mentions!: WeiboPostMentionEntity[];
+
+  get weiboUid(): string {
+    return this.weiboId;
+  }
+
+  set weiboUid(value: string) {
+    this.weiboId = value;
+  }
+
+  get nickname(): string {
+    return this.screenName;
+  }
+
+  set nickname(value: string) {
+    this.screenName = value;
+  }
+
+  get avatar(): string | null {
+    return this.avatarHd ?? this.profileImageUrl;
+  }
+
+  set avatar(value: string | null) {
+    this.avatarHd = value;
+    if (!this.profileImageUrl) {
+      this.profileImageUrl = value;
+    }
+  }
+
+  get followingCount(): number {
+    return this.friendsCount;
+  }
+
+  set followingCount(value: number | null) {
+    this.friendsCount = value ?? 0;
+  }
+
+  get postsCount(): number {
+    return this.statusesCount;
+  }
+
+  set postsCount(value: number | null) {
+    this.statusesCount = value ?? 0;
+  }
+
+  get isVerified(): boolean {
+    return this.verified;
+  }
+
+  set isVerified(value: boolean) {
+    this.verified = value;
+  }
 }

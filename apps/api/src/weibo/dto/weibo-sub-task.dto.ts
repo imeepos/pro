@@ -1,4 +1,5 @@
 import {
+  IsDateString,
   IsIn,
   IsInt,
   IsOptional,
@@ -43,6 +44,26 @@ export class QueryWeiboSubTaskDto {
   @MaxLength(50)
   @Field(() => String, { nullable: true })
   status?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @Field(() => String, { nullable: true })
+  createdAfter?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @Field(() => String, { nullable: true })
+  createdBefore?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @Field(() => String, { nullable: true })
+  updatedAfter?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @Field(() => String, { nullable: true })
+  updatedBefore?: string;
 
   @IsOptional()
   @IsString()

@@ -7,6 +7,11 @@ import {
   mapWeiboSearchTaskEntityToModel,
 } from './models/weibo-search-task.model';
 import {
+  WeiboSubTaskConnection,
+  WeiboSubTaskModel,
+  mapWeiboSubTaskEntityToModel,
+} from './models/weibo-sub-task.model';
+import {
   CreateWeiboSearchTaskDto,
   UpdateWeiboSearchTaskDto,
   QueryTaskDto,
@@ -14,6 +19,7 @@ import {
   ResumeTaskDto,
   RunNowTaskDto,
 } from './dto/weibo-search-task.dto';
+import { QueryWeiboSubTaskDto } from './dto/weibo-sub-task.dto';
 import { buildOffsetConnection } from '../common/utils/pagination.utils';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Field, ObjectType } from '@nestjs/graphql';
@@ -120,6 +126,37 @@ export class WeiboSearchTaskResolver {
   @Query(() => WeiboSearchTaskStatsModel, { name: 'weiboSearchTaskStats' })
   async stats(@CurrentUser('userId') userId: string): Promise<WeiboSearchTaskStatsModel> {
     return this.weiboSearchTaskService.getTaskStats(userId);
+  }
+
+  @Query(() => WeiboSubTaskConnection, { name: 'weiboSubTasks' })
+  async subTasks(
+    @CurrentUser('userId') userId: string,
+    @Args('taskId', { type: () => Int }) taskId: number,
+    @Args('filter', { type: () => QueryWeiboSubTaskDto, nullable: true })
+    filter?: QueryWeiboSubTaskDto,
+  ): Promise<WeiboSubTaskConnection> {
+    const query = Object.assign(new QueryWeiboSubTaskDto(), filter);
+    const result = await this.weiboSearchTaskService.findSubTasksWithPagination(
+      userId,
+      taskId,
+      query,
+    );
+    const nodes = result.subTasks.map(mapWeiboSubTaskEntityToModel);
+
+    return buildOffsetConnection(nodes, {
+      total: result.total,
+      page: result.page,
+      pageSize: result.limit,
+    });
+  }
+
+  @Query(() => WeiboSubTaskModel, { name: 'weiboSubTask' })
+  async subTask(
+    @CurrentUser('userId') userId: string,
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<WeiboSubTaskModel> {
+    const entity = await this.weiboSearchTaskService.findSubTaskById(userId, id);
+    return mapWeiboSubTaskEntityToModel(entity);
   }
 }
 

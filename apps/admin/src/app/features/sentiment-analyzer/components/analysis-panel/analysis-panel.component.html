@@ -1,0 +1,70 @@
+<section class="analysis-panel">
+  <header class="analysis-panel__header">
+    <div>
+      <h2>舆情洞察面板</h2>
+      <p class="analysis-panel__subtitle">
+        {{ context.topic || '等待选定事件' }} · {{ context.perspective === 'public-opinion' ? '公众视角' : context.perspective === 'official-voice' ? '官方声音' : '媒体报道' }}
+      </p>
+    </div>
+    <div class="analysis-panel__actions">
+      <button nz-button nzType="default" (click)="refresh()" [disabled]="loading()">
+        刷新
+      </button>
+      <button
+        nz-button
+        nzType="primary"
+        (click)="exportReport()"
+        [disabled]="generatingReport() || loading()"
+      >
+        @if (generatingReport()) {
+          生成中...
+        } @else {
+          导出报告
+        }
+      </button>
+    </div>
+  </header>
+
+  <nz-spin [nzSpinning]="loading()">
+    @if (bundle$ | async as bundle) {
+      <div class="analysis-panel__grid">
+        <article class="analysis-panel__summary">
+          <div class="analysis-panel__score">
+            <span class="analysis-panel__score-label">当前情绪判定</span>
+            <span class="analysis-panel__score-value">{{ bundle.score.label | titlecase }}</span>
+            <span class="analysis-panel__score-confidence">
+              置信度 {{ (bundle.score.confidence * 100) | number: '1.0-0' }}%
+            </span>
+          </div>
+          <p class="analysis-panel__summary-text">{{ bundle.summary }}</p>
+        </article>
+
+        <sentiment-trend [trend]="bundle.trend"></sentiment-trend>
+        <keyword-cloud [keywords]="bundle.keywords"></keyword-cloud>
+        <timeline-view [timeline]="bundle.timeline"></timeline-view>
+        <milestone-cards [milestones]="bundle.milestones"></milestone-cards>
+
+        @if (reportSections$ | async as sections; else reportFallback) {
+          <section class="analysis-panel__report">
+            <h3>自动化报告</h3>
+            @for (section of sections; track section.title) {
+              <article class="analysis-panel__report-section">
+                <h4>{{ section.title }}</h4>
+                <p>{{ section.markdown }}</p>
+              </article>
+            }
+          </section>
+        }
+        <ng-template #reportFallback>
+          <section class="analysis-panel__report analysis-panel__report--empty">
+            <p>报告生成中，请稍候...</p>
+          </section>
+        </ng-template>
+      </div>
+    } @else {
+      <div class="analysis-panel__empty">
+        <p>选定一个舆情事件后，我会在这里呈现趋势、热词和里程碑。</p>
+      </div>
+    }
+  </nz-spin>
+</section>

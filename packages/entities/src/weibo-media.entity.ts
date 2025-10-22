@@ -34,6 +34,7 @@ export class WeiboMediaEntity {
     type: 'enum',
     enum: WeiboMediaType,
     name: 'media_type',
+    enumName: 'weibo_media_type_enum',
   })
   mediaType!: WeiboMediaType;
 

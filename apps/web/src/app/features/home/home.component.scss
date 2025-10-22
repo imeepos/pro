@@ -1,31 +1,29 @@
-/* ===== 屏幕显示组件样式 ===== */
-
-/* 视口容器 */
+/* Screen viewport evokes a theatrical stage for data. */
 .screen-viewport {
   position: relative;
   width: 100vw;
   height: 100%;
   overflow: hidden;
-  background: radial-gradient(circle at center,
-    #0f172a 0%,
-    rgba(15, 23, 42, 0.95) 50%,
+  background: radial-gradient(
+    circle at center,
+    rgb(var(--color-background)) 0%,
+    rgb(var(--color-background) / 0.95) 50%,
     rgba(0, 0, 0, 1) 100%
   );
 }
 
-/* 屏幕舞台 */
 .screen-stage {
   position: absolute;
   left: 0;
   top: 0;
   transform-origin: top left;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 0.75rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  transition: transform var(--pro-transition-base);
+  border-radius: var(--pro-radius-xl);
+  box-shadow: var(--pro-shadow-2xl);
   will-change: transform, left, top;
+  contain: layout style paint;
 }
 
-/* 保留加载和错误状态的样式 */
 .loading-container,
 .error-container {
   display: flex;
@@ -33,31 +31,31 @@
   align-items: center;
   justify-content: center;
   height: 100vh;
-  background: #000;
-  color: white;
+  background: rgb(var(--color-background));
+  color: rgb(var(--color-foreground));
 }
 
 .loading-spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid rgba(255, 255, 255, 0.2);
-  border-top-color: theme('colors.primary.500');
+  border: 4px solid rgb(var(--color-muted) / 0.3);
+  border-top-color: rgb(var(--color-primary));
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
+  will-change: transform;
 }
 
 .error-message {
-  color: theme('colors.error');
+  color: rgb(var(--color-destructive));
   font-size: 1.125rem;
+  font-weight: var(--pro-font-weight-medium);
 }
 
-/* 组件容器样式 */
 .screen-canvas {
   width: 100%;
   height: 100%;
   position: relative;
-  border-radius: 0.75rem;
+  border-radius: var(--pro-radius-xl);
   overflow: hidden;
   background: transparent;
 }
@@ -66,34 +64,117 @@
   width: 100%;
   height: 100%;
   position: relative;
+  contain: layout style paint;
 }
 
 .component-wrapper {
   position: absolute;
   box-sizing: border-box;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(156, 163, 175, 0.2);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 0.5rem;
+  background: rgb(var(--color-primary) / 0.1);
+  border: 1px solid rgb(var(--color-border) / 0.3);
+  transition: all var(--pro-transition-base);
+  border-radius: var(--pro-radius-lg);
   overflow: hidden;
   animation: componentEnter 0.5s ease-out;
   contain: layout style paint;
+  will-change: transform, border-color, background;
 }
 
 .component-wrapper:hover {
-  border-color: rgba(59, 130, 246, 0.4);
-  background: rgba(59, 130, 246, 0.16);
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+  border-color: rgb(var(--color-primary) / 0.5);
+  background: rgb(var(--color-primary) / 0.16);
+  box-shadow: 0 0 0 1px rgb(var(--color-primary) / 0.2);
   transform: translateZ(0);
 }
 
 @keyframes componentEnter {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(10px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 1024px) {
+  .screen-viewport {
+    height: calc(100vh - 80px);
+  }
+
+  .component-wrapper {
+    font-size: 0.9em;
+  }
+}
+
+@media (max-width: 768px) {
+  .screen-viewport {
+    height: calc(100vh - 60px);
+  }
+
+  .screen-stage {
+    border-radius: var(--pro-radius-lg);
+  }
+
+  .component-wrapper {
+    font-size: 0.85em;
+    border-radius: var(--pro-radius-md, 0.375rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .loading-container,
+  .error-container {
+    padding: var(--pro-space-4);
+  }
+
+  .component-wrapper {
+    font-size: 0.8em;
+  }
+}
+
+:host-context(.dark) {
+  .screen-viewport {
+    background: radial-gradient(
+      circle at center,
+      rgb(var(--color-background)) 0%,
+      rgb(var(--color-background) / 0.98) 50%,
+      rgba(0, 0, 0, 1) 100%
+    );
+  }
+
+  .component-wrapper {
+    background: rgb(var(--color-primary) / 0.08);
+    border-color: rgb(var(--color-border) / 0.2);
+  }
+
+  .component-wrapper:hover {
+    background: rgb(var(--color-primary) / 0.12);
+    border-color: rgb(var(--color-primary) / 0.4);
+  }
+}
+
+.screen-stage,
+.component-wrapper,
+.loading-spinner {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.components-container > * {
+  will-change: auto;
+}
+
+@media print {
+  .screen-viewport {
+    background: white;
+    height: auto;
+    overflow: visible;
+  }
+
+  .component-wrapper {
+    page-break-inside: avoid;
   }
 }

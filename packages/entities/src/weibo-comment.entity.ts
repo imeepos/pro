@@ -156,4 +156,36 @@ export class WeiboCommentEntity {
 
   @OneToMany(() => WeiboInteractionEntity, (interaction) => interaction.comment)
   interactions!: WeiboInteractionEntity[];
+
+  get content(): string {
+    return this.text;
+  }
+
+  set content(value: string) {
+    this.text = value;
+  }
+
+  get likeCount(): number {
+    return this.likeCounts;
+  }
+
+  set likeCount(value: number) {
+    this.likeCounts = value ?? 0;
+  }
+
+  get replyToCommentId(): string | null {
+    return this.replyCommentId ?? null;
+  }
+
+  set replyToCommentId(value: string | null) {
+    this.replyCommentId = value ?? null;
+  }
+
+  get publishedAt(): Date {
+    return this.createdAt;
+  }
+
+  set publishedAt(value: Date) {
+    this.createdAt = value;
+  }
 }

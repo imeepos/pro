@@ -1,0 +1,20 @@
+<div class="timeline">
+  @if (!timeline || timeline.length === 0) {
+    <div class="timeline__empty">暂未识别到时间线节点</div>
+  } @else {
+    <ol class="timeline__list">
+      @for (moment of timeline; track moment.timestamp) {
+        <li class="timeline__item">
+          <div class="timeline__head">
+            <span class="timeline__badge" [ngClass]="severityColor(moment)"></span>
+            <div>
+              <time class="timeline__time">{{ moment.timestamp | date: 'MM-dd HH:mm' }}</time>
+              <h4 class="timeline__title">{{ moment.title }}</h4>
+            </div>
+          </div>
+          <p class="timeline__description">{{ moment.description }}</p>
+        </li>
+      }
+    </ol>
+  }
+</div>

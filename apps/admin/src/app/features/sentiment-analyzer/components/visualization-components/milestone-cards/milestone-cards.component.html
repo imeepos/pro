@@ -1,0 +1,15 @@
+<div class="milestones">
+  @if (!milestones || milestones.length === 0) {
+    <div class="milestones__empty">暂无识别到事件的关键转折点</div>
+  } @else {
+    <div class="milestones__grid">
+      @for (milestone of milestones; track milestone.occurredAt) {
+        <article class="milestones__card">
+          <time class="milestones__time">{{ milestone.occurredAt | date: 'MM-dd HH:mm' }}</time>
+          <h3 class="milestones__headline">{{ milestone.headline }}</h3>
+          <p class="milestones__summary">{{ milestone.summary }}</p>
+        </article>
+      }
+    </div>
+  }
+</div>

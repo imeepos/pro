@@ -11,7 +11,7 @@ import {
   RelationId,
   UpdateDateColumn,
 } from 'typeorm';
-import { WeiboVisibleType } from './enums/weibo.enums.js';
+import { WeiboVisibleType, WeiboMediaType } from './enums/weibo.enums.js';
 import { WeiboUserEntity } from './weibo-user.entity.js';
 import { WeiboMediaEntity } from './weibo-media.entity.js';
 import { WeiboPostHashtagEntity } from './weibo-post-hashtag.entity.js';
@@ -149,6 +149,7 @@ export class WeiboPostEntity {
     enum: WeiboVisibleType,
     name: 'visible_type',
     nullable: true,
+    enumName: 'weibo_visible_type_enum',
   })
   visibleType!: WeiboVisibleType | null;
 
@@ -199,17 +200,15 @@ export class WeiboPostEntity {
 
   @OneToMany(() => WeiboMediaEntity, (media) => media.post, {
     cascade: true,
+    eager: false,
+    orphanedRowAction: 'delete',
   })
   media!: WeiboMediaEntity[];
 
-  @OneToMany(() => WeiboPostHashtagEntity, (hashtag) => hashtag.post, {
-    cascade: true,
-  })
+  @OneToMany(() => WeiboPostHashtagEntity, (hashtag) => hashtag.post)
   hashtags!: WeiboPostHashtagEntity[];
 
-  @OneToMany(() => WeiboPostMentionEntity, (mention) => mention.post, {
-    cascade: true,
-  })
+  @OneToMany(() => WeiboPostMentionEntity, (mention) => mention.post)
   mentions!: WeiboPostMentionEntity[];
 
   @OneToMany(() => WeiboCommentEntity, (comment) => comment.post)
@@ -217,4 +216,70 @@ export class WeiboPostEntity {
 
   @OneToMany(() => WeiboInteractionEntity, (interaction) => interaction.post)
   interactions!: WeiboInteractionEntity[];
+
+  get content(): string {
+    return this.text;
+  }
+
+  set content(value: string) {
+    this.text = value;
+    this.textLength = value ? value.length : 0;
+  }
+
+  get likeCount(): number {
+    return this.attitudesCount;
+  }
+
+  set likeCount(value: number) {
+    this.attitudesCount = value ?? 0;
+  }
+
+  get commentCount(): number {
+    return this.commentsCount;
+  }
+
+  set commentCount(value: number) {
+    this.commentsCount = value ?? 0;
+  }
+
+  get shareCount(): number {
+    return this.repostsCount;
+  }
+
+  set shareCount(value: number) {
+    this.repostsCount = value ?? 0;
+  }
+
+  get location(): string | null {
+    return this.regionName;
+  }
+
+  set location(value: string | null) {
+    this.regionName = value;
+  }
+
+  get images(): string[] {
+    if (!this.media) {
+      return [];
+    }
+    return this.media
+      .filter((item) => item.mediaType === WeiboMediaType.Image)
+      .map((item) => item.fileUrl);
+  }
+
+  set images(urls: string[]) {
+    if (!urls || urls.length === 0) {
+      this.media = [];
+      return;
+    }
+    this.media = urls.map((url, index) => {
+      const media = new WeiboMediaEntity();
+      media.mediaId = `${this.weiboId ?? 'legacy'}-${index}`;
+      media.mediaType = WeiboMediaType.Image;
+      media.fileUrl = url;
+      media.rawPayload = { source: 'legacy', url };
+      media.post = this;
+      return media;
+    });
+  }
 }

@@ -1,4 +1,5 @@
 import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
+import { GraphQLJSONObject } from 'graphql-type-json';
 
 import { WeiboSubTaskEntity } from '@pro/entities';
 
@@ -12,7 +13,7 @@ export class WeiboSubTaskModel {
   @Field(() => Int)
   taskId: number;
 
-  @Field(() => JSON)
+  @Field(() => GraphQLJSONObject)
   metadata: Record<string, unknown>;
 
   @Field(() => String)

@@ -1,0 +1,41 @@
+<section class="chat-shell">
+  <header class="chat-shell__header">
+    <div class="chat-shell__heading">
+      <h2>舆情分析助手</h2>
+      <p class="chat-shell__subtitle">
+        {{ context.topic || '等待选定事件' }} · {{ context.perspective === 'public-opinion' ? '公众视角' : context.perspective === 'official-voice' ? '官方声音' : '媒体报道' }}
+      </p>
+    </div>
+    <div class="chat-shell__status">
+      <span class="chat-shell__status-dot"></span>
+      实时连接
+    </div>
+  </header>
+
+  <div class="chat-shell__history" #scrollContainer>
+    @if (loadingHistory()) {
+      <div class="chat-shell__history-loading">
+        <span class="chat-shell__spinner"></span>
+        <span>正在召回历史对话...</span>
+      </div>
+    } @else {
+      @for (message of messages$ | async; track message.id) {
+        <sentiment-chat-message [message]="message" />
+      } @empty {
+        <div class="chat-shell__empty">
+          <i nz-icon nzType="bulb" nzTheme="twoTone"></i>
+          <p>描述你想追踪的舆情事件，我会与左侧分析面板联动，为你呈现趋势、节点与洞察。</p>
+        </div>
+      }
+    }
+  </div>
+
+  <footer class="chat-shell__footer">
+    <sentiment-chat-input
+      [busy]="busy()"
+      [disabled]="!context"
+      (send)="handleSend($event)"
+      (upload)="handleUpload($event)"
+    />
+  </footer>
+</section>

@@ -3,23 +3,24 @@ import { PinoLogger } from '@pro/logger';
 import { NLPAnalysisResult } from '@pro/entities';
 import * as natural from 'natural';
 import * as franc from 'franc-min';
-import Segment from 'segment';
+import { createHash } from 'crypto';
 import { PerformanceMonitorService } from './performance-monitor.service';
+import { SegmentTokenizerService } from './segment-tokenizer.service';
+import { CorpusStatisticsService } from './corpus-statistics.service';
 
 @Injectable()
 export class NLPAnalysisService {
   private readonly cache = new Map<string, NLPAnalysisResult>();
-  private readonly segment: Segment;
+  private readonly cacheCapacity = 300;
   private readonly topicPatterns: Array<{ pattern: RegExp; name: string; keywords: string[] }>;
   private readonly entityPatterns: Record<string, RegExp>;
 
   constructor(
     private readonly logger: PinoLogger,
-    private readonly performanceMonitor: PerformanceMonitorService
+    private readonly performanceMonitor: PerformanceMonitorService,
+    private readonly segmentTokenizer: SegmentTokenizerService,
+    private readonly corpusStatistics: CorpusStatisticsService
   ) {
-    this.segment = new Segment();
-    this.segment.useDefault();
-
     this.topicPatterns = [
       {
         pattern: /科技|技术|AI|人工智能|机器学习|深度学习|算法|编程|代码|软件|硬件|互联网|5G|区块链/,
@@ -79,11 +80,12 @@ export class NLPAnalysisService {
     const timer = this.performanceMonitor.startTimer('nlp-analysis');
     const textHash = this.hashText(text);
 
-    if (this.cache.has(textHash)) {
+    const cached = this.readFromCache(textHash);
+    if (cached) {
       this.performanceMonitor.recordCacheHit('nlp');
       this.logger.debug('使用缓存的NLP分析结果');
       timer(true, { cached: true, textLength: text.length });
-      return this.cache.get(textHash)!;
+      return cached;
     }
 
     this.performanceMonitor.recordCacheMiss('nlp');
@@ -101,13 +103,7 @@ export class NLPAnalysisService {
         language: result.language.detected,
       });
 
-      this.cache.set(textHash, result);
-      if (this.cache.size > 1000) {
-        const firstKey = this.cache.keys().next().value;
-        if (firstKey) {
-          this.cache.delete(firstKey);
-        }
-      }
+      this.writeThroughCache(textHash, result);
 
       timer(true, {
         textLength: text.length,
@@ -153,7 +149,11 @@ export class NLPAnalysisService {
     const cleanText = this.preprocessText(text);
 
     // 使用中文分词
-    const chineseWords = this.segment.doSegment(cleanText, { simple: true });
+    const chineseWords = this.segmentTokenizer.words(cleanText, {
+      stripPunctuation: true,
+      stripStopword: true,
+      convertSynonym: true,
+    });
     const chineseKeywords = this.calculateTfIdf(chineseWords);
 
     // 使用英文分词处理混合文本
@@ -184,7 +184,11 @@ export class NLPAnalysisService {
     if (tokens.length === 0) return [];
 
     // 过滤停用词和短词
-    const stopWords = new Set(['的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一个', '上', '也', '很', '到', '说', '要', '去', '你', '会', '着', '没有', '看', 'the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are', 'was', 'were', 'been', 'be']);
+    const stopWords = new Set([
+      '的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一个', '上', '也', '很', '到', '说', '要', '去', '你', '会', '着', '没有', '看',
+      'the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are', 'was', 'were', 'been', 'be',
+      'emm', 'emmm', '233', 'orz', 'lol', '哈哈', '哈哈哈', '呵呵', '哈哈~'
+    ]);
     const filteredTokens = tokens.filter(token =>
       token.length > 1 &&
       !stopWords.has(token.toLowerCase()) &&
@@ -203,8 +207,7 @@ export class NLPAnalysisService {
 
     termFreq.forEach((freq, term) => {
       const tf = freq / totalTerms;
-      // 简化的 IDF，实际应用中可以使用更大的语料库
-      const idf = Math.log(1000 / (freq + 1));
+      const idf = this.corpusStatistics.idf(term);
       const weight = tf * idf;
 
       if (weight > 0.001) {
@@ -219,6 +222,8 @@ export class NLPAnalysisService {
         });
       }
     });
+
+    this.corpusStatistics.recordDocument(filteredTokens);
 
     return keywords.sort((a, b) => b.weight - a.weight);
   }
@@ -377,13 +382,32 @@ export class NLPAnalysisService {
   }
 
   private hashText(text: string): string {
-    let hash = 0;
-    if (text.length === 0) return hash.toString();
-    for (let i = 0; i < text.length; i++) {
-      const char = text.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+    return createHash('sha1').update(text, 'utf8').digest('hex');
+  }
+
+  private readFromCache(key: string): NLPAnalysisResult | undefined {
+    const cached = this.cache.get(key);
+    if (!cached) {
+      return undefined;
     }
-    return hash.toString();
+
+    this.cache.delete(key);
+    this.cache.set(key, cached);
+    return cached;
+  }
+
+  private writeThroughCache(key: string, value: NLPAnalysisResult): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+
+    if (this.cache.size >= this.cacheCapacity) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey) {
+        this.cache.delete(oldestKey);
+      }
+    }
+
+    this.cache.set(key, value);
   }
 }

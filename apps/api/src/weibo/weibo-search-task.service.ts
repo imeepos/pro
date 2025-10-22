@@ -18,6 +18,7 @@ import {
   ResumeTaskDto,
   RunNowTaskDto,
 } from './dto/weibo-search-task.dto';
+import { QueryWeiboSubTaskDto } from './dto/weibo-sub-task.dto';
 
 @Injectable()
 export class WeiboSearchTaskService {
@@ -317,10 +318,111 @@ export class WeiboSearchTaskService {
     return this.subTaskRepo.save(subTask);
   }
 
-  async listSubTasks(taskId: number): Promise<WeiboSubTaskEntity[]> {
-    return this.subTaskRepo.find({
-      where: { taskId },
-      order: { createdAt: 'DESC' },
+  async listSubTasks(
+    taskId: number,
+    filter: QueryWeiboSubTaskDto = new QueryWeiboSubTaskDto(),
+  ): Promise<{
+    subTasks: WeiboSubTaskEntity[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const {
+      page = 1,
+      limit = 10,
+      type,
+      status,
+      createdAfter,
+      createdBefore,
+      updatedAfter,
+      updatedBefore,
+      sortBy = 'createdAt',
+      sortOrder = 'DESC',
+    } = filter;
+
+    const qb = this.subTaskRepo
+      .createQueryBuilder('subTask')
+      .where('subTask.taskId = :taskId', { taskId });
+
+    if (type) {
+      qb.andWhere('subTask.type = :type', { type });
+    }
+
+    if (status) {
+      qb.andWhere('subTask.status = :status', { status });
+    }
+
+    if (createdAfter) {
+      qb.andWhere('subTask.createdAt >= :createdAfter', {
+        createdAfter: new Date(createdAfter),
+      });
+    }
+
+    if (createdBefore) {
+      qb.andWhere('subTask.createdAt <= :createdBefore', {
+        createdBefore: new Date(createdBefore),
+      });
+    }
+
+    if (updatedAfter) {
+      qb.andWhere('subTask.updatedAt >= :updatedAfter', {
+        updatedAfter: new Date(updatedAfter),
+      });
+    }
+
+    if (updatedBefore) {
+      qb.andWhere('subTask.updatedAt <= :updatedBefore', {
+        updatedBefore: new Date(updatedBefore),
+      });
+    }
+
+    const availableSortFields = new Set(['createdAt', 'updatedAt', 'id', 'type', 'status']);
+    const safeSortField = availableSortFields.has(sortBy ?? '') ? sortBy! : 'createdAt';
+    const order = (sortOrder ?? 'DESC').toString().toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    qb.orderBy(`subTask.${safeSortField}`, order as 'ASC' | 'DESC');
+
+    const offset = (page - 1) * limit;
+    qb.skip(offset).take(limit);
+
+    const [subTasks, total] = await qb.getManyAndCount();
+
+    return {
+      subTasks,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async findSubTasksWithPagination(
+    userId: string,
+    taskId: number,
+    filter: QueryWeiboSubTaskDto = new QueryWeiboSubTaskDto(),
+  ): Promise<{
+    subTasks: WeiboSubTaskEntity[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    await this.findOne(userId, taskId);
+    return this.listSubTasks(taskId, filter);
+  }
+
+  async findSubTaskById(userId: string, id: number): Promise<WeiboSubTaskEntity> {
+    const subTask = await this.subTaskRepo.findOne({
+      where: { id },
+      relations: ['task'],
     });
+
+    if (!subTask) {
+      throw new NotFoundException('微博搜索子任务不存在');
+    }
+
+    if (!subTask.task || subTask.task.userId !== userId) {
+      throw new ForbiddenException('无权访问该子任务');
+    }
+
+    return subTask;
   }
 }

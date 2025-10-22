@@ -7,6 +7,10 @@ import {
   WeiboPostEntity,
   WeiboCommentEntity,
   WeiboUserEntity,
+  WeiboHashtagEntity,
+  WeiboPostHashtagEntity,
+  WeiboUserStatsEntity,
+  WeiboMediaEntity,
 } from '@pro/entities';
 import {
   RawDataSource,
@@ -17,13 +21,15 @@ import { AppService } from './app.service';
 import { RabbitMQService } from './rabbitmq/rabbitmq.service';
 import { RawDataConsumer } from './consumers/raw-data.consumer';
 import { RawDataService } from './services/raw-data.service';
-import { WeiboCleanerService } from './services/weibo-cleaner.service';
 import {
   createMongoDBConfig,
   createRabbitMQConfig,
   createCleanerConfig,
 } from './config';
-import {createDatabaseConfig} from '@pro/entities'
+import { createDatabaseConfig } from '@pro/entities';
+import { CleanTaskFactory } from './tasks/clean-task-factory';
+import { CleanerService } from './services/cleaner.service';
+import { WeiboPersistenceService } from './services/weibo-persistence.service';
 
 @Module({
   imports: [
@@ -43,7 +49,15 @@ import {createDatabaseConfig} from '@pro/entities'
         const config = createDatabaseConfig(configService);
         return {
           ...config,
-          entities: [WeiboPostEntity, WeiboCommentEntity, WeiboUserEntity],
+          entities: [
+            WeiboPostEntity,
+            WeiboCommentEntity,
+            WeiboUserEntity,
+            WeiboMediaEntity,
+            WeiboHashtagEntity,
+            WeiboPostHashtagEntity,
+            WeiboUserStatsEntity,
+          ],
           synchronize: false,
           logging: configService.get('NODE_ENV') === 'development',
         };
@@ -53,6 +67,10 @@ import {createDatabaseConfig} from '@pro/entities'
       WeiboPostEntity,
       WeiboCommentEntity,
       WeiboUserEntity,
+      WeiboMediaEntity,
+      WeiboHashtagEntity,
+      WeiboPostHashtagEntity,
+      WeiboUserStatsEntity,
     ]),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -89,7 +107,9 @@ import {createDatabaseConfig} from '@pro/entities'
     AppService,
     RabbitMQService,
     RawDataService,
-    WeiboCleanerService,
+    CleanTaskFactory,
+    WeiboPersistenceService,
+    CleanerService,
     RawDataConsumer,
     {
       provide: 'RABBITMQ_CONFIG',

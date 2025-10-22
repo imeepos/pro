@@ -1,0 +1,67 @@
+.input-shell {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.input-shell--busy {
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.input-shell--disabled {
+  opacity: 0.6;
+}
+
+.input-shell__textarea {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.25);
+  color: #f8fafc;
+  border: none;
+  resize: none;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.input-shell__textarea:focus {
+  outline: none;
+}
+
+.input-shell__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.input-shell__left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.input-shell__icon-button {
+  border: none;
+  background: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+}
+
+.input-shell__icon-button:hover {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.input-shell__file {
+  display: none;
+}
+
+.input-shell__send {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+}

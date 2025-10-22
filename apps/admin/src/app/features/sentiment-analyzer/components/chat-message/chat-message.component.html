@@ -1,0 +1,63 @@
+<div class="message" [ngClass]="positionClass()">
+  <div class="message__avatar" aria-hidden="true">
+    <i nz-icon [nzType]="message.author === 'analyst' ? 'user' : 'robot'"></i>
+  </div>
+
+  <div class="message__body">
+    <div class="message__meta">
+      <span class="message__author">
+        @switch (message.author) {
+          @case ('analyst') { 你 }
+          @case ('assistant') { 智能分析师 }
+          @default { 系统 }
+        }
+      </span>
+      <span class="message__time">{{ formatTimestamp(message.emittedAt) }}</span>
+      @if (isStreaming()) {
+        <nz-tag nzColor="blue" class="message__tag">分析中</nz-tag>
+      }
+      @if (isFailed()) {
+        <nz-tag nzColor="red" class="message__tag">发送失败</nz-tag>
+      }
+    </div>
+
+    <div class="message__bubble" [class.message__bubble--warning]="isFailed()">
+      @switch (message.content.kind) {
+        @case ('text') {
+          <p class="message__text">{{ message.content.text }}</p>
+        }
+        @case ('analysis') {
+          <div class="message__analysis">
+            <h4 class="message__analysis-title">{{ message.content.headline }}</h4>
+            <ul class="message__analysis-list">
+              @for (insight of message.content.insights; track insight) {
+                <li>{{ insight }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @case ('visualization') {
+          <div class="message__visualization">
+            <div class="message__visualization-label">{{ message.content.visualization.title }}</div>
+            <p class="message__visualization-desc">
+              {{ message.content.visualization.description || '图表已同步到左侧分析面板' }}
+            </p>
+          </div>
+        }
+        @case ('attachment') {
+          <div class="message__attachment">
+            <i nz-icon nzType="paper-clip"></i>
+            <a [href]="message.content.attachment.url" target="_blank" rel="noopener noreferrer">
+              {{ message.content.attachment.name }}
+            </a>
+            @if (message.content.attachment.sizeKb) {
+              <span class="message__attachment-size">
+                {{ message.content.attachment.sizeKb }} KB
+              </span>
+            }
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>
