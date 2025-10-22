@@ -1,10 +1,12 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import { WeiboProfileService, WeiboStatusService } from '@pro/weibo';
 import { TaskFactory } from '../tasks/task-factory';
 import { AjaxFetcherService } from './ajax-fetcher.service';
 import { HtmlFetcherService } from './html-fetcher.service';
 import { StorageService } from './storage.service';
 import { WeiboTaskConfig } from '../config/crawler.config';
 import { SubTaskMessage, TaskContext } from '../tasks/base-task';
+import { WeiboAccountService } from './weibo-account.service';
 
 export interface CrawlResult {
   success: boolean;
@@ -22,6 +24,9 @@ export class CrawlerService {
     private readonly htmlFetcher: HtmlFetcherService,
     private readonly ajaxFetcher: AjaxFetcherService,
     private readonly storage: StorageService,
+    private readonly weiboAccountService: WeiboAccountService,
+    private readonly weiboStatusService: WeiboStatusService,
+    private readonly weiboProfileService: WeiboProfileService,
     @Inject('WEIBO_CONFIG') private readonly weiboConfig: WeiboTaskConfig,
   ) {}
 
@@ -46,6 +51,9 @@ export class CrawlerService {
       ajaxFetcher: this.ajaxFetcher,
       storage: this.storage,
       weiboConfig: this.weiboConfig,
+      weiboAccountService: this.weiboAccountService,
+      weiboStatusService: this.weiboStatusService,
+      weiboProfileService: this.weiboProfileService,
     };
   }
 }

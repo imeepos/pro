@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { MongodbModule } from '@pro/mongodb';
+import { WeiboModule } from '@pro/weibo';
+import { RedisClient, redisConfigFactory } from '@pro/redis';
+import { createDatabaseConfig, WeiboAccountEntity } from '@pro/entities';
 import {
   createCrawlerRuntimeConfig,
   createRabbitConfig,
@@ -13,6 +17,9 @@ import { StorageService } from './services/storage.service';
 import { TaskFactory } from './tasks/task-factory';
 import { CrawlerService } from './services/crawler.service';
 import { CrawlQueueConsumer } from './crawl-queue.consumer';
+import { BrowserGuardianService } from './services/browser-guardian.service';
+import { WeiboAccountService } from './services/weibo-account.service';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -25,11 +32,20 @@ import { CrawlQueueConsumer } from './crawl-queue.consumer';
       }),
     ),
     MongodbModule.forRoot(),
+    WeiboModule,
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
+    }),
+    TypeOrmModule.forFeature([WeiboAccountEntity]),
   ],
+  controllers: [HealthController],
   providers: [
+    BrowserGuardianService,
     HtmlFetcherService,
     AjaxFetcherService,
     StorageService,
+    WeiboAccountService,
     TaskFactory,
     CrawlerService,
     CrawlQueueConsumer,
@@ -47,6 +63,13 @@ import { CrawlQueueConsumer } from './crawl-queue.consumer';
       provide: 'WEIBO_CONFIG',
       inject: [ConfigService],
       useFactory: createWeiboTaskConfig,
+    },
+    {
+      provide: RedisClient,
+      useFactory: (configService: ConfigService) => {
+        return new RedisClient(redisConfigFactory(configService));
+      },
+      inject: [ConfigService],
     },
   ],
 })
