@@ -4,10 +4,11 @@ import { MongodbModule } from '@pro/mongodb'
 
 import { WeiboStatusService } from './weibo.service.js'
 import { WeiboProfileService } from './weibo-profile.service.js'
+import { WeiboHealthCheckService } from './weibo-health-check.service.js'
 
 @Module({
   imports: [HttpModule, MongodbModule.forFeature()],
-  providers: [WeiboStatusService, WeiboProfileService],
-  exports: [WeiboStatusService, WeiboProfileService]
+  providers: [WeiboStatusService, WeiboProfileService, WeiboHealthCheckService],
+  exports: [WeiboStatusService, WeiboProfileService, WeiboHealthCheckService]
 })
 export class WeiboModule {}

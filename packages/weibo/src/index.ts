@@ -6,6 +6,11 @@ export {
 } from './weibo.service.js'
 export { WeiboProfileService } from './weibo-profile.service.js'
 export type { WeiboProfileTimelineOptions } from './weibo-profile.service.js'
+export {
+  WeiboHealthCheckService,
+  type WeiboAccountHealthResult,
+  type WeiboAccountHealthEntry
+} from './weibo-health-check.service.js'
 export type { WeiboStatusLikesOptions, WeiboStatusCommentsOptions } from './weibo.service.js'
 export {
   DEFAULT_WEIBO_BASE_URL,

@@ -635,6 +635,9 @@ importers:
       '@pro/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      '@pro/weibo':
+        specifier: workspace:*
+        version: link:../../packages/weibo
       axios:
         specifier: 1.7.9
         version: 1.7.9
@@ -982,6 +985,9 @@ importers:
       '@pro/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      '@pro/weibo':
+        specifier: workspace:*
+        version: link:../../packages/weibo
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1003,9 +1009,6 @@ importers:
       typeorm:
         specifier: ^0.3.20
         version: 0.3.27(ioredis@5.8.1)(mongodb@6.20.0(socks@2.8.7))(pg@8.13.1)(redis@4.7.1)(reflect-metadata@0.2.2)(ts-node@10.9.2(@swc/core@1.13.5)(@types/node@20.19.23)(typescript@5.8.3))
-      undici:
-        specifier: 5.28.0
-        version: 5.28.0
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.0
@@ -3831,10 +3834,6 @@ packages:
   '@faker-js/faker@10.1.0':
     resolution: {integrity: sha512-C3mrr3b5dRVlKPJdfrAXS8+dq+rq8Qm5SNRazca0JKgw1HQERFmrVb0towvMmw5uu8hHKNiQasMaR/tydf3Zsg==}
     engines: {node: ^20.19.0 || ^22.13.0 || ^23.5.0 || >=24.0.0, npm: '>=10'}
-
-  '@fastify/busboy@2.1.1':
-    resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
-    engines: {node: '>=14'}
 
   '@fastify/busboy@3.2.0':
     resolution: {integrity: sha512-m9FVDXU3GT2ITSe0UaMA5rU3QkfC/UXtCU8y0gSN/GugTqtVldOBWIB5V6V3sbmenVZUIpU6f+mPEO2+m5iTaA==}
@@ -12585,10 +12584,6 @@ packages:
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
-  undici@5.28.0:
-    resolution: {integrity: sha512-gM12DkXhlAc5+/TPe60iy9P6ETgVfqTuRJ6aQ4w8RYu0MqKuXhaq3/b86GfzDQnNA3NUO6aUNdvevrKH59D0Nw==}
-    engines: {node: '>=14.0'}
-
   unicode-canonical-property-names-ecmascript@2.0.1:
     resolution: {integrity: sha512-dA8WbNeb2a6oQzAQ55YlT5vQAWGV9WXOsi3SskE3bcCdM0P4SDd+24zS/OCacdRq5BkdsRj9q3Pg6YyQoxIGqg==}
     engines: {node: '>=4'}
@@ -15392,8 +15387,6 @@ snapshots:
       levn: 0.4.1
 
   '@faker-js/faker@10.1.0': {}
-
-  '@fastify/busboy@2.1.1': {}
 
   '@fastify/busboy@3.2.0': {}
 
@@ -25940,10 +25933,6 @@ snapshots:
   underscore@1.13.7: {}
 
   undici-types@6.21.0: {}
-
-  undici@5.28.0:
-    dependencies:
-      '@fastify/busboy': 2.1.1
 
   unicode-canonical-property-names-ecmascript@2.0.1: {}
 

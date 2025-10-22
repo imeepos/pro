@@ -6,7 +6,10 @@ import { PinoLogger } from '@pro/logger';
 import { RedisClient } from '@pro/redis';
 import { WeiboAccountEntity } from '@pro/entities';
 import { WeiboAccountStatus } from '@pro/types';
-import { fetch } from 'undici';
+import {
+  WeiboHealthCheckService as WeiboCoreHealthCheckService,
+  type WeiboAccountHealthResult,
+} from '@pro/weibo';
 
 /**
  * 微博账号健康度调度器
@@ -22,6 +25,7 @@ export class WeiboAccountHealthScheduler {
     private readonly accountRepository: Repository<WeiboAccountEntity>,
     private readonly redis: RedisClient,
     private readonly logger: PinoLogger,
+    private readonly weiboHealthInspector: WeiboCoreHealthCheckService,
   ) {
     this.logger.setContext(WeiboAccountHealthScheduler.name);
   }
@@ -83,9 +87,11 @@ export class WeiboAccountHealthScheduler {
 
     for (const account of accounts) {
       try {
-        const isValid = await this.validateCookie(account);
+        const health = await this.weiboHealthInspector.checkAccountHealth(account.id, account.cookies, {
+          weiboUid: account.weiboUid,
+        });
 
-        if (isValid) {
+        if (health.isValid) {
           await this.updateHealthScore(account.id, 20);
           successCount++;
         } else {
@@ -93,11 +99,7 @@ export class WeiboAccountHealthScheduler {
           failureCount++;
         }
 
-        await this.redis.hset(
-          this.metricsKey(account.id),
-          'lastValidatedAt',
-          Date.now(),
-        );
+        await this.recordHealthSnapshot(account.id, health);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         this.logger.error('Cookie 验证失败', {
@@ -131,43 +133,26 @@ export class WeiboAccountHealthScheduler {
     });
   }
 
-  private async validateCookie(account: WeiboAccountEntity): Promise<boolean> {
-    if (!account.cookies) {
-      return false;
+  private async recordHealthSnapshot(accountId: number, health: WeiboAccountHealthResult): Promise<void> {
+    const metricsKey = this.metricsKey(accountId);
+    const pipeline = this.redis.pipeline();
+
+    pipeline.hset(metricsKey, 'lastValidatedAt', health.checkedAt.getTime());
+    pipeline.hset(metricsKey, 'lastStatus', health.status);
+
+    if (health.errorType) {
+      pipeline.hset(metricsKey, 'lastErrorType', health.errorType);
+    } else {
+      pipeline.hset(metricsKey, 'lastErrorType', '');
     }
 
-    try {
-      const parsed = JSON.parse(account.cookies);
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        return false;
-      }
-
-      const cookieString = parsed
-        .map((cookie: { name: string; value: string }) => `${cookie.name}=${cookie.value}`)
-        .join('; ');
-
-      if (!cookieString) {
-        return false;
-      }
-
-      const response = await fetch('https://m.weibo.cn/api/config', {
-        headers: { Cookie: cookieString },
-      });
-
-      if (!response.ok) {
-        return false;
-      }
-
-      const data = await response.json() as { login?: boolean };
-      return data.login === true;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.warn('Cookie 验证请求异常', {
-        accountId: account.id,
-        error: message,
-      });
-      return false;
+    if (health.errorMessage) {
+      pipeline.hset(metricsKey, 'lastErrorMessage', health.errorMessage);
+    } else {
+      pipeline.hset(metricsKey, 'lastErrorMessage', '');
     }
+
+    await pipeline.exec();
   }
 
   private metricsKey(accountId: number): string {

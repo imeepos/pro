@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity, createDatabaseConfig } from '@pro/entities';
 import { RedisClient, redisConfigFactory } from '@pro/redis';
+import { WeiboModule as CoreWeiboModule } from '@pro/weibo';
 
 // 核心服务导入 - 每个导入都有其存在的意义
 import { SimpleIntervalScheduler } from './weibo/simple-interval-scheduler.service';
@@ -53,6 +54,7 @@ import { WeiboAccountHealthScheduler } from './weibo/account-health-scheduler.se
 
     // 实体之殿 - 数据模型的家园
     TypeOrmModule.forFeature([WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity]),
+    CoreWeiboModule,
   ],
 
   // 服务之群 - 业务逻辑的守护者

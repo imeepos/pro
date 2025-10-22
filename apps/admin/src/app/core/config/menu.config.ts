@@ -24,7 +24,20 @@ export const MENU_ITEMS: MenuItem[] = [
     id: 'data',
     label: '数据管理',
     icon: 'database',
-    route: '/data'
+    children: [
+      {
+        id: 'data-list',
+        label: '数据列表',
+        icon: 'list',
+        route: '/data'
+      },
+      {
+        id: 'dlq-manager',
+        label: '死信队列管理',
+        icon: 'alert',
+        route: '/dlq-manager'
+      }
+    ]
   },
   {
     id: 'screens',
