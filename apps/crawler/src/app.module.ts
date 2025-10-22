@@ -28,6 +28,7 @@ import { WeiboContentParser } from './data-cleaner/weibo-content-parser.service'
 import { WeiboDataCleaner } from './data-cleaner/weibo-data-cleaner.service';
 import { WeiboStatusService } from '@pro/weibo';
 import { RawDataSourceService } from '@pro/mongodb';
+import { RedisClient, redisConfigFactory } from '@pro/redis';
 
 import {
   createCrawlerConfig,
@@ -158,6 +159,13 @@ import { createDatabaseConfig } from '@pro/entities';
       provide: 'WEIBO_CONFIG',
       inject: [ConfigService],
       useFactory: createWeiboConfig,
+    },
+    {
+      provide: RedisClient,
+      useFactory: (configService: ConfigService) => {
+        return new RedisClient(redisConfigFactory(configService));
+      },
+      inject: [ConfigService],
     },
   ],
 })

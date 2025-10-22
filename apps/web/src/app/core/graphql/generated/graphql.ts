@@ -456,6 +456,52 @@ export type DashboardStats = {
   totalWeiboAccounts: Scalars['Int']['output'];
 };
 
+export type DeleteMessagesInput = {
+  /** 需删除的消息 ID 列表 */
+  messageIds: Array<Scalars['String']['input']>;
+  /** 目标死信队列名称 */
+  queueName: Scalars['String']['input'];
+};
+
+export type DlqMessage = {
+  __typename?: 'DlqMessage';
+  content?: Maybe<Scalars['JSON']['output']>;
+  errorMessage?: Maybe<Scalars['String']['output']>;
+  failedAt: Scalars['DateTime']['output'];
+  id: Scalars['String']['output'];
+  queueName: Scalars['String']['output'];
+  retryCount: Scalars['Int']['output'];
+};
+
+export type DlqMessageConnection = {
+  __typename?: 'DlqMessageConnection';
+  edges: Array<DlqMessageEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type DlqMessageEdge = {
+  __typename?: 'DlqMessageEdge';
+  cursor: Scalars['String']['output'];
+  node: DlqMessage;
+};
+
+export type DlqQueryInput = {
+  /** 页码，起始为 1 */
+  page?: Scalars['Int']['input'];
+  /** 每页条数，最大 100 条 */
+  pageSize?: Scalars['Int']['input'];
+  /** 死信队列名称 */
+  queueName: Scalars['String']['input'];
+};
+
+export type DlqQueueInfo = {
+  __typename?: 'DlqQueueInfo';
+  messageCount: Scalars['Int']['output'];
+  name: Scalars['String']['output'];
+  originalQueue: Scalars['String']['output'];
+};
+
 export type Event = {
   __typename?: 'Event';
   attachments: Array<EventAttachment>;
@@ -850,6 +896,8 @@ export type Mutation = {
   createScreen: Screen;
   createTag: Tag;
   createWeiboSearchTask: WeiboSearchTask;
+  /** 删除死信队列中的消息 */
+  deleteDlqMessages: Scalars['Boolean']['output'];
   disableApiKey: Scalars['Boolean']['output'];
   dispatchNotification: Notification;
   draftScreen: Screen;
@@ -882,6 +930,8 @@ export type Mutation = {
   resetWeiboTaskStatusConsumerStats: Scalars['Boolean']['output'];
   resumeAllWeiboSearchTasks: Scalars['Int']['output'];
   resumeWeiboSearchTask: WeiboSearchTask;
+  /** 将死信消息重新投递到原队列 */
+  retryDlqMessages: Scalars['Boolean']['output'];
   runWeiboSearchTaskNow: WeiboSearchTask;
   setDefaultScreen: Screen;
   startJdLogin: JdLoginSession;
@@ -996,6 +1046,11 @@ export type MutationCreateTagArgs = {
 
 export type MutationCreateWeiboSearchTaskArgs = {
   input: CreateWeiboSearchTaskInput;
+};
+
+
+export type MutationDeleteDlqMessagesArgs = {
+  input: DeleteMessagesInput;
 };
 
 
@@ -1140,6 +1195,11 @@ export type MutationRequestEventAttachmentUploadArgs = {
 export type MutationResumeWeiboSearchTaskArgs = {
   id: Scalars['Int']['input'];
   input?: InputMaybe<ResumeWeiboTaskInput>;
+};
+
+
+export type MutationRetryDlqMessagesArgs = {
+  input: RetryMessagesInput;
 };
 
 
@@ -1304,6 +1364,10 @@ export type Query = {
   dashboardRecentActivities: Array<DashboardActivity>;
   dashboardStats: DashboardStats;
   defaultScreen: Screen;
+  /** 分页查询死信队列中的消息 */
+  dlqMessages: DlqMessageConnection;
+  /** 获取所有死信队列信息 */
+  dlqQueues: Array<DlqQueueInfo>;
   event: Event;
   eventType: EventType;
   eventTypes: Array<EventType>;
@@ -1392,6 +1456,11 @@ export type QueryBugsArgs = {
 
 export type QueryConfigValueArgs = {
   type: ConfigType;
+};
+
+
+export type QueryDlqMessagesArgs = {
+  filter?: InputMaybe<DlqQueryInput>;
 };
 
 
@@ -1653,6 +1722,13 @@ export type RequestAttachmentUploadInput = {
 
 export type ResumeWeiboTaskInput = {
   reason?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type RetryMessagesInput = {
+  /** 需重试的消息 ID 列表 */
+  messageIds: Array<Scalars['String']['input']>;
+  /** 目标死信队列名称 */
+  queueName: Scalars['String']['input'];
 };
 
 export type RunWeiboTaskNowInput = {

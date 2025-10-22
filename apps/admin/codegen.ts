@@ -15,7 +15,8 @@ const config: CodegenConfig = {
     'src/app/core/graphql/raw-data.graphql',
     'src/app/core/graphql/jd-account.graphql',
     'src/app/core/graphql/weibo-account.graphql',
-    'src/app/core/graphql/notifications.graphql'
+    'src/app/core/graphql/notifications.graphql',
+    'src/app/core/graphql/dlq.graphql'
   ],
   ignoreNoDocuments: false,
   generates: {

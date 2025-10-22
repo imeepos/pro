@@ -1,0 +1,145 @@
+<div class="dlq-manager">
+  <div class="dlq-manager__header">
+    <div>
+      <h1>死信队列管理</h1>
+      <p class="dlq-manager__subtitle">
+        坚守消息的尊严，给每一条失败的故事第二次机会
+      </p>
+    </div>
+    <button
+      nz-button
+      nzType="default"
+      nzShape="circle"
+      nz-tooltip="刷新队列信息"
+      (click)="refresh()"
+      [disabled]="loadingQueues() || loadingMessages()"
+    >
+      <span nz-icon nzType="reload"></span>
+    </button>
+  </div>
+
+  <div class="dlq-manager__toolbar">
+    <div class="dlq-manager__selector">
+      <label>死信队列</label>
+      <nz-select
+        class="dlq-manager__select"
+        nzPlaceHolder="选择死信队列"
+        [ngModel]="selectedQueue()"
+        (ngModelChange)="onQueueChange($event)"
+        [nzLoading]="loadingQueues()"
+      >
+        <nz-option
+          *ngFor="let queue of queues()"
+          [nzLabel]="queue.name"
+          [nzValue]="queue.name"
+        ></nz-option>
+      </nz-select>
+    </div>
+
+    <div class="dlq-manager__actions">
+      <span class="dlq-manager__selection" *ngIf="selectionSize() > 0">
+        已选 {{ selectionSize() }} 条消息
+      </span>
+      <button
+        nz-button
+        nzType="primary"
+        nzDanger
+        (click)="deleteSelected()"
+        [disabled]="selectionSize() === 0 || operating()"
+      >
+        批量删除
+      </button>
+      <button
+        nz-button
+        nzType="default"
+        nz-tooltip="重新投递到原始队列"
+        (click)="retrySelected()"
+        [disabled]="selectionSize() === 0 || operating()"
+      >
+        批量恢复
+      </button>
+    </div>
+  </div>
+
+  <div class="dlq-manager__body" *ngIf="selectedQueue(); else emptyState">
+    <nz-table
+      nzBordered
+      nzSize="middle"
+      [nzData]="messages()"
+      [nzLoading]="loadingMessages() || loadingQueues() || operating()"
+      [nzFrontPagination]="false"
+      [nzShowPagination]="false"
+      [nzNoResult]="noMessages"
+      [nzScroll]="{ x: '960px' }"
+    >
+      <thead>
+        <tr>
+          <th nzWidth="48px">
+            <label nz-checkbox [ngModel]="allChecked()" (ngModelChange)="toggleAll($event)" [nzIndeterminate]="indeterminate()"></label>
+          </th>
+          <th nzWidth="160px">消息 ID</th>
+          <th nzWidth="220px">失败时间</th>
+          <th nzWidth="120px">重试次数</th>
+          <th>消息内容</th>
+          <th nzWidth="200px">错误原因</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let message of messages(); trackBy: trackByMessageId">
+          <td>
+            <label
+              nz-checkbox
+              [ngModel]="selectedIds().has(message.id)"
+              (ngModelChange)="toggleSelection(message.id, $event)"
+            ></label>
+          </td>
+          <td>
+            <div class="dlq-manager__id" [nzTooltipTitle]="message.id" nz-tooltip>
+              {{ message.id }}
+            </div>
+          </td>
+          <td>{{ message.failedAt | date: 'yyyy-MM-dd HH:mm:ss' }}</td>
+          <td>{{ message.retryCount }}</td>
+          <td>
+            <pre class="dlq-manager__content">{{ displayContent(message.content) }}</pre>
+          </td>
+          <td>
+            <span class="dlq-manager__error" *ngIf="message.errorMessage; else noError">
+              {{ message.errorMessage }}
+            </span>
+            <ng-template #noError>
+              <span class="dlq-manager__error dlq-manager__error--muted">无</span>
+            </ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </nz-table>
+
+    <div class="dlq-manager__pagination" *ngIf="totalMessages() > 0">
+      <nz-pagination
+        [nzTotal]="totalMessages()"
+        [nzPageIndex]="page()"
+        [nzPageSize]="pageSize()"
+        [nzPageSizeOptions]="[10, 20, 50, 100]"
+        nzShowSizeChanger
+        nzShowQuickJumper
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)"
+      ></nz-pagination>
+    </div>
+  </div>
+</div>
+
+<ng-template #emptyState>
+  <nz-empty
+    nzNotFoundImage="simple"
+    nzNotFoundContent="请选择一个死信队列，开启消息救赎之旅"
+  ></nz-empty>
+</ng-template>
+
+<ng-template #noMessages>
+  <nz-empty
+    nzNotFoundImage="simple"
+    nzNotFoundContent="这座死信队列一片安静"
+  ></nz-empty>
+</ng-template>

@@ -22,6 +22,7 @@ import { BugModule } from './bug/bug.module';
 import { RawDataModule } from './raw-data/raw-data.module';
 import { DatabaseModule } from './database/database.module';
 import { LoadersModule } from './loaders.module';
+import { DlqModule } from './dlq/dlq.module';
 import { RabbitMQModule } from './rabbitmq/rabbitmq.module';
 import { TasksModule } from './tasks/tasks.module';
 import { createDatabaseConfig } from './config';
@@ -184,6 +185,7 @@ import { TagLoader } from './events/tag.loader';
     NotificationsModule,
     BugModule,
     RawDataModule,
+    DlqModule,
     TasksModule,
   ],
   controllers: [],

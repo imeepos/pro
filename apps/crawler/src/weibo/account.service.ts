@@ -7,7 +7,7 @@ import { WeiboAccountStatus } from '@pro/types';
 import { BrowserService } from '../browser/browser.service';
 import { WeiboAccountSelector, AccountSelectionAlgorithm } from './account.selector';
 import { DurationFormatter } from '@pro/crawler-utils';
-import { WeiboAccountHealthMonitor } from './account.health-monitor';
+import { RedisClient } from '@pro/redis';
 
 export interface WeiboAccount {
   id: number;
@@ -92,6 +92,8 @@ interface LoadBalancingMetrics {
 export class WeiboAccountService implements OnModuleInit {
   private readonly logger = new Logger(WeiboAccountService.name);
   private accounts: Map<number, WeiboAccount> = new Map();
+  private readonly redisHealthKey = 'weibo:account:health';
+  private readonly redisMetricsPrefix = 'weibo:account';
 
   // MediaCrawler风格的智能管理属性
   private rotationStrategy: RotationStrategy = {
@@ -110,8 +112,6 @@ export class WeiboAccountService implements OnModuleInit {
     accountUtilization: []
   };
 
-  private healthCheckInterval: NodeJS.Timeout | null = null;
-  private lastHealthCheckTime = 0;
   private readonly WEIBO_API_BASE = 'https://m.weibo.cn';
   private readonly PONG_ENDPOINT = '/api/config';
   private readonly COOKIE_VALIDATION_TIMEOUT = 10000; // 10秒
@@ -121,7 +121,7 @@ export class WeiboAccountService implements OnModuleInit {
     @InjectRepository(WeiboAccountEntity)
     private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
     private readonly browserService: BrowserService,
-    private readonly healthMonitor: WeiboAccountHealthMonitor,
+    private readonly redis: RedisClient,
     private readonly accountSelector: WeiboAccountSelector,
   ) {}
 
@@ -143,9 +143,6 @@ export class WeiboAccountService implements OnModuleInit {
       const stats = await this.getAccountStats();
       const healthStatus = await this.checkAccountsHealth();
 
-      // 启动定期健康检查 - MediaCrawler风格
-      this.startPeriodicHealthCheck();
-
       this.logger.log('✅ 微博账号服务初始化完成', {
         initTimeMs: initDuration,
         initTimeFormatted: DurationFormatter.format(initDuration),
@@ -159,7 +156,7 @@ export class WeiboAccountService implements OnModuleInit {
         loadStrategy: this.accounts.size > 0 ? 'database' : 'fallback',
         smartFeatures: {
           rotationAlgorithm: this.rotationStrategy.algorithm,
-          healthCheckEnabled: !!this.healthCheckInterval,
+          redisHealthSyncEnabled: true,
           cookieValidationEnabled: true,
           loadBalancingEnabled: true
         }
@@ -204,6 +201,10 @@ export class WeiboAccountService implements OnModuleInit {
     let loadedAccounts = 0;
     let skippedAccounts = 0;
     let invalidCookiesAccounts = 0;
+    const parseNumericMetric = (value: string | undefined): number => {
+      const parsed = Number.parseInt(value ?? '', 10);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    };
 
     try {
       this.logger.debug('开始从数据库加载微博账号');
@@ -222,47 +223,45 @@ export class WeiboAccountService implements OnModuleInit {
       this.accounts.clear();
 
       for (const dbAccount of dbAccounts) {
-        let cookies = [];
-        try {
-          cookies = JSON.parse(dbAccount.cookies);
+        const cookies = this.extractCookies(dbAccount.cookies, {
+          accountId: dbAccount.id,
+          nickname: dbAccount.weiboNickname,
+          context: 'initial_load'
+        });
 
-          // 验证cookies的基本结构
-          if (!Array.isArray(cookies) || cookies.length === 0) {
-            this.logger.warn('账号cookies格式无效', {
-              accountId: dbAccount.id,
-              nickname: dbAccount.weiboNickname,
-              cookiesType: typeof cookies,
-              cookiesLength: Array.isArray(cookies) ? cookies.length : 0
-            });
-            invalidCookiesAccounts++;
-            skippedAccounts++;
-            continue;
-          }
-
-        } catch (error) {
-          this.logger.warn('解析账号cookies失败', {
-            accountId: dbAccount.id,
-            nickname: dbAccount.weiboNickname,
-            error: error instanceof Error ? error.message : '未知错误',
-            cookiesPreview: dbAccount.cookies?.substring(0, 100)
-          });
+        if (!cookies) {
           invalidCookiesAccounts++;
           skippedAccounts++;
           continue;
         }
+
+        const member = dbAccount.id.toString();
+        const redisScore = await this.redis.zscore(this.redisHealthKey, member);
+        const metrics = await this.redis.hgetall(this.redisMetricsKey(dbAccount.id));
+
+        const normalizedHealthScore = typeof redisScore === 'number' && !Number.isNaN(redisScore)
+          ? redisScore
+          : 100;
+        const usageCount = parseNumericMetric(metrics?.usageCount);
+        const consecutiveFailures = parseNumericMetric(metrics?.consecutiveFailures);
+        const totalSuccesses = parseNumericMetric(metrics?.totalSuccesses);
+        const lastValidatedAtMs = Number.parseInt(metrics?.lastValidatedAt ?? '', 10);
+        const lastValidatedAt = Number.isNaN(lastValidatedAtMs) ? undefined : new Date(lastValidatedAtMs);
+        const lastUsedAtMs = Number.parseInt(metrics?.lastUsedAt ?? '', 10);
+        const lastUsedAt = Number.isNaN(lastUsedAtMs) ? undefined : new Date(lastUsedAtMs);
 
         this.accounts.set(dbAccount.id, {
           id: dbAccount.id,
           nickname: dbAccount.weiboNickname || `账号${dbAccount.id}`,
           cookies,
           status: dbAccount.status,
-          usageCount: 0,
-          lastUsedAt: undefined,
+          usageCount,
+          lastUsedAt,
           // MediaCrawler风格的智能初始化
-          healthScore: 100,
-          lastValidatedAt: undefined,
-          consecutiveFailures: 0,
-          totalSuccesses: 0,
+          healthScore: normalizedHealthScore,
+          lastValidatedAt,
+          consecutiveFailures,
+          totalSuccesses,
           averageResponseTime: 0,
           bannedRiskLevel: 'low',
           priority: dbAccount.id,
@@ -270,13 +269,26 @@ export class WeiboAccountService implements OnModuleInit {
           cookieValidationHash: this.generateCookieValidationHash(cookies)
         });
 
+        if (redisScore === null || Number.isNaN(redisScore)) {
+          await this.redis.zadd(this.redisHealthKey, normalizedHealthScore, member);
+        }
+
+        if (!metrics || Object.keys(metrics).length === 0) {
+          await this.redis.hmset(this.redisMetricsKey(dbAccount.id), {
+            consecutiveFailures: 0,
+            totalSuccesses: 0,
+            usageCount: 0,
+          });
+        }
+
         loadedAccounts++;
 
         this.logger.debug('账号加载成功', {
           accountId: dbAccount.id,
           nickname: dbAccount.weiboNickname,
           cookiesCount: cookies.length,
-          lastCheckAt: dbAccount.lastCheckAt?.toISOString()
+          lastCheckAt: dbAccount.lastCheckAt?.toISOString(),
+          redisHealthScore: normalizedHealthScore
         });
       }
 
@@ -303,6 +315,169 @@ export class WeiboAccountService implements OnModuleInit {
       // 如果数据库连接失败，尝试从环境变量加载（fallback）
       this.logger.warn('启用环境变量fallback机制');
       this.loadAccountsFromEnv();
+    }
+  }
+
+  private extractCookies(
+    rawCookies: unknown,
+    details: { accountId: number; nickname?: string | null; context: 'initial_load' | 'refresh' },
+  ): any[] | null {
+    if (!rawCookies) {
+      this.logger.warn('账号cookies缺失', {
+        accountId: details.accountId,
+        nickname: details.nickname,
+        context: details.context
+      });
+      return null;
+    }
+
+    if (Array.isArray(rawCookies)) {
+      return rawCookies;
+    }
+
+    try {
+      const parsed = JSON.parse(String(rawCookies));
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        this.logger.warn('账号cookies格式无效', {
+          accountId: details.accountId,
+          nickname: details.nickname,
+          cookiesType: typeof parsed,
+          cookiesLength: Array.isArray(parsed) ? parsed.length : 0,
+          context: details.context
+        });
+        return null;
+      }
+      return parsed;
+    } catch (error) {
+      this.logger.warn('解析账号cookies失败', {
+        accountId: details.accountId,
+        nickname: details.nickname,
+        error: error instanceof Error ? error.message : '未知错误',
+        cookiesPreview: typeof rawCookies === 'string' ? rawCookies.substring(0, 100) : undefined,
+        context: details.context
+      });
+      return null;
+    }
+  }
+
+  private async refreshAccountsFromDatabase(): Promise<void> {
+    const refreshStartTime = Date.now();
+    let addedAccounts = 0;
+    let updatedAccounts = 0;
+    let removedAccounts = 0;
+    let skippedAccounts = 0;
+
+    try {
+      const dbAccounts = await this.weiboAccountRepo.find({
+        where: { status: WeiboAccountStatus.ACTIVE },
+        order: { lastCheckAt: 'ASC' }
+      });
+
+      const activeAccountIds = new Set<number>();
+
+      for (const dbAccount of dbAccounts) {
+        activeAccountIds.add(dbAccount.id);
+        const cookies = this.extractCookies(dbAccount.cookies, {
+          accountId: dbAccount.id,
+          nickname: dbAccount.weiboNickname,
+          context: 'refresh'
+        });
+
+        if (!cookies) {
+          if (this.accounts.delete(dbAccount.id)) {
+            removedAccounts++;
+          }
+          skippedAccounts++;
+          continue;
+        }
+
+        const existingAccount = this.accounts.get(dbAccount.id);
+
+        if (existingAccount) {
+          existingAccount.nickname = dbAccount.weiboNickname || `账号${dbAccount.id}`;
+          existingAccount.status = dbAccount.status;
+          existingAccount.cookies = cookies;
+          existingAccount.cookieExpiryTime = this.calculateCookieExpiry(cookies);
+          existingAccount.cookieValidationHash = this.generateCookieValidationHash(cookies);
+          existingAccount.priority = dbAccount.id;
+          updatedAccounts++;
+        } else {
+          const member = dbAccount.id.toString();
+          const redisScore = await this.redis.zscore(this.redisHealthKey, member);
+          const metrics = await this.redis.hgetall(this.redisMetricsKey(dbAccount.id));
+          const parseMetric = (value: string | undefined): number => {
+            const parsed = Number.parseInt(value ?? '', 10);
+            return Number.isNaN(parsed) ? 0 : parsed;
+          };
+          const normalizedHealthScore = typeof redisScore === 'number' && !Number.isNaN(redisScore)
+            ? redisScore
+            : 100;
+          const usageCount = parseMetric(metrics?.usageCount);
+          const consecutiveFailures = parseMetric(metrics?.consecutiveFailures);
+          const totalSuccesses = parseMetric(metrics?.totalSuccesses);
+          const lastValidatedAtMs = Number.parseInt(metrics?.lastValidatedAt ?? '', 10);
+          const lastValidatedAt = Number.isNaN(lastValidatedAtMs) ? undefined : new Date(lastValidatedAtMs);
+          const lastUsedAtMs = Number.parseInt(metrics?.lastUsedAt ?? '', 10);
+          const lastUsedAt = Number.isNaN(lastUsedAtMs) ? undefined : new Date(lastUsedAtMs);
+
+          this.accounts.set(dbAccount.id, {
+            id: dbAccount.id,
+            nickname: dbAccount.weiboNickname || `账号${dbAccount.id}`,
+            cookies,
+            status: dbAccount.status,
+            usageCount,
+            lastUsedAt,
+            healthScore: normalizedHealthScore,
+            lastValidatedAt,
+            consecutiveFailures,
+            totalSuccesses,
+            averageResponseTime: 0,
+            bannedRiskLevel: 'low',
+            priority: dbAccount.id,
+            cookieExpiryTime: this.calculateCookieExpiry(cookies),
+            cookieValidationHash: this.generateCookieValidationHash(cookies)
+          });
+
+          if (redisScore === null || Number.isNaN(redisScore)) {
+            await this.redis.zadd(this.redisHealthKey, normalizedHealthScore, member);
+          }
+
+          if (!metrics || Object.keys(metrics).length === 0) {
+            await this.redis.hmset(this.redisMetricsKey(dbAccount.id), {
+              consecutiveFailures: 0,
+              totalSuccesses: 0,
+              usageCount: 0,
+            });
+          }
+
+          addedAccounts++;
+        }
+      }
+
+      for (const accountId of Array.from(this.accounts.keys())) {
+        if (!activeAccountIds.has(accountId)) {
+          this.accounts.delete(accountId);
+          removedAccounts++;
+        }
+      }
+
+      const refreshDuration = Date.now() - refreshStartTime;
+      this.logger.debug('数据库账号刷新完成', {
+        refreshTimeMs: refreshDuration,
+        addedAccounts,
+        updatedAccounts,
+        removedAccounts,
+        skippedAccounts,
+        totalAccounts: this.accounts.size
+      });
+    } catch (error) {
+      const refreshDuration = Date.now() - refreshStartTime;
+      this.logger.error('刷新账号列表失败', {
+        refreshTimeMs: refreshDuration,
+        error: error instanceof Error ? error.message : '未知错误',
+        stack: error instanceof Error ? error.stack : undefined,
+        errorCode: this.classifyDatabaseError(error)
+      });
     }
   }
 
@@ -920,26 +1095,35 @@ export class WeiboAccountService implements OnModuleInit {
           return result;
         }
 
-        // MediaCrawler风格：检查login字段
-        if (responseData && responseData.login === true) {
-          result.isValid = true;
-          result.loginStatus = true;
+        // 与Admin服务保持一致：优先检查ok字段
+        const apiOkValue = responseData?.ok;
+        const apiAcknowledgedSession = apiOkValue === 1;
+        const loginConfirmed = responseData?.data?.login === true;
 
-          this.logger.log('✅ Cookie验证成功', {
+        if (apiAcknowledgedSession) {
+          result.isValid = true;
+          result.loginStatus = loginConfirmed || apiAcknowledgedSession;
+
+          this.logger.log('✅ Cookie验证成功 - 接口返回ok', {
             accountId: account.id,
             nickname: account.nickname,
             responseTime: result.responseTime,
-            validationDuration: Date.now() - validationStartTime
+            validationDuration: Date.now() - validationStartTime,
+            apiOkValue,
+            loginConfirmed
           });
         } else {
           result.errorType = 'not_logged_in';
           result.errorMessage = responseData?.msg || '登录状态无效';
 
-          this.logger.warn('Cookie验证失败 - 登录状态无效', {
+          this.logger.warn('Cookie验证失败 - 接口未确认登录', {
             accountId: account.id,
             nickname: account.nickname,
-            responseData: responseData,
-            responseTime: result.responseTime
+            responseTime: result.responseTime,
+            apiOkValue,
+            apiAcknowledgedSession,
+            loginConfirmed,
+            responseData
           });
         }
 
@@ -964,155 +1148,10 @@ export class WeiboAccountService implements OnModuleInit {
 
     return result;
   }
+  
 
   /**
-   * 启动定期健康检查
-   */
-  private startPeriodicHealthCheck(): void {
-    if (this.healthCheckInterval) {
-      clearInterval(this.healthCheckInterval);
-    }
-
-    const intervalMs = this.rotationStrategy.rotationInterval * 60 * 1000; // 转换为毫秒
-
-    this.logger.log('🔄 启动定期健康检查', {
-      intervalMinutes: this.rotationStrategy.rotationInterval,
-      intervalMs,
-      algorithm: this.rotationStrategy.algorithm,
-      healthThreshold: this.rotationStrategy.healthThreshold
-    });
-
-    this.healthCheckInterval = setInterval(async () => {
-      try {
-        this.lastHealthCheckTime = Date.now();
-        await this.performPeriodicHealthCheck();
-      } catch (error) {
-        this.logger.error('定期健康检查失败', {
-          error: error instanceof Error ? error.message : '未知错误',
-          lastCheckTime: new Date(this.lastHealthCheckTime).toISOString()
-        });
-      }
-    }, intervalMs);
-
-    // 立即执行一次健康检查
-    this.performPeriodicHealthCheck().catch(error => {
-      this.logger.error('初始健康检查失败', { error: error.message });
-    });
-  }
-
-  /**
-   * 执行定期健康检查
-   */
-  private async performPeriodicHealthCheck(): Promise<void> {
-    const healthCheckStartTime = Date.now();
-
-    this.logger.debug('🏥 开始执行定期健康检查', {
-      totalAccounts: this.accounts.size,
-      checkStartTime: new Date(healthCheckStartTime).toISOString()
-    });
-
-    const healthResults: AccountHealthCheckResult[] = [];
-    const accounts = Array.from(this.accounts.values());
-
-    for (const account of accounts) {
-      try {
-        const healthResult = await this.healthMonitor.evaluate(account, {
-          rotationStrategy: this.rotationStrategy,
-          validateCookie: (target) => this.validateCookie(target),
-        });
-        healthResults.push(healthResult);
-
-        // 更新账号健康度指标
-        this.updateAccountHealthMetrics(account, healthResult);
-
-      } catch (error) {
-        this.logger.error('账号健康检查异常', {
-          accountId: account.id,
-          nickname: account.nickname,
-          error: error instanceof Error ? error.message : '未知错误'
-        });
-      }
-    }
-
-    const healthCheckDuration = Date.now() - healthCheckStartTime;
-    const healthyAccounts = healthResults.filter(r => r.isHealthy).length;
-    const unhealthyAccounts = healthResults.length - healthyAccounts;
-
-    this.logger.log('🏥 定期健康检查完成', {
-      duration: healthCheckDuration,
-      totalAccounts: accounts.length,
-      healthyAccounts,
-      unhealthyAccounts,
-      healthRate: accounts.length > 0 ? Math.round((healthyAccounts / accounts.length) * 100) : 0,
-      averageHealthScore: this.calculateAverageHealthScore(),
-      checkTime: new Date().toISOString()
-    });
-
-    // 如果不健康的账号过多，发出警告
-    if (unhealthyAccounts > accounts.length * 0.3) {
-      this.logger.warn('⚠️ 发现较多不健康账号，可能需要人工干预', {
-        unhealthyAccounts,
-        totalAccounts: accounts.length,
-        unhealthyRate: Math.round((unhealthyAccounts / accounts.length) * 100),
-        recommendations: [
-          '检查账号Cookie有效性',
-          '考虑更新账号配置',
-          '检查网络连接状态',
-          '验证目标网站访问状态'
-        ]
-      });
-    }
-  }
-
-  /**
-   * 检查单个账号的健康状态
-   */
-  private async checkAccountHealth(account: WeiboAccount): Promise<AccountHealthCheckResult> {
-    return this.healthMonitor.evaluate(account, {
-      rotationStrategy: this.rotationStrategy,
-      validateCookie: (target) => this.validateCookie(target),
-    });
-  }
-
-  /**
-   * 更新账号健康度指标
-   */
-  private updateAccountHealthMetrics(account: WeiboAccount, healthResult: AccountHealthCheckResult): void {
-    account.healthScore = healthResult.healthScore;
-    account.lastValidatedAt = healthResult.validationDetails.lastCheckTime;
-
-    // 如果验证成功，重置连续失败计数
-    if (healthResult.validationDetails.cookieStatus === 'valid') {
-      account.consecutiveFailures = 0;
-      account.totalSuccesses++;
-    } else {
-      account.consecutiveFailures++;
-    }
-
-    // 更新平均响应时间
-    if (healthResult.validationDetails.responseTime > 0) {
-      account.averageResponseTime = this.calculateMovingAverage(
-        account.averageResponseTime,
-        healthResult.validationDetails.responseTime,
-        account.totalSuccesses
-      );
-    }
-
-    // 更新banned风险等级
-    account.bannedRiskLevel = this.assessBannedRiskLevel(account);
-
-    this.logger.debug('账号健康指标已更新', {
-      accountId: account.id,
-      healthScore: account.healthScore,
-      consecutiveFailures: account.consecutiveFailures,
-      totalSuccesses: account.totalSuccesses,
-      averageResponseTime: account.averageResponseTime,
-      bannedRiskLevel: account.bannedRiskLevel
-    });
-  }
-
-  /**
-   * 智能账号轮换策略 - MediaCrawler风格
+   * 智能账号轮换策略 - 优先使用 Redis 中的健康度排行
    */
   async getOptimalAccount(preferredAccountId?: number): Promise<WeiboAccount | null> {
     const requestStartTime = Date.now();
@@ -1127,32 +1166,103 @@ export class WeiboAccountService implements OnModuleInit {
     this.loadBalancingMetrics.totalRequests++;
 
     try {
-      // 如果指定了账号ID，优先检查该账号
       if (preferredAccountId) {
         const account = this.accounts.get(preferredAccountId);
-        if (account && this.isAccountSuitableForUse(account)) {
-          this.recordAccountUsage(account);
-          this.loadBalancingMetrics.successfulRequests++;
+        if (account) {
+          if (this.isAccountSuitableForUse(account)) {
+            await this.recordAccountUsage(account);
+            this.loadBalancingMetrics.successfulRequests++;
 
-          this.logger.log('✅ 指定账号分配成功', {
-            accountId: account.id,
-            nickname: account.nickname,
-            healthScore: account.healthScore,
-            selectionDuration: Date.now() - requestStartTime
-          });
+            this.logger.log('✅ 指定账号分配成功', {
+              accountId: account.id,
+              nickname: account.nickname,
+              healthScore: account.healthScore,
+              selectionDuration: Date.now() - requestStartTime
+            });
 
-          return account;
-        } else {
+            return account;
+          }
+
           this.logger.warn('指定账号不适合使用', {
             accountId: preferredAccountId,
-            accountExists: !!account,
-            isSuitable: account ? this.isAccountSuitableForUse(account) : false
+            accountExists: true,
+            isSuitable: false
+          });
+        } else {
+          this.logger.warn('指定账号不存在', {
+            accountId: preferredAccountId
           });
         }
       }
 
-      const suitableAccounts = Array.from(this.accounts.values())
-        .filter(account => this.isAccountSuitableForUse(account));
+      const topEntries = await this.redis.zrevrange(this.redisHealthKey, 0, 9, true);
+      const redisCandidates: Array<{ id: number; score: number }> = [];
+
+      for (let index = 0; index < topEntries.length; index += 2) {
+        const idValue = topEntries[index];
+        const scoreValue = topEntries[index + 1];
+        if (idValue === undefined || scoreValue === undefined) {
+          continue;
+        }
+
+        const id = Number.parseInt(idValue, 10);
+        const score = Number.parseFloat(scoreValue);
+
+        if (Number.isNaN(id) || Number.isNaN(score)) {
+          continue;
+        }
+
+        redisCandidates.push({ id, score });
+      }
+
+      if (redisCandidates.length > 0) {
+        this.logger.debug('Redis 健康度排行', { candidates: redisCandidates });
+
+        for (const candidate of redisCandidates) {
+          const account = this.accounts.get(candidate.id);
+          if (!account) {
+            continue;
+          }
+
+          account.healthScore = candidate.score;
+
+          if (this.isAccountSuitableForUse(account)) {
+            await this.recordAccountUsage(account);
+            this.loadBalancingMetrics.successfulRequests++;
+
+            this.logger.log('✅ 智能账号分配成功', {
+              accountId: account.id,
+              nickname: account.nickname,
+              algorithm: 'redis_sorted_set',
+              healthScore: account.healthScore,
+              selectionDuration: Date.now() - requestStartTime
+            });
+
+            return account;
+          }
+        }
+      }
+
+      const accountsArray = Array.from(this.accounts.values());
+      const suitableAccounts = accountsArray.filter(account => this.isAccountSuitableForUse(account));
+
+      const accountSnapshots = accountsArray.map(account => ({
+        accountId: account.id,
+        nickname: account.nickname,
+        healthScore: account.healthScore,
+        status: account.status,
+        consecutiveFailures: account.consecutiveFailures,
+        bannedRiskLevel: account.bannedRiskLevel,
+        cookieExpiryTime: account.cookieExpiryTime?.toISOString(),
+        cookieCount: account.cookies?.length || 0
+      }));
+
+      this.logger.debug('📊 账号健康快照', {
+        totalAccounts: accountsArray.length,
+        suitableAccounts: suitableAccounts.length,
+        healthThreshold: this.rotationStrategy.healthThreshold,
+        accounts: accountSnapshots
+      });
 
       const selectedAccount = this.accountSelector.select(
         suitableAccounts,
@@ -1160,7 +1270,7 @@ export class WeiboAccountService implements OnModuleInit {
       );
 
       if (selectedAccount) {
-        this.recordAccountUsage(selectedAccount);
+        await this.recordAccountUsage(selectedAccount);
         this.loadBalancingMetrics.successfulRequests++;
 
         this.logger.log('✅ 智能账号分配成功', {
@@ -1173,18 +1283,37 @@ export class WeiboAccountService implements OnModuleInit {
         });
 
         return selectedAccount;
-      } else {
-        this.loadBalancingMetrics.failedRequests++;
-        this.logger.error('❌ 没有找到合适的账号', {
-          algorithm: this.rotationStrategy.algorithm,
-          totalAccounts: this.accounts.size,
-          healthyAccounts: suitableAccounts.length,
-          selectionDuration: Date.now() - requestStartTime
-        });
-
-        return null;
       }
 
+      const fallbackAccount = this.accountSelector.select(
+        accountsArray,
+        'health_based'
+      );
+
+      if (fallbackAccount) {
+        await this.recordAccountUsage(fallbackAccount);
+        this.loadBalancingMetrics.successfulRequests++;
+
+        this.logger.warn('⚠️ 没有达到健康阈值的账号，启用最佳账号降级策略', {
+          fallbackAccountId: fallbackAccount.id,
+          fallbackHealthScore: fallbackAccount.healthScore,
+          selectionDuration: Date.now() - requestStartTime,
+          healthThreshold: this.rotationStrategy.healthThreshold
+        });
+
+        return fallbackAccount;
+      }
+
+      this.loadBalancingMetrics.failedRequests++;
+      this.logger.error('❌ 没有找到任何可用账号', {
+        algorithm: this.rotationStrategy.algorithm,
+        totalAccounts: accountsArray.length,
+        healthyAccounts: suitableAccounts.length,
+        selectionDuration: Date.now() - requestStartTime,
+        redisCandidates
+      });
+
+      return null;
     } catch (error) {
       this.loadBalancingMetrics.failedRequests++;
       this.logger.error('智能账号选择失败', {
@@ -1200,33 +1329,44 @@ export class WeiboAccountService implements OnModuleInit {
    * 检查账号是否适合使用
    */
   private isAccountSuitableForUse(account: WeiboAccount): boolean {
-    // 检查基本状态
+    const exclusionReasons: string[] = [];
+
     if (account.status !== WeiboAccountStatus.ACTIVE) {
-      return false;
+      exclusionReasons.push(`账号状态为${account.status}`);
     }
 
-    // 检查健康分数
     if (account.healthScore < this.rotationStrategy.healthThreshold) {
-      return false;
+      exclusionReasons.push(`健康分数低于阈值(${account.healthScore}/${this.rotationStrategy.healthThreshold})`);
     }
 
-    // 检查连续失败次数
     if (account.consecutiveFailures > this.rotationStrategy.maxConsecutiveFailures) {
-      return false;
+      exclusionReasons.push(`连续失败${account.consecutiveFailures}次`);
     }
 
-    // 检查banned风险等级
     if (account.bannedRiskLevel === 'critical') {
-      return false;
+      exclusionReasons.push('封禁风险处于critical级别');
     }
 
-    // 检查Cookie是否存在
     if (!account.cookies || account.cookies.length === 0) {
-      return false;
+      exclusionReasons.push('缺少有效Cookie');
     }
 
-    // 检查Cookie是否过期
     if (account.cookieExpiryTime && new Date() > account.cookieExpiryTime) {
+      exclusionReasons.push('Cookie已过期');
+    }
+
+    if (exclusionReasons.length > 0) {
+      this.logger.debug('账号暂不可用', {
+        accountId: account.id,
+        nickname: account.nickname,
+        reasons: exclusionReasons,
+        healthScore: account.healthScore,
+        consecutiveFailures: account.consecutiveFailures,
+        bannedRiskLevel: account.bannedRiskLevel,
+        cookieCount: account.cookies?.length || 0,
+        cookieExpiryTime: account.cookieExpiryTime?.toISOString(),
+        lastValidatedAt: account.lastValidatedAt?.toISOString()
+      });
       return false;
     }
 
@@ -1236,9 +1376,18 @@ export class WeiboAccountService implements OnModuleInit {
   /**
    * 记录账号使用情况
    */
-  private recordAccountUsage(account: WeiboAccount): void {
+  private async recordAccountUsage(account: WeiboAccount): Promise<void> {
     account.usageCount++;
     account.lastUsedAt = new Date();
+    account.consecutiveFailures = 0;
+
+    const pipeline = this.redis.pipeline();
+    pipeline.zincrby(this.redisHealthKey, -1, account.id.toString());
+    pipeline.hset(this.redisMetricsKey(account.id), 'usageCount', account.usageCount);
+    pipeline.hset(this.redisMetricsKey(account.id), 'lastUsedAt', Date.now());
+    await pipeline.exec();
+
+    account.healthScore = Math.max(0, account.healthScore - 1);
 
     // 更新负载均衡指标
     this.loadBalancingMetrics.averageResponseTime = this.calculateMovingAverage(
@@ -1246,6 +1395,54 @@ export class WeiboAccountService implements OnModuleInit {
       account.averageResponseTime,
       this.loadBalancingMetrics.successfulRequests
     );
+  }
+
+  /**
+   * 记录账号请求成功
+   */
+  async recordAccountSuccess(accountId: number): Promise<void> {
+    const account = this.accounts.get(accountId);
+    if (!account) {
+      return;
+    }
+
+    account.consecutiveFailures = 0;
+    account.totalSuccesses++;
+
+    const pipeline = this.redis.pipeline();
+    pipeline.hset(this.redisMetricsKey(accountId), 'consecutiveFailures', 0);
+    pipeline.hset(this.redisMetricsKey(accountId), 'totalSuccesses', account.totalSuccesses);
+    await pipeline.exec();
+
+    this.logger.debug('记录账号成功', {
+      accountId,
+      totalSuccesses: account.totalSuccesses,
+    });
+  }
+
+  /**
+   * 记录账号请求失败
+   */
+  async recordAccountFailure(accountId: number): Promise<void> {
+    const account = this.accounts.get(accountId);
+    if (!account) {
+      return;
+    }
+
+    account.consecutiveFailures++;
+
+    const pipeline = this.redis.pipeline();
+    pipeline.zincrby(this.redisHealthKey, -5, accountId.toString());
+    pipeline.hset(this.redisMetricsKey(accountId), 'consecutiveFailures', account.consecutiveFailures);
+    await pipeline.exec();
+
+    account.healthScore = Math.max(0, account.healthScore - 5);
+
+    this.logger.warn('记录账号失败', {
+      accountId,
+      consecutiveFailures: account.consecutiveFailures,
+      healthScore: account.healthScore,
+    });
   }
 
   // ==================== 辅助方法 ====================
@@ -1312,6 +1509,10 @@ export class WeiboAccountService implements OnModuleInit {
     }
 
     return Math.abs(hash).toString(16);
+  }
+
+  private redisMetricsKey(accountId: number): string {
+    return `${this.redisMetricsPrefix}:${accountId}:metrics`;
   }
 
   /**
@@ -1418,6 +1619,74 @@ export class WeiboAccountService implements OnModuleInit {
     return this.getOptimalAccount(accountId);
   }
 
+  formatCookieString(rawCookies: unknown): string {
+    if (!Array.isArray(rawCookies)) {
+      return '';
+    }
+
+    const serialized = rawCookies
+      .filter(
+        (cookie): cookie is { name: string; value: string } =>
+          Boolean(cookie) &&
+          typeof cookie === 'object' &&
+          typeof (cookie as any).name === 'string' &&
+          typeof (cookie as any).value === 'string'
+      )
+      .map((cookie) => `${cookie.name}=${cookie.value}`);
+
+    return serialized.join('; ');
+  }
+
+  async markAccountNeedsReview(accountId: number, reason: string): Promise<void> {
+    const account = this.accounts.get(accountId);
+
+    if (!account) {
+      this.logger.warn('尝试标记不存在的账号为待检查状态', {
+        accountId,
+        reason
+      });
+      return;
+    }
+
+    const previousStatus = account.status;
+    const reviewStatus = previousStatus === WeiboAccountStatus.BANNED ? previousStatus : WeiboAccountStatus.RESTRICTED;
+
+    account.status = reviewStatus;
+    account.consecutiveFailures = Math.max(
+      account.consecutiveFailures,
+      this.rotationStrategy.maxConsecutiveFailures + 1
+    );
+    account.healthScore = Math.max(
+      0,
+      Math.min(account.healthScore, this.rotationStrategy.healthThreshold - 10)
+    );
+    account.lastValidatedAt = new Date();
+
+    this.logger.warn('账号已标记为需要人工检查', {
+      accountId,
+      nickname: account.nickname,
+      previousStatus,
+      newStatus: reviewStatus,
+      reason,
+      cookiesCount: account.cookies?.length ?? 0,
+      consecutiveFailures: account.consecutiveFailures,
+      healthScore: account.healthScore
+    });
+
+    try {
+      await this.weiboAccountRepo.update(accountId, {
+        status: reviewStatus,
+        lastCheckAt: new Date()
+      });
+    } catch (error) {
+      this.logger.error('更新账号检查状态时发生错误', {
+        accountId,
+        reason,
+        error: error instanceof Error ? error.message : '未知错误'
+      });
+    }
+  }
+
   /**
    * 手动验证账号Cookie
    */
@@ -1496,25 +1765,5 @@ export class WeiboAccountService implements OnModuleInit {
     }
 
     return recommendations;
-  }
-
-  /**
-   * 停止定期健康检查
-   */
-  async stopPeriodicHealthCheck(): Promise<void> {
-    if (this.healthCheckInterval) {
-      clearInterval(this.healthCheckInterval);
-      this.healthCheckInterval = null;
-
-      this.logger.log('定期健康检查已停止');
-    }
-  }
-
-  /**
-   * 重新开始定期健康检查
-   */
-  async restartPeriodicHealthCheck(): Promise<void> {
-    await this.stopPeriodicHealthCheck();
-    this.startPeriodicHealthCheck();
   }
 }

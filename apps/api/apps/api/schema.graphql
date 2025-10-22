@@ -438,6 +438,51 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+input DeleteMessagesInput {
+  """需删除的消息 ID 列表"""
+  messageIds: [String!]!
+
+  """目标死信队列名称"""
+  queueName: String!
+}
+
+type DlqMessage {
+  content: JSON
+  errorMessage: String
+  failedAt: DateTime!
+  id: String!
+  queueName: String!
+  retryCount: Int!
+}
+
+type DlqMessageConnection {
+  edges: [DlqMessageEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type DlqMessageEdge {
+  cursor: String!
+  node: DlqMessage!
+}
+
+input DlqQueryInput {
+  """页码，起始为 1"""
+  page: Int! = 1
+
+  """每页条数，最大 100 条"""
+  pageSize: Int! = 20
+
+  """死信队列名称"""
+  queueName: String!
+}
+
+type DlqQueueInfo {
+  messageCount: Int!
+  name: String!
+  originalQueue: String!
+}
+
 type Event {
   attachments: [EventAttachment!]!
   city: String!
@@ -833,6 +878,9 @@ type Mutation {
   createScreen(input: CreateScreenInput!): Screen!
   createTag(input: CreateTagInput!): Tag!
   createWeiboSearchTask(input: CreateWeiboSearchTaskInput!): WeiboSearchTask!
+
+  """删除死信队列中的消息"""
+  deleteDlqMessages(input: DeleteMessagesInput!): Boolean!
   disableApiKey(id: Int!): Boolean!
   dispatchNotification(input: NotificationInput!): Notification!
   draftScreen(id: ID!): Screen!
@@ -865,6 +913,9 @@ type Mutation {
   resetWeiboTaskStatusConsumerStats: Boolean!
   resumeAllWeiboSearchTasks: Int!
   resumeWeiboSearchTask(id: Int!, input: ResumeWeiboTaskInput): WeiboSearchTask!
+
+  """将死信消息重新投递到原队列"""
+  retryDlqMessages(input: RetryMessagesInput!): Boolean!
   runWeiboSearchTaskNow(id: Int!, input: RunWeiboTaskNowInput): WeiboSearchTask!
   setDefaultScreen(id: ID!): Screen!
   startJdLogin: JdLoginSession!
@@ -963,6 +1014,12 @@ type Query {
   dashboardRecentActivities: [DashboardActivity!]!
   dashboardStats: DashboardStats!
   defaultScreen: Screen!
+
+  """分页查询死信队列中的消息"""
+  dlqMessages(filter: DlqQueryInput): DlqMessageConnection!
+
+  """获取所有死信队列信息"""
+  dlqQueues: [DlqQueueInfo!]!
   event(id: ID!): Event!
   eventType(id: ID!): EventType!
   eventTypes: [EventType!]!
@@ -1139,6 +1196,14 @@ input RequestAttachmentUploadInput {
 
 input ResumeWeiboTaskInput {
   reason: String
+}
+
+input RetryMessagesInput {
+  """需重试的消息 ID 列表"""
+  messageIds: [String!]!
+
+  """目标死信队列名称"""
+  queueName: String!
 }
 
 input RunWeiboTaskNowInput {

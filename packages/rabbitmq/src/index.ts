@@ -175,6 +175,7 @@ export { ConnectionPool } from './connection-pool.js';
 export { RabbitMQPublisher } from './publisher.service.js';
 export { RabbitMQConsumer, type MessageHandler } from './consumer.service.js';
 export { RabbitMQService } from './rabbitmq.service.js';
+export { DlqManagerService } from './dlq-manager.service.js';
 
 export type {
   PublishOptions,

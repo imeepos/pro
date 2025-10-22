@@ -23,6 +23,11 @@ export class RedisPipeline {
     return this;
   }
 
+  zadd(key: string, score: number, member: string): RedisPipeline {
+    this.pipeline.zadd(key, score, member);
+    return this;
+  }
+
   expire(key: string, seconds: number): RedisPipeline {
     this.pipeline.expire(key, seconds);
     return this;
@@ -30,6 +35,12 @@ export class RedisPipeline {
 
   hmset(key: string, data: Record<string, any>): RedisPipeline {
     this.pipeline.hmset(key, data);
+    return this;
+  }
+
+  hset(key: string, field: string, value: any): RedisPipeline {
+    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    this.pipeline.hset(key, field, serialized);
     return this;
   }
 
@@ -97,6 +108,15 @@ export class RedisClient {
   async zincrby(key: string, increment: number, member: string): Promise<number> {
     const result = await this.client.zincrby(key, increment, member);
     return parseFloat(result);
+  }
+
+  async zscore(key: string, member: string): Promise<number | null> {
+    const result = await this.client.zscore(key, member);
+    if (result === null || result === undefined) {
+      return null;
+    }
+    const parsed = parseFloat(result);
+    return Number.isNaN(parsed) ? null : parsed;
   }
 
   async zrangebyscore(

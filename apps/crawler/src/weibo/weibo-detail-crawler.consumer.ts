@@ -1,12 +1,13 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Inject, Logger } from '@nestjs/common';
 import { RabbitMQClient } from '@pro/rabbitmq';
-import { QUEUE_NAMES, type WeiboDetailCrawlEvent } from '@pro/types';
+import { type WeiboDetailCrawlEvent } from '@pro/types';
 import {
   WeiboStatusService,
   WeiboRequestError,
   type SaveStatusDetailContext
 } from '@pro/weibo';
 import { RabbitMQConfig } from '../config/crawler.interface';
+import { WeiboAccountService, type WeiboAccount } from './account.service';
 
 @Injectable()
 export class WeiboDetailCrawlerConsumer implements OnModuleInit, OnModuleDestroy {
@@ -15,6 +16,7 @@ export class WeiboDetailCrawlerConsumer implements OnModuleInit, OnModuleDestroy
 
   constructor(
     private readonly weiboStatusService: WeiboStatusService,
+    private readonly weiboAccountService: WeiboAccountService,
     @Inject('RABBITMQ_CONFIG') private readonly rabbitmqConfig: RabbitMQConfig
   ) {}
 
@@ -85,8 +87,23 @@ export class WeiboDetailCrawlerConsumer implements OnModuleInit, OnModuleDestroy
       discoveredAt: event.discoveredAt
     });
 
+    let account: WeiboAccount | null = null;
+
     try {
-      const detail = await this.weiboStatusService.fetchStatusDetail(statusId);
+      account = await this.weiboAccountService.getAvailableAccount();
+
+      if (!account) {
+        throw new WeiboRequestError('没有可用的微博账号用于详情请求', 503);
+      }
+
+      const cookie = this.weiboAccountService.formatCookieString(account.cookies);
+      if (!cookie) {
+        throw new WeiboRequestError('选定账号缺少有效的微博认证Cookie', 401);
+      }
+
+      const detail = await this.weiboStatusService.fetchStatusDetail(statusId, {
+        cookie
+      });
       const record = await this.weiboStatusService.saveStatusDetailToMongoDB(statusId, detail, context);
 
       if (record) {
@@ -97,6 +114,10 @@ export class WeiboDetailCrawlerConsumer implements OnModuleInit, OnModuleDestroy
           processedAt: record.processedAt ?? new Date(),
           keyword: context.keyword
         });
+
+        if (account) {
+          await this.weiboAccountService.recordAccountSuccess(account.id);
+        }
       } else {
         this.logger.debug('微博详情已存在于存储中, 跳过重复保存', {
           statusId,
@@ -113,11 +134,20 @@ export class WeiboDetailCrawlerConsumer implements OnModuleInit, OnModuleDestroy
             error
           );
 
+      if (account && this.isAuthenticationFailure(requestError)) {
+        await this.weiboAccountService.markAccountNeedsReview(account.id, 'cookie_authentication_failed');
+      }
+
+      if (account) {
+        await this.weiboAccountService.recordAccountFailure(account.id);
+      }
+
       if (this.shouldSkipRetry(requestError)) {
         this.logger.warn('终止微博详情爬取重试', {
           statusId,
           traceId: context.traceId,
           status: requestError.status,
+          indicator: this.extractWeiboStatusIndicator(requestError.message),
           reason: requestError.message
         });
         return;
@@ -150,9 +180,38 @@ export class WeiboDetailCrawlerConsumer implements OnModuleInit, OnModuleDestroy
 
   private shouldSkipRetry(error: WeiboRequestError): boolean {
     if (typeof error.status !== 'number') {
+      return this.extractWeiboStatusIndicator(error.message) === -100;
+    }
+
+    if ([400, 401, 403, 404, 410, 422].includes(error.status)) {
+      return true;
+    }
+
+    return this.extractWeiboStatusIndicator(error.message) === -100;
+  }
+
+  private isAuthenticationFailure(error: WeiboRequestError): boolean {
+    if (!error) {
       return false;
     }
 
-    return [400, 401, 403, 404, 410, 422].includes(error.status);
+    return this.extractWeiboStatusIndicator(error.message) === -100 || [401, 403].includes(error.status ?? 0);
+  }
+
+  private extractWeiboStatusIndicator(message: string | undefined): number | null {
+    if (!message) {
+      return null;
+    }
+
+    const match =
+      message.match(/status indicator\s*(-?\d{1,4})/i) ??
+      message.match(/ok[:=]\s*(-?\d{1,4})/i);
+
+    if (!match) {
+      return null;
+    }
+
+    const indicator = Number.parseInt(match[1], 10);
+    return Number.isNaN(indicator) ? null : indicator;
   }
 }

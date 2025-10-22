@@ -122,6 +122,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/flowbite-demo/flowbite-demo.component').then(m => m.FlowbiteDemoComponent)
       },
       {
+        path: 'dlq-manager',
+        loadComponent: () => import('./pages/dlq-manager/dlq-manager.component').then(m => m.DlqManagerComponent)
+      },
+      {
         path: 'data',
         loadChildren: () => import('./features/data/data.routes').then(m => m.DATA_ROUTES)
       }

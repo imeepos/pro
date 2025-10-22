@@ -397,8 +397,25 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
     subject: Subject<JdLoginEvent>,
     sessionId: string,
   ) {
+    this.logger.info('注册京东二维码响应监听器', { sessionId });
+
     page.on('response', async (response) => {
       const responseUrl = response.url();
+      const status = response.status();
+      const headers = response.headers();
+      const contentType = headers['content-type'];
+      const request = response.request();
+      const method = request?.method();
+      const resourceType = request?.resourceType();
+
+      this.logger.debug('监听到页面响应', {
+        sessionId,
+        responseUrl,
+        status,
+        method,
+        resourceType,
+        contentType,
+      });
 
       try {
         // 精确匹配京东二维码接口
@@ -406,26 +423,33 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
           return;
         }
 
-        this.logger.debug(`捕获京东二维码接口响应: ${responseUrl}, session: ${sessionId}`);
+        this.logger.info('捕获京东二维码接口响应', { sessionId, responseUrl, status });
 
         const imageData = await this.extractQrImageData(response);
 
         if (imageData) {
-          this.logger.info(`二维码数据提取成功: ${sessionId}`);
+          const source = imageData.startsWith('data:') ? 'inline' : 'url';
+          this.logger.info('二维码数据提取成功', { sessionId, source });
 
           subject.next({
             type: 'qrcode',
             data: { image: imageData }
           });
         } else {
-          this.logger.warn(`二维码数据为空: ${sessionId}`);
+          this.logger.warn('二维码数据为空', { sessionId, responseUrl, status });
           subject.next({
             type: 'error',
             data: { message: '二维码获取失败，请重试' }
           });
         }
       } catch (error) {
-        this.logger.error(`二维码监听处理失败: ${responseUrl}, session: ${sessionId}`, error);
+        this.logger.error({
+          sessionId,
+          responseUrl,
+          status,
+          contentType,
+          err: error,
+        }, '二维码监听处理失败');
         subject.next({
           type: 'error',
           data: { message: '二维码处理异常' }
@@ -457,7 +481,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
         ? `https:${location}`
         : location;
 
-      this.logger.debug(`获取到二维码图片URL: ${imageUrl}`);
+      this.logger.info('获取到二维码图片URL', { imageUrl });
       return imageUrl;
     }
 
@@ -469,7 +493,7 @@ export class JdAuthService implements OnModuleInit, OnModuleDestroy {
         return urlMatch[0];
       }
     } catch (error) {
-      this.logger.debug('解析响应体URL失败', error);
+      this.logger.debug({ err: error }, '解析响应体URL失败');
     }
 
     return null;

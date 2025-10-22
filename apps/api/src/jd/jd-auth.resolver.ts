@@ -51,7 +51,10 @@ export class JdAuthResolver {
     return mapJdLoginSnapshotToModel(snapshot);
   }
 
-  @Subscription(() => JdLoginEventModel, { name: 'jdLoginEvents' })
+  @Subscription(() => JdLoginEventModel, {
+    name: 'jdLoginEvents',
+    resolve: (event: JdLoginEventModel) => event,
+  })
   async jdLoginEvents(
     @CurrentUser('userId') userId: string,
     @Args('sessionId', { type: () => String }) sessionId: string,

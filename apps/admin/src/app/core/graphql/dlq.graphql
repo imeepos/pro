@@ -1,0 +1,35 @@
+query DlqQueues {
+  dlqQueues {
+    name
+    messageCount
+    originalQueue
+  }
+}
+
+query DlqMessages($filter: DlqQueryInput) {
+  dlqMessages(filter: $filter) {
+    edges {
+      node {
+        id
+        queueName
+        content
+        failedAt
+        retryCount
+        errorMessage
+      }
+    }
+    totalCount
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+    }
+  }
+}
+
+mutation RetryDlqMessages($input: RetryMessagesInput!) {
+  retryDlqMessages(input: $input)
+}
+
+mutation DeleteDlqMessages($input: DeleteMessagesInput!) {
+  deleteDlqMessages(input: $input)
+}

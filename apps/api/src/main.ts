@@ -29,6 +29,6 @@ async function bootstrap() {
     origin: '*',
     credentials: true,
   });
-  await app.listen(config.get('PORT', 3000));
+  await app.listen(config.get('PORT', 3000), '0.0.0.0');
 }
 bootstrap();

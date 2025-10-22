@@ -55,11 +55,15 @@ export class WeiboAccountHealthMonitor {
       }
     }
 
-    if (account.consecutiveFailures > rotationStrategy.maxConsecutiveFailures) {
-      result.isHealthy = false;
-      result.healthScore -= 30;
-      result.issues.push(`连续失败次数过多: ${account.consecutiveFailures}`);
-      result.recommendations.push('暂时停用此账号，检查问题原因');
+    if (account.consecutiveFailures > 0) {
+      const penalty = -5 * account.consecutiveFailures;
+      result.healthScore += penalty;
+      result.issues.push(`连续失败 ${account.consecutiveFailures} 次，惩罚 ${penalty} 分`);
+
+      if (account.consecutiveFailures > rotationStrategy.maxConsecutiveFailures) {
+        result.isHealthy = false;
+        result.recommendations.push('暂时停用此账号，检查问题原因');
+      }
     }
 
     if (cookieValidation.responseTime > 8000) {
