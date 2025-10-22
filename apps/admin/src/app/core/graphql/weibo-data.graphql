@@ -1,0 +1,159 @@
+fragment WeiboUserFields on WeiboUser {
+  id
+  weiboId
+  screenName
+  profileImageUrl
+  verified
+  verifiedReason
+  followersCount
+  friendsCount
+  statusesCount
+  gender
+  location
+  description
+}
+
+fragment WeiboPostFields on WeiboPost {
+  id
+  weiboId
+  mid
+  text
+  textLength
+  author {
+    ...WeiboUserFields
+  }
+  createdAt
+  repostsCount
+  commentsCount
+  attitudesCount
+  source
+  regionName
+  isLongText
+  isRepost
+  favorited
+  visibleType
+}
+
+fragment WeiboCommentFields on WeiboComment {
+  id
+  commentId
+  mid
+  postId
+  text
+  createdAt
+  likeCounts
+  liked
+  source
+  replyCommentId
+  isMblogAuthor
+  author {
+    ...WeiboUserFields
+  }
+}
+
+fragment WeiboInteractionFields on WeiboInteraction {
+  id
+  interactionType
+  targetType
+  targetWeiboId
+  userWeiboId
+  createdAt
+}
+
+query WeiboPosts($filter: PostFilterInput, $pagination: PaginationInput, $sort: SortInput) {
+  weiboPosts(filter: $filter, pagination: $pagination, sort: $sort) {
+    edges {
+      cursor
+      node {
+        ...WeiboPostFields
+      }
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+    }
+    totalCount
+  }
+}
+
+query WeiboPost($id: String!) {
+  weiboPost(id: $id) {
+    ...WeiboPostFields
+  }
+}
+
+query WeiboPostStats($filter: PostFilterInput) {
+  weiboPostStats(filter: $filter) {
+    totalPosts
+    totalReposts
+    totalComments
+    totalLikes
+  }
+}
+
+query WeiboComments($filter: CommentFilterInput, $pagination: PaginationInput, $sort: SortInput) {
+  weiboComments(filter: $filter, pagination: $pagination, sort: $sort) {
+    edges {
+      cursor
+      node {
+        ...WeiboCommentFields
+      }
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+    }
+    totalCount
+  }
+}
+
+query WeiboComment($id: String!) {
+  weiboComment(id: $id) {
+    ...WeiboCommentFields
+  }
+}
+
+query WeiboCommentStats($filter: CommentFilterInput) {
+  weiboCommentStats(filter: $filter) {
+    totalComments
+    totalLikes
+  }
+}
+
+query WeiboInteractions($filter: InteractionFilterInput, $pagination: PaginationInput, $sort: SortInput) {
+  weiboInteractions(filter: $filter, pagination: $pagination, sort: $sort) {
+    edges {
+      cursor
+      node {
+        ...WeiboInteractionFields
+      }
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+    }
+    totalCount
+  }
+}
+
+query WeiboInteraction($id: String!) {
+  weiboInteraction(id: $id) {
+    ...WeiboInteractionFields
+  }
+}
+
+query WeiboInteractionStats($filter: InteractionFilterInput) {
+  weiboInteractionStats(filter: $filter) {
+    totalInteractions
+    totalLikes
+    totalReposts
+    totalComments
+    totalFavorites
+  }
+}

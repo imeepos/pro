@@ -16,6 +16,10 @@
     <nz-tab nzTitle="评论 💬"></nz-tab>
   </nz-tabset>
 
+  <div *ngIf="error()" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
+    {{ error() }}
+  </div>
+
   <!-- Toolbar -->
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -101,7 +105,7 @@
         清空筛选
       </button>
 
-      <span class="ml-auto text-sm text-gray-500 dark:text-gray-400">共 {{ filteredInteractions().length }} 条记录</span>
+      <span class="ml-auto text-sm text-gray-500 dark:text-gray-400">共 {{ totalCount() }} 条记录</span>
     </div>
   </div>
 
@@ -109,13 +113,16 @@
   <nz-spin [nzSpinning]="loading()">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <nz-table
-        #interactionTable
-        [nzData]="filteredInteractions()"
-        [nzPageSize]="20"
+        [nzData]="interactions()"
+        [nzPageSize]="pageSize()"
+        [nzPageIndex]="page()"
+        [nzTotal]="totalCount()"
         [nzShowPagination]="true"
-        [nzFrontPagination]="true"
+        [nzFrontPagination]="false"
         [nzShowSizeChanger]="true"
-        [nzPageSizeOptions]="[10, 20, 50, 100]">
+        [nzPageSizeOptions]="[10, 20, 50, 100]"
+        (nzPageIndexChange)="onPageChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)">
         <thead>
           <tr>
             <th nzWidth="120px">互动类型</th>
@@ -127,7 +134,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of interactionTable.data">
+          <tr *ngFor="let item of interactions()">
             <!-- Interaction Type -->
             <td>
               <nz-tag [nzColor]="'blue'">
@@ -138,19 +145,10 @@
 
             <!-- User -->
             <td>
-              <div class="flex items-center gap-2">
-                <nz-avatar
-                  [nzSrc]="getUserSnapshot(item.userInfoSnapshot).profileImageUrl"
-                  [nzSize]="32">
-                </nz-avatar>
-                <div class="flex flex-col min-w-0">
-                  <span class="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {{ getUserSnapshot(item.userInfoSnapshot).screenName }}
-                  </span>
-                  <span class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    ID: {{ getUserSnapshot(item.userInfoSnapshot).weiboId }}
-                  </span>
-                </div>
+              <div class="flex flex-col">
+                <span class="text-sm font-medium text-gray-900 dark:text-white">
+                  {{ item.userWeiboId || '未知用户' }}
+                </span>
               </div>
             </td>
 
@@ -202,7 +200,7 @@
 
   <!-- Empty State -->
   <nz-empty
-    *ngIf="!loading() && filteredInteractions().length === 0"
+    *ngIf="!loading() && interactions().length === 0"
     nzNotFoundContent="暂无互动数据"
     [nzNotFoundImage]="'simple'">
   </nz-empty>

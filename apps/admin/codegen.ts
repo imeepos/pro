@@ -12,12 +12,13 @@ const config: CodegenConfig = {
     'src/app/core/graphql/tag.graphql',
     'src/app/core/graphql/screen.graphql',
     'src/app/core/graphql/weibo-search-task.graphql',
-    'src/app/core/graphql/raw-data.graphql',
-    'src/app/core/graphql/jd-account.graphql',
-    'src/app/core/graphql/weibo-account.graphql',
-    'src/app/core/graphql/notifications.graphql',
-    'src/app/core/graphql/dlq.graphql'
-  ],
+  'src/app/core/graphql/raw-data.graphql',
+  'src/app/core/graphql/jd-account.graphql',
+  'src/app/core/graphql/weibo-account.graphql',
+  'src/app/core/graphql/weibo-data.graphql',
+  'src/app/core/graphql/notifications.graphql',
+  'src/app/core/graphql/dlq.graphql'
+],
   ignoreNoDocuments: false,
   generates: {
     'src/app/core/graphql/generated/': {

@@ -5,6 +5,10 @@
     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">查看和管理微博帖子数据</p>
   </div>
 
+  <div *ngIf="error()" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
+    {{ error() }}
+  </div>
+
   <!-- 搜索和筛选工具栏 -->
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
     <!-- 搜索栏 -->
@@ -165,11 +169,11 @@
                 {{ truncateText(post.text, 100) }}
               </div>
               <div class="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                <span *ngIf="post.picNum" class="inline-flex items-center">
-                  <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                <span class="inline-flex items-center">
+                  <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
                   </svg>
-                  {{ post.picNum }}
+                  {{ post.textLength }} 字
                 </span>
                 <span *ngIf="post.regionName">{{ post.regionName }}</span>
                 <span *ngIf="post.isLongText" class="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded">长文</span>
@@ -266,7 +270,7 @@
 </div>
 
 <!-- 详情抽屉 -->
-<div *ngIf="selectedPost()"
+<div *ngIf="selectedPost() as post"
      class="fixed inset-0 z-50 overflow-hidden"
      (click)="closeDetail()">
   <div class="absolute inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity"></div>
@@ -292,23 +296,30 @@
       <div class="px-6 py-4 space-y-6">
         <!-- 作者信息 -->
         <div class="flex items-center space-x-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <img [src]="selectedPost()!.author.profileImageUrl"
-               [alt]="selectedPost()!.author.screenName"
-               class="w-16 h-16 rounded-full object-cover">
+          <ng-container *ngIf="post.author.profileImageUrl; else authorFallback">
+            <img [src]="post.author.profileImageUrl!"
+                 [alt]="post.author.screenName"
+                 class="w-16 h-16 rounded-full object-cover">
+          </ng-container>
+          <ng-template #authorFallback>
+            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-500 text-lg font-semibold text-white">
+              {{ post.author.screenName.charAt(0) }}
+            </div>
+          </ng-template>
           <div class="flex-1">
             <div class="flex items-center gap-2">
-              <h4 class="font-semibold text-gray-900 dark:text-white">{{ selectedPost()!.author.screenName }}</h4>
-              <span *ngIf="selectedPost()!.author.verified"
+              <h4 class="font-semibold text-gray-900 dark:text-white">{{ post.author.screenName }}</h4>
+              <span *ngIf="post.author.verified"
                     class="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
                 已认证
               </span>
             </div>
             <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              <span>粉丝 {{ formatNumber(selectedPost()!.author.followersCount) }}</span>
+              <span>粉丝 {{ formatNumber(post.author.followersCount) }}</span>
               <span class="mx-2">·</span>
-              <span>关注 {{ formatNumber(selectedPost()!.author.friendsCount) }}</span>
+              <span>关注 {{ formatNumber(post.author.friendsCount) }}</span>
               <span class="mx-2">·</span>
-              <span>微博 {{ formatNumber(selectedPost()!.author.statusesCount) }}</span>
+              <span>微博 {{ formatNumber(post.author.statusesCount) }}</span>
             </div>
           </div>
         </div>
@@ -316,20 +327,20 @@
         <!-- 帖子内容 -->
         <div class="space-y-4">
           <div class="text-gray-900 dark:text-white text-base leading-relaxed whitespace-pre-wrap">
-            {{ selectedPost()!.text }}
+            {{ post.text }}
           </div>
 
           <!-- 标签 -->
           <div class="flex flex-wrap gap-2">
-            <span *ngIf="selectedPost()!.isLongText"
+            <span *ngIf="post.isLongText"
                   class="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded">
               长文本
             </span>
-            <span *ngIf="selectedPost()!.isRepost"
+            <span *ngIf="post.isRepost"
                   class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
               转发
             </span>
-            <span *ngIf="selectedPost()!.favorited"
+            <span *ngIf="post.favorited"
                   class="px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded">
               已收藏
             </span>
@@ -340,42 +351,42 @@
         <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div>
             <div class="text-xs text-gray-500 dark:text-gray-400">帖子ID</div>
-            <div class="text-sm text-gray-900 dark:text-white font-mono mt-1">{{ selectedPost()!.weiboId }}</div>
+            <div class="text-sm text-gray-900 dark:text-white font-mono mt-1">{{ post.weiboId }}</div>
           </div>
           <div>
             <div class="text-xs text-gray-500 dark:text-gray-400">MID</div>
-            <div class="text-sm text-gray-900 dark:text-white font-mono mt-1">{{ selectedPost()!.mid }}</div>
+            <div class="text-sm text-gray-900 dark:text-white font-mono mt-1">{{ post.mid }}</div>
           </div>
           <div>
             <div class="text-xs text-gray-500 dark:text-gray-400">发布时间</div>
-            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ formatDate(selectedPost()!.createdAt) }}</div>
+            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ formatDate(post.createdAt) }}</div>
           </div>
           <div>
             <div class="text-xs text-gray-500 dark:text-gray-400">地区</div>
-            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedPost()!.regionName || '-' }}</div>
+            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ post.regionName || '-' }}</div>
           </div>
           <div>
             <div class="text-xs text-gray-500 dark:text-gray-400">来源</div>
-            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedPost()!.source || '-' }}</div>
+            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ post.source || '-' }}</div>
           </div>
           <div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">媒体数量</div>
-            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedPost()!.picNum || 0 }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">文本长度</div>
+            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ post.textLength }}</div>
           </div>
         </div>
 
         <!-- 互动数据 -->
         <div class="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div class="text-center">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatNumber(selectedPost()!.attitudesCount) }}</div>
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatNumber(post.attitudesCount) }}</div>
             <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">点赞</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatNumber(selectedPost()!.commentsCount) }}</div>
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatNumber(post.commentsCount) }}</div>
             <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">评论</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatNumber(selectedPost()!.repostsCount) }}</div>
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatNumber(post.repostsCount) }}</div>
             <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">转发</div>
           </div>
         </div>
@@ -383,12 +394,12 @@
         <!-- 操作按钮 -->
         <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
-            (click)="viewComments(selectedPost()!)"
+            (click)="viewComments(post)"
             class="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
             查看评论
           </button>
           <button
-            (click)="deletePost(selectedPost()!); closeDetail()"
+            (click)="deletePost(post); closeDetail()"
             class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
             删除帖子
           </button>

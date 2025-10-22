@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
@@ -8,22 +8,19 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzAvatarModule } from 'ng-zorro-antd/avatar';
-import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { firstValueFrom } from 'rxjs';
 import {
   WeiboInteraction,
   WeiboInteractionType,
   WeiboTargetType,
-  InteractionFilter
+  InteractionFilter,
+  Pagination,
+  Sort,
+  SortOrder
 } from '../../core/services/weibo-data.types';
-
-interface UserSnapshot {
-  screenName?: string;
-  profileImageUrl?: string;
-  weiboId?: string;
-}
+import { WeiboDataService } from '../../core/services/weibo-data.service';
 
 @Component({
   selector: 'app-weibo-interactions',
@@ -38,60 +35,28 @@ interface UserSnapshot {
     NzDatePickerModule,
     NzSelectModule,
     NzTagModule,
-    NzAvatarModule,
-    NzIconModule,
     NzSpinModule,
     NzEmptyModule
   ],
   templateUrl: './weibo-interactions.component.html'
 })
-export class WeiboInteractionsComponent {
-  interactions = signal<WeiboInteraction[]>(this.mockInteractions());
+export class WeiboInteractionsComponent implements OnInit {
+  interactions = signal<WeiboInteraction[]>([]);
+  totalCount = signal(0);
   loading = signal<boolean>(false);
+  error = signal<string | null>(null);
   activeTab = signal<WeiboInteractionType | 'all'>('all');
 
   searchUserWeiboId = signal<string>('');
   searchTargetWeiboId = signal<string>('');
   dateRange = signal<Date[] | null>(null);
   selectedTargetType = signal<WeiboTargetType | null>(null);
+  page = signal<number>(1);
+  pageSize = signal<number>(20);
 
-  filteredInteractions = computed(() => {
-    let data = this.interactions();
-    const tab = this.activeTab();
-
-    if (tab !== 'all') {
-      data = data.filter(item => item.interactionType === tab);
-    }
-
-    const userWeiboId = this.searchUserWeiboId();
-    if (userWeiboId) {
-      data = data.filter(item => {
-        const snapshot = item.userInfoSnapshot as UserSnapshot;
-        return snapshot.weiboId?.includes(userWeiboId);
-      });
-    }
-
-    const targetWeiboId = this.searchTargetWeiboId();
-    if (targetWeiboId) {
-      data = data.filter(item => item.targetWeiboId.includes(targetWeiboId));
-    }
-
-    const targetType = this.selectedTargetType();
-    if (targetType) {
-      data = data.filter(item => item.targetType === targetType);
-    }
-
-    const range = this.dateRange();
-    if (range && range.length === 2) {
-      const [start, end] = range;
-      data = data.filter(item => {
-        const date = new Date(item.createdAt);
-        return date >= start && date <= end;
-      });
-    }
-
-    return data;
-  });
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.totalCount() / this.pageSize()))
+  );
 
   readonly WeiboInteractionType = WeiboInteractionType;
   readonly WeiboTargetType = WeiboTargetType;
@@ -109,16 +74,20 @@ export class WeiboInteractionsComponent {
     WeiboInteractionType.Comment
   ];
 
-  onTabChange(index: number): void {
-    this.activeTab.set(this.tabIndexMap[index]);
+  constructor(private readonly weiboData: WeiboDataService) {}
+
+  ngOnInit(): void {
+    void this.loadInteractions();
   }
 
-  refresh(): void {
-    this.loading.set(true);
-    setTimeout(() => {
-      this.interactions.set(this.mockInteractions());
-      this.loading.set(false);
-    }, 500);
+  onTabChange(index: number): void {
+    this.activeTab.set(this.tabIndexMap[index]);
+    this.page.set(1);
+    void this.loadInteractions();
+  }
+
+  async refresh(): Promise<void> {
+    await this.loadInteractions();
   }
 
   resetFilters(): void {
@@ -126,10 +95,23 @@ export class WeiboInteractionsComponent {
     this.searchTargetWeiboId.set('');
     this.dateRange.set(null);
     this.selectedTargetType.set(null);
+    this.page.set(1);
+    void this.loadInteractions();
+  }
+
+  async onPageChange(index: number): Promise<void> {
+    this.page.set(index);
+    await this.loadInteractions();
+  }
+
+  async onPageSizeChange(size: number): Promise<void> {
+    this.pageSize.set(size);
+    this.page.set(1);
+    await this.loadInteractions();
   }
 
   getInteractionIcon(type: WeiboInteractionType): string {
-    const icons = {
+    const icons: Record<WeiboInteractionType, string> = {
       [WeiboInteractionType.Like]: '❤️',
       [WeiboInteractionType.Repost]: '🔄',
       [WeiboInteractionType.Comment]: '💬',
@@ -139,7 +121,7 @@ export class WeiboInteractionsComponent {
   }
 
   getInteractionLabel(type: WeiboInteractionType): string {
-    const labels = {
+    const labels: Record<WeiboInteractionType, string> = {
       [WeiboInteractionType.Like]: '点赞',
       [WeiboInteractionType.Repost]: '转发',
       [WeiboInteractionType.Comment]: '评论',
@@ -150,10 +132,6 @@ export class WeiboInteractionsComponent {
 
   getTargetTypeLabel(type: WeiboTargetType): string {
     return type === WeiboTargetType.Post ? '帖子' : '评论';
-  }
-
-  getUserSnapshot(snapshot: Record<string, unknown>): UserSnapshot {
-    return snapshot as UserSnapshot;
   }
 
   formatDate(dateStr: string): string {
@@ -168,22 +146,102 @@ export class WeiboInteractionsComponent {
     });
   }
 
-  private mockInteractions(): WeiboInteraction[] {
-    const types = Object.values(WeiboInteractionType);
-    const targetTypes = Object.values(WeiboTargetType);
-    const now = Date.now();
+  private async loadInteractions(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
 
-    return Array.from({ length: 50 }, (_, i) => ({
-      id: `interaction-${i + 1}`,
-      interactionType: types[i % types.length],
-      targetType: targetTypes[i % targetTypes.length],
-      userInfoSnapshot: {
-        screenName: `用户${i + 1}`,
-        profileImageUrl: `https://i.pravatar.cc/150?img=${i + 1}`,
-        weiboId: `${1000000000 + i}`
-      },
-      targetWeiboId: `${5000000000 + i}`,
-      createdAt: new Date(now - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-    }));
+    try {
+      const connection = await firstValueFrom(
+        this.weiboData.getInteractions(
+          this.buildFilter(),
+          this.buildPagination(),
+          this.buildSort()
+        )
+      );
+
+      this.totalCount.set(connection.totalCount);
+
+      const desiredPage = this.resolvePageWithinBounds();
+      if (desiredPage !== this.page()) {
+        this.page.set(desiredPage);
+        this.loading.set(false);
+        await this.loadInteractions();
+        return;
+      }
+
+      this.interactions.set(connection.edges.map(edge => edge.node));
+    } catch (error) {
+      console.error('加载互动数据失败:', error);
+      this.error.set('加载互动数据失败，请稍后再试。');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  private buildFilter(): InteractionFilter | undefined {
+    const filter: InteractionFilter = {};
+
+    const tab = this.activeTab();
+    if (tab !== 'all') {
+      filter.interactionType = tab;
+    }
+
+    const userId = this.searchUserWeiboId().trim();
+    if (userId) {
+      filter.userWeiboId = userId;
+    }
+
+    const targetId = this.searchTargetWeiboId().trim();
+    if (targetId) {
+      filter.targetWeiboId = targetId;
+    }
+
+    const targetType = this.selectedTargetType();
+    if (targetType) {
+      filter.targetType = targetType;
+    }
+
+    const range = this.dateRange();
+    if (range && range.length === 2) {
+      const [start, end] = range;
+      if (start) {
+        filter.dateFrom = start.toISOString();
+      }
+      if (end) {
+        const endOfDay = new Date(end);
+        endOfDay.setHours(23, 59, 59, 999);
+        filter.dateTo = endOfDay.toISOString();
+      }
+    }
+
+    return Object.keys(filter).length > 0 ? filter : undefined;
+  }
+
+  private buildPagination(): Pagination {
+    return {
+      page: this.page(),
+      limit: this.pageSize()
+    };
+  }
+
+  private buildSort(): Sort {
+    return {
+      field: 'createdAt',
+      order: SortOrder.DESC
+    };
+  }
+
+  private resolvePageWithinBounds(): number {
+    const maxPage = this.totalPages();
+
+    if (this.page() > maxPage) {
+      return maxPage;
+    }
+
+    if (this.page() < 1) {
+      return 1;
+    }
+
+    return this.page();
   }
 }
