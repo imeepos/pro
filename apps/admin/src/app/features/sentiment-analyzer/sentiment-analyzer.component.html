@@ -1,0 +1,31 @@
+<sentiment-floating-chat-button
+  [active]="open()"
+  [busy]="chatBusy()"
+  [unreadCount]="unreadCount()"
+  (toggled)="toggleWindow($event)"
+></sentiment-floating-chat-button>
+
+<div
+  class="analyzer__window"
+  [class.analyzer__window--visible]="open()"
+  cdkDrag
+  cdkDragRootElement=".analyzer__window"
+  [cdkDragFreeDragPosition]="dragPosition()"
+  (cdkDragEnded)="onDragEnd($event)"
+  [attr.aria-hidden]="!open()"
+>
+  <header cdkDragHandle class="analyzer__header">
+    <div>
+      <h2>舆情事件分析工作台</h2>
+      <p>拖拽调整位置，随时召回分析助手</p>
+    </div>
+    <button type="button" class="analyzer__close" (click)="close()">
+      ✕
+    </button>
+  </header>
+
+  <div class="analyzer__content">
+    <sentiment-analysis-panel [context]="context()"></sentiment-analysis-panel>
+    <sentiment-chat [context]="context()" (busyChange)="updateBusyState($event)"></sentiment-chat>
+  </div>
+</div>

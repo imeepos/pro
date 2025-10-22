@@ -3,11 +3,12 @@ import { RouterOutlet } from '@angular/router';
 import { ToastContainerComponent } from './shared/components/toast/toast-container.component';
 import { FlowbiteService } from './shared/services/flowbite.service';
 import { ComponentInitializerService } from '@pro/components';
+import { SentimentAnalyzerComponent } from './features/sentiment-analyzer/sentiment-analyzer.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, ToastContainerComponent],
+  imports: [RouterOutlet, ToastContainerComponent, SentimentAnalyzerComponent],
   templateUrl: './app.component.html'
 })
 export class AppComponent implements OnInit {

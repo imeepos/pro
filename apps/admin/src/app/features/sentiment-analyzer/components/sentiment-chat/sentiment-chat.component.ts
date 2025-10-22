@@ -83,6 +83,12 @@ export class SentimentChatComponent implements AfterViewInit, OnChanges, OnDestr
 
   private async initializeConversation(): Promise<void> {
     this.loadingHistory.set(true);
+    const hasScope = Boolean(this.context.eventId || this.context.topic);
+    if (!hasScope) {
+      this.chatService.reset();
+      this.loadingHistory.set(false);
+      return;
+    }
     const realtimeUrl = this.createRealtimeUrl();
     this.chatService.connectRealtime(realtimeUrl);
     await this.chatService.hydrateHistory(this.context);

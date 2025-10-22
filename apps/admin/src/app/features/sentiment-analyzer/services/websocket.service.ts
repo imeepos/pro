@@ -32,12 +32,11 @@ export class WebsocketService {
   }
 
   listen<T>(event: string): Observable<T> {
-    let channel = this.channels.get(event);
-    if (!channel) {
-      channel = new Subject<T>();
-      this.channels.set(event, channel);
+    if (!this.channels.has(event)) {
+      this.channels.set(event, new Subject<unknown>());
     }
 
+    const channel = this.channels.get(event)!;
     return channel.asObservable() as Observable<T>;
   }
 

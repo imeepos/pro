@@ -54,6 +54,13 @@ export class AnalysisPanelComponent implements OnChanges, OnDestroy {
       return;
     }
 
+    const hasScope = Boolean(this.context.eventId || this.context.topic);
+    if (!hasScope) {
+      this.analysisData.reset();
+      this.loading.set(false);
+      return;
+    }
+
     this.loading.set(true);
     try {
       await this.analysisData.refreshBundle(this.context);
