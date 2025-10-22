@@ -79,7 +79,8 @@
       "Bash(timedatectl:*)",
       "Bash(echo:*)",
       "Bash(node:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(pkill -f \"pnpm run build\")"
     ],
     "deny": [],
     "ask": []
