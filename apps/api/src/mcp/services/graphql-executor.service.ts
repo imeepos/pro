@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { GraphQLSchemaHost } from '@nestjs/graphql';
 import {
   DocumentNode,
@@ -35,14 +36,15 @@ const isAsyncIterable = <T>(source: unknown): source is AsyncIterable<T> => {
 };
 
 @Injectable()
-export class GraphqlExecutorService {
+export class GraphqlExecutorService implements OnModuleInit {
   private readonly logger = new Logger(GraphqlExecutorService.name);
   private readonly subscriptionEventLimit = 50;
   private readonly subscriptionTimeoutMs = 5000;
   private readonly defaultOperation: OperationTypeNode = OperationTypeNode.QUERY;
+  private schemaHost: GraphQLSchemaHost;
 
   constructor(
-    private readonly schemaHost: GraphQLSchemaHost,
+    private readonly moduleRef: ModuleRef,
     private readonly authService: McpAuthService,
     private readonly userLoader: UserLoader,
     private readonly apiKeyLoader: ApiKeyLoader,
@@ -50,6 +52,10 @@ export class GraphqlExecutorService {
     private readonly industryTypeLoader: IndustryTypeLoader,
     private readonly tagLoader: TagLoader,
   ) {}
+
+  onModuleInit() {
+    this.schemaHost = this.moduleRef.get(GraphQLSchemaHost, { strict: false });
+  }
 
   async execute(payload: GraphqlExecutionPayload): Promise<GraphqlExecutorResponse> {
     const start = Date.now();

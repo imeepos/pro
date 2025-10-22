@@ -40,6 +40,7 @@ import { IndustryTypeLoader } from './events/industry-type.loader';
 import { TagLoader } from './events/tag.loader';
 import { DateTimeScalar } from './common/scalars/date-time.scalar';
 import { McpModule } from './mcp/mcp.module';
+import { GraphqlExecutorModule } from './mcp/graphql-executor.module';
 
 @Module({
   imports: [
@@ -189,6 +190,7 @@ import { McpModule } from './mcp/mcp.module';
     RawDataModule,
     DlqModule,
     TasksModule,
+    GraphqlExecutorModule,
     McpModule,
   ],
   controllers: [],

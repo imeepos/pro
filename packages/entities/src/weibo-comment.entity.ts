@@ -17,7 +17,7 @@ import { WeiboInteractionEntity } from './weibo-interaction.entity.js';
 @Entity('weibo_comments')
 @Index(['commentId'], { unique: true })
 @Index(['mid'], { unique: true })
-@Index(['postId', 'path'])
+@Index(['post', 'path'])
 @Index(['createdAt'])
 export class WeiboCommentEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint', unsigned: true })

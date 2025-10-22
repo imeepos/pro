@@ -6,6 +6,7 @@ import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity, createDatabaseConfig } from '@pro/entities';
 import { RedisClient, redisConfigFactory } from '@pro/redis';
 import { WeiboModule as CoreWeiboModule } from '@pro/weibo';
+import { MongodbModule } from '@pro/mongodb';
 
 // 核心服务导入 - 每个导入都有其存在的意义
 import { SimpleIntervalScheduler } from './weibo/simple-interval-scheduler.service';
@@ -47,6 +48,14 @@ import { WeiboAccountHealthScheduler } from './weibo/account-health-scheduler.se
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
+    }),
+
+    // MongoDB 之库 - 原始数据的归宿
+    MongodbModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGODB_URL', 'mongodb://localhost:27017/pro'),
+      }),
     }),
 
     // 时间之舞 - 定时任务的舞台

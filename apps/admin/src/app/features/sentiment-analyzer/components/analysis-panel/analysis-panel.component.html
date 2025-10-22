@@ -26,7 +26,7 @@
   </header>
 
   <nz-spin [nzSpinning]="loading()">
-    @if (bundle$ | async as bundle) {
+    @if (bundle$ | async; as bundle) {
       <div class="analysis-panel__grid">
         <article class="analysis-panel__summary">
           <div class="analysis-panel__score">
@@ -44,7 +44,7 @@
         <timeline-view [timeline]="bundle.timeline"></timeline-view>
         <milestone-cards [milestones]="bundle.milestones"></milestone-cards>
 
-        @if (reportSections$ | async as sections; else reportFallback) {
+        @if (reportSections$ | async; as sections) {
           <section class="analysis-panel__report">
             <h3>自动化报告</h3>
             @for (section of sections; track section.title) {
@@ -54,12 +54,11 @@
               </article>
             }
           </section>
-        }
-        <ng-template #reportFallback>
+        } @else {
           <section class="analysis-panel__report analysis-panel__report--empty">
             <p>报告生成中，请稍候...</p>
           </section>
-        </ng-template>
+        }
       </div>
     } @else {
       <div class="analysis-panel__empty">

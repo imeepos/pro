@@ -11,7 +11,7 @@ import {
 import { WeiboUserEntity } from './weibo-user.entity.js';
 
 @Entity('weibo_user_stats')
-@Index(['userId', 'snapshotTime'], { unique: true })
+@Index(['user', 'snapshotTime'], { unique: true })
 export class WeiboUserStatsEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint', unsigned: true })
   id!: string;
