@@ -99,9 +99,11 @@ export class HtmlFetcherService {
       if (error instanceof RenderingDisabledError) {
         throw error;
       }
-      throw new Error(`渲染页面失败，已放弃任务: ${targetUrl} (${detail})`, {
-        cause: error instanceof Error ? error : undefined,
-      });
+      const renderingError = new Error(`渲染页面失败，已放弃任务: ${targetUrl} (${detail})`);
+      if (error instanceof Error) {
+        renderingError.cause = error;
+      }
+      throw renderingError;
     }
   }
 
