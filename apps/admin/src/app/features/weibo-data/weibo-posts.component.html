@@ -1,0 +1,368 @@
+<div class="w-full">
+  <!-- 头部 -->
+  <div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">帖子管理</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">查看和管理微博帖子数据</p>
+  </div>
+
+  <!-- 搜索和筛选工具栏 -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
+    <!-- 搜索栏 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+      <input
+        type="text"
+        [ngModel]="keyword()"
+        (ngModelChange)="keyword.set($event)"
+        placeholder="搜索帖子内容..."
+        class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+
+      <input
+        type="text"
+        [ngModel]="authorNickname()"
+        (ngModelChange)="authorNickname.set($event)"
+        placeholder="作者昵称..."
+        class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+
+      <div class="flex gap-2">
+        <button
+          (click)="applyFilters()"
+          class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+          搜索
+        </button>
+        <button
+          (click)="resetFilters()"
+          class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+          重置
+        </button>
+      </div>
+    </div>
+
+    <!-- 日期范围 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+      <input
+        type="date"
+        [ngModel]="dateFrom()"
+        (ngModelChange)="dateFrom.set($event)"
+        class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+
+      <input
+        type="date"
+        [ngModel]="dateTo()"
+        (ngModelChange)="dateTo.set($event)"
+        class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+    </div>
+
+    <!-- 快捷筛选 -->
+    <div class="flex flex-wrap gap-2">
+      <button
+        (click)="toggleFilter('isLongText')"
+        [ngClass]="getFilterClass(isLongText())"
+        class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors">
+        长文本
+        <span *ngIf="isLongText() === true" class="ml-1">✓</span>
+        <span *ngIf="isLongText() === false" class="ml-1">✗</span>
+      </button>
+
+      <button
+        (click)="toggleFilter('isRepost')"
+        [ngClass]="getFilterClass(isRepost())"
+        class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors">
+        转发
+        <span *ngIf="isRepost() === true" class="ml-1">✓</span>
+        <span *ngIf="isRepost() === false" class="ml-1">✗</span>
+      </button>
+
+      <button
+        (click)="toggleFilter('favorited')"
+        [ngClass]="getFilterClass(favorited())"
+        class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors">
+        收藏
+        <span *ngIf="favorited() === true" class="ml-1">✓</span>
+        <span *ngIf="favorited() === false" class="ml-1">✗</span>
+      </button>
+
+      <div class="ml-auto text-sm text-gray-500 dark:text-gray-400 flex items-center">
+        共 {{ totalCount() }} 条记录
+      </div>
+    </div>
+  </div>
+
+  <!-- 加载状态 -->
+  <div *ngIf="loading()" class="flex justify-center items-center py-12">
+    <div class="flex space-x-2">
+      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
+      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+      <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+    </div>
+  </div>
+
+  <!-- 帖子列表 -->
+  <div *ngIf="!loading()" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+              帖子ID
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              内容
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-36">
+              作者
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
+                (click)="toggleSort('createdAt')">
+              发布时间 {{ getSortIcon('createdAt') }}
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-40 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
+                (click)="toggleSort('attitudesCount')">
+              互动数据 {{ getSortIcon('attitudesCount') }}
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+              操作
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <tr *ngFor="let post of pagedPosts()" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">
+              {{ post.weiboId.slice(-8) }}
+            </td>
+            <td class="px-4 py-3">
+              <div class="text-sm text-gray-900 dark:text-white">
+                {{ truncateText(post.text, 100) }}
+              </div>
+              <div class="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <span *ngIf="post.picNum" class="inline-flex items-center">
+                  <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                  </svg>
+                  {{ post.picNum }}
+                </span>
+                <span *ngIf="post.regionName">{{ post.regionName }}</span>
+                <span *ngIf="post.isLongText" class="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded">长文</span>
+                <span *ngIf="post.isRepost" class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">转发</span>
+                <span *ngIf="post.favorited" class="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded">收藏</span>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center space-x-2">
+                <img [src]="post.author.profileImageUrl" [alt]="post.author.screenName"
+                     class="w-8 h-8 rounded-full object-cover">
+                <div class="flex flex-col">
+                  <span class="text-sm text-gray-900 dark:text-white">{{ post.author.screenName }}</span>
+                  <span *ngIf="post.author.verified" class="text-xs text-blue-600 dark:text-blue-400">已认证</span>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+              {{ formatDate(post.createdAt) }}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-3">
+                  <span title="点赞">❤️ {{ formatNumber(post.attitudesCount) }}</span>
+                  <span title="评论">💬 {{ formatNumber(post.commentsCount) }}</span>
+                  <span title="转发">🔄 {{ formatNumber(post.repostsCount) }}</span>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <button
+                  (click)="viewDetail(post)"
+                  class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs font-medium">
+                  详情
+                </button>
+                <button
+                  (click)="viewComments(post)"
+                  class="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 text-xs font-medium">
+                  评论
+                </button>
+                <button
+                  (click)="deletePost(post)"
+                  class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-xs font-medium">
+                  删除
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 空状态 -->
+    <div *ngIf="pagedPosts().length === 0" class="text-center py-12">
+      <svg class="mx-auto h-16 w-16 text-gray-400 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">暂无帖子</h3>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">没有找到符合条件的帖子</p>
+    </div>
+
+    <!-- 分页 -->
+    <div *ngIf="pagedPosts().length > 0" class="bg-gray-50 dark:bg-gray-900 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
+      <div class="text-sm text-gray-700 dark:text-gray-300">
+        显示第 {{ (page() - 1) * pageSize() + 1 }} 到 {{ Math.min(page() * pageSize(), totalCount()) }} 条，共 {{ totalCount() }} 条
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          (click)="changePage(page() - 1)"
+          [disabled]="page() === 1"
+          [class.opacity-50]="page() === 1"
+          [class.cursor-not-allowed]="page() === 1"
+          class="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:hover:bg-white dark:disabled:hover:bg-gray-800 transition-colors">
+          上一页
+        </button>
+
+        <span class="text-sm text-gray-700 dark:text-gray-300">
+          第 {{ page() }} / {{ totalPages() }} 页
+        </span>
+
+        <button
+          (click)="changePage(page() + 1)"
+          [disabled]="page() === totalPages()"
+          [class.opacity-50]="page() === totalPages()"
+          [class.cursor-not-allowed]="page() === totalPages()"
+          class="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:hover:bg-white dark:disabled:hover:bg-gray-800 transition-colors">
+          下一页
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 详情抽屉 -->
+<div *ngIf="selectedPost()"
+     class="fixed inset-0 z-50 overflow-hidden"
+     (click)="closeDetail()">
+  <div class="absolute inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity"></div>
+
+  <div class="fixed inset-y-0 right-0 max-w-2xl w-full flex">
+    <div class="relative w-full bg-white dark:bg-gray-800 shadow-xl overflow-y-auto"
+         (click)="$event.stopPropagation()">
+      <!-- 抽屉头部 -->
+      <div class="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">帖子详情</h3>
+          <button
+            (click)="closeDetail()"
+            class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 抽屉内容 -->
+      <div class="px-6 py-4 space-y-6">
+        <!-- 作者信息 -->
+        <div class="flex items-center space-x-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <img [src]="selectedPost()!.author.profileImageUrl"
+               [alt]="selectedPost()!.author.screenName"
+               class="w-16 h-16 rounded-full object-cover">
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <h4 class="font-semibold text-gray-900 dark:text-white">{{ selectedPost()!.author.screenName }}</h4>
+              <span *ngIf="selectedPost()!.author.verified"
+                    class="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
+                已认证
+              </span>
+            </div>
+            <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <span>粉丝 {{ formatNumber(selectedPost()!.author.followersCount) }}</span>
+              <span class="mx-2">·</span>
+              <span>关注 {{ formatNumber(selectedPost()!.author.friendsCount) }}</span>
+              <span class="mx-2">·</span>
+              <span>微博 {{ formatNumber(selectedPost()!.author.statusesCount) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 帖子内容 -->
+        <div class="space-y-4">
+          <div class="text-gray-900 dark:text-white text-base leading-relaxed whitespace-pre-wrap">
+            {{ selectedPost()!.text }}
+          </div>
+
+          <!-- 标签 -->
+          <div class="flex flex-wrap gap-2">
+            <span *ngIf="selectedPost()!.isLongText"
+                  class="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded">
+              长文本
+            </span>
+            <span *ngIf="selectedPost()!.isRepost"
+                  class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
+              转发
+            </span>
+            <span *ngIf="selectedPost()!.favorited"
+                  class="px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded">
+              已收藏
+            </span>
+          </div>
+        </div>
+
+        <!-- 元数据 -->
+        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">帖子ID</div>
+            <div class="text-sm text-gray-900 dark:text-white font-mono mt-1">{{ selectedPost()!.weiboId }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">MID</div>
+            <div class="text-sm text-gray-900 dark:text-white font-mono mt-1">{{ selectedPost()!.mid }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">发布时间</div>
+            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ formatDate(selectedPost()!.createdAt) }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">地区</div>
+            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedPost()!.regionName || '-' }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">来源</div>
+            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedPost()!.source || '-' }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">媒体数量</div>
+            <div class="text-sm text-gray-900 dark:text-white mt-1">{{ selectedPost()!.picNum || 0 }}</div>
+          </div>
+        </div>
+
+        <!-- 互动数据 -->
+        <div class="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatNumber(selectedPost()!.attitudesCount) }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">点赞</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatNumber(selectedPost()!.commentsCount) }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">评论</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatNumber(selectedPost()!.repostsCount) }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">转发</div>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            (click)="viewComments(selectedPost()!)"
+            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+            查看评论
+          </button>
+          <button
+            (click)="deletePost(selectedPost()!); closeDetail()"
+            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+            删除帖子
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

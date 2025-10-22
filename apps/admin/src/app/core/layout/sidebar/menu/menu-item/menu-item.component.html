@@ -51,6 +51,14 @@
         <path *ngIf="item.icon === 'database'" d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"></path>
         <path *ngIf="item.icon === 'database'" d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"></path>
 
+        <!-- alert -->
+        <path
+          *ngIf="item.icon === 'alert'"
+          d="M10.29 3.86 2.18 18a2 2 0 0 0 1.71 3h16.22a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+        ></path>
+        <line *ngIf="item.icon === 'alert'" x1="12" y1="9" x2="12" y2="14"></line>
+        <line *ngIf="item.icon === 'alert'" x1="12" y1="18" x2="12.01" y2="18"></line>
+
         <!-- calendar -->
         <rect *ngIf="item.icon === 'calendar'" x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
         <line *ngIf="item.icon === 'calendar'" x1="16" y1="2" x2="16" y2="6"></line>
@@ -146,6 +154,14 @@
           <ellipse *ngIf="child.icon === 'database'" cx="12" cy="5" rx="9" ry="3"></ellipse>
           <path *ngIf="child.icon === 'database'" d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"></path>
           <path *ngIf="child.icon === 'database'" d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"></path>
+
+          <!-- alert -->
+          <path
+            *ngIf="child.icon === 'alert'"
+            d="M10.29 3.86 2.18 18a2 2 0 0 0 1.71 3h16.22a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+          ></path>
+          <line *ngIf="child.icon === 'alert'" x1="12" y1="9" x2="12" y2="14"></line>
+          <line *ngIf="child.icon === 'alert'" x1="12" y1="18" x2="12.01" y2="18"></line>
 
           <!-- apartment -->
           <path *ngIf="child.icon === 'apartment'" d="M3 21h7v-8a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v8h7"></path>

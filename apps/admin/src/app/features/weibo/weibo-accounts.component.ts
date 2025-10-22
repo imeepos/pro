@@ -5,6 +5,45 @@ import { WeiboAccountService, WeiboAccount } from '../../core/services/weibo-acc
 import { ToastService } from '../../shared/services/toast.service';
 import { WeiboLoginComponent } from './weibo-login.component';
 
+interface StatusPresentation {
+  label: string;
+  classes: string;
+}
+
+type WeiboStatusToken = 'ACTIVE' | 'EXPIRED' | 'RESTRICTED' | 'BANNED' | 'INACTIVE' | 'SUSPENDED';
+
+const STATUS_PRESENTATION: Record<WeiboStatusToken, StatusPresentation> = {
+  ACTIVE: {
+    label: '正常',
+    classes: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+  },
+  EXPIRED: {
+    label: '已过期',
+    classes: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+  },
+  RESTRICTED: {
+    label: '风控受限',
+    classes: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+  },
+  BANNED: {
+    label: '已封禁',
+    classes: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+  },
+  INACTIVE: {
+    label: '已停用',
+    classes: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+  },
+  SUSPENDED: {
+    label: '暂时冻结',
+    classes: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
+  }
+};
+
+const FALLBACK_STATUS_PRESENTATION: StatusPresentation = {
+  label: '未知状态',
+  classes: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+};
+
 /**
  * 微博账号管理组件
  *
@@ -109,13 +148,20 @@ export class WeiboAccountsComponent implements OnInit {
    * 获取状态显示文本
    */
   getStatusText(status: string): string {
-    const statusMap: Record<string, string> = {
-      'active': '正常',
-      'expired': '已过期',
-      'restricted': '风控受限',
-      'banned': '已封禁'
-    };
-    return statusMap[status] || status;
+    return this.describeStatus(status).label;
+  }
+
+  getStatusClasses(status: string): string {
+    return this.describeStatus(status).classes;
+  }
+
+  private describeStatus(status: string | null | undefined): StatusPresentation {
+    if (!status) {
+      return FALLBACK_STATUS_PRESENTATION;
+    }
+
+    const normalized = status.toUpperCase() as WeiboStatusToken;
+    return STATUS_PRESENTATION[normalized] ?? FALLBACK_STATUS_PRESENTATION;
   }
 
   /**

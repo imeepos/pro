@@ -44,6 +44,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/weibo/weibo-accounts.component').then(m => m.WeiboAccountsComponent)
       },
       {
+        path: 'weibo-data/posts',
+        loadComponent: () => import('./features/weibo-data/weibo-posts.component').then(m => m.WeiboPostsComponent)
+      },
+      {
+        path: 'weibo-data/comments',
+        loadComponent: () => import('./features/weibo-data/weibo-comments.component').then(m => m.WeiboCommentsComponent)
+      },
+      {
+        path: 'weibo-data/interactions',
+        loadComponent: () => import('./features/weibo-data/weibo-interactions.component').then(m => m.WeiboInteractionsComponent)
+      },
+      {
         path: 'weibo-search-tasks',
         children: [
           {

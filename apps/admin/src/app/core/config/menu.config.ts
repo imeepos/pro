@@ -91,6 +91,31 @@ export const MENU_ITEMS: MenuItem[] = [
     ]
   },
   {
+    id: 'weibo-data',
+    label: '微博数据管理',
+    icon: 'document-text',
+    children: [
+      {
+        id: 'weibo-posts',
+        label: '帖子管理',
+        icon: 'document',
+        route: '/weibo-data/posts'
+      },
+      {
+        id: 'weibo-comments',
+        label: '评论管理',
+        icon: 'chat',
+        route: '/weibo-data/comments'
+      },
+      {
+        id: 'weibo-interactions',
+        label: '互动数据',
+        icon: 'heart',
+        route: '/weibo-data/interactions'
+      }
+    ]
+  },
+  {
     id: 'weibo-search',
     label: '微博搜索任务',
     icon: 'search',
