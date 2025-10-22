@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, ID, ObjectType } from '@nestjs/graphql';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 
 import { WeiboSearchTaskEntity } from '@pro/entities';
 
@@ -18,19 +18,19 @@ export class WeiboSearchTaskModel {
   @Field(() => String)
   crawlInterval: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   startDate: Date;
 
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   latestCrawlTime?: Date;
 
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   nextRunAt?: Date;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   updatedAt: Date;
 }
 

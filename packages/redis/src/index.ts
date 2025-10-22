@@ -168,6 +168,24 @@ export class RedisClient {
     return await this.client.zcard(key);
   }
 
+  async zpopmax(key: string): Promise<{ member: string; score: number } | null> {
+    const result = await this.client.zpopmax(key);
+    if (!Array.isArray(result) || result.length < 2) {
+      return null;
+    }
+
+    const [member, score] = result;
+    const numericScore = typeof score === 'number' ? score : Number(score);
+    return {
+      member: String(member),
+      score: Number.isFinite(numericScore) ? numericScore : 0,
+    };
+  }
+
+  async zrem(key: string, member: string): Promise<number> {
+    return await this.client.zrem(key, member);
+  }
+
   // Hash operations
   async hmset(key: string, data: Record<string, any>): Promise<string> {
     return await this.client.hmset(key, data);

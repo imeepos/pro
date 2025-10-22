@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { JdAccountStatus } from '@pro/types';
 import { createOffsetConnectionType } from '../../common/models/pagination.model';
 import { JdAccountSummary } from '../jd-account.service';
@@ -25,10 +25,10 @@ export class JdAccountModel {
   @Field(() => JdAccountStatus)
   status: JdAccountStatus;
 
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   lastCheckAt?: Date;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 }
 
@@ -69,7 +69,7 @@ export class JdAccountCheckResultModel {
   @Field(() => String)
   message: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   checkedAt: Date;
 }
 

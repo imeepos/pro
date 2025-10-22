@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { JdLoginEventType } from '@pro/types';
 import { JdLoginEvent, JdLoginEventType as JdLoginEventTypeString, JdLoginSessionSnapshot } from '../jd-auth.service';
@@ -22,7 +22,7 @@ export class JdLoginSessionModel {
   @Field(() => String)
   sessionId: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   expiresAt: Date;
 
   @Field(() => Boolean)

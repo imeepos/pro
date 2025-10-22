@@ -17,7 +17,6 @@ import { ApiKeyType, ApiKeyStatusFilter, ApiKeySortBy, ApiKeySortOrder } from '@
 import {
   Field,
   Float,
-  GraphQLISODateTime,
   InputType,
   Int,
   ObjectType,
@@ -260,7 +259,7 @@ export class ApiKeyQueryDto {
   })
   @IsOptional()
   @IsDateString({}, { message: '开始日期格式无效' })
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   startDate?: string;
 
   @ApiPropertyOptional({
@@ -269,7 +268,7 @@ export class ApiKeyQueryDto {
   })
   @IsOptional()
   @IsDateString({}, { message: '结束日期格式无效' })
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   endDate?: string;
 }
 
@@ -313,7 +312,7 @@ export class ApiKeyResponseDto {
     description: '最后使用时间',
     example: '2024-01-15T10:30:00.000Z'
   })
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   lastUsedAt?: Date;
 
   @ApiProperty({ description: '使用次数', example: 42 })
@@ -324,7 +323,7 @@ export class ApiKeyResponseDto {
     description: '过期时间',
     example: '2024-12-31T23:59:59.000Z'
   })
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   expiresAt?: Date;
 
   @ApiPropertyOptional({
@@ -335,11 +334,11 @@ export class ApiKeyResponseDto {
   createdIp?: string;
 
   @ApiProperty({ description: '创建时间', example: '2024-01-01T00:00:00.000Z' })
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 
   @ApiProperty({ description: '更新时间', example: '2024-01-01T00:00:00.000Z' })
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   updatedAt: Date;
 
   @ApiProperty({ description: '是否已过期', example: false })
@@ -411,11 +410,11 @@ export class ApiKeyStatsDto {
     description: '最后使用时间',
     example: '2024-01-15T10:30:00.000Z'
   })
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   lastUsedAt?: Date;
 
   @ApiProperty({ description: '创建时间', example: '2024-01-01T00:00:00.000Z' })
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 
   @ApiProperty({ description: '使用天数', example: 15 })

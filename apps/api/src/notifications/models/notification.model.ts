@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, ID, ObjectType } from '@nestjs/graphql';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Notification')
 export class NotificationModel {
@@ -11,7 +11,7 @@ export class NotificationModel {
   @Field(() => String)
   message: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   timestamp: Date;
 
   @Field(() => ID, { nullable: true })

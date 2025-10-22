@@ -1,6 +1,5 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import GraphQLJSON from 'graphql-type-json';
-import { DateTimeScalar } from '../../common/scalars/date-time.scalar';
 
 type DlqMessageModelInit = {
   id?: string;
@@ -13,14 +12,6 @@ type DlqMessageModelInit = {
 
 @ObjectType('DlqMessage')
 export class DlqMessageModel {
-  private failureMoment: Date = new Date();
-
-  constructor(init?: DlqMessageModelInit) {
-    if (init) {
-      Object.assign(this, init);
-    }
-  }
-
   @Field(() => String)
   id: string;
 
@@ -30,20 +21,24 @@ export class DlqMessageModel {
   @Field(() => GraphQLJSON, { nullable: true })
   content?: unknown;
 
-  @Field(() => DateTimeScalar)
-  get failedAt(): Date {
-    return this.failureMoment;
-  }
-
-  set failedAt(value: Date | string | number | null | undefined) {
-    this.failureMoment = this.coerceToDate(value);
-  }
+  @Field(() => Date)
+  failedAt: Date = new Date();
 
   @Field(() => Int)
   retryCount: number;
 
   @Field(() => String, { nullable: true })
   errorMessage?: string;
+
+  constructor(init?: DlqMessageModelInit) {
+    if (!init) {
+      return;
+    }
+
+    const { failedAt, ...rest } = init;
+    Object.assign(this, rest);
+    this.failedAt = this.coerceToDate(failedAt);
+  }
 
   private coerceToDate(value: Date | string | number | null | undefined): Date {
     if (value instanceof Date && !Number.isNaN(value.getTime())) {

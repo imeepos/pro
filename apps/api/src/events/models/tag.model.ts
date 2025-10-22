@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, ID, Int, ObjectType } from '@nestjs/graphql';
+import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
 import { TagEntity } from '@pro/entities';
 import { createOffsetConnectionType } from '../../common/models/pagination.model';
 
@@ -16,10 +16,10 @@ export class TagModel {
   @Field(() => Int)
   usageCount: number;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   updatedAt: Date;
 }
 

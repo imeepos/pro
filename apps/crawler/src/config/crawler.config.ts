@@ -1,9 +1,18 @@
 import { ConfigService } from '@nestjs/config';
 import { QUEUE_NAMES } from '@pro/types';
 
+export interface RenderingRuntimeConfig {
+  enabled: boolean;
+  headless: boolean;
+  navigationTimeoutMs: number;
+  actionTimeoutMs: number;
+  warmupUrl: string;
+}
+
 export interface CrawlerRuntimeConfig {
   userAgent: string;
   requestTimeoutMs: number;
+  rendering: RenderingRuntimeConfig;
 }
 
 export interface RabbitConfig {
@@ -28,11 +37,47 @@ export interface WeiboTaskConfig {
   userInfoEndpoint: string;
 }
 
+const coerceBoolean = (value: unknown, fallback: boolean): boolean => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+    if (['false', '0', 'no', 'off'].includes(normalized)) {
+      return false;
+    }
+  }
+  return fallback;
+};
+
+const coerceNumber = (value: unknown, fallback: number): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
+};
+
 export const createCrawlerRuntimeConfig = (config: ConfigService): CrawlerRuntimeConfig => ({
   userAgent:
     config.get<string>('CRAWLER_USER_AGENT') ??
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-  requestTimeoutMs: config.get<number>('CRAWLER_REQUEST_TIMEOUT_MS', 20000),
+  requestTimeoutMs: coerceNumber(config.get('CRAWLER_REQUEST_TIMEOUT_MS'), 20000),
+  rendering: {
+    enabled: coerceBoolean(config.get('CRAWLER_RENDERING_ENABLED'), false),
+    headless: coerceBoolean(config.get('CRAWLER_RENDERING_HEADLESS'), true),
+    navigationTimeoutMs: coerceNumber(config.get('CRAWLER_RENDERING_NAVIGATION_TIMEOUT_MS'), 30000),
+    actionTimeoutMs: coerceNumber(config.get('CRAWLER_RENDERING_ACTION_TIMEOUT_MS'), 15000),
+    warmupUrl: config.get<string>('CRAWLER_RENDERING_WARMUP_URL', 'https://example.com')!,
+  },
 });
 
 export const createRabbitConfig = (config: ConfigService): RabbitConfig => ({

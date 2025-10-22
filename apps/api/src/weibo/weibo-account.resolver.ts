@@ -1,5 +1,5 @@
 import { ForbiddenException, UseGuards } from '@nestjs/common';
-import { Args, ID, Int, Mutation, Query, Resolver, GraphQLISODateTime, ObjectType, Field } from '@nestjs/graphql';
+import { Args, ID, Int, Mutation, Query, Resolver, ObjectType, Field } from '@nestjs/graphql';
 import { ConfigService } from '@nestjs/config';
 import { buildOffsetConnection } from '../common/utils/pagination.utils';
 import { WeiboAccountService } from './weibo-account.service';
@@ -144,6 +144,6 @@ class WeiboAccountWithCookiesModel {
   @Field(() => String)
   cookies: string;
 
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   lastCheckAt?: Date;
 }

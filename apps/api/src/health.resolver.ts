@@ -1,11 +1,11 @@
-import { Query, Resolver, ObjectType, Field, GraphQLISODateTime } from '@nestjs/graphql';
+import { Query, Resolver, ObjectType, Field } from '@nestjs/graphql';
 
 @ObjectType('HealthStatus')
 class HealthStatusModel {
   @Field(() => String)
   status: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   timestamp: Date;
 }
 

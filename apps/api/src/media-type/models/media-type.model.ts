@@ -1,7 +1,7 @@
-import { Field, GraphQLISODateTime, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { MediaTypeEntity } from '@pro/entities';
 import { createOffsetConnectionType } from '../../common/models/pagination.model';
-import { MediaTypeStatus } from '@pro/types'
+import { MediaTypeStatus } from '@pro/types';
 registerEnumType(MediaTypeStatus, {
   name: 'MediaTypeStatus',
   description: '媒体类型状态',
@@ -27,10 +27,10 @@ export class MediaTypeModel {
   @Field(() => MediaTypeStatus)
   status: MediaTypeStatus;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   updatedAt: Date;
 }
 

@@ -2,7 +2,7 @@ import { BaseTask, TaskContext, TaskResult } from './base-task';
 import { HtmlRequest, HtmlResponse } from '../services/html-fetcher.service';
 
 export abstract class HtmlTask extends BaseTask {
-  protected abstract createRequest(context: TaskContext): HtmlRequest;
+  protected abstract createRequest(context: TaskContext): HtmlRequest | Promise<HtmlRequest>;
 
   protected abstract handleResponse(
     response: HtmlResponse,
@@ -10,7 +10,8 @@ export abstract class HtmlTask extends BaseTask {
   ): Promise<TaskResult>;
 
   protected async execute(context: TaskContext): Promise<TaskResult> {
-    const request = this.createRequest(context);
+    const request = await this.createRequest(context);
+    await this.ensureAccount(context, request);
     const response = await context.htmlFetcher.fetch(request);
     return this.handleResponse(response, context);
   }

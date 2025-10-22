@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, ID, InputType } from '@nestjs/graphql';
+import { Field, ID, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsDate, IsOptional, IsString, MaxLength } from 'class-validator';
 
@@ -27,6 +27,6 @@ export class NotificationInput {
   @IsOptional()
   @Type(() => Date)
   @IsDate()
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   timestamp?: Date;
 }

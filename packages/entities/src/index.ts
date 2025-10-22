@@ -5,6 +5,13 @@ export * from './weibo-account.entity.js';
 export * from './weibo-post.entity.js';
 export * from './weibo-comment.entity.js';
 export * from './weibo-user.entity.js';
+export * from './weibo-media.entity.js';
+export * from './weibo-hashtag.entity.js';
+export * from './weibo-post-hashtag.entity.js';
+export * from './weibo-post-mention.entity.js';
+export * from './weibo-interaction.entity.js';
+export * from './weibo-user-stats.entity.js';
+export * from './enums/weibo.enums.js';
 export * from './jd-account.entity.js';
 export * from './screen-page.entity.js';
 export * from './industry-type.entity.js';
@@ -39,6 +46,12 @@ import { WeiboAccountEntity } from './weibo-account.entity.js';
 import { WeiboPostEntity } from './weibo-post.entity.js';
 import { WeiboCommentEntity } from './weibo-comment.entity.js';
 import { WeiboUserEntity } from './weibo-user.entity.js';
+import { WeiboMediaEntity } from './weibo-media.entity.js';
+import { WeiboHashtagEntity } from './weibo-hashtag.entity.js';
+import { WeiboPostHashtagEntity } from './weibo-post-hashtag.entity.js';
+import { WeiboPostMentionEntity } from './weibo-post-mention.entity.js';
+import { WeiboInteractionEntity } from './weibo-interaction.entity.js';
+import { WeiboUserStatsEntity } from './weibo-user-stats.entity.js';
 import { WeiboSearchTaskEntity } from './weibo-search-task.entity.js';
 import { WeiboSubTaskEntity } from './weibo-sub-task.entity.js';
 import { JdAccountEntity } from './jd-account.entity.js';
@@ -73,6 +86,12 @@ const entities = [
   WeiboPostEntity,
   WeiboCommentEntity,
   WeiboUserEntity,
+  WeiboMediaEntity,
+  WeiboHashtagEntity,
+  WeiboPostHashtagEntity,
+  WeiboPostMentionEntity,
+  WeiboInteractionEntity,
+  WeiboUserStatsEntity,
   WeiboSearchTaskEntity,
   WeiboSubTaskEntity,
   JdAccountEntity,

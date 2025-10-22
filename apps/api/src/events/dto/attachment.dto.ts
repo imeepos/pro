@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsInt, IsIn, Min, IsNumber, IsPositive, Matches } from 'class-validator';
 import { FileType } from '@pro/types';
-import { Field, Float, GraphQLISODateTime, ID, InputType, ObjectType } from '@nestjs/graphql';
+import { Field, Float, ID, InputType, ObjectType } from '@nestjs/graphql';
 
 export class UploadAttachmentDto {
   @IsString()
@@ -61,7 +61,7 @@ export class AttachmentUploadCredential {
   @Field(() => String)
   bucketName: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   expiresAt: Date;
 
   @Field(() => Boolean)

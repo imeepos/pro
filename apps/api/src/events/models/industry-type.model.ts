@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, ID, Int, ObjectType } from '@nestjs/graphql';
+import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
 import { IndustryTypeEntity } from '@pro/entities';
 
 @ObjectType('IndustryType')
@@ -21,10 +21,10 @@ export class IndustryTypeModel {
   @Field(() => Int)
   status: number;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   updatedAt: Date;
 }
 

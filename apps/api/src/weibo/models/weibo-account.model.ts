@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, ID, ObjectType } from '@nestjs/graphql';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
 import { createOffsetConnectionType } from '../../common/models/pagination.model';
 
@@ -22,13 +22,13 @@ export class WeiboAccountModel {
   @Field(() => Boolean)
   hasCookies: boolean;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   updatedAt: Date;
 
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   lastCheckAt?: Date;
 }
 

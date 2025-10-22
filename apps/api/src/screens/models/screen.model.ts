@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { ScreenPageEntity, ScreenComponent as ScreenComponentEntity, LayoutConfig } from '@pro/entities';
 import { UserModel } from '../../user/models/user.model';
@@ -133,10 +133,10 @@ export class ScreenModel {
   @Field(() => String)
   createdBy: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   updatedAt: Date;
 
   @Field(() => UserModel, { nullable: true })

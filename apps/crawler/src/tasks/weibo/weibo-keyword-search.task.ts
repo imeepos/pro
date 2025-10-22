@@ -1,6 +1,7 @@
 import { SourcePlatform, SourceType, WeiboSearchType } from '@pro/types';
 import { HtmlTask } from '../html-task';
 import { NormalizedTask, TaskContext, TaskResult } from '../base-task';
+import { HtmlRequest } from '../../services/html-fetcher.service';
 
 const endpointKey: Record<WeiboSearchType, keyof TaskContext['weiboConfig']['searchEndpoints']> = {
   [WeiboSearchType.DEFAULT]: 'default',
@@ -26,13 +27,9 @@ export class WeiboKeywordSearchTask extends HtmlTask {
     super(task);
   }
 
-  protected createRequest(context: TaskContext) {
-    const searchType = this.options.searchType ?? WeiboSearchType.DEFAULT;
-    const page = this.options.page ?? 1;
-    const base = context.weiboConfig.searchEndpoints[endpointKey[searchType] ?? 'default'];
-    const params = new URLSearchParams({ q: this.task.keyword, page: String(page) });
-    this.applyExtras(params, searchType, this.task.start, this.task.end);
-    return { url: `${base}?${params.toString()}` };
+  protected async createRequest(context: TaskContext): Promise<HtmlRequest> {
+    const request = { url: this.composeRequestUrl(context) };
+    return this.withWeiboAccount(context, request);
   }
 
   protected async handleResponse(
@@ -41,7 +38,7 @@ export class WeiboKeywordSearchTask extends HtmlTask {
   ): Promise<TaskResult> {
     const page = this.options.page ?? 1;
     const searchType = this.options.searchType ?? WeiboSearchType.DEFAULT;
-    const requestUrl = this.createRequest(context).url;
+    const requestUrl = this.composeRequestUrl(context);
 
     const stored = await context.storage.store({
       type: SourceType.WEIBO_KEYWORD_SEARCH,
@@ -61,7 +58,21 @@ export class WeiboKeywordSearchTask extends HtmlTask {
       },
     });
 
+    const account = this.getSelectedAccount();
+    if (account) {
+      await context.weiboAccountService.decreaseHealthScore(account.id);
+    }
+
     return { success: stored, notes: stored ? undefined : 'duplicate' };
+  }
+
+  private composeRequestUrl(context: TaskContext): string {
+    const searchType = this.options.searchType ?? WeiboSearchType.DEFAULT;
+    const page = this.options.page ?? 1;
+    const base = context.weiboConfig.searchEndpoints[endpointKey[searchType] ?? 'default'];
+    const params = new URLSearchParams({ q: this.task.keyword, page: String(page) });
+    this.applyExtras(params, searchType, this.task.start, this.task.end);
+    return `${base}?${params.toString()}`;
   }
 
   private applyExtras(

@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { WeiboLoginEventType } from '@pro/types';
 import { WeiboLoginEvent, WeiboLoginEventType as WeiboLoginEventTypeString, WeiboLoginSessionSnapshot } from '../weibo-auth.service';
@@ -22,7 +22,7 @@ export class WeiboLoginSessionModel {
   @Field(() => String)
   sessionId: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   expiresAt: Date;
 
   @Field(() => Boolean)

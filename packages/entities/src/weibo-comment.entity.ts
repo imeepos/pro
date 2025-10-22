@@ -1,47 +1,159 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
+  Entity,
   Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  RelationId,
+  UpdateDateColumn,
 } from 'typeorm';
+import { WeiboPostEntity } from './weibo-post.entity.js';
+import { WeiboUserEntity } from './weibo-user.entity.js';
+import { WeiboInteractionEntity } from './weibo-interaction.entity.js';
 
 @Entity('weibo_comments')
 @Index(['commentId'], { unique: true })
-@Index(['postWeiboId'])
-@Index(['publishedAt'])
+@Index(['mid'], { unique: true })
+@Index(['postId', 'path'])
+@Index(['createdAt'])
 export class WeiboCommentEntity {
-  @PrimaryGeneratedColumn('increment')
-  id: number;
+  @PrimaryGeneratedColumn('increment', { type: 'bigint', unsigned: true })
+  id!: string;
 
-  @Column({ type: 'varchar', length: 50, name: 'comment_id' })
-  commentId: string;
+  @Column({
+    type: 'numeric',
+    precision: 20,
+    scale: 0,
+    name: 'comment_id',
+  })
+  commentId!: string;
 
-  @Column({ type: 'varchar', length: 50, name: 'post_weibo_id' })
-  postWeiboId: string;
+  @Column({ type: 'varchar', length: 64, name: 'idstr' })
+  idstr!: string;
+
+  @Column({ type: 'varchar', length: 64, name: 'mid' })
+  mid!: string;
+
+  @Column({
+    type: 'numeric',
+    precision: 20,
+    scale: 0,
+    name: 'root_id',
+    nullable: true,
+  })
+  rootId!: string | null;
+
+  @Column({ type: 'varchar', length: 64, name: 'root_mid', nullable: true })
+  rootMid!: string | null;
+
+  @ManyToOne(() => WeiboPostEntity, (post) => post.comments, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'post_id' })
+  post!: WeiboPostEntity;
+
+  @RelationId((comment: WeiboCommentEntity) => comment.post)
+  postId!: string;
+
+  @ManyToOne(() => WeiboUserEntity, (user) => user.comments, {
+    nullable: false,
+  })
+  @JoinColumn({ name: 'author_id' })
+  author!: WeiboUserEntity;
+
+  @RelationId((comment: WeiboCommentEntity) => comment.author)
+  authorId!: string;
+
+  @Column({
+    type: 'numeric',
+    precision: 20,
+    scale: 0,
+    name: 'author_weibo_id',
+  })
+  authorWeiboId!: string;
+
+  @Column({ type: 'varchar', length: 64, name: 'author_nickname', nullable: true })
+  authorNickname!: string | null;
 
   @Column({ type: 'text' })
-  content: string;
+  text!: string;
 
-  @Column({ type: 'varchar', length: 50, name: 'author_weibo_id' })
-  authorWeiboId: string;
+  @Column({ type: 'text', name: 'text_raw', nullable: true })
+  textRaw!: string | null;
 
-  @Column({ type: 'varchar', length: 100, nullable: true, name: 'author_nickname' })
-  authorNickname: string | null;
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  source!: string | null;
 
-  @Column({ type: 'timestamp', name: 'published_at' })
-  publishedAt: Date;
+  @Column({ type: 'integer', name: 'floor_number', nullable: true })
+  floorNumber!: number | null;
 
-  @Column({ type: 'int', default: 0, name: 'like_count' })
-  likeCount: number;
+  @Column({ type: 'timestamptz', name: 'created_at' })
+  createdAt!: Date;
 
-  @Column({ type: 'varchar', length: 50, nullable: true, name: 'reply_to_comment_id' })
-  replyToCommentId: string | null;
+  @Column({
+    type: 'integer',
+    name: 'like_counts',
+    default: 0,
+  })
+  likeCounts!: number;
 
-  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-  createdAt: Date;
+  @Column({ type: 'boolean', default: false })
+  liked!: boolean;
 
-  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-  updatedAt: Date;
+  @Column({ type: 'integer', name: 'total_number', nullable: true })
+  totalNumber!: number | null;
+
+  @Column({ type: 'boolean', name: 'disable_reply', default: false })
+  disableReply!: boolean;
+
+  @Column({ type: 'boolean', name: 'restrict_operate', default: false })
+  restrictOperate!: boolean;
+
+  @Column({ type: 'boolean', name: 'allow_follow', default: true })
+  allowFollow!: boolean;
+
+  @Column({
+    type: 'numeric',
+    precision: 20,
+    scale: 0,
+    name: 'reply_comment_id',
+    nullable: true,
+  })
+  replyCommentId!: string | null;
+
+  @Column({ type: 'text', name: 'reply_original_text', nullable: true })
+  replyOriginalText!: string | null;
+
+  @Column({ type: 'boolean', name: 'is_mblog_author', default: false })
+  isMblogAuthor!: boolean;
+
+  @Column({ type: 'jsonb', name: 'comment_badge', nullable: true })
+  commentBadge!: Record<string, unknown> | null;
+
+  @Column({ type: 'ltree' })
+  path!: string;
+
+  @Column({ type: 'jsonb', name: 'raw_payload' })
+  rawPayload!: Record<string, unknown>;
+
+  @CreateDateColumn({
+    type: 'timestamptz',
+    name: 'ingested_at',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  ingestedAt!: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamptz',
+    name: 'updated_at',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  updatedAt!: Date;
+
+  @OneToMany(() => WeiboInteractionEntity, (interaction) => interaction.comment)
+  interactions!: WeiboInteractionEntity[];
 }

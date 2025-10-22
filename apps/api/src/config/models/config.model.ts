@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { ConfigType } from '../dto/config.dto';
 
 registerEnumType(ConfigType, {
@@ -11,7 +11,7 @@ export class ConfigValueModel {
   @Field(() => String)
   value: string;
 
-  @Field(() => GraphQLISODateTime, { nullable: true })
+  @Field(() => Date, { nullable: true })
   expiresAt?: Date;
 }
 

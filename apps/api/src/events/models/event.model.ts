@@ -1,4 +1,4 @@
-import { Field, Float, GraphQLISODateTime, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, Float, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { EventAttachmentEntity, EventEntity, EventStatus, EventTagEntity } from '@pro/entities';
 import { FileType } from '@pro/types';
 import { EventTypeModel, mapEventTypeEntityToModel } from './event-type.model';
@@ -46,7 +46,7 @@ export class EventAttachmentModel {
   @Field(() => Int)
   sortOrder: number;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 }
 
@@ -64,7 +64,7 @@ export class EventModel {
   @Field(() => String, { nullable: true })
   summary?: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   occurTime: Date;
 
   @Field(() => String)
@@ -97,10 +97,10 @@ export class EventModel {
   @Field(() => String, { nullable: true })
   createdBy?: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   updatedAt: Date;
 
   @Field(() => EventTypeModel, { nullable: true })
@@ -132,7 +132,7 @@ export class EventMapPointModel {
   @Field(() => String, { nullable: true })
   summary?: string;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   occurTime: Date;
 
   @Field(() => String)

@@ -3,14 +3,13 @@ import { PinoLogger } from '@pro/logger';
 import { NLPAnalysisResult } from '@pro/entities';
 import * as natural from 'natural';
 import * as franc from 'franc-min';
-// @ts-ignore
-import { Segment } from 'segment';
+import Segment from 'segment';
 import { PerformanceMonitorService } from './performance-monitor.service';
 
 @Injectable()
 export class NLPAnalysisService {
   private readonly cache = new Map<string, NLPAnalysisResult>();
-  private readonly segment: any;
+  private readonly segment: Segment;
   private readonly topicPatterns: Array<{ pattern: RegExp; name: string; keywords: string[] }>;
   private readonly entityPatterns: Record<string, RegExp>;
 
@@ -154,7 +153,7 @@ export class NLPAnalysisService {
     const cleanText = this.preprocessText(text);
 
     // 使用中文分词
-    const chineseWords = this.segment.doSegment(cleanText, { simple: true }) as string[];
+    const chineseWords = this.segment.doSegment(cleanText, { simple: true });
     const chineseKeywords = this.calculateTfIdf(chineseWords);
 
     // 使用英文分词处理混合文本

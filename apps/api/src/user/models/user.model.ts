@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { UserStatus } from '@pro/types';
 
 registerEnumType(UserStatus, {
@@ -20,9 +20,9 @@ export class UserModel {
   @Field(() => UserStatus)
   status: UserStatus;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   createdAt: Date;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => Date)
   updatedAt: Date;
 }
