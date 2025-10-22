@@ -258,9 +258,13 @@ export class WeiboPostsComponent implements OnInit {
   }
 
   getFilterClass(value: boolean | undefined): string {
-    if (value === undefined) return 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300';
-    if (value === true) return 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700';
-    return 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400';
+    if (value === undefined) {
+      return 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600';
+    }
+    if (value === true) {
+      return 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700';
+    }
+    return 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600';
   }
 
   getSortIcon(field: 'createdAt' | 'attitudesCount' | 'commentsCount'): string {

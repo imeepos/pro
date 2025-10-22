@@ -48,6 +48,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/weibo-data/weibo-posts.component').then(m => m.WeiboPostsComponent)
       },
       {
+        path: 'weibo-data/users',
+        loadComponent: () => import('./features/weibo-data/weibo-users.component').then(m => m.WeiboUsersComponent)
+      },
+      {
         path: 'weibo-data/comments',
         loadComponent: () => import('./features/weibo-data/weibo-comments.component').then(m => m.WeiboCommentsComponent)
       },

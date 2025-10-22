@@ -30,6 +30,8 @@ export class BreadcrumbComponent implements OnInit, OnDestroy {
     'editor': '编辑大屏',
     'weibo': '微博管理',
     'weibo-search-tasks': '微博搜索任务',
+    'weibo-data': '微博数据管理',
+    'users': '用户管理',
     'accounts': '账号列表',
     'login': '微博登录',
     'register': '注册',

@@ -102,6 +102,12 @@ export const MENU_ITEMS: MenuItem[] = [
         route: '/weibo-data/posts'
       },
       {
+        id: 'weibo-users',
+        label: '用户管理',
+        icon: 'users',
+        route: '/weibo-data/users'
+      },
+      {
         id: 'weibo-comments',
         label: '评论管理',
         icon: 'chat',
