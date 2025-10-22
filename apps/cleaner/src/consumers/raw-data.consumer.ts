@@ -21,16 +21,34 @@ export class RawDataConsumer implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     this.logger.info('启动原始数据消费者');
 
+    try {
+      this.logger.debug('等待 RabbitMQ 渠道就绪');
+      await this.rabbitMQService.waitForConnection();
+    } catch (error) {
+      this.logger.error('原始数据消费者初始化失败, RabbitMQ 渠道未就绪', {
+        error: error.message,
+      });
+      throw error;
+    }
+
     const client = this.rabbitMQService.getClient();
     const queue = this.rabbitMQService.getQueueName();
 
-    await client.consume(
-      queue,
-      async (event: RawDataReadyEvent) => {
-        await this.processRawData(event);
-      },
-      { noAck: false, prefetchCount: 5 },
-    );
+    try {
+      await client.consume(
+        queue,
+        async (event: RawDataReadyEvent) => {
+          await this.processRawData(event);
+        },
+        { noAck: false, prefetchCount: 5 },
+      );
+    } catch (error) {
+      this.logger.error('原始数据消费者启动失败', {
+        queue,
+        error: error.message,
+      });
+      throw error;
+    }
 
     this.logger.info('原始数据消费者已启动');
   }

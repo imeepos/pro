@@ -16,8 +16,8 @@ export interface DlqMessage {
   queueName: string;
   /** 原始消息内容，保持原貌 */
   content: unknown;
-  /** 第一次失败时间 */
-  failedAt: Date | string;
+  /** 第一次失败时间，服务端始终返回合法 Date */
+  failedAt: Date;
   /** 已尝试重试的次数 */
   retryCount: number;
   /** 最后一次失败时的错误信息 */

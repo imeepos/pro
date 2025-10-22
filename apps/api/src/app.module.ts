@@ -38,6 +38,7 @@ import { ConnectionMetricsService } from './monitoring/connection-metrics.servic
 import { EventTypeLoader } from './events/event-type.loader';
 import { IndustryTypeLoader } from './events/industry-type.loader';
 import { TagLoader } from './events/tag.loader';
+import { DateTimeScalar } from './common/scalars/date-time.scalar';
 
 @Module({
   imports: [
@@ -189,6 +190,6 @@ import { TagLoader } from './events/tag.loader';
     TasksModule,
   ],
   controllers: [],
-  providers: [HealthResolver],
+  providers: [HealthResolver, DateTimeScalar],
 })
 export class AppModule {}

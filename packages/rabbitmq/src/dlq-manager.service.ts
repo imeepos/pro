@@ -9,6 +9,12 @@ interface DlqQueueDefinition {
   originalQueue: string;
 }
 
+interface DlqManagerOptions {
+  queues?: DlqQueueDefinition[];
+  fetchLimit?: number;
+  logger?: Pick<Console, 'debug' | 'warn' | 'error'>;
+}
+
 const DEFAULT_DLQ_QUEUES: DlqQueueDefinition[] = [
   {
     name: `${QUEUE_NAMES.CRAWL_TASK}.dlq`,
@@ -32,18 +38,17 @@ export class DlqManagerService {
   private readonly connectionPool: ConnectionPool;
   private readonly queues: DlqQueueDefinition[];
   private readonly fetchLimit: number;
+  private readonly logger: Pick<Console, 'debug' | 'warn' | 'error'>;
   private initialized = false;
 
   constructor(
     config: RabbitMQConfig,
-    options?: {
-      queues?: DlqQueueDefinition[];
-      fetchLimit?: number;
-    },
+    options?: DlqManagerOptions,
   ) {
     this.connectionPool = new ConnectionPool(config);
     this.queues = options?.queues ?? DEFAULT_DLQ_QUEUES;
     this.fetchLimit = Math.max(1, Math.min(options?.fetchLimit ?? 100, 500));
+    this.logger = options?.logger ?? console;
   }
 
   async getDlqQueues(): Promise<DlqQueueInfo[]> {
@@ -186,6 +191,11 @@ export class DlqManagerService {
   private toDlqMessage(queueName: string, message: Message): DlqMessage {
     const headers = message.properties.headers ?? {};
     const deathInfo = this.extractDeathInfo(headers);
+    if (deathInfo && typeof deathInfo.time === 'undefined') {
+      this.logger.warn(
+        `[DLQ] x-death 缺少 time 字段: ${this.safeStringify(deathInfo)}`,
+      );
+    }
 
     return {
       id: this.extractMessageId(message),
@@ -232,18 +242,26 @@ export class DlqManagerService {
     }
   }
 
-  private resolveFailureTime(deathInfo: any | undefined): string {
-    const time = deathInfo?.time;
-    if (!time) {
-      return new Date().toISOString();
+  private resolveFailureTime(deathInfo: any | undefined): Date {
+    this.logger.debug(
+      `[DLQ] 解析失败时间: deathInfo=${this.safeStringify(deathInfo)}`,
+    );
+
+    const candidate = deathInfo?.time;
+    if (candidate === undefined || candidate === null) {
+      this.logger.warn('[DLQ] x-death 缺少 time 值，使用当前时间');
+      return new Date();
     }
 
-    if (time instanceof Date) {
-      return time.toISOString();
+    const resolved = this.parseFailureTimestamp(candidate);
+    if (resolved) {
+      return resolved;
     }
 
-    const date = new Date(time);
-    return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+    this.logger.error(
+      `[DLQ] 无法解析死信消息时间: candidate=${this.safeStringify(candidate)}`,
+    );
+    return new Date();
   }
 
   private resolveRetryCount(
@@ -298,5 +316,61 @@ export class DlqManagerService {
     }
 
     return queueName.replace(/\.dlq$/i, '');
+  }
+
+  private parseFailureTimestamp(candidate: unknown): Date | null {
+    if (candidate instanceof Date && !Number.isNaN(candidate.getTime())) {
+      this.logger.debug('[DLQ] 时间戳为有效 Date 实例');
+      return candidate;
+    }
+
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+      const milliseconds = candidate >= 1e12 ? candidate : candidate * 1000;
+      this.logger.debug(
+        `[DLQ] 数值时间戳解析: 原始=${candidate}, 毫秒=${milliseconds}`,
+      );
+      return this.instantOrNull(milliseconds);
+    }
+
+    if (typeof candidate === 'string') {
+      const trimmed = candidate.trim();
+      if (trimmed) {
+        const numeric = Number(trimmed);
+        if (!Number.isNaN(numeric)) {
+          const milliseconds = Math.abs(numeric) >= 1e12 ? numeric : numeric * 1000;
+          this.logger.debug(
+            `[DLQ] 字符串数字时间戳解析: 原始=${trimmed}, 毫秒=${milliseconds}`,
+          );
+          return this.instantOrNull(milliseconds);
+        }
+
+        const parsed = new Date(trimmed);
+        this.logger.debug(`[DLQ] ISO 字符串解析: 原始=${trimmed}`);
+        if (!Number.isNaN(parsed.getTime())) {
+          return parsed;
+        }
+      }
+    }
+
+    this.logger.warn(
+      `[DLQ] 未知时间戳类型: ${typeof candidate}=${this.safeStringify(candidate)}`,
+    );
+    return null;
+  }
+
+  private instantOrNull(milliseconds: number): Date | null {
+    const result = new Date(milliseconds);
+    return Number.isNaN(result.getTime()) ? null : result;
+  }
+
+  private safeStringify(input: unknown): string {
+    try {
+      const serialized = JSON.stringify(input);
+      if (serialized) {
+        return serialized;
+      }
+    } catch {
+    }
+    return String(input);
   }
 }

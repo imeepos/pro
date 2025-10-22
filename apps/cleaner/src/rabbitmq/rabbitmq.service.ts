@@ -7,11 +7,19 @@ import { QUEUE_NAMES, CleanedDataEvent } from '@pro/types';
 @Injectable()
 export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private client: RabbitMQClient;
+  private readonly clientReady: Promise<void>;
+  private resolveClientReady?: () => void;
+  private rejectClientReady?: (error: Error) => void;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly logger: PinoLogger,
-  ) {}
+  ) {
+    this.clientReady = new Promise<void>((resolve, reject) => {
+      this.resolveClientReady = resolve;
+      this.rejectClientReady = reject;
+    });
+  }
 
   async onModuleInit(): Promise<void> {
     const config: RabbitMQConfig = {
@@ -33,11 +41,19 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       await this.client.connect();
       const duration = Date.now() - startTime;
 
+      this.resolveClientReady?.();
+      this.resolveClientReady = undefined;
+      this.rejectClientReady = undefined;
+
       this.logger.info(`RabbitMQ 连接已建立,耗时 ${duration}ms`, {
         queue: config.queue,
         connectionTimeMs: duration,
       });
     } catch (error) {
+      this.rejectClientReady?.(error);
+      this.resolveClientReady = undefined;
+      this.rejectClientReady = undefined;
+
       this.logger.error('RabbitMQ 连接失败', {
         error: error.message,
         queue: config.queue,
@@ -60,6 +76,8 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   }
 
   async publishCleanedData(event: CleanedDataEvent): Promise<boolean> {
+    await this.waitForConnection();
+
     const startTime = Date.now();
 
     try {
@@ -95,10 +113,22 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   }
 
   getClient(): RabbitMQClient {
+    if (!this.client || !this.client.isConnected()) {
+      throw new Error('RabbitMQ 客户端尚未就绪');
+    }
+
     return this.client;
   }
 
   getQueueName(): string {
     return QUEUE_NAMES.RAW_DATA_READY;
+  }
+
+  async waitForConnection(): Promise<void> {
+    if (this.client?.isConnected()) {
+      return;
+    }
+
+    await this.clientReady;
   }
 }
