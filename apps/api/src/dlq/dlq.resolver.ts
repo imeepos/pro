@@ -9,12 +9,34 @@ import { RetryMessagesInput } from './dto/retry-messages.dto';
 import { DeleteMessagesInput } from './dto/delete-messages.dto';
 import { OFFSET_CURSOR_PREFIX } from '../common/models/pagination.model';
 import { DlqMessageModel } from './models/dlq-message.model';
+import { DlqConnectionStatusModel } from './models/dlq-connection-status.model';
 
 @Resolver()
 export class DlqResolver implements OnModuleDestroy {
   private readonly logger = new Logger(DlqResolver.name);
 
   constructor(private readonly dlqManager: DlqManagerService) {}
+
+  @Query(() => DlqConnectionStatusModel, {
+    description: '查看死信队列连接的实时状态',
+  })
+  dlqConnectionStatus(): DlqConnectionStatusModel {
+    const status = this.dlqManager.getConnectionStatus();
+
+    const model = new DlqConnectionStatusModel();
+    model.target = status.target;
+    model.state = status.state;
+    model.connected = status.connected;
+    if (status.lastConnectedAt) {
+      model.lastConnectedAt = new Date(status.lastConnectedAt);
+    }
+    if (status.lastError) {
+      model.lastErrorMessage = status.lastError.message;
+      model.lastErrorAt = new Date(status.lastError.at);
+    }
+
+    return model;
+  }
 
   @Query(() => [DlqQueueInfoModel], {
     description: '获取所有死信队列信息',

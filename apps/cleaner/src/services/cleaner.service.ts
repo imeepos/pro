@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PinoLogger } from '@pro/logger';
 import { RawDataService } from './raw-data.service';
 import { CleanTaskFactory } from '../tasks/clean-task-factory';
@@ -8,14 +8,16 @@ import { WeiboPersistenceService } from './weibo-persistence.service';
 
 @Injectable()
 export class CleanerService {
-  private readonly logger = new Logger(CleanerService.name);
-
   constructor(
     private readonly rawDataService: RawDataService,
     private readonly taskFactory: CleanTaskFactory,
     private readonly weiboPersistence: WeiboPersistenceService,
+    private readonly logger: PinoLogger,
     private readonly taskLogger: PinoLogger,
-  ) {}
+  ) {
+    this.logger.setContext(CleanerService.name);
+    this.taskLogger.setContext('CleanerTask');
+  }
 
   async execute(message: CleanTaskMessage): Promise<CleanTaskResult> {
     const rawData = await this.rawDataService.getRawDataById(message.rawDataId);
@@ -31,7 +33,8 @@ export class CleanerService {
       sourceType: message.sourceType,
     });
 
-    this.logger.debug(`执行清洗任务: ${task.name}`, {
+    this.logger.info('执行清洗任务', {
+      task: task.name,
       rawDataId: message.rawDataId,
       sourceType: message.sourceType,
     });
@@ -46,6 +49,10 @@ export class CleanerService {
       },
     };
 
-    return task.run(context);
+    try {
+      return await task.run(context);
+    } finally {
+      this.taskLogger.setContext('CleanerTask');
+    }
   }
 }

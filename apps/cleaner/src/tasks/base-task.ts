@@ -1,6 +1,7 @@
 import { PinoLogger } from '@pro/logger';
 import { RawDataSourceDoc } from '@pro/mongodb';
 import { CleanTaskMessage } from './clean-task-message';
+import { serializeError } from '../utils/serialize-error';
 
 export interface CleanTaskResult {
   postIds: string[];
@@ -24,20 +25,32 @@ export abstract class BaseTask {
 
   async run(context: CleanTaskContext): Promise<CleanTaskResult> {
     const startedAt = context.clock();
+    context.logger.debug(`${this.name} 开始执行`, {
+      rawDataId: context.rawData._id.toString(),
+      startedAt: startedAt.toISOString(),
+    });
+
     try {
       const result = await this.execute(context);
-      context.logger.debug(`${this.name} 执行完成`, {
+      const finishedAt = context.clock();
+      const durationMs = finishedAt.getTime() - startedAt.getTime();
+
+      context.logger.info(`${this.name} 执行完成`, {
         rawDataId: context.rawData._id.toString(),
-        durationMs: context.clock().getTime() - startedAt.getTime(),
+        finishedAt: finishedAt.toISOString(),
+        durationMs,
         posts: result.postIds.length,
         comments: result.commentIds.length,
         users: result.userIds.length,
       });
       return result;
     } catch (error) {
+      const failedAt = context.clock();
       context.logger.error(`${this.name} 执行失败`, {
         rawDataId: context.rawData._id.toString(),
-        error: error instanceof Error ? error.message : String(error),
+        failedAt: failedAt.toISOString(),
+        durationMs: failedAt.getTime() - startedAt.getTime(),
+        error: serializeError(error),
       });
       throw error;
     }

@@ -102,3 +102,29 @@ describe('DlqManagerService timestamp resolution', () => {
     );
   });
 });
+
+describe('DlqManagerService diagnostics', () => {
+  it('exposes default connection status gracefully', () => {
+    const { service } = createService();
+
+    const status = service.getConnectionStatus();
+
+    expect(status.connected).toBe(false);
+    expect(status.target).toBe('amqp://localhost/');
+    expect(status.lastError).toBeUndefined();
+  });
+
+  it('sanitizes connection target without leaking credentials', () => {
+    const service = new DlqManagerService(
+      {
+        url: 'amqp://guest:secret@127.0.0.1:5672/%2Fanalytics',
+      },
+      { logger: createLogger() },
+    );
+
+    const status = service.getConnectionStatus();
+
+    expect(status.target).toBe('amqp://guest@127.0.0.1:5672/analytics');
+    expect(status.target.includes('secret')).toBe(false);
+  });
+});

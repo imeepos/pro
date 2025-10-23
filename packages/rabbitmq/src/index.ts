@@ -199,4 +199,5 @@ export type {
   QueueStats,
   ConnectionState,
   ConnectionEvent,
+  DlqConnectionStatus,
 } from './types.js';

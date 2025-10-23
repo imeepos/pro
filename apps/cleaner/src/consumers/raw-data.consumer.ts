@@ -8,6 +8,7 @@ import {
 } from '@pro/types';
 import { CleanerService } from '../services/cleaner.service';
 import { fromRawDataEvent } from '../tasks/clean-task-message';
+import { serializeError } from '../utils/serialize-error';
 
 @Injectable()
 export class RawDataConsumer implements OnModuleInit {
@@ -16,7 +17,9 @@ export class RawDataConsumer implements OnModuleInit {
     private readonly rawDataService: RawDataService,
     private readonly cleanerService: CleanerService,
     private readonly logger: PinoLogger,
-  ) {}
+  ) {
+    this.logger.setContext(RawDataConsumer.name);
+  }
 
   async onModuleInit(): Promise<void> {
     this.logger.info('启动原始数据消费者');
@@ -26,7 +29,7 @@ export class RawDataConsumer implements OnModuleInit {
       await this.rabbitMQService.waitForConnection();
     } catch (error) {
       this.logger.error('原始数据消费者初始化失败, RabbitMQ 渠道未就绪', {
-        error: error.message,
+        error: serializeError(error),
       });
       throw error;
     }
@@ -45,7 +48,7 @@ export class RawDataConsumer implements OnModuleInit {
     } catch (error) {
       this.logger.error('原始数据消费者启动失败', {
         queue,
-        error: error.message,
+        error: serializeError(error),
       });
       throw error;
     }
@@ -55,11 +58,12 @@ export class RawDataConsumer implements OnModuleInit {
 
   private async processRawData(event: RawDataReadyEvent): Promise<void> {
     const startTime = Date.now();
+    const messageContext = this.buildMessageContext(event);
 
     this.logger.info('开始处理原始数据', {
-      rawDataId: event.rawDataId,
-      sourceType: event.sourceType,
-      sourcePlatform: event.sourcePlatform,
+      ...messageContext,
+      createdAt: event.createdAt,
+      metadata: event.metadata ?? {},
     });
 
     try {
@@ -69,21 +73,36 @@ export class RawDataConsumer implements OnModuleInit {
 
       if (!rawData) {
         this.logger.error('原始数据不存在', {
-          rawDataId: event.rawDataId,
+          ...messageContext,
         });
         return;
       }
 
       if (rawData.status === 'processed') {
         this.logger.warn('原始数据已处理过,跳过', {
-          rawDataId: event.rawDataId,
+          ...messageContext,
+          currentStatus: rawData.status,
         });
         return;
       }
 
+      this.logger.debug('转换原始事件为清洗任务消息', {
+        ...messageContext,
+        stage: 'fromRawDataEvent',
+      });
       const message = fromRawDataEvent(event);
-      let cleanedData = await this.cleanerService.execute(message);
 
+      this.logger.debug('触发清洗任务执行', {
+        ...messageContext,
+        stage: 'execute',
+      });
+      const cleanedData = await this.cleanerService.execute(message);
+
+      this.logger.debug('更新原始数据状态', {
+        ...messageContext,
+        stage: 'updateStatus',
+        nextStatus: 'processed',
+      });
       await this.rawDataService.updateStatus(event.rawDataId, 'processed');
 
       const processingTime = Date.now() - startTime;
@@ -111,10 +130,15 @@ export class RawDataConsumer implements OnModuleInit {
         createdAt: new Date().toISOString(),
       };
 
+      this.logger.debug('发布清洗完成事件', {
+        ...messageContext,
+        stage: 'publishCleanedData',
+        processingTimeMs: processingTime,
+      });
       await this.rabbitMQService.publishCleanedData(cleanedEvent);
 
       this.logger.info('原始数据处理完成', {
-        rawDataId: event.rawDataId,
+        ...messageContext,
         posts: cleanedData.postIds.length,
         comments: cleanedData.commentIds.length,
         users: cleanedData.userIds.length,
@@ -124,17 +148,60 @@ export class RawDataConsumer implements OnModuleInit {
       const processingTime = Date.now() - startTime;
 
       this.logger.error('处理原始数据失败', {
-        rawDataId: event.rawDataId,
-        error: error.message,
-        stack: error.stack,
+        ...messageContext,
+        error: serializeError(error),
         processingTimeMs: processingTime,
       });
 
+      this.logger.debug('更新原始数据状态', {
+        ...messageContext,
+        stage: 'updateStatus',
+        nextStatus: 'failed',
+      });
       await this.rawDataService.updateStatus(
         event.rawDataId,
         'failed',
-        error.message,
+        error instanceof Error ? error.message : String(error),
       );
     }
+  }
+
+  private buildMessageContext(event: RawDataReadyEvent): Record<string, unknown> {
+    const metadata = (event.metadata ?? {}) as RawDataReadyEvent['metadata'] &
+      Record<string, unknown>;
+
+    const retryCount =
+      typeof metadata.retryCount === 'number'
+        ? metadata.retryCount
+        : typeof metadata.attempt === 'number'
+        ? metadata.attempt
+        : 0;
+
+    const context: Record<string, unknown> = {
+      rawDataId: event.rawDataId,
+      sourceType: event.sourceType,
+      sourcePlatform: event.sourcePlatform,
+      sourceUrl: event.sourceUrl,
+      contentHash: event.contentHash,
+      messageId:
+        typeof metadata.messageId === 'string' &&
+        metadata.messageId.trim().length > 0
+          ? metadata.messageId
+          : event.rawDataId,
+      retryCount,
+    };
+
+    const correlationCandidate =
+      typeof metadata.correlationId === 'string'
+        ? metadata.correlationId
+        : metadata.taskId !== undefined
+        ? String(metadata.taskId)
+        : undefined;
+
+    if (correlationCandidate) {
+      context.correlationId = correlationCandidate;
+    }
+
+    return context;
   }
 }

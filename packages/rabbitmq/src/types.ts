@@ -206,3 +206,29 @@ export interface ConnectionEvent {
   /** 附加元数据 */
   metadata?: Record<string, any>;
 }
+
+/**
+ * 死信连接状态
+ */
+export interface DlqConnectionStatus {
+  /** 连接目标描述（隐藏敏感信息） */
+  target: string;
+
+  /** 当前连接状态 */
+  state: ConnectionState;
+
+  /** 是否处于可用状态 */
+  connected: boolean;
+
+  /** 最近一次成功建立连接的时间戳 */
+  lastConnectedAt?: number;
+
+  /** 最近一次连接错误 */
+  lastError?: {
+    /** 错误信息 */
+    message: string;
+
+    /** 发生时间戳 */
+    at: number;
+  };
+}
