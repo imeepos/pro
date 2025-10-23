@@ -25,11 +25,14 @@ export class AnalysisQueueConsumer implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly logger: PinoLogger,
   ) {
-    this.prefetchCount = this.configService.get<number>('SENTIMENT_BATCH_SIZE', 10);
+    const batchSize = this.configService.get('SENTIMENT_BATCH_SIZE', '10');
+    this.prefetchCount = typeof batchSize === 'number' ? batchSize : parseInt(batchSize, 10);
   }
 
   async onModuleInit(): Promise<void> {
     this.logger.info('初始化分析队列消费者', 'AnalysisQueueConsumer');
+
+    await this.rabbitmqService.waitForConnection();
 
     const client = this.rabbitmqService.getClient();
     const queueName = this.rabbitmqService.getCleanedDataQueue();

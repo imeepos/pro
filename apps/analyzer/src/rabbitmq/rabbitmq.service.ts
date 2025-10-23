@@ -27,6 +27,8 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private client: RabbitMQClient;
   private readonly cleanedDataQueue: string;
   private readonly analysisResultQueue: string;
+  private connectionReady: Promise<void>;
+  private resolveConnection: () => void;
 
   constructor(
     private readonly configService: ConfigService,
@@ -40,6 +42,9 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       'ANALYSIS_RESULT_QUEUE',
       'analysis_result_queue',
     );
+    this.connectionReady = new Promise((resolve) => {
+      this.resolveConnection = resolve;
+    });
   }
 
   async onModuleInit(): Promise<void> {
@@ -69,6 +74,8 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         publishQueue: this.analysisResultQueue,
         connectionTimeMs: connectDuration,
       });
+
+      this.resolveConnection();
     } catch (error) {
       const connectDuration = Date.now() - connectStart;
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -78,6 +85,10 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       });
       throw error;
     }
+  }
+
+  async waitForConnection(): Promise<void> {
+    return this.connectionReady;
   }
 
   async onModuleDestroy(): Promise<void> {
