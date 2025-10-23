@@ -10,37 +10,42 @@ export class WeiboDetailTask extends WeiboApiTask {
   }
 
   protected async execute(context: TaskContext): Promise<TaskResult> {
-    const { baseUrl, options } = await this.resolveWeiboRequest(
-      context,
-      context.weiboConfig.detailEndpoint,
-    );
+    try {
+      const { baseUrl, options } = await this.resolveWeiboRequest(
+        context,
+        context.weiboConfig.detailEndpoint,
+      );
 
-    const detail = await context.weiboStatusService.fetchStatusDetail(this.options.statusId, options);
-    const apiUrl = this.composeApiUrl(baseUrl, 'ajax/statuses/show', {
-      id: this.options.statusId,
-    });
+      const detail = await context.weiboStatusService.fetchStatusDetail(this.options.statusId, options);
+      const apiUrl = this.composeApiUrl(baseUrl, 'ajax/statuses/show', {
+        id: this.options.statusId,
+      });
 
-    const metadata = {
-      ...this.task.metadata,
-      taskId: this.task.taskId,
-      statusId: this.options.statusId,
-      keyword: this.task.keyword,
-      responseUrl: apiUrl,
-    };
+      const metadata = {
+        ...this.task.metadata,
+        taskId: this.task.taskId,
+        statusId: this.options.statusId,
+        keyword: this.task.keyword,
+        responseUrl: apiUrl,
+      };
 
-    const stored = await context.storage.store({
-      type: SourceType.WEIBO_NOTE_DETAIL,
-      platform: SourcePlatform.WEIBO,
-      url: apiUrl,
-      raw: JSON.stringify(detail),
-      metadata,
-    });
+      const stored = await context.storage.store({
+        type: SourceType.WEIBO_NOTE_DETAIL,
+        platform: SourcePlatform.WEIBO,
+        url: apiUrl,
+        raw: JSON.stringify(detail),
+        metadata,
+      });
 
-    const account = this.getSelectedAccount();
-    if (account) {
-      await context.weiboAccountService.decreaseHealthScore(account.id);
+      const account = this.getSelectedAccount();
+      if (account) {
+        await context.weiboAccountService.decreaseHealthScore(account.id);
+      }
+
+      return { success: stored, notes: stored ? undefined : 'duplicate' };
+    } catch (error) {
+      await this.handleAccountHealthOnError(context, error);
+      throw error;
     }
-
-    return { success: stored, notes: stored ? undefined : 'duplicate' };
   }
 }

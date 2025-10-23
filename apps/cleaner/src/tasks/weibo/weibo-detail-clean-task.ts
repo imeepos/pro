@@ -7,6 +7,7 @@ import {
   normalizeStatus,
   normalizeUser,
 } from './weibo-normalizer';
+import { narrate } from '../../utils/logging';
 
 export class WeiboDetailCleanTask extends WeiboBaseCleanTask {
   readonly name = 'WeiboDetailCleanTask';
@@ -44,7 +45,11 @@ export class WeiboDetailCleanTask extends WeiboBaseCleanTask {
     }
 
     if (statuses.length === 0) {
-      logger.warn('微博详情未包含有效正文', { rawDataId: rawData._id.toString() });
+      logger.warn(
+        narrate('微博详情未包含有效正文', {
+          rawDataId: rawData._id.toString(),
+        }),
+      );
       return { postIds: [], commentIds: [], userIds: [], notes: { normalizedEmpty: true } };
     }
 
@@ -71,9 +76,11 @@ export class WeiboDetailCleanTask extends WeiboBaseCleanTask {
       }
       return parsed as WeiboStatusDetail;
     } catch (error) {
-      logger.error('解析微博详情数据失败', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error(
+        narrate('解析微博详情数据失败', {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
       return null;
     }
   }

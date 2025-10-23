@@ -1,5 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { PinoLogger } from '@pro/logger';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 import { RawDataService } from '../services/raw-data.service';
 import {
@@ -9,28 +8,30 @@ import {
 import { CleanerService } from '../services/cleaner.service';
 import { fromRawDataEvent } from '../tasks/clean-task-message';
 import { serializeError } from '../utils/serialize-error';
+import { narrate } from '../utils/logging';
 
 @Injectable()
 export class RawDataConsumer implements OnModuleInit {
+  private readonly logger = new Logger(RawDataConsumer.name);
+
   constructor(
     private readonly rabbitMQService: RabbitMQService,
     private readonly rawDataService: RawDataService,
     private readonly cleanerService: CleanerService,
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(RawDataConsumer.name);
-  }
+  ) {}
 
   async onModuleInit(): Promise<void> {
-    this.logger.info('启动原始数据消费者');
+    this.logger.log(narrate('启动原始数据消费者'));
 
     try {
-      this.logger.debug('等待 RabbitMQ 渠道就绪');
+      this.logger.debug(narrate('等待 RabbitMQ 渠道就绪'));
       await this.rabbitMQService.waitForConnection();
     } catch (error) {
-      this.logger.error('原始数据消费者初始化失败, RabbitMQ 渠道未就绪', {
-        error: serializeError(error),
-      });
+      this.logger.error(
+        narrate('原始数据消费者初始化失败, RabbitMQ 渠道未就绪', {
+          error: serializeError(error),
+        }),
+      );
       throw error;
     }
 
@@ -46,25 +47,29 @@ export class RawDataConsumer implements OnModuleInit {
         { noAck: false, prefetchCount: 5 },
       );
     } catch (error) {
-      this.logger.error('原始数据消费者启动失败', {
-        queue,
-        error: serializeError(error),
-      });
+      this.logger.error(
+        narrate('原始数据消费者启动失败', {
+          queue,
+          error: serializeError(error),
+        }),
+      );
       throw error;
     }
 
-    this.logger.info('原始数据消费者已启动');
+    this.logger.log(narrate('原始数据消费者已启动'));
   }
 
   private async processRawData(event: RawDataReadyEvent): Promise<void> {
     const startTime = Date.now();
     const messageContext = this.buildMessageContext(event);
 
-    this.logger.info('开始处理原始数据', {
-      ...messageContext,
-      createdAt: event.createdAt,
-      metadata: event.metadata ?? {},
-    });
+    this.logger.log(
+      narrate('开始处理原始数据', {
+        ...messageContext,
+        createdAt: event.createdAt,
+        metadata: event.metadata ?? {},
+      }),
+    );
 
     try {
       const rawData = await this.rawDataService.getRawDataById(
@@ -72,37 +77,47 @@ export class RawDataConsumer implements OnModuleInit {
       );
 
       if (!rawData) {
-        this.logger.error('原始数据不存在', {
-          ...messageContext,
-        });
+        this.logger.error(
+          narrate('原始数据不存在', {
+            ...messageContext,
+          }),
+        );
         return;
       }
 
       if (rawData.status === 'processed') {
-        this.logger.warn('原始数据已处理过,跳过', {
-          ...messageContext,
-          currentStatus: rawData.status,
-        });
+        this.logger.warn(
+          narrate('原始数据已处理过,跳过', {
+            ...messageContext,
+            currentStatus: rawData.status,
+          }),
+        );
         return;
       }
 
-      this.logger.debug('转换原始事件为清洗任务消息', {
-        ...messageContext,
-        stage: 'fromRawDataEvent',
-      });
+      this.logger.debug(
+        narrate('转换原始事件为清洗任务消息', {
+          ...messageContext,
+          stage: 'fromRawDataEvent',
+        }),
+      );
       const message = fromRawDataEvent(event);
 
-      this.logger.debug('触发清洗任务执行', {
-        ...messageContext,
-        stage: 'execute',
-      });
+      this.logger.debug(
+        narrate('触发清洗任务执行', {
+          ...messageContext,
+          stage: 'execute',
+        }),
+      );
       const cleanedData = await this.cleanerService.execute(message);
 
-      this.logger.debug('更新原始数据状态', {
-        ...messageContext,
-        stage: 'updateStatus',
-        nextStatus: 'processed',
-      });
+      this.logger.debug(
+        narrate('更新原始数据状态', {
+          ...messageContext,
+          stage: 'updateStatus',
+          nextStatus: 'processed',
+        }),
+      );
       await this.rawDataService.updateStatus(event.rawDataId, 'processed');
 
       const processingTime = Date.now() - startTime;
@@ -130,34 +145,42 @@ export class RawDataConsumer implements OnModuleInit {
         createdAt: new Date().toISOString(),
       };
 
-      this.logger.debug('发布清洗完成事件', {
-        ...messageContext,
-        stage: 'publishCleanedData',
-        processingTimeMs: processingTime,
-      });
+      this.logger.debug(
+        narrate('发布清洗完成事件', {
+          ...messageContext,
+          stage: 'publishCleanedData',
+          processingTimeMs: processingTime,
+        }),
+      );
       await this.rabbitMQService.publishCleanedData(cleanedEvent);
 
-      this.logger.info('原始数据处理完成', {
-        ...messageContext,
-        posts: cleanedData.postIds.length,
-        comments: cleanedData.commentIds.length,
-        users: cleanedData.userIds.length,
-        processingTimeMs: processingTime,
-      });
+      this.logger.log(
+        narrate('原始数据处理完成', {
+          ...messageContext,
+          posts: cleanedData.postIds.length,
+          comments: cleanedData.commentIds.length,
+          users: cleanedData.userIds.length,
+          processingTimeMs: processingTime,
+        }),
+      );
     } catch (error) {
       const processingTime = Date.now() - startTime;
 
-      this.logger.error('处理原始数据失败', {
-        ...messageContext,
-        error: serializeError(error),
-        processingTimeMs: processingTime,
-      });
+      this.logger.error(
+        narrate('处理原始数据失败', {
+          ...messageContext,
+          error: serializeError(error),
+          processingTimeMs: processingTime,
+        }),
+      );
 
-      this.logger.debug('更新原始数据状态', {
-        ...messageContext,
-        stage: 'updateStatus',
-        nextStatus: 'failed',
-      });
+      this.logger.debug(
+        narrate('更新原始数据状态', {
+          ...messageContext,
+          stage: 'updateStatus',
+          nextStatus: 'failed',
+        }),
+      );
       await this.rawDataService.updateStatus(
         event.rawDataId,
         'failed',

@@ -12,7 +12,13 @@ export abstract class HtmlTask extends BaseTask {
   protected async execute(context: TaskContext): Promise<TaskResult> {
     const request = await this.createRequest(context);
     await this.ensureAccount(context, request);
-    const response = await context.htmlFetcher.fetch(request);
-    return this.handleResponse(response, context);
+
+    try {
+      const response = await context.htmlFetcher.fetch(request);
+      return this.handleResponse(response, context);
+    } catch (error) {
+      await this.handleAccountHealthOnError(context, error);
+      throw error;
+    }
   }
 }

@@ -7,6 +7,7 @@ import {
   normalizeTimeline,
   normalizeUser,
 } from './weibo-normalizer';
+import { narrate } from '../../utils/logging';
 
 export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
   readonly name = 'WeiboKeywordSearchCleanTask';
@@ -17,9 +18,11 @@ export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
     const statuses = normalizeTimeline(payload);
 
     if (statuses.length === 0) {
-      logger.warn('未从微博搜索数据中解析出有效状态', {
-        rawDataId: rawData._id.toString(),
-      });
+      logger.warn(
+        narrate('未从微博搜索数据中解析出有效状态', {
+          rawDataId: rawData._id.toString(),
+        }),
+      );
       return { postIds: [], commentIds: [], userIds: [], notes: { empty: true } };
     }
 

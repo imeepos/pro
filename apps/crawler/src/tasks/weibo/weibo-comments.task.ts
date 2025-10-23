@@ -17,48 +17,53 @@ export class WeiboCommentsTask extends WeiboApiTask {
   }
 
   protected async execute(context: TaskContext): Promise<TaskResult> {
-    const uid = this.resolveUid();
-    const { baseUrl, options } = await this.resolveWeiboRequest(
-      context,
-      context.weiboConfig.commentsEndpoint,
-    );
+    try {
+      const uid = this.resolveUid();
+      const { baseUrl, options } = await this.resolveWeiboRequest(
+        context,
+        context.weiboConfig.commentsEndpoint,
+      );
 
-    const response = await context.weiboStatusService.fetchStatusComments(this.options.statusId, {
-      ...options,
-      uid,
-      ...(this.options.maxId ? { maxId: this.options.maxId } : {}),
-    });
+      const response = await context.weiboStatusService.fetchStatusComments(this.options.statusId, {
+        ...options,
+        uid,
+        ...(this.options.maxId ? { maxId: this.options.maxId } : {}),
+      });
 
-    const apiUrl = this.composeApiUrl(baseUrl, 'ajax/statuses/buildComments', {
-      id: this.options.statusId,
-      uid,
-      max_id: this.options.maxId,
-    });
+      const apiUrl = this.composeApiUrl(baseUrl, 'ajax/statuses/buildComments', {
+        id: this.options.statusId,
+        uid,
+        max_id: this.options.maxId,
+      });
 
-    const metadata = {
-      ...this.task.metadata,
-      taskId: this.task.taskId,
-      statusId: this.options.statusId,
-      page: this.options.page ?? 1,
-      maxId: this.options.maxId,
-      keyword: this.task.keyword,
-      responseUrl: apiUrl,
-    };
+      const metadata = {
+        ...this.task.metadata,
+        taskId: this.task.taskId,
+        statusId: this.options.statusId,
+        page: this.options.page ?? 1,
+        maxId: this.options.maxId,
+        keyword: this.task.keyword,
+        responseUrl: apiUrl,
+      };
 
-    const stored = await context.storage.store({
-      type: SourceType.WEIBO_COMMENTS,
-      platform: SourcePlatform.WEIBO,
-      url: apiUrl,
-      raw: JSON.stringify(response),
-      metadata,
-    });
+      const stored = await context.storage.store({
+        type: SourceType.WEIBO_COMMENTS,
+        platform: SourcePlatform.WEIBO,
+        url: apiUrl,
+        raw: JSON.stringify(response),
+        metadata,
+      });
 
-    const account = this.getSelectedAccount();
-    if (account) {
-      await context.weiboAccountService.decreaseHealthScore(account.id);
+      const account = this.getSelectedAccount();
+      if (account) {
+        await context.weiboAccountService.decreaseHealthScore(account.id);
+      }
+
+      return { success: stored, notes: stored ? undefined : 'duplicate' };
+    } catch (error) {
+      await this.handleAccountHealthOnError(context, error);
+      throw error;
     }
-
-    return { success: stored, notes: stored ? undefined : 'duplicate' };
   }
 
   private resolveUid(): string {
