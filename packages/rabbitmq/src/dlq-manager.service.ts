@@ -13,9 +13,21 @@ interface DlqManagerOptions {
   queues?: DlqQueueDefinition[];
   fetchLimit?: number;
   logger?: Pick<Console, 'debug' | 'warn' | 'error'>;
+  /** 是否启用动态 DLQ 发现，默认为 true */
+  enableAutoDiscovery?: boolean;
 }
 
-const DEFAULT_DLQ_QUEUES: DlqQueueDefinition[] = [
+/**
+ * 系统已知的所有业务队列名称
+ * 用于动态发现对应的 DLQ 队列
+ */
+const BUSINESS_QUEUES = Object.values(QUEUE_NAMES);
+
+/**
+ * 向后兼容的默认 DLQ 队列定义
+ * 仅在禁用自动发现时使用
+ */
+const LEGACY_DEFAULT_QUEUES: DlqQueueDefinition[] = [
   {
     name: `${QUEUE_NAMES.CRAWL_TASK}.dlq`,
     originalQueue: QUEUE_NAMES.CRAWL_TASK,
@@ -39,6 +51,7 @@ export class DlqManagerService {
   private readonly queues: DlqQueueDefinition[];
   private readonly fetchLimit: number;
   private readonly logger: Pick<Console, 'debug' | 'warn' | 'error'>;
+  private readonly enableAutoDiscovery: boolean;
   private initialized = false;
 
   constructor(
@@ -46,7 +59,20 @@ export class DlqManagerService {
     options?: DlqManagerOptions,
   ) {
     this.connectionPool = new ConnectionPool(config);
-    this.queues = options?.queues ?? DEFAULT_DLQ_QUEUES;
+    this.enableAutoDiscovery = options?.enableAutoDiscovery ?? true;
+
+    // 根据配置决定队列定义的来源
+    if (options?.queues) {
+      // 用户显式提供了队列定义，优先使用
+      this.queues = options.queues;
+    } else if (this.enableAutoDiscovery) {
+      // 启用自动发现时，不预定义队列，而是在运行时动态发现
+      this.queues = [];
+    } else {
+      // 禁用自动发现时，使用传统的硬编码队列
+      this.queues = LEGACY_DEFAULT_QUEUES;
+    }
+
     this.fetchLimit = Math.max(1, Math.min(options?.fetchLimit ?? 100, 500));
     this.logger = options?.logger ?? console;
   }
@@ -55,7 +81,9 @@ export class DlqManagerService {
     const channel = await this.getChannel();
     const result: DlqQueueInfo[] = [];
 
-    for (const queue of this.queues) {
+    const queuesToCheck = await this.resolveDlqQueues();
+
+    for (const queue of queuesToCheck) {
       try {
         const { messageCount } = await channel.checkQueue(queue.name);
         result.push({
@@ -178,6 +206,35 @@ export class DlqManagerService {
       this.initialized = true;
     }
     return this.connectionPool.getChannel();
+  }
+
+  /**
+   * 解析需要检查的 DLQ 队列定义
+   *
+   * @returns DLQ 队列定义数组
+   */
+  private async resolveDlqQueues(): Promise<DlqQueueDefinition[]> {
+    // 如果用户显式提供了队列定义，直接使用
+    if (!this.enableAutoDiscovery && this.queues.length > 0) {
+      return this.queues;
+    }
+
+    // 动态发现所有可能的 DLQ 队列
+    const discoveredQueues: DlqQueueDefinition[] = [];
+
+    // 基于已知的业务队列生成对应的 DLQ 队列定义
+    for (const originalQueue of BUSINESS_QUEUES) {
+      discoveredQueues.push({
+        name: `${originalQueue}.dlq`,
+        originalQueue,
+      });
+    }
+
+    this.logger.debug(
+      `[DLQ] 动态发现 ${discoveredQueues.length} 个潜在 DLQ 队列: ${discoveredQueues.map(q => q.name).join(', ')}`
+    );
+
+    return discoveredQueues;
   }
 
   private async safeMessageCount(queueName: string): Promise<number> {
