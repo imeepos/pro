@@ -308,6 +308,21 @@ export type CleanTaskInput = {
   sourceType: Scalars['String']['input'];
 };
 
+export type CommentFilterInput = {
+  authorNickname?: InputMaybe<Scalars['String']['input']>;
+  dateFrom?: InputMaybe<Scalars['DateTime']['input']>;
+  dateTo?: InputMaybe<Scalars['DateTime']['input']>;
+  hasLikes?: InputMaybe<Scalars['Boolean']['input']>;
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  postId?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CommentStats = {
+  __typename?: 'CommentStats';
+  totalComments: Scalars['Int']['output'];
+  totalLikes: Scalars['Int']['output'];
+};
+
 export type ConfigCacheStats = {
   __typename?: 'ConfigCacheStats';
   keys: Array<Scalars['String']['output']>;
@@ -461,6 +476,16 @@ export type DeleteMessagesInput = {
   messageIds: Array<Scalars['String']['input']>;
   /** 目标死信队列名称 */
   queueName: Scalars['String']['input'];
+};
+
+export type DlqConnectionStatusModel = {
+  __typename?: 'DlqConnectionStatusModel';
+  connected: Scalars['Boolean']['output'];
+  lastConnectedAt?: Maybe<Scalars['DateTime']['output']>;
+  lastErrorAt?: Maybe<Scalars['DateTime']['output']>;
+  lastErrorMessage?: Maybe<Scalars['String']['output']>;
+  state: Scalars['String']['output'];
+  target: Scalars['String']['output'];
 };
 
 export type DlqMessage = {
@@ -722,6 +747,24 @@ export type IndustryType = {
   sortOrder: Scalars['Int']['output'];
   status: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
+};
+
+export type InteractionFilterInput = {
+  dateFrom?: InputMaybe<Scalars['DateTime']['input']>;
+  dateTo?: InputMaybe<Scalars['DateTime']['input']>;
+  interactionType?: InputMaybe<WeiboInteractionType>;
+  targetType?: InputMaybe<WeiboTargetType>;
+  targetWeiboId?: InputMaybe<Scalars['String']['input']>;
+  userWeiboId?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type InteractionStats = {
+  __typename?: 'InteractionStats';
+  totalComments: Scalars['Int']['output'];
+  totalFavorites: Scalars['Int']['output'];
+  totalInteractions: Scalars['Int']['output'];
+  totalLikes: Scalars['Int']['output'];
+  totalReposts: Scalars['Int']['output'];
 };
 
 export type JdAccount = {
@@ -1337,8 +1380,31 @@ export type PaginatedRawData = {
   totalPages: Scalars['Int']['output'];
 };
 
+export type PaginationInput = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type PauseWeiboTaskInput = {
   reason?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type PostFilterInput = {
+  authorNickname?: InputMaybe<Scalars['String']['input']>;
+  dateFrom?: InputMaybe<Scalars['DateTime']['input']>;
+  dateTo?: InputMaybe<Scalars['DateTime']['input']>;
+  favorited?: InputMaybe<Scalars['Boolean']['input']>;
+  isLongText?: InputMaybe<Scalars['Boolean']['input']>;
+  isRepost?: InputMaybe<Scalars['Boolean']['input']>;
+  keyword?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type PostStats = {
+  __typename?: 'PostStats';
+  totalComments: Scalars['Int']['output'];
+  totalLikes: Scalars['Int']['output'];
+  totalPosts: Scalars['Int']['output'];
+  totalReposts: Scalars['Int']['output'];
 };
 
 /** 原始数据处理状态 */
@@ -1364,6 +1430,8 @@ export type Query = {
   dashboardRecentActivities: Array<DashboardActivity>;
   dashboardStats: DashboardStats;
   defaultScreen: Screen;
+  /** 查看死信队列连接的实时状态 */
+  dlqConnectionStatus: DlqConnectionStatusModel;
   /** 分页查询死信队列中的消息 */
   dlqMessages: DlqMessageConnection;
   /** 获取所有死信队列信息 */
@@ -1413,13 +1481,24 @@ export type Query = {
   weiboAccounts: WeiboAccountConnection;
   weiboAccountsWithCookies: Array<WeiboAccountWithCookies>;
   weiboAggregatedStats: HourlyStatsResponse;
+  weiboComment: WeiboComment;
+  weiboCommentStats: CommentStats;
+  weiboComments: WeiboCommentConnection;
   weiboHourlyStats: HourlyStatsResponse;
+  weiboInteraction: WeiboInteraction;
+  weiboInteractionStats: InteractionStats;
+  weiboInteractions: WeiboInteractionConnection;
   weiboLoginSession: WeiboLoginSession;
   weiboMultiTypeHourlyStats: MultiTypeHourlyStats;
+  weiboPost: WeiboPost;
+  weiboPostStats: PostStats;
+  weiboPosts: WeiboPostConnection;
   weiboSearchTask: WeiboSearchTask;
   weiboSearchTaskStats: WeiboSearchTaskStats;
   weiboSearchTasks: WeiboSearchTaskConnection;
   weiboSessionStats: WeiboSessionStats;
+  weiboSubTask: WeiboSubTask;
+  weiboSubTasks: WeiboSubTaskConnection;
   weiboTaskStatusConsumerStats: ConsumerStats;
 };
 
@@ -1615,8 +1694,42 @@ export type QueryWeiboAggregatedStatsArgs = {
 };
 
 
+export type QueryWeiboCommentArgs = {
+  id: Scalars['String']['input'];
+};
+
+
+export type QueryWeiboCommentStatsArgs = {
+  filter?: InputMaybe<CommentFilterInput>;
+};
+
+
+export type QueryWeiboCommentsArgs = {
+  filter?: InputMaybe<CommentFilterInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  sort?: InputMaybe<SortInput>;
+};
+
+
 export type QueryWeiboHourlyStatsArgs = {
   query: HourlyStatsQueryDto;
+};
+
+
+export type QueryWeiboInteractionArgs = {
+  id: Scalars['String']['input'];
+};
+
+
+export type QueryWeiboInteractionStatsArgs = {
+  filter?: InputMaybe<InteractionFilterInput>;
+};
+
+
+export type QueryWeiboInteractionsArgs = {
+  filter?: InputMaybe<InteractionFilterInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  sort?: InputMaybe<SortInput>;
 };
 
 
@@ -1630,6 +1743,23 @@ export type QueryWeiboMultiTypeHourlyStatsArgs = {
 };
 
 
+export type QueryWeiboPostArgs = {
+  id: Scalars['String']['input'];
+};
+
+
+export type QueryWeiboPostStatsArgs = {
+  filter?: InputMaybe<PostFilterInput>;
+};
+
+
+export type QueryWeiboPostsArgs = {
+  filter?: InputMaybe<PostFilterInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  sort?: InputMaybe<SortInput>;
+};
+
+
 export type QueryWeiboSearchTaskArgs = {
   id: Scalars['Int']['input'];
 };
@@ -1637,6 +1767,17 @@ export type QueryWeiboSearchTaskArgs = {
 
 export type QueryWeiboSearchTasksArgs = {
   filter?: InputMaybe<WeiboSearchTaskFilterInput>;
+};
+
+
+export type QueryWeiboSubTaskArgs = {
+  id: Scalars['Int']['input'];
+};
+
+
+export type QueryWeiboSubTasksArgs = {
+  filter?: InputMaybe<WeiboSubTaskFilterInput>;
+  taskId: Scalars['Int']['input'];
 };
 
 export type RawDataFilterInput = {
@@ -1860,6 +2001,16 @@ export type ScreenLayoutInput = {
 export enum ScreenStatus {
   Draft = 'Draft',
   Published = 'Published'
+}
+
+export type SortInput = {
+  field: Scalars['String']['input'];
+  order: SortOrder;
+};
+
+export enum SortOrder {
+  Asc = 'ASC',
+  Desc = 'DESC'
 }
 
 /** 数据源平台 */
@@ -2149,6 +2300,65 @@ export type WeiboAccountWithCookies = {
   weiboUid: Scalars['String']['output'];
 };
 
+export type WeiboComment = {
+  __typename?: 'WeiboComment';
+  author: WeiboUser;
+  commentId: Scalars['String']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  isMblogAuthor: Scalars['Boolean']['output'];
+  likeCounts: Scalars['Int']['output'];
+  liked: Scalars['Boolean']['output'];
+  mid: Scalars['String']['output'];
+  postId: Scalars['String']['output'];
+  replyCommentId?: Maybe<Scalars['String']['output']>;
+  source?: Maybe<Scalars['String']['output']>;
+  text: Scalars['String']['output'];
+};
+
+export type WeiboCommentConnection = {
+  __typename?: 'WeiboCommentConnection';
+  edges: Array<WeiboCommentEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type WeiboCommentEdge = {
+  __typename?: 'WeiboCommentEdge';
+  cursor: Scalars['String']['output'];
+  node: WeiboComment;
+};
+
+export type WeiboInteraction = {
+  __typename?: 'WeiboInteraction';
+  createdAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  interactionType: WeiboInteractionType;
+  targetType: WeiboTargetType;
+  targetWeiboId: Scalars['String']['output'];
+  userWeiboId?: Maybe<Scalars['String']['output']>;
+};
+
+export type WeiboInteractionConnection = {
+  __typename?: 'WeiboInteractionConnection';
+  edges: Array<WeiboInteractionEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type WeiboInteractionEdge = {
+  __typename?: 'WeiboInteractionEdge';
+  cursor: Scalars['String']['output'];
+  node: WeiboInteraction;
+};
+
+export enum WeiboInteractionType {
+  Comment = 'Comment',
+  Favorite = 'Favorite',
+  Like = 'Like',
+  Repost = 'Repost'
+}
+
 export type WeiboLoggedInUsersStats = {
   __typename?: 'WeiboLoggedInUsersStats';
   online: Scalars['Int']['output'];
@@ -2178,6 +2388,39 @@ export type WeiboLoginSession = {
   expiresAt: Scalars['DateTime']['output'];
   lastEvent?: Maybe<WeiboLoginEvent>;
   sessionId: Scalars['String']['output'];
+};
+
+export type WeiboPost = {
+  __typename?: 'WeiboPost';
+  attitudesCount: Scalars['Int']['output'];
+  author: WeiboUser;
+  commentsCount: Scalars['Int']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  favorited: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  isLongText: Scalars['Boolean']['output'];
+  isRepost: Scalars['Boolean']['output'];
+  mid: Scalars['String']['output'];
+  regionName?: Maybe<Scalars['String']['output']>;
+  repostsCount: Scalars['Int']['output'];
+  source?: Maybe<Scalars['String']['output']>;
+  text: Scalars['String']['output'];
+  textLength: Scalars['Int']['output'];
+  visibleType?: Maybe<WeiboVisibleType>;
+  weiboId: Scalars['String']['output'];
+};
+
+export type WeiboPostConnection = {
+  __typename?: 'WeiboPostConnection';
+  edges: Array<WeiboPostEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type WeiboPostEdge = {
+  __typename?: 'WeiboPostEdge';
+  cursor: Scalars['String']['output'];
+  node: WeiboPost;
 };
 
 export type WeiboSearchTask = {
@@ -2233,6 +2476,73 @@ export type WeiboSessionStats = {
   totalSessions: Scalars['Int']['output'];
   webSocketConnections: Scalars['Int']['output'];
 };
+
+export type WeiboSubTask = {
+  __typename?: 'WeiboSubTask';
+  createdAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  metadata: Scalars['JSONObject']['output'];
+  status: Scalars['String']['output'];
+  taskId: Scalars['Int']['output'];
+  type: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type WeiboSubTaskConnection = {
+  __typename?: 'WeiboSubTaskConnection';
+  edges: Array<WeiboSubTaskEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type WeiboSubTaskEdge = {
+  __typename?: 'WeiboSubTaskEdge';
+  cursor: Scalars['String']['output'];
+  node: WeiboSubTask;
+};
+
+export type WeiboSubTaskFilterInput = {
+  createdAfter?: InputMaybe<Scalars['String']['input']>;
+  createdBefore?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  sortBy?: InputMaybe<Scalars['String']['input']>;
+  sortOrder?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  taskId?: InputMaybe<Scalars['Int']['input']>;
+  type?: InputMaybe<Scalars['String']['input']>;
+  updatedAfter?: InputMaybe<Scalars['String']['input']>;
+  updatedBefore?: InputMaybe<Scalars['String']['input']>;
+};
+
+export enum WeiboTargetType {
+  Comment = 'Comment',
+  Post = 'Post'
+}
+
+export type WeiboUser = {
+  __typename?: 'WeiboUser';
+  description?: Maybe<Scalars['String']['output']>;
+  followersCount: Scalars['Int']['output'];
+  friendsCount: Scalars['Int']['output'];
+  gender?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  location?: Maybe<Scalars['String']['output']>;
+  profileImageUrl?: Maybe<Scalars['String']['output']>;
+  screenName: Scalars['String']['output'];
+  statusesCount: Scalars['Int']['output'];
+  verified: Scalars['Boolean']['output'];
+  verifiedReason?: Maybe<Scalars['String']['output']>;
+  weiboId: Scalars['String']['output'];
+};
+
+export enum WeiboVisibleType {
+  Custom = 'Custom',
+  Fans = 'Fans',
+  Group = 'Group',
+  Private = 'Private',
+  Public = 'Public'
+}
 
 export type LoginMutationVariables = Exact<{
   input: LoginDto;

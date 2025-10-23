@@ -1227,9 +1227,6 @@ importers:
       '@pro/entities':
         specifier: workspace:*
         version: link:../../packages/entities
-      '@pro/logger':
-        specifier: workspace:*
-        version: link:../../packages/logger
       '@pro/minio':
         specifier: workspace:*
         version: link:../../packages/minio
