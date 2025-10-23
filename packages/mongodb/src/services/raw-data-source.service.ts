@@ -20,7 +20,7 @@ export class RawDataSourceService {
   /**
    * 创建原始数据记录
    */
-  async create(dto: CreateRawDataSourceDto): Promise<RawDataSourceDoc | null> {
+  async create(dto: CreateRawDataSourceDto): Promise<RawDataSourceDoc> {
     const contentHash = calculateContentHash(dto.rawContent);
 
     const data = new this.rawDataSourceModel({
@@ -32,16 +32,7 @@ export class RawDataSourceService {
       status: ProcessingStatus.PENDING,
     });
 
-    try {
-      const saved = await data.save();
-      return saved;
-    } catch (error: any) {
-      if (error?.code === 11000) {
-        this.logger.debug(`Content already exists: ${contentHash}`);
-        return null;
-      }
-      throw error;
-    }
+    return data.save();
   }
 
   /**

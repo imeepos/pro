@@ -242,18 +242,8 @@ export class WeiboStatusService {
     statusId: string,
     detail: WeiboStatusDetailResponse,
     context: SaveStatusDetailContext = {}
-  ): Promise<RawDataSourceDoc | null> {
+  ): Promise<RawDataSourceDoc> {
     const sourceUrl = context.sourceUrl ?? `https://weibo.com/status/${statusId}`
-
-    const existingDoc = await this.rawDataSourceService.findExistingSourceRecord({
-      sourceType: SourceType.WEIBO_API_JSON,
-      sourceUrl,
-      statusId
-    })
-
-    if (existingDoc) {
-      return null
-    }
 
     const createDto: CreateRawDataSourceDto = {
       sourceType: SourceType.WEIBO_API_JSON,
