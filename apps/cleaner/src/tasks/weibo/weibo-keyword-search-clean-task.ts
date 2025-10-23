@@ -8,17 +8,67 @@ import {
   normalizeUser,
 } from './weibo-normalizer';
 import { narrate } from '../../utils/logging';
+import { QUEUE_NAMES, WeiboDetailCrawlEvent, TaskPriority } from '@pro/types';
+import { RabbitMQService } from '../../rabbitmq/rabbitmq.service';
+import { CleanTaskMessage } from '../clean-task-message';
 
 export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
   readonly name = 'WeiboKeywordSearchCleanTask';
 
+  private extractWeiboDetailIds(sourceUrl: string): { uid: string; mid: string } | null {
+    // 解析微博详情链接格式: /:uid/:mid
+    const match = sourceUrl.match(/\/(\w+)\/(\w+)(?:\?|$)/);
+    if (match) {
+      return { uid: match[1], mid: match[2] };
+    }
+    return null;
+  }
+
+  private extractPageNumber(sourceUrl: string): number | undefined {
+    // 从URL中提取页码，例如: page=2
+    const match = sourceUrl.match(/[?&]page=(\d+)/);
+    return match ? parseInt(match[1], 10) : undefined;
+  }
+
+  private async sendDetailCrawlTask(
+    rabbitMQService: RabbitMQService,
+    statusId: string,
+    sourceContext: WeiboDetailCrawlEvent['sourceContext'],
+  ): Promise<void> {
+    const event: WeiboDetailCrawlEvent = {
+      statusId,
+      priority: TaskPriority.NORMAL,
+      sourceContext,
+      discoveredAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+
+    const success = await rabbitMQService.getClient().publish(
+      QUEUE_NAMES.WEIBO_DETAIL_CRAWL,
+      event,
+    );
+
+    if (success) {
+      console.log(`[WeiboDetailCrawl] 已发送详情爬取任务: ${statusId}`);
+    } else {
+      console.warn(`[WeiboDetailCrawl] 发送详情爬取任务失败: ${statusId}`);
+    }
+  }
+
   protected async handle(context: WeiboTaskContext): Promise<CleanTaskResult> {
-    const { rawData, logger } = context;
+    const { rawData, logger, message, rabbitMQService } = context;
     const payload = this.extractPayload(rawData.rawContent);
-    // 解析 payload 中的 html
-    // step1 打印 payload 中的长度
-    // step2 解析 微博详情的 id 详情链接 /:uid/:mid 中的 uid,mid然后发送 抓取详情元数据的任务到mq
-    // step3 记录 当前页面中 时间最小的值 爬取完成后 对比一下 当前所在页码是否是 50 如果小于50 发送下一页抓取任务到mq 如果是50页 拿到[任务开始时间]-[最小时间值] + 关键字 再次触发 关键字检索任务到mq 修改了时间窗口
+
+    // Step1: 打印 payload 长度
+    const payloadLength = rawData.rawContent?.length || 0;
+    logger.log(
+      narrate('微博搜索数据清洗任务开始', {
+        rawDataId: rawData._id.toString(),
+        payloadLength,
+        sourceUrl: rawData.sourceUrl,
+      }),
+    );
+
     const statuses = normalizeTimeline(payload);
 
     if (statuses.length === 0) {
@@ -32,6 +82,21 @@ export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
 
     const users: NormalizedWeiboUser[] = [];
     const posts: NormalizedWeiboPost[] = [];
+    let minCreatedAt: Date | null = null;
+
+    // Step2: 解析微博详情链接并发送详情爬取任务
+    const detailIds = this.extractWeiboDetailIds(rawData.sourceUrl);
+    if (detailIds) {
+      const statusId = `${detailIds.uid}_${detailIds.mid}`;
+      const sourceContext: WeiboDetailCrawlEvent['sourceContext'] = {
+        taskId: message.metadata?.taskId,
+        keyword: message.metadata?.keyword,
+        page: this.extractPageNumber(rawData.sourceUrl),
+        discoveredAtUrl: rawData.sourceUrl,
+      };
+
+      await this.sendDetailCrawlTask(rabbitMQService, statusId, sourceContext);
+    }
 
     for (const status of statuses) {
       const author = normalizeUser(status.user);
@@ -42,6 +107,11 @@ export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
       const normalizedStatus = normalizeStatus(status);
       if (normalizedStatus) {
         posts.push(normalizedStatus);
+
+        // 跟踪最小创建时间
+        if (!minCreatedAt || normalizedStatus.createdAt < minCreatedAt) {
+          minCreatedAt = normalizedStatus.createdAt;
+        }
       }
 
       const retweeted = (status as unknown as Record<string, unknown>).retweeted_status as Record<string, unknown> | undefined;
@@ -53,6 +123,11 @@ export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
         }
         if (retweetedStatus) {
           posts.push(retweetedStatus);
+
+          // 跟踪最小创建时间（转发帖）
+          if (!minCreatedAt || retweetedStatus.createdAt < minCreatedAt) {
+            minCreatedAt = retweetedStatus.createdAt;
+          }
         }
       }
     }
@@ -61,11 +136,68 @@ export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
     const userMap = await helpers.weibo.saveUsers(users);
     const postMap = await helpers.weibo.savePosts(posts, userMap);
 
+    // Step3: 处理分页逻辑
+    await this.handlePaginationLogic(context, minCreatedAt);
+
     return {
       postIds: [...postMap.values()].map((post) => post.id),
       commentIds: [],
       userIds: [...userMap.values()].map((user) => user.id),
     };
+  }
+
+  private async handlePaginationLogic(
+    context: WeiboTaskContext,
+    minCreatedAt: Date | null,
+  ): Promise<void> {
+    const { rawData, logger, message, rabbitMQService } = context;
+    const currentPage = this.extractPageNumber(rawData.sourceUrl);
+
+    if (currentPage === undefined) {
+      logger.debug('无法从URL中提取页码，跳过分页逻辑');
+      return;
+    }
+
+    logger.log(
+      narrate('处理分页逻辑', {
+        currentPage,
+        minCreatedAt: minCreatedAt?.toISOString(),
+        keyword: message.metadata?.keyword,
+      }),
+    );
+
+    // 根据页码决定下一步操作
+    if (currentPage < 50) {
+      // 发送下一页抓取任务
+      await this.sendNextPageTask(rabbitMQService, message, currentPage + 1);
+    } else if (currentPage === 50 && minCreatedAt) {
+      // 使用时间窗口调整重新触发关键字检索任务
+      await this.sendTimeWindowSearchTask(rabbitMQService, message, minCreatedAt);
+    }
+  }
+
+  private async sendNextPageTask(
+    rabbitMQService: RabbitMQService,
+    message: CleanTaskMessage,
+    nextPage: number,
+  ): Promise<void> {
+    // 这里需要实现发送下一页抓取任务的逻辑
+    // 由于缺少具体的抓取任务事件定义，暂时记录日志
+    console.log(`[Pagination] 应该发送第 ${nextPage} 页抓取任务`);
+  }
+
+  private async sendTimeWindowSearchTask(
+    rabbitMQService: RabbitMQService,
+    message: CleanTaskMessage,
+    minCreatedAt: Date,
+  ): Promise<void> {
+    // 这里需要实现发送时间窗口调整后的搜索任务
+    // 使用 [任务开始时间]-[最小时间值] + 关键字 重新触发
+    const taskStartTime = new Date(message.createdAt);
+    const timeWindow = `${taskStartTime.toISOString()}-${minCreatedAt.toISOString()}`;
+    const keyword = message.metadata?.keyword;
+
+    console.log(`[TimeWindowSearch] 应该发送时间窗口搜索任务: ${timeWindow} + ${keyword}`);
   }
 
   private extractPayload(raw: string): unknown {
