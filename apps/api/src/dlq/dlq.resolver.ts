@@ -20,7 +20,23 @@ export class DlqResolver implements OnModuleDestroy {
     description: '获取所有死信队列信息',
   })
   async dlqQueues(): Promise<DlqQueueInfoModel[]> {
-    return this.dlqManager.getDlqQueues();
+    try {
+      const queues = await this.dlqManager.getDlqQueues();
+      return queues.map(queue => {
+        const model = new DlqQueueInfoModel();
+        model.name = queue.name;
+        model.messageCount = queue.messageCount;
+        model.originalQueue = queue.originalQueue;
+        return model;
+      });
+    } catch (error) {
+      this.logger.error(
+        '获取死信队列列表失败',
+        error instanceof Error ? error.stack : undefined,
+      );
+      // 连接失败时返回空列表，避免前端报错
+      return [];
+    }
   }
 
   @Query(() => DlqMessageConnection, {

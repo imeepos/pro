@@ -52,6 +52,7 @@ export class DlqManagerService {
   private readonly fetchLimit: number;
   private readonly logger: Pick<Console, 'debug' | 'warn' | 'error'>;
   private readonly enableAutoDiscovery: boolean;
+  private connectionError: Error | null = null;
   private initialized = false;
 
   constructor(
@@ -75,49 +76,74 @@ export class DlqManagerService {
 
     this.fetchLimit = Math.max(1, Math.min(options?.fetchLimit ?? 100, 500));
     this.logger = options?.logger ?? console;
+
+    // 监听连接池事件，优雅处理连接状态变化
+    this.setupConnectionEventHandlers();
   }
 
   async getDlqQueues(): Promise<DlqQueueInfo[]> {
-    const channel = await this.getChannel();
-    const result: DlqQueueInfo[] = [];
-
-    const queuesToCheck = await this.resolveDlqQueues();
-
-    for (const queue of queuesToCheck) {
-      try {
-        const { messageCount } = await channel.checkQueue(queue.name);
-        result.push({
-          name: queue.name,
-          originalQueue: queue.originalQueue,
-          messageCount: messageCount ?? 0,
-        });
-      } catch {
-        result.push({
-          name: queue.name,
-          originalQueue: queue.originalQueue,
-          messageCount: 0,
-        });
-      }
+    // 如果连接不可用，返回空队列列表而不是抛出异常
+    if (this.connectionError) {
+      this.logger.warn('[DLQ] 连接不可用，返回空队列列表', this.connectionError);
+      return [];
     }
 
-    return result;
+    try {
+      const channel = await this.getChannel();
+      const result: DlqQueueInfo[] = [];
+
+      const queuesToCheck = await this.resolveDlqQueues();
+
+      for (const queue of queuesToCheck) {
+        try {
+          const { messageCount } = await channel.checkQueue(queue.name);
+          result.push({
+            name: queue.name,
+            originalQueue: queue.originalQueue,
+            messageCount: messageCount ?? 0,
+          });
+        } catch {
+          result.push({
+            name: queue.name,
+            originalQueue: queue.originalQueue,
+            messageCount: 0,
+          });
+        }
+      }
+
+      return result;
+    } catch (error) {
+      this.logger.error('[DLQ] 获取队列列表失败', error as Error);
+      // 连接失败时记录错误并返回空列表，避免 GraphQL 查询失败
+      return [];
+    }
   }
 
   async getDlqMessages(queueName: string): Promise<DlqMessage[]> {
-    const channel = await this.getChannel();
-    const messages: DlqMessage[] = [];
-
-    for (let inspected = 0; inspected < this.fetchLimit; inspected++) {
-      const message = await channel.get(queueName, { noAck: false });
-      if (!message) {
-        break;
-      }
-
-      messages.push(this.toDlqMessage(queueName, message));
-      channel.nack(message, false, true);
+    if (this.connectionError) {
+      this.logger.warn('[DLQ] 连接不可用，无法获取消息', this.connectionError);
+      return [];
     }
 
-    return messages;
+    try {
+      const channel = await this.getChannel();
+      const messages: DlqMessage[] = [];
+
+      for (let inspected = 0; inspected < this.fetchLimit; inspected++) {
+        const message = await channel.get(queueName, { noAck: false });
+        if (!message) {
+          break;
+        }
+
+        messages.push(this.toDlqMessage(queueName, message));
+        channel.nack(message, false, true);
+      }
+
+      return messages;
+    } catch (error) {
+      this.logger.error(`[DLQ] 获取消息失败: ${queueName}`, error as Error);
+      return [];
+    }
   }
 
   async retryMessages(queueName: string, messageIds: string[]): Promise<number> {
@@ -125,33 +151,43 @@ export class DlqManagerService {
       return 0;
     }
 
-    const channel = await this.getChannel();
-    const targetIds = new Set(messageIds);
-    const totalMessages = await this.safeMessageCount(queueName);
-    let retried = 0;
-    let inspected = 0;
-
-    while (targetIds.size > 0 && inspected < totalMessages) {
-      const message = await channel.get(queueName, { noAck: false });
-      if (!message) {
-        break;
-      }
-
-      inspected += 1;
-      const messageId = this.extractMessageId(message);
-
-      if (messageId && targetIds.has(messageId)) {
-        const destination = this.resolveOriginalQueue(queueName, message);
-        channel.sendToQueue(destination, message.content, message.properties);
-        channel.ack(message);
-        targetIds.delete(messageId);
-        retried += 1;
-      } else {
-        channel.nack(message, false, true);
-      }
+    if (this.connectionError) {
+      this.logger.warn('[DLQ] 连接不可用，无法重试消息', this.connectionError);
+      return 0;
     }
 
-    return retried;
+    try {
+      const channel = await this.getChannel();
+      const targetIds = new Set(messageIds);
+      const totalMessages = await this.safeMessageCount(queueName);
+      let retried = 0;
+      let inspected = 0;
+
+      while (targetIds.size > 0 && inspected < totalMessages) {
+        const message = await channel.get(queueName, { noAck: false });
+        if (!message) {
+          break;
+        }
+
+        inspected += 1;
+        const messageId = this.extractMessageId(message);
+
+        if (messageId && targetIds.has(messageId)) {
+          const destination = this.resolveOriginalQueue(queueName, message);
+          channel.sendToQueue(destination, message.content, message.properties);
+          channel.ack(message);
+          targetIds.delete(messageId);
+          retried += 1;
+        } else {
+          channel.nack(message, false, true);
+        }
+      }
+
+      return retried;
+    } catch (error) {
+      this.logger.error(`[DLQ] 重试消息失败: ${queueName}`, error as Error);
+      return 0;
+    }
   }
 
   async deleteMessages(queueName: string, messageIds: string[]): Promise<number> {
@@ -159,37 +195,57 @@ export class DlqManagerService {
       return 0;
     }
 
-    const channel = await this.getChannel();
-    const targetIds = new Set(messageIds);
-    const totalMessages = await this.safeMessageCount(queueName);
-    let deleted = 0;
-    let inspected = 0;
-
-    while (targetIds.size > 0 && inspected < totalMessages) {
-      const message = await channel.get(queueName, { noAck: false });
-      if (!message) {
-        break;
-      }
-
-      inspected += 1;
-      const messageId = this.extractMessageId(message);
-
-      if (messageId && targetIds.has(messageId)) {
-        channel.ack(message);
-        targetIds.delete(messageId);
-        deleted += 1;
-      } else {
-        channel.nack(message, false, true);
-      }
+    if (this.connectionError) {
+      this.logger.warn('[DLQ] 连接不可用，无法删除消息', this.connectionError);
+      return 0;
     }
 
-    return deleted;
+    try {
+      const channel = await this.getChannel();
+      const targetIds = new Set(messageIds);
+      const totalMessages = await this.safeMessageCount(queueName);
+      let deleted = 0;
+      let inspected = 0;
+
+      while (targetIds.size > 0 && inspected < totalMessages) {
+        const message = await channel.get(queueName, { noAck: false });
+        if (!message) {
+          break;
+        }
+
+        inspected += 1;
+        const messageId = this.extractMessageId(message);
+
+        if (messageId && targetIds.has(messageId)) {
+          channel.ack(message);
+          targetIds.delete(messageId);
+          deleted += 1;
+        } else {
+          channel.nack(message, false, true);
+        }
+      }
+
+      return deleted;
+    } catch (error) {
+      this.logger.error(`[DLQ] 删除消息失败: ${queueName}`, error as Error);
+      return 0;
+    }
   }
 
   async getMessageCount(queueName: string): Promise<number> {
-    const channel = await this.getChannel();
-    const { messageCount } = await channel.checkQueue(queueName);
-    return messageCount ?? 0;
+    if (this.connectionError) {
+      this.logger.warn('[DLQ] 连接不可用，无法获取消息数量', this.connectionError);
+      return 0;
+    }
+
+    try {
+      const channel = await this.getChannel();
+      const { messageCount } = await channel.checkQueue(queueName);
+      return messageCount ?? 0;
+    } catch (error) {
+      this.logger.error(`[DLQ] 获取消息数量失败: ${queueName}`, error as Error);
+      return 0;
+    }
   }
 
   async close(): Promise<void> {
@@ -201,11 +257,47 @@ export class DlqManagerService {
   }
 
   private async getChannel(): Promise<any> {
+    // 如果已知连接有问题，直接抛出异常
+    if (this.connectionError) {
+      throw this.connectionError;
+    }
+
     if (!this.initialized) {
-      await this.connectionPool.connect();
-      this.initialized = true;
+      try {
+        await this.connectionPool.connect();
+        this.initialized = true;
+        // 连接成功后清除错误状态
+        this.connectionError = null;
+      } catch (error) {
+        this.connectionError = error as Error;
+        throw error;
+      }
     }
     return this.connectionPool.getChannel();
+  }
+
+  /**
+   * 设置连接池事件处理器，优雅处理连接状态变化
+   */
+  private setupConnectionEventHandlers(): void {
+    // 监听连接成功事件，清除错误状态
+    this.connectionPool.on('connected', () => {
+      this.connectionError = null;
+      this.logger.debug('[DLQ] 连接已建立，清除错误状态');
+    });
+
+    // 监听连接断开事件，重置初始化状态
+    this.connectionPool.on('disconnected', () => {
+      this.initialized = false;
+      this.logger.debug('[DLQ] 连接已断开，重置初始化状态');
+    });
+
+    // 监听连接错误事件，记录错误并重置状态
+    this.connectionPool.on('error', (event) => {
+      this.connectionError = event.error ?? null;
+      this.initialized = false;
+      this.logger.error('[DLQ] 连接发生错误', event.error);
+    });
   }
 
   /**
