@@ -15,6 +15,10 @@ export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
   protected async handle(context: WeiboTaskContext): Promise<CleanTaskResult> {
     const { rawData, logger } = context;
     const payload = this.extractPayload(rawData.rawContent);
+    // 解析 payload 中的 html
+    // step1 打印 payload 中的长度
+    // step2 解析 微博详情的 id 详情链接 /:uid/:mid 中的 uid,mid然后发送 抓取详情元数据的任务到mq
+    // step3 记录 当前页面中 时间最小的值 爬取完成后 对比一下 当前所在页码是否是 50 如果小于50 发送下一页抓取任务到mq 如果是50页 拿到[任务开始时间]-[最小时间值] + 关键字 再次触发 关键字检索任务到mq 修改了时间窗口
     const statuses = normalizeTimeline(payload);
 
     if (statuses.length === 0) {
