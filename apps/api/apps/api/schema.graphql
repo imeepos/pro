@@ -458,6 +458,15 @@ input DeleteMessagesInput {
   queueName: String!
 }
 
+type DlqConnectionStatusModel {
+  connected: Boolean!
+  lastConnectedAt: DateTime
+  lastErrorAt: DateTime
+  lastErrorMessage: String
+  state: String!
+  target: String!
+}
+
 type DlqMessage {
   content: JSON
   errorMessage: String
@@ -1065,6 +1074,9 @@ type Query {
   dashboardRecentActivities: [DashboardActivity!]!
   dashboardStats: DashboardStats!
   defaultScreen: Screen!
+
+  """查看死信队列连接的实时状态"""
+  dlqConnectionStatus: DlqConnectionStatusModel!
 
   """分页查询死信队列中的消息"""
   dlqMessages(filter: DlqQueryInput): DlqMessageConnection!
