@@ -1,4 +1,5 @@
 import * as amqp from 'amqplib';
+import { randomUUID } from 'crypto';
 
 export interface RabbitMQConfig {
   url: string;
@@ -72,23 +73,34 @@ export class RabbitMQClient {
 
     const messageSize = Buffer.byteLength(JSON.stringify(message));
     const startTime = Date.now();
+    const messageId =
+      typeof message === 'object' &&
+      message !== null &&
+      typeof (message as Record<string, any>).rawDataId === 'string'
+        ? (message as Record<string, any>).rawDataId
+        : randomUUID();
 
-    console.log(`[RabbitMQ] 正在发布消息到队列 ${queue}, 消息大小: ${messageSize} bytes, 时间: ${new Date().toISOString()}`);
+    console.log(
+      `[RabbitMQ] 正在发布消息到队列 ${queue}, 消息标识: ${messageId}, 消息大小: ${messageSize} bytes, 时间: ${new Date().toISOString()}`
+    );
 
     const result = this.channel.sendToQueue(
       queue,
       Buffer.from(JSON.stringify(message)),
       {
-        persistent: options?.persistent ?? true
+        persistent: options?.persistent ?? true,
+        messageId
       }
     );
 
     const duration = Date.now() - startTime;
 
     if (result) {
-      console.log(`[RabbitMQ] 消息发布成功到队列 ${queue}, 耗时: ${duration}ms`);
+      console.log(`[RabbitMQ] 消息 ${messageId} 发布成功到队列 ${queue}, 耗时: ${duration}ms`);
     } else {
-      console.warn(`[RabbitMQ] 消息发布失败到队列 ${queue} - sendToQueue返回false, 可能原因: 队列缓冲区满/背压, 耗时: ${duration}ms`);
+      console.warn(
+        `[RabbitMQ] 消息 ${messageId} 发布失败到队列 ${queue} - sendToQueue返回false, 可能原因: 队列缓冲区满/背压, 耗时: ${duration}ms`
+      );
     }
 
     return result;

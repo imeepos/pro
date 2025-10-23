@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Logger } from '@pro/logger';
+import { createHash } from 'crypto';
 import {
   ConfigurationDomain,
   ConfigurationPath,
@@ -113,9 +114,8 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
   }
 
   private createConfigHash(): string {
-    const crypto = require('crypto');
     const configStr = JSON.stringify(this.config);
-    return crypto.createHash('sha256').update(configStr).digest('hex').slice(0, 8);
+    return createHash('sha256').update(configStr).digest('hex').slice(0, 8);
   }
 
   get<T = unknown>(path: ConfigurationPath): T {

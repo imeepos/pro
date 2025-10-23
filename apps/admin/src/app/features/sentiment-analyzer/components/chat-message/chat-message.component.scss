@@ -22,8 +22,8 @@
 }
 
 .message--left .message__avatar {
-  background: rgba(59, 130, 246, 0.15);
-  color: #1e40af;
+  background: rgba(24, 144, 255, 0.18);
+  color: rgba(24, 144, 255, 0.9);
 }
 
 .message__body {
@@ -43,12 +43,12 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-color-secondary, rgba(0, 0, 0, 0.5));
 }
 
 .message__author {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-color, #1f2937);
 }
 
 .message__bubble {
@@ -94,13 +94,13 @@
 
 .message__visualization-label {
   font-weight: 600;
-  color: #334155;
+  color: var(--text-color, #1f2937);
 }
 
 .message__visualization-desc {
   margin: 0;
   font-size: 0.85rem;
-  color: #475569;
+  color: var(--text-color-secondary, rgba(0, 0, 0, 0.55));
   opacity: 0.9;
 }
 
@@ -112,7 +112,7 @@
 }
 
 .message__attachment a {
-  color: #2563eb;
+  color: var(--primary-color, #1890ff);
   text-decoration: underline;
 }
 

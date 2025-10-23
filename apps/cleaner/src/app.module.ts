@@ -11,6 +11,8 @@ import {
   WeiboPostHashtagEntity,
   WeiboUserStatsEntity,
   WeiboMediaEntity,
+  WeiboInteractionEntity,
+  WeiboPostMentionEntity,
 } from '@pro/entities';
 import {
   RawDataSource,
@@ -57,6 +59,8 @@ import { WeiboPersistenceService } from './services/weibo-persistence.service';
             WeiboHashtagEntity,
             WeiboPostHashtagEntity,
             WeiboUserStatsEntity,
+            WeiboInteractionEntity,
+            WeiboPostMentionEntity,
           ],
           synchronize: false,
           logging: configService.get('NODE_ENV') === 'development',
@@ -71,6 +75,8 @@ import { WeiboPersistenceService } from './services/weibo-persistence.service';
       WeiboHashtagEntity,
       WeiboPostHashtagEntity,
       WeiboUserStatsEntity,
+      WeiboInteractionEntity,
+      WeiboPostMentionEntity,
     ]),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],

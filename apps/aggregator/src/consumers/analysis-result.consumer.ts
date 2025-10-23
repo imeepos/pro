@@ -52,6 +52,9 @@ export class AnalysisResultConsumer implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
+    // Wait for RabbitMQ service to be fully initialized
+    await this.waitForRabbitMQConnection();
+
     const client = this.rabbitMQService.getClient();
     const queue = 'analysis_result_queue';
 
@@ -64,6 +67,31 @@ export class AnalysisResultConsumer implements OnModuleInit, OnModuleDestroy {
     });
 
     this.logger.log('分析结果消费者已优雅启动', 'AnalysisResultConsumer');
+  }
+
+  private async waitForRabbitMQConnection(): Promise<void> {
+    const maxAttempts = 30;
+    const retryInterval = 1000;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const client = this.rabbitMQService.getClient();
+        if (client.isConnected()) {
+          this.logger.log('RabbitMQ 连接已就绪', 'AnalysisResultConsumer');
+          return;
+        }
+      } catch (error) {
+        this.logger.debug(`RabbitMQ 连接等待中 (${attempt}/${maxAttempts})`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      if (attempt === maxAttempts) {
+        throw new Error('RabbitMQ 连接超时，消费者初始化失败');
+      }
+
+      await new Promise(resolve => setTimeout(resolve, retryInterval));
+    }
   }
 
   async onModuleDestroy() {

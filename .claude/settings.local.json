@@ -80,7 +80,8 @@
       "Bash(echo:*)",
       "Bash(node:*)",
       "WebFetch(domain:github.com)",
-      "Bash(pkill -f \"pnpm run build\")"
+      "Bash(pkill -f \"pnpm run build\")",
+      "Bash(pnpm run:*)"
     ],
     "deny": [],
     "ask": []
