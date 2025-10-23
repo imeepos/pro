@@ -5,6 +5,7 @@ import {
   normalizeProfileSnapshot,
   normalizeUser,
 } from './weibo-normalizer';
+import { narrate } from '../../utils/logging';
 
 export class WeiboUserInfoCleanTask extends WeiboBaseCleanTask {
   readonly name = 'WeiboUserInfoCleanTask';
@@ -18,7 +19,11 @@ export class WeiboUserInfoCleanTask extends WeiboBaseCleanTask {
 
     const user = normalizeUser(payload.data?.user);
     if (!user) {
-      logger.warn('用户资料中缺少有效用户信息', { rawDataId: rawData._id.toString() });
+      logger.warn(
+        narrate('用户资料中缺少有效用户信息', {
+          rawDataId: rawData._id.toString(),
+        }),
+      );
       return { postIds: [], commentIds: [], userIds: [], notes: { normalizedEmpty: true } };
     }
 
@@ -51,9 +56,11 @@ export class WeiboUserInfoCleanTask extends WeiboBaseCleanTask {
       }
       return parsed;
     } catch (error) {
-      logger.error('解析微博用户资料失败', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error(
+        narrate('解析微博用户资料失败', {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
       return null;
     }
   }

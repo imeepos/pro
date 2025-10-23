@@ -1,15 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { PinoLogger } from '@pro/logger';
 import { RawDataSourceDoc } from '@pro/mongodb';
+import { narrate } from '../utils/logging';
 
 @Injectable()
 export class RawDataService {
+  private readonly logger = new Logger(RawDataService.name);
+
   constructor(
     @InjectModel('RawDataSource')
     private readonly rawDataModel: Model<RawDataSourceDoc>,
-    private readonly logger: PinoLogger,
   ) {}
 
   async getRawDataById(rawDataId: string): Promise<RawDataSourceDoc | null> {
@@ -17,16 +18,18 @@ export class RawDataService {
       const rawData = await this.rawDataModel.findById(rawDataId).exec();
 
       if (!rawData) {
-        this.logger.warn('原始数据未找到', { rawDataId });
+        this.logger.warn(narrate('原始数据未找到', { rawDataId }));
         return null;
       }
 
       return rawData;
     } catch (error) {
-      this.logger.error('获取原始数据失败', {
-        rawDataId,
-        error: error.message,
-      });
+      this.logger.error(
+        narrate('获取原始数据失败', {
+          rawDataId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
       throw error;
     }
   }
@@ -48,17 +51,21 @@ export class RawDataService {
 
       await this.rawDataModel.findByIdAndUpdate(rawDataId, update).exec();
 
-      this.logger.debug('更新原始数据状态', {
-        rawDataId,
-        status,
-        hasError: !!errorMessage,
-      });
+      this.logger.debug(
+        narrate('更新原始数据状态', {
+          rawDataId,
+          status,
+          hasError: !!errorMessage,
+        }),
+      );
     } catch (error) {
-      this.logger.error('更新原始数据状态失败', {
-        rawDataId,
-        status,
-        error: error.message,
-      });
+      this.logger.error(
+        narrate('更新原始数据状态失败', {
+          rawDataId,
+          status,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
       throw error;
     }
   }

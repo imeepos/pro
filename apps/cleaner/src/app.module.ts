@@ -2,7 +2,6 @@ import { Module, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
-import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import {
   WeiboPostEntity,
   WeiboCommentEntity,
@@ -39,11 +38,6 @@ import { WeiboPersistenceService } from './services/weibo-persistence.service';
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
-    LoggerModule.forRoot(
-      createLoggerConfig({
-        serviceName: '@pro/cleaner',
-      }),
-    ),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

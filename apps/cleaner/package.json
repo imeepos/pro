@@ -33,7 +33,6 @@
     "@nestjs/swagger": "^11.0.5",
     "@nestjs/typeorm": "^11.0.0",
     "@pro/entities": "workspace:*",
-    "@pro/logger": "workspace:*",
     "@pro/minio": "workspace:*",
     "@pro/mongodb": "workspace:*",
     "@pro/rabbitmq": "workspace:*",

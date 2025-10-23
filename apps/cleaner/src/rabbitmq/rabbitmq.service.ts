@@ -1,8 +1,8 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitMQClient, RabbitMQConfig } from '@pro/rabbitmq';
-import { PinoLogger } from '@pro/logger';
 import { QUEUE_NAMES, CleanedDataEvent } from '@pro/types';
+import { narrate } from '../utils/logging';
 
 @Injectable()
 export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
@@ -11,10 +11,9 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private resolveClientReady?: () => void;
   private rejectClientReady?: (error: Error) => void;
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly logger: PinoLogger,
-  ) {
+  private readonly logger = new Logger(RabbitMQService.name);
+
+  constructor(private readonly configService: ConfigService) {
     this.clientReady = new Promise<void>((resolve, reject) => {
       this.resolveClientReady = resolve;
       this.rejectClientReady = reject;
@@ -29,10 +28,12 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       queue: QUEUE_NAMES.RAW_DATA_READY,
     };
 
-    this.logger.debug('初始化 RabbitMQ 连接', {
-      url: config.url.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@'),
-      queue: config.queue,
-    });
+    this.logger.debug(
+      narrate('初始化 RabbitMQ 连接', {
+        url: config.url.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@'),
+        queue: config.queue,
+      }),
+    );
 
     const startTime = Date.now();
     this.client = new RabbitMQClient(config);
@@ -45,33 +46,39 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       this.resolveClientReady = undefined;
       this.rejectClientReady = undefined;
 
-      this.logger.info(`RabbitMQ 连接已建立,耗时 ${duration}ms`, {
-        queue: config.queue,
-        connectionTimeMs: duration,
-      });
+      this.logger.log(
+        narrate('RabbitMQ 连接已建立', {
+          queue: config.queue,
+          connectionTimeMs: duration,
+        }),
+      );
     } catch (error) {
       this.rejectClientReady?.(error);
       this.resolveClientReady = undefined;
       this.rejectClientReady = undefined;
 
-      this.logger.error('RabbitMQ 连接失败', {
-        error: error.message,
-        queue: config.queue,
-      });
+      this.logger.error(
+        narrate('RabbitMQ 连接失败', {
+          error: error.message,
+          queue: config.queue,
+        }),
+      );
       throw error;
     }
   }
 
   async onModuleDestroy(): Promise<void> {
-    this.logger.debug('关闭 RabbitMQ 连接');
+    this.logger.debug(narrate('关闭 RabbitMQ 连接'));
 
     try {
       await this.client.close();
-      this.logger.info('RabbitMQ 连接已关闭');
+      this.logger.log(narrate('RabbitMQ 连接已关闭'));
     } catch (error) {
-      this.logger.error('关闭 RabbitMQ 连接失败', {
-        error: error.message,
-      });
+      this.logger.error(
+        narrate('关闭 RabbitMQ 连接失败', {
+          error: error.message,
+        }),
+      );
     }
   }
 
@@ -87,27 +94,33 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       );
       const duration = Date.now() - startTime;
 
+      const summary = {
+        rawDataId: event.rawDataId,
+        sourceType: event.sourceType,
+        totalPosts: event.extractedEntities.postIds.length,
+        totalComments: event.extractedEntities.commentIds.length,
+        totalUsers: event.extractedEntities.userIds.length,
+        publishTimeMs: duration,
+      };
+
       if (success) {
-        this.logger.info('已发布清洗完成事件', {
-          rawDataId: event.rawDataId,
-          sourceType: event.sourceType,
-          totalPosts: event.extractedEntities.postIds.length,
-          totalComments: event.extractedEntities.commentIds.length,
-          totalUsers: event.extractedEntities.userIds.length,
-          publishTimeMs: duration,
-        });
+        this.logger.log(narrate('已发布清洗完成事件', summary));
       } else {
-        this.logger.warn('发布清洗完成事件失败', {
-          rawDataId: event.rawDataId,
-        });
+        this.logger.warn(
+          narrate('发布清洗完成事件失败', {
+            rawDataId: event.rawDataId,
+          }),
+        );
       }
 
       return success;
     } catch (error) {
-      this.logger.error('发布清洗完成事件异常', {
-        rawDataId: event.rawDataId,
-        error: error.message,
-      });
+      this.logger.error(
+        narrate('发布清洗完成事件异常', {
+          rawDataId: event.rawDataId,
+          error: error.message,
+        }),
+      );
       throw error;
     }
   }

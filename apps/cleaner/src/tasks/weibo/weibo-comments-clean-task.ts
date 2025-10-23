@@ -7,6 +7,7 @@ import {
   normalizeComments,
   normalizeUser,
 } from './weibo-normalizer';
+import { narrate } from '../../utils/logging';
 
 export class WeiboCommentsCleanTask extends WeiboBaseCleanTask {
   readonly name = 'WeiboCommentsCleanTask';
@@ -33,13 +34,23 @@ export class WeiboCommentsCleanTask extends WeiboBaseCleanTask {
     }
 
     if (commentBuckets.length === 0) {
-      logger.info('评论数据为空', { rawDataId: rawData._id.toString(), targetWeiboId });
+      logger.log(
+        narrate('评论数据为空', {
+          rawDataId: rawData._id.toString(),
+          targetWeiboId,
+        }),
+      );
       return { postIds: [], commentIds: [], userIds: [], notes: { empty: true } };
     }
 
     const normalizedComments: NormalizedWeiboComment[] = normalizeComments(commentBuckets, targetWeiboId);
     if (normalizedComments.length === 0) {
-      logger.warn('评论归一化结果为空', { rawDataId: rawData._id.toString(), targetWeiboId });
+      logger.warn(
+        narrate('评论归一化结果为空', {
+          rawDataId: rawData._id.toString(),
+          targetWeiboId,
+        }),
+      );
       return { postIds: [], commentIds: [], userIds: [], notes: { normalizedEmpty: true } };
     }
 
@@ -104,9 +115,11 @@ export class WeiboCommentsCleanTask extends WeiboBaseCleanTask {
       }
       return parsed;
     } catch (error) {
-      logger.error('解析微博评论数据失败', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error(
+        narrate('解析微博评论数据失败', {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
       return null;
     }
   }
