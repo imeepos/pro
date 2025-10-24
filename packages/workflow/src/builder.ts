@@ -23,8 +23,8 @@ export class WorkflowBuilder {
         return this;
     }
 
-    build(): WorkflowGraphAst {
+    build(name: string): WorkflowGraphAst {
         // 返回特定类型的工作流
-        return createWorkflowGraphAst({ nodes: this.nodes, edges: this.edges })
+        return createWorkflowGraphAst({ nodes: this.nodes, edges: this.edges, name })
     }
 }

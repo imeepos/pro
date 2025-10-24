@@ -46,7 +46,7 @@ export async function main() {
             fromProperty: 'html',
             toProperty: 'html'
         })
-        .build()
+        .build(`weibo_keyword_search`)
 
     const executer = new ExecutorVisitor()
     console.log(`开始执行`)

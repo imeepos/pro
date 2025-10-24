@@ -11,6 +11,7 @@ export abstract class Ast implements INode {
     abstract visit(visitor: Visitor, ctx: Context): Promise<any>;
 }
 export class WorkflowGraphAst extends Ast implements WorkflowGraph {
+    name: string | undefined;
     nodes: INode[] = [];
     edges: IEdge[] = [];
     type: `WorkflowGraphAst` = `WorkflowGraphAst`
@@ -18,8 +19,9 @@ export class WorkflowGraphAst extends Ast implements WorkflowGraph {
         return visitor.visitWorkflowGraphAst(this, ctx)
     }
 }
-export function createWorkflowGraphAst({ nodes, edges, id, state }: { nodes: INode[], edges: IEdge[], id?: string, state?: IAstStates }) {
+export function createWorkflowGraphAst({ nodes, edges, id, state, name }: { name: string, nodes: INode[], edges: IEdge[], id?: string, state?: IAstStates }) {
     const ast = new WorkflowGraphAst()
+    ast.name = name
     ast.nodes = nodes;
     ast.edges = edges;
     if (id) ast.id = id;
@@ -124,7 +126,7 @@ export function createWeiboKeywordSearchAst({ keyword, start, end, id, state }: 
 
 export class WeiboDetailAst extends Ast {
     @Input() mid: string | undefined;
-
+    @Output() detail: any;
     type: `WeiboDetailAst` = `WeiboDetailAst`
     visit(visitor: Visitor, ctx: Context): Promise<any> {
         return visitor.visitWeiboDetailAst(this, ctx)
@@ -132,7 +134,7 @@ export class WeiboDetailAst extends Ast {
 }
 export class WeiboUserAst extends Ast {
     @Input() uid: string | undefined;
-
+    @Output() user: any;
     type: `WeiboUserAst` = `WeiboUserAst`
     visit(visitor: Visitor, ctx: Context): Promise<any> {
         return visitor.visitWeiboUserAst(this, ctx)
@@ -140,7 +142,7 @@ export class WeiboUserAst extends Ast {
 }
 export class WeiboLikesAst extends Ast {
     @Input() mid: string | undefined;
-
+    @Output() likes: any;
     type: `WeiboLikesAst` = `WeiboLikesAst`
     visit(visitor: Visitor, ctx: Context): Promise<any> {
         return visitor.visitWeiboLikesAst(this, ctx)
@@ -148,6 +150,7 @@ export class WeiboLikesAst extends Ast {
 }
 export class WeiboCommentsAst extends Ast {
     @Input() mid: string | undefined;
+    @Output() comments: any;
 
     type: `WeiboCommentsAst` = `WeiboCommentsAst`
     visit(visitor: Visitor, ctx: Context): Promise<any> {
@@ -156,7 +159,7 @@ export class WeiboCommentsAst extends Ast {
 }
 export class WeiboSharesAst extends Ast {
     @Input() mid: string | undefined;
-
+    @Output() shares: any;
     type: `WeiboSharesAst` = `WeiboSharesAst`
     visit(visitor: Visitor, ctx: Context): Promise<any> {
         return visitor.visitWeiboSharesAst(this, ctx)

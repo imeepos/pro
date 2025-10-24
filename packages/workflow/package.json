@@ -25,6 +25,7 @@
     "author": "Pro Team",
     "license": "MIT",
     "dependencies": {
+        "@pro/weibo": "workspace:*",
         "@types/cheerio": "^1.0.0",
         "cheerio": "^1.1.2",
         "playwright": "^1.56.0"

@@ -21,7 +21,7 @@ export class WeiboVisitor extends EmptyVisitor {
    * 访问HTML解析AST节点
    * 专门处理微博页面的HTML解析任务
    */
-  async visitHtmlParserAst(ast: HtmlParserAst, ctx: any): Promise<any> {
+  async visitHtmlParserAst(ast: HtmlParserAst): Promise<any> {
     if (!ast.html) {
       ast.state = 'fail';
       return ast;
@@ -43,29 +43,29 @@ export class WeiboVisitor extends EmptyVisitor {
         ast.maxPage = maxPage;
         ast.minDate = minTime;
         ast.state = 'success';
-        if (ast.currentPage < ast.maxPage) {
-          // 发送事件到mq
-          await ctx.send('weibo_page', {
-            keyword: `国庆`,
-            url: ast.nextPageUrl,
-            start: ast.start,
-            end: ast.minDate
-          })
-        } else {
-          await ctx.send('weibo_search', {
-            keyword: `国庆`,
-            start: ast.start,
-            end: ast.minDate
-          })
-        }
-        if (ast.posts && ast.posts.length > 0) {
-          await Promise.all(ast.posts.map(async post => {
-            ctx.send(`weibo_detail`, {
-              keyword: `国庆`,
-              mid: post.mid
-            })
-          }))
-        }
+        // if (ast.currentPage < ast.maxPage) {
+        //   // 发送事件到mq
+        //   await ctx.send('weibo_page', {
+        //     keyword: `国庆`,
+        //     url: ast.nextPageUrl,
+        //     start: ast.start,
+        //     end: ast.minDate
+        //   })
+        // } else {
+        //   await ctx.send('weibo_search', {
+        //     keyword: `国庆`,
+        //     start: ast.start,
+        //     end: ast.minDate
+        //   })
+        // }
+        // if (ast.posts && ast.posts.length > 0) {
+        //   await Promise.all(ast.posts.map(async post => {
+        //     ctx.send(`weibo_detail`, {
+        //       keyword: `国庆`,
+        //       mid: post.mid
+        //     })
+        //   }))
+        // }
         return ast;
       }
       ast.state = 'success';
