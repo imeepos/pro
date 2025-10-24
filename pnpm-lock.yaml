@@ -1378,6 +1378,9 @@ importers:
       '@pro/weibo':
         specifier: workspace:*
         version: link:../../packages/weibo
+      '@pro/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
       axios:
         specifier: 1.7.9
         version: 1.7.9

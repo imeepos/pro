@@ -159,6 +159,109 @@ export class WeiboSharesAst extends Ast {
         return visitor.visitWeiboSharesAst(this, ctx)
     }
 }
+
+// 爬虫专用节点
+export class WeiboSearchUrlBuilderAst extends Ast {
+    @Input() keyword: string | undefined;
+    @Input() start: Date | undefined;
+    @Input() end: Date | undefined;
+    @Input() page: number | undefined;
+    @Input() searchType: string | undefined;
+
+    @Output() url: string | undefined;
+
+    type: `WeiboSearchUrlBuilderAst` = `WeiboSearchUrlBuilderAst`
+    visit(visitor: Visitor, ctx: Context): Promise<any> {
+        return visitor.visitWeiboSearchUrlBuilderAst(this, ctx)
+    }
+}
+
+export function createWeiboSearchUrlBuilderAst({ keyword, start, end, page, searchType, id, state }: {
+    keyword: string,
+    start: Date,
+    end: Date,
+    page?: number,
+    searchType?: string,
+    id?: string,
+    state?: IAstStates
+}) {
+    const ast = new WeiboSearchUrlBuilderAst();
+    ast.keyword = keyword;
+    ast.start = start;
+    ast.end = end;
+    ast.page = page;
+    ast.searchType = searchType;
+    if (id) ast.id = id;
+    if (state) ast.state = state;
+    return ast;
+}
+
+export class AccountInjectorAst extends Ast {
+    @Input() url: string | undefined;
+    @Input() taskId: number | undefined;
+    @Input() taskName: string | undefined;
+
+    @Output() cookies: string | undefined;
+    @Output() headers: Record<string, string> | undefined;
+    @Output() selectedAccountId: number | undefined;
+
+    type: `AccountInjectorAst` = `AccountInjectorAst`
+    visit(visitor: Visitor, ctx: Context): Promise<any> {
+        return visitor.visitAccountInjectorAst(this, ctx)
+    }
+}
+
+export function createAccountInjectorAst({ url, taskId, taskName, id, state }: {
+    url?: string,
+    taskId?: number,
+    taskName?: string,
+    id?: string,
+    state?: IAstStates
+} = {}) {
+    const ast = new AccountInjectorAst();
+    ast.url = url;
+    ast.taskId = taskId;
+    ast.taskName = taskName;
+    if (id) ast.id = id;
+    if (state) ast.state = state || 'pending';
+    return ast;
+}
+
+export class StorageAst extends Ast {
+    @Input() storageType: string | undefined;
+    @Input() platform: string | undefined;
+    @Input() url: string | undefined;
+    @Input() raw: string | undefined;
+    @Input() metadata: Record<string, unknown> | undefined;
+
+    @Output() stored: boolean | undefined;
+
+    type: `StorageAst` = `StorageAst`
+    visit(visitor: Visitor, ctx: Context): Promise<any> {
+        return visitor.visitStorageAst(this, ctx)
+    }
+}
+
+export function createStorageAst({ type, platform, url, raw, metadata, id, state }: {
+    type?: string,
+    platform?: string,
+    url?: string,
+    raw?: string,
+    metadata?: Record<string, unknown>,
+    id?: string,
+    state?: IAstStates
+} = {}) {
+    const ast = new StorageAst();
+    ast.storageType = type;
+    ast.platform = platform;
+    ast.url = url;
+    ast.raw = raw;
+    ast.metadata = metadata;
+    if (id) ast.id = id;
+    if (state) ast.state = state || 'pending';
+    return ast;
+}
+
 export function createHtmlParserAst({ url, html, id, state }: { url?: string, html?: string, id?: string, state?: IAstStates } = {}) {
     const ast = new HtmlParserAst()
     ast.url = url;
@@ -188,6 +291,9 @@ export interface Visitor {
     visitMqConsumerAst(ast: MqConsumerAst, ctx: Context): Promise<any>;
     visiMqPublisherAst(ast: MqPublisherAst, ctx: Context): Promise<any>;
     visitWeiboKeywordSearchAst(ast: WeiboKeywordSearchAst, ctx: Context): Promise<any>;
+    visitWeiboSearchUrlBuilderAst(ast: WeiboSearchUrlBuilderAst, ctx: Context): Promise<any>;
+    visitAccountInjectorAst(ast: AccountInjectorAst, ctx: Context): Promise<any>;
+    visitStorageAst(ast: StorageAst, ctx: Context): Promise<any>;
 }
 export class EmptyVisitor implements Visitor {
     visit(ast: Ast, ctx: Context): Promise<any> {
@@ -224,6 +330,15 @@ export class EmptyVisitor implements Visitor {
         return ast;
     }
     async visitWeiboSharesAst(ast: WeiboSharesAst, _ctx: Context): Promise<any> {
+        return ast;
+    }
+    async visitWeiboSearchUrlBuilderAst(ast: WeiboSearchUrlBuilderAst, _ctx: Context): Promise<any> {
+        return ast;
+    }
+    async visitAccountInjectorAst(ast: AccountInjectorAst, _ctx: Context): Promise<any> {
+        return ast;
+    }
+    async visitStorageAst(ast: StorageAst, _ctx: Context): Promise<any> {
         return ast;
     }
 }
