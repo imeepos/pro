@@ -23,6 +23,7 @@ import { RawDataModule } from './raw-data/raw-data.module';
 import { DatabaseModule } from './database/database.module';
 import { LoadersModule } from './loaders.module';
 import { DlqModule } from './dlq/dlq.module';
+import { RabbitMQModule as BaseRabbitMQModule } from '@pro/rabbitmq';
 import { RabbitMQModule } from './rabbitmq/rabbitmq.module';
 import { TasksModule } from './tasks/tasks.module';
 import { createDatabaseConfig } from './config';
@@ -170,6 +171,15 @@ import { GraphqlExecutorModule } from './mcp/graphql-executor.module';
         serverSelectionTimeoutMS: configService.get<number>('MONGODB_SERVER_SELECTION_TIMEOUT', 5000),
         socketTimeoutMS: configService.get<number>('MONGODB_SOCKET_TIMEOUT', 45000),
         bufferCommands: configService.get<boolean>('MONGODB_BUFFER_COMMANDS', false),
+      }),
+    }),
+    BaseRabbitMQModule.forRootAsync({
+      imports: [NestConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        url: configService.get<string>('RABBITMQ_URL') || 'amqp://localhost:5672',
+        maxRetries: 3,
+        enableDLQ: true,
       }),
     }),
 
