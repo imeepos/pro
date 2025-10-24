@@ -25,6 +25,8 @@
     "author": "Pro Team",
     "license": "MIT",
     "dependencies": {
+        "@types/cheerio": "^1.0.0",
+        "cheerio": "^1.1.2",
         "playwright": "^1.56.0"
     },
     "devDependencies": {

@@ -1,10 +1,13 @@
 import { writeFileSync } from "fs";
-import { createHtmlParserAst, createPlaywrightAst } from "./ast";
+import { createHtmlParserAst, createPlaywrightAst, createWeiboKeywordSearchAst } from "./ast";
 import { WorkflowBuilder } from "./builder";
-import { executeAst, ExecutorVisitor } from "./executor";
+import { execute, ExecutorVisitor } from "./executor";
 
 export async function main() {
     const builder = new WorkflowBuilder()
+    const startDate = new Date()
+    startDate.setDate(1)
+    const keywordNode = createWeiboKeywordSearchAst({ keyword: '国庆', start: startDate, end: new Date() })
     const PlaywrightNode = createPlaywrightAst({
         url: `https://s.weibo.com/weibo?q=%E5%9B%BD%E5%BA%86`,
         ua: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36`,
@@ -12,11 +15,25 @@ export async function main() {
     })
     const htmlParserAst = createHtmlParserAst({
         html: ``,
-        url: ``
+        url: ``,
+        start: new Date()
     })
     const workflow = builder
+        .addAst(keywordNode)
         .addAst(PlaywrightNode)
         .addAst(htmlParserAst)
+        .addEdge({
+            from: keywordNode.id,
+            to: htmlParserAst.id,
+            fromProperty: 'start',
+            toProperty: `start`
+        })
+        .addEdge({
+            from: keywordNode.id,
+            to: PlaywrightNode.id,
+            fromProperty: 'url',
+            toProperty: 'url'
+        })
         .addEdge({
             from: PlaywrightNode.id,
             to: htmlParserAst.id,
@@ -32,9 +49,13 @@ export async function main() {
         .build()
 
     const executer = new ExecutorVisitor()
-    let currentState = await executeAst(workflow, executer, {})
-    currentState = await executeAst(currentState, executer, {})
-
+    console.log(`开始执行`)
+    let currentState = await execute(workflow, executer, {
+        send(...args: any[]) {
+            console.log(`发送事件`, args)
+        }
+    })
+    console.log(`执行结束`)
     writeFileSync(`1.json`, JSON.stringify(currentState, null, 2))
 }
 

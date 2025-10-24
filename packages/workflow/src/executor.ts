@@ -1,16 +1,41 @@
-import { Ast, HtmlParserAst, PlaywrightAst, Visitor, WorkflowGraphAst } from "./ast";
+import { Ast, EmptyVisitor, HtmlParserAst, PlaywrightAst, Visitor, WeiboKeywordSearchAst, WorkflowGraphAst } from "./ast";
 import { getOutputs } from "./decorator";
 import { generateAst } from "./generater";
 import { PlaywrightExecutor } from "./PlaywrightExecutor";
 import { Context, IAstStates, IEdge, INode, Playwright, WorkflowGraph } from "./types";
-import { findTerminalNodes } from "./utils";
+import { WeiboVisitor } from "./weibo";
 
-export class ExecutorVisitor implements Visitor {
+export class ExecutorVisitor extends EmptyVisitor {
     visit(ast: Ast, ctx: Context): Promise<any> {
+        console.log(`执行 ${ast.type}`)
         return ast.visit(this, ctx)
     }
-    async visitHtmlParserAst(ast: HtmlParserAst, _ctx: Context): Promise<any> {
-        return ast
+
+    async visitWeiboKeywordSearchAst(ast: WeiboKeywordSearchAst, _ctx: Context): Promise<any> {
+        const now = new Date();
+        const startDate = ast.start || now;
+        const endDate = now;
+
+        // 格式化日期为微博搜索时间范围格式: YYYY-MM-DD-H
+        const formatDateForWeibo = (date: Date): string => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hour = String(date.getHours()).padStart(2, '0');
+            return `${year}-${month}-${day}-${hour}`;
+        };
+
+        const startTime = formatDateForWeibo(startDate);
+        const endTime = formatDateForWeibo(endDate);
+
+        ast.url = `https://s.weibo.com/weibo?q=${encodeURIComponent(ast.keyword || '')}&typeall=1&suball=1&timescope=custom%3A${startTime}%3A${endTime}&Refer=g`;
+
+        ast.state = 'success'
+        return ast;
+    }
+
+    async visitHtmlParserAst(ast: HtmlParserAst, ctx: Context): Promise<any> {
+        return new WeiboVisitor().visit(ast, ctx)
     }
     // 打开浏览器获取html
     async visitPlaywrightAst(ast: PlaywrightAst, _ctx: Context): Promise<Playwright> {
@@ -19,6 +44,7 @@ export class ExecutorVisitor implements Visitor {
         ast.state = 'success';
         return ast;
     }
+
     // 找到当前可以执行的节点
     private findExecutableNodes(nodes: INode[], edges: IEdge[]): INode[] {
         const completedNodes = new Set(
@@ -87,23 +113,15 @@ export class ExecutorVisitor implements Visitor {
 
         return outputData;
     }
-
-    // 获取指定节点的输出数据
-    private getNodeOutputs(nodeId: string, allOutputs: Map<string, any>): any {
-        return allOutputs.get(nodeId) || {};
-    }
-
     // 根据边关系将前驱节点输出映射到当前节点输入
-    private assignInputsToNode(targetNode: INode, workflowNodes: INode[], edges: IEdge[]): void {
+    private assignInputsToNode(targetNode: INode, allOutputs: Map<string, any>, edges: IEdge[]): void {
         // 找到所有指向目标节点的边
         const incomingEdges = edges.filter(edge => edge.to === targetNode.id);
 
         incomingEdges.forEach(edge => {
-            const sourceNode = workflowNodes.find(n => n.id === edge.from);
-            if (!sourceNode) return;
-
-            // 直接从源节点获取输出数据
-            const sourceOutputs = this.extractNodeOutputs(sourceNode);
+            // 直接从输出数据Map中获取源节点的输出
+            const sourceOutputs = allOutputs.get(edge.from);
+            if (!sourceOutputs) return;
 
             // 如果指定了属性映射，则进行精确映射
             if (edge.fromProperty && edge.toProperty) {
@@ -160,7 +178,7 @@ export class ExecutorVisitor implements Visitor {
         const hasFailures = updatedNodes.some(node => node.state === 'fail');
         // 6. 状态转移：running → success/fail 或继续 running
         let finalState: IAstStates;
-        const results = findTerminalNodes(updatedNodes, ast.edges)
+        // const results = findTerminalNodes(updatedNodes, ast.edges)
         if (allCompleted) {
             finalState = hasFailures ? 'fail' : 'success';
         } else {
@@ -168,7 +186,6 @@ export class ExecutorVisitor implements Visitor {
         }
         ast.nodes = updatedNodes;
         ast.state = finalState;
-        ast.results = results;
         return ast;
     }
     // 每次执行都会更新状态
@@ -178,15 +195,6 @@ export class ExecutorVisitor implements Visitor {
     }
 }
 
-export function canTransition(from: IAstStates, to: IAstStates): boolean {
-    const transitions: Record<IAstStates, IAstStates[]> = {
-        pending: ['running'],
-        running: ['success', 'fail'],
-        success: [],
-        fail: []
-    };
-    return transitions[from].includes(to);
-}
 
 // 访问模式的执行引擎 - 连接状态与访问者的桥梁
 export async function executeAst<S extends INode>(state: S, visitor: Visitor, ctx: Context) {
