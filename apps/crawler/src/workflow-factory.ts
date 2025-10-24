@@ -84,7 +84,7 @@ export class WorkflowFactory {
       .addAst(storage)
       .addEdge({ from: urlBuilder.id, to: playwright.id, fromProperty: 'url', toProperty: 'url' })
       .addEdge({ from: accountInjector.id, to: playwright.id, fromProperty: 'cookies', toProperty: 'cookies' })
-      .addEdge({ from: accountInjector.id, to: playwright.id, fromProperty: 'headers', toProperty: 'ua' })
+      .addEdge({ from: accountInjector.id, to: playwright.id, fromProperty: 'userAgent', toProperty: 'ua' })
       .addEdge({ from: playwright.id, to: storage.id, fromProperty: 'html', toProperty: 'raw' })
       .addEdge({ from: playwright.id, to: storage.id, fromProperty: 'url', toProperty: 'url' })
       .build('WeiboKeywordSearchWorkflow');

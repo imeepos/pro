@@ -120,9 +120,11 @@ export class PlaywrightExecutor {
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
+        const userAgent = typeof node.ua === 'string' ? node.ua : undefined;
+
         this.context = await this.browser.newContext({
             viewport: { width: 1920, height: 1080 },
-            userAgent: node.ua,
+            userAgent,
         });
 
         this.page = await this.context.newPage();

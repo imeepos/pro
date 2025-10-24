@@ -13,6 +13,7 @@ export class AccountInjectorAst extends Ast {
 
   @Output() cookies!: string;
   @Output() headers!: Record<string, string>;
+  @Output() userAgent!: string;
   @Output() selectedAccountId?: number;
 
   type = 'AccountInjectorAst' as const;
