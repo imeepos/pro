@@ -4,6 +4,7 @@ import { CleanTaskFactory } from '../tasks/clean-task-factory';
 import { CleanTaskMessage } from '../tasks/clean-task-message';
 import { CleanTaskResult } from '../tasks/base-task';
 import { WeiboPersistenceService } from './weibo-persistence.service';
+import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 import { narrate } from '../utils/logging';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class CleanerService {
     private readonly rawDataService: RawDataService,
     private readonly taskFactory: CleanTaskFactory,
     private readonly weiboPersistence: WeiboPersistenceService,
+    private readonly rabbitMQService: RabbitMQService,
   ) {}
 
   async execute(message: CleanTaskMessage): Promise<CleanTaskResult> {
@@ -40,6 +42,7 @@ export class CleanerService {
       clock: () => new Date(),
       helpers: {
         weibo: this.weiboPersistence,
+        rabbitMQ: this.rabbitMQService,
       },
     };
 

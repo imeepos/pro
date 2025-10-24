@@ -1,0 +1,81 @@
+<section class="workflows">
+  <header class="workflows__header">
+    <div>
+      <h1>工作流编排中心</h1>
+      <ng-container *ngIf="totalWorkflows() > 0; else emptySummary">
+        <p>
+          共 {{ totalWorkflows() }} 条流程，最近更新 {{ latestUpdateNarrative() }}。
+        </p>
+      </ng-container>
+      <ng-template #emptySummary>
+        <p>还没有任何流程，让我们绘制第一张数据蓝图。</p>
+      </ng-template>
+    </div>
+    <button
+      type="button"
+      class="workflows__create"
+      (click)="createWorkflow()"
+    >
+      新建工作流
+    </button>
+  </header>
+
+  <div *ngIf="loading(); else loaded" class="workflows__loading">
+    <span>正在收集工作流...</span>
+  </div>
+
+  <ng-template #loaded>
+    <div *ngIf="error(); else content" class="workflows__error">
+      <p>{{ error() }}</p>
+      <button type="button" (click)="reload()">重试</button>
+    </div>
+
+    <ng-template #content>
+      <div *ngIf="cards().length > 0; else emptyState" class="workflows__grid">
+        <article
+          class="workflows__card"
+          *ngFor="let entry of cards(); trackBy: trackById"
+        >
+          <header>
+            <h2>{{ entry.name }}</h2>
+            <span class="workflows__revision" [attr.title]="entry.updatedExact">
+              版本 {{ entry.revision }}
+            </span>
+          </header>
+
+          <p class="workflows__description">{{ entry.description }}</p>
+
+          <ul class="workflows__meta">
+            <li [attr.title]="entry.updatedExact">
+              最近更新：{{ entry.updatedNarrative }}
+            </li>
+            <li [attr.title]="entry.createdExact">
+              创建于：{{ entry.createdNarrative }}
+            </li>
+          </ul>
+
+          <footer>
+            <div class="workflows__tags">
+              <ng-container *ngIf="entry.tags.length > 0; else untitledTag">
+                <span *ngFor="let tag of entry.tags">#{{ tag }}</span>
+              </ng-container>
+              <ng-template #untitledTag>
+                <span class="workflows__tag-empty">尚未分配标签</span>
+              </ng-template>
+            </div>
+            <div class="workflows__actions">
+              <button type="button" (click)="openEditor(entry.id)">编辑</button>
+              <button type="button" (click)="openMonitor(entry.id)">监控</button>
+            </div>
+          </footer>
+        </article>
+      </div>
+
+      <ng-template #emptyState>
+        <div class="workflows__empty">
+          <p>暂未创建工作流，点击右上角开始编排第一条任务链。</p>
+        </div>
+      </ng-template>
+    </ng-template>
+  </ng-template>
+</section>

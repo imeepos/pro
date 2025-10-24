@@ -1,0 +1,62 @@
+{
+    "name": "@pro/workflow",
+    "version": "1.0.0",
+    "description": "DAG工作流执行引擎 - 支持状态机模式、访问者模式和React风格状态转移",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "typecheck": "tsc --noEmit",
+        "clean": "rm -rf dist",
+        "test": "tsx src/main.ts",
+        "lint": "eslint src --ext .ts",
+        "lint:fix": "eslint src --ext .ts --fix"
+    },
+    "keywords": [
+        "workflow",
+        "dag",
+        "state-machine",
+        "visitor-pattern",
+        "typescript",
+        "async",
+        "parallel-execution"
+    ],
+    "author": "Pro Team",
+    "license": "MIT",
+    "dependencies": {
+        "@nestjs/common": "^10.0.0",
+        "@nestjs/core": "^10.0.0",
+        "playwright": "^1.56.0",
+        "reflect-metadata": "^0.2.0",
+        "rxjs": "^7.8.0"
+    },
+    "peerDependencies": {
+        "@nestjs/common": "^10.0.0",
+        "@nestjs/core": "^10.0.0"
+    },
+    "devDependencies": {
+        "tsx": "^4.20.6"
+    },
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "publishConfig": {
+        "access": "restricted",
+        "registry": "https://npm.pkg.github.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/your-org/pro.git",
+        "directory": "packages/workflow"
+    },
+    "homepage": "https://github.com/your-org/pro/tree/main/packages/workflow#readme",
+    "bugs": {
+        "url": "https://github.com/your-org/pro/issues"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}

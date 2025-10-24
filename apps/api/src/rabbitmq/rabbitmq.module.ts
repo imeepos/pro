@@ -1,15 +1,17 @@
-import { Module, Global } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { RabbitMQService } from './rabbitmq.service';
 
 /**
- * RabbitMQ 全局模块
+ * API 服务的 RabbitMQ 功能模块
  *
- * 设计原则：
- * - Global 装饰器：避免在多个模块中重复导入
- * - 单例服务：整个应用共享同一个 RabbitMQ 连接
- * - 存在即合理：提供消息发布能力，是微服务通信的桥梁
+ * 存在即合理：
+ * - 提供业务特定的 RabbitMQService 包装器
+ * - 基础连接由 @pro/rabbitmq 的 RabbitMQModule 全局提供
+ *
+ * 优雅即简约：
+ * - 薄模块，只提供业务逻辑层
+ * - 依赖全局 RabbitMQModule 的连接管理
  */
-@Global()
 @Module({
   providers: [RabbitMQService],
   exports: [RabbitMQService],

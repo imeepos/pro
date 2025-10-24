@@ -1,0 +1,18 @@
+.monitor {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  color: #0f172a;
+
+  header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  header p {
+    margin: 0;
+    color: #475569;
+  }
+}

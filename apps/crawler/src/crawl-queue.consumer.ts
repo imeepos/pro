@@ -1,8 +1,8 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Inject, Logger } from '@nestjs/common';
 import { RabbitMQClient } from '@pro/rabbitmq';
-import { CrawlerService } from './services/crawler.service';
+import { CrawlerServiceV2 } from './services/crawler-v2.service';
 import { RabbitConfig } from './config/crawler.config';
-import { SubTaskMessage } from './tasks/base-task';
+import { SubTaskMessage } from './types';
 
 @Injectable()
 export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
@@ -10,7 +10,7 @@ export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
   private client: RabbitMQClient | null = null;
 
   constructor(
-    private readonly crawlerService: CrawlerService,
+    private readonly crawlerService: CrawlerServiceV2,
     @Inject('RABBIT_CONFIG') private readonly config: RabbitConfig,
   ) {}
 

@@ -478,6 +478,16 @@ export type DeleteMessagesInput = {
   queueName: Scalars['String']['input'];
 };
 
+export type DlqConnectionStatusModel = {
+  __typename?: 'DlqConnectionStatusModel';
+  connected: Scalars['Boolean']['output'];
+  lastConnectedAt?: Maybe<Scalars['DateTime']['output']>;
+  lastErrorAt?: Maybe<Scalars['DateTime']['output']>;
+  lastErrorMessage?: Maybe<Scalars['String']['output']>;
+  state: Scalars['String']['output'];
+  target: Scalars['String']['output'];
+};
+
 export type DlqMessage = {
   __typename?: 'DlqMessage';
   content?: Maybe<Scalars['JSON']['output']>;
@@ -1420,6 +1430,8 @@ export type Query = {
   dashboardRecentActivities: Array<DashboardActivity>;
   dashboardStats: DashboardStats;
   defaultScreen: Screen;
+  /** 查看死信队列连接的实时状态 */
+  dlqConnectionStatus: DlqConnectionStatusModel;
   /** 分页查询死信队列中的消息 */
   dlqMessages: DlqMessageConnection;
   /** 获取所有死信队列信息 */

@@ -10,6 +10,8 @@ nul
 coverage/
 *.lcov
 
+1.json
+
 # Production
 dist/
 build/

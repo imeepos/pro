@@ -1,0 +1,29 @@
+<header class="toolbar">
+  <div class="toolbar__title">
+    <h1>{{ workflowName }}</h1>
+    <span
+      class="toolbar__status"
+      [class.toolbar__status--dirty]="dirty"
+      [class.toolbar__status--saving]="saving"
+    >
+      @if (saving) {
+        正在保存…
+      } @else if (dirty) {
+        未保存更改
+      } @else {
+        所有变更已保存
+      }
+    </span>
+  </div>
+
+  <div class="toolbar__actions">
+    <button type="button" (click)="triggerImport()">导入</button>
+    <button type="button" (click)="triggerExport()">导出</button>
+    <button type="button" class="primary" (click)="triggerSave()" [disabled]="saving">
+      保存
+    </button>
+    <button type="button" class="accent" (click)="triggerExecute()">
+      执行预览
+    </button>
+  </div>
+</header>

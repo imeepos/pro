@@ -1,0 +1,107 @@
+query Workflows($filter: WorkflowFilterInput) {
+  workflows(filter: $filter) {
+    id
+    name
+    slug
+    description
+    revision
+    tags
+    createdAt
+    updatedAt
+    createdBy
+    updatedBy
+  }
+}
+
+query Workflow($id: ID!) {
+  workflow(id: $id) {
+    id
+    name
+    slug
+    description
+    revision
+    tags
+    definition {
+      version
+      nodes {
+        id
+        key
+        title
+        kind
+        config {
+          schema
+          values
+        }
+        position {
+          x
+          y
+        }
+        metadata
+      }
+      edges {
+        id
+        sourceId
+        targetId
+        sourcePort
+        targetPort
+        condition
+      }
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+mutation SaveWorkflow($input: SaveWorkflowInput!) {
+  saveWorkflow(input: $input) {
+    id
+    name
+    slug
+    description
+    revision
+    tags
+    definition {
+      version
+      nodes {
+        id
+        key
+        title
+        kind
+        config {
+          schema
+          values
+        }
+        position {
+          x
+          y
+        }
+        metadata
+      }
+      edges {
+        id
+        sourceId
+        targetId
+        sourcePort
+        targetPort
+        condition
+      }
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+mutation TriggerWorkflow($input: TriggerWorkflowInput!) {
+  triggerWorkflow(input: $input) {
+    id
+    workflowId
+    revision
+    status
+    startedAt
+    finishedAt
+    durationMs
+    triggeredBy
+    createdAt
+    updatedAt
+  }
+}

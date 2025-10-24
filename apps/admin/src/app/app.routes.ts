@@ -130,6 +130,10 @@ export const routes: Routes = [
         ]
       },
       {
+        path: 'workflows',
+        loadChildren: () => import('./features/workflows/workflows.routes').then(m => m.WORKFLOW_ROUTES)
+      },
+      {
         path: 'media-type',
         loadChildren: () => import('./features/media-type/media-type.routes').then(m => m.mediaTypeRoutes)
       },

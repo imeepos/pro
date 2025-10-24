@@ -81,7 +81,8 @@
       "Bash(node:*)",
       "WebFetch(domain:github.com)",
       "Bash(pkill -f \"pnpm run build\")",
-      "Bash(pnpm run:*)"
+      "Bash(pnpm run:*)",
+      "WebFetch(domain:docs.temporal.io)"
     ],
     "deny": [],
     "ask": []

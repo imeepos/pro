@@ -1,0 +1,7 @@
+<section class="canvas">
+  <div #canvasHost class="canvas__host"></div>
+
+  <div class="canvas__placeholder" *ngIf="(nodes$ | async)?.length === 0">
+    <p>将节点放入画布，故事便此展开。</p>
+  </div>
+</section>

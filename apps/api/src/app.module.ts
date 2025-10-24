@@ -23,6 +23,7 @@ import { RawDataModule } from './raw-data/raw-data.module';
 import { DatabaseModule } from './database/database.module';
 import { LoadersModule } from './loaders.module';
 import { DlqModule } from './dlq/dlq.module';
+import { RabbitMQModule as BaseRabbitMQModule } from '@pro/rabbitmq';
 import { RabbitMQModule } from './rabbitmq/rabbitmq.module';
 import { TasksModule } from './tasks/tasks.module';
 import { createDatabaseConfig } from './config';
@@ -41,6 +42,7 @@ import { TagLoader } from './events/tag.loader';
 import { DateTimeScalar } from './common/scalars/date-time.scalar';
 import { McpModule } from './mcp/mcp.module';
 import { GraphqlExecutorModule } from './mcp/graphql-executor.module';
+import { WorkflowModule } from './workflow/workflow.module';
 
 @Module({
   imports: [
@@ -172,6 +174,15 @@ import { GraphqlExecutorModule } from './mcp/graphql-executor.module';
         bufferCommands: configService.get<boolean>('MONGODB_BUFFER_COMMANDS', false),
       }),
     }),
+    BaseRabbitMQModule.forRootAsync({
+      imports: [NestConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        url: configService.get<string>('RABBITMQ_URL') || 'amqp://localhost:5672',
+        maxRetries: 3,
+        enableDLQ: true,
+      }),
+    }),
 
     ConfigModule,
     DatabaseModule,
@@ -188,6 +199,7 @@ import { GraphqlExecutorModule } from './mcp/graphql-executor.module';
     NotificationsModule,
     BugModule,
     RawDataModule,
+    WorkflowModule,
     DlqModule,
     TasksModule,
     GraphqlExecutorModule,

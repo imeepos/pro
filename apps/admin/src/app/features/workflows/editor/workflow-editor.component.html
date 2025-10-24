@@ -1,0 +1,34 @@
+<section class="editor">
+  <app-workflow-toolbar
+    [workflowName]="workflowName()"
+    [dirty]="isDirty()"
+    [saving]="isSaving()"
+    (save)="handleSave()"
+    (execute)="handleExecute()"
+    (importDefinition)="handleImport()"
+    (exportDefinition)="handleExport()"
+  ></app-workflow-toolbar>
+
+  @if (loadError()) {
+    <div class="editor__state editor__state--error">
+      <p>{{ loadError() }}</p>
+      <button type="button" (click)="reloadCurrent()">重新载入</button>
+    </div>
+  } @else {
+    <div class="editor__body" [class.editor__body--masked]="isLoading()">
+      <app-workflow-node-panel (addNode)="handleAddNode($event)"></app-workflow-node-panel>
+      <app-workflow-canvas></app-workflow-canvas>
+      <app-workflow-property-panel></app-workflow-property-panel>
+
+      @if (isLoading()) {
+        <div class="editor__mask">
+          <span>正在加载工作流…</span>
+        </div>
+      }
+    </div>
+
+    <footer class="editor__footer">
+      {{ footerStatus() }}
+    </footer>
+  }
+</section>

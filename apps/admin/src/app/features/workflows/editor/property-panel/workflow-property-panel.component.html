@@ -1,0 +1,77 @@
+<aside class="property">
+  <header>
+    <h2>属性面板</h2>
+  </header>
+
+  <section class="property__section property__section--workflow">
+    <h3>工作流信息</h3>
+    <label>
+      <span>名称</span>
+      <input
+        type="text"
+        [value]="workflowName()"
+        (change)="updateName($any($event.target).value)"
+        placeholder="请输入工作流名称"
+      />
+    </label>
+    <label>
+      <span>标识符</span>
+      <input
+        type="text"
+        [value]="workflowSlug()"
+        (change)="updateSlug($any($event.target).value)"
+        placeholder="如：daily-harvest"
+      />
+    </label>
+    <label>
+      <span>描述</span>
+      <textarea
+        rows="4"
+        [value]="workflowDescription() ?? ''"
+        (change)="updateDescription($any($event.target).value)"
+        placeholder="为团队讲述这条流程的使命。"
+      ></textarea>
+    </label>
+    <label>
+      <span>标签</span>
+      <input
+        type="text"
+        [value]="workflowTags().join(', ')"
+        (change)="updateTags($any($event.target).value)"
+        placeholder="使用逗号或空格分隔标签"
+      />
+    </label>
+  </section>
+
+  <ng-container *ngIf="selectedNode$ | async as node; else blank">
+    <section class="property__section">
+      <h3>{{ node.label }}</h3>
+      <dl>
+        <div>
+          <dt>节点 ID</dt>
+          <dd>{{ node.id }}</dd>
+        </div>
+        <div>
+          <dt>类型</dt>
+          <dd>{{ node.kind }}</dd>
+        </div>
+      </dl>
+    </section>
+  </ng-container>
+
+  <ng-template #blank>
+    <p class="property__empty">
+      选择一个节点以查看配置，或从左侧拖入新节点。
+    </p>
+  </ng-template>
+
+  <section class="property__section" *ngIf="validationIssues$ | async as issues">
+    <h3>验证</h3>
+    <ul class="property__issues" *ngIf="issues.length; else allGood">
+      <li *ngFor="let issue of issues">{{ issue }}</li>
+    </ul>
+    <ng-template #allGood>
+      <p class="property__ok">当前没有验证错误。</p>
+    </ng-template>
+  </section>
+</aside>

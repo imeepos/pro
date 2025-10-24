@@ -905,6 +905,7 @@ type Mutation {
   cleanupExpiredSessions: String!
   cleanupExpiredStats: Int!
   clearConfigCache(type: ConfigType): Boolean!
+  cloneWorkflow(id: ID!, name: String!, slug: String!): Workflow!
   confirmEventAttachmentUpload(input: ConfirmAttachmentUploadInput!): EventAttachment!
   copyScreen(id: ID!): Screen!
   createApiKey(input: CreateApiKeyDto!): ApiKeyResponseDto!
@@ -919,6 +920,7 @@ type Mutation {
 
   """删除死信队列中的消息"""
   deleteDlqMessages(input: DeleteMessagesInput!): Boolean!
+  deleteWorkflow(id: ID!): Boolean!
   disableApiKey(id: Int!): Boolean!
   dispatchNotification(input: NotificationInput!): Notification!
   draftScreen(id: ID!): Screen!
@@ -955,6 +957,7 @@ type Mutation {
   """将死信消息重新投递到原队列"""
   retryDlqMessages(input: RetryMessagesInput!): Boolean!
   runWeiboSearchTaskNow(id: Int!, input: RunWeiboTaskNowInput): WeiboSearchTask!
+  saveWorkflow(input: SaveWorkflowInput!): Workflow!
   setDefaultScreen(id: ID!): Screen!
   startJdLogin: JdLoginSession!
   startWeiboLogin: WeiboLoginSession!
@@ -967,6 +970,7 @@ type Mutation {
 
   """手动触发数据清洗任务"""
   triggerCleanTask(input: CleanTaskInput!): TaskResult!
+  triggerWorkflow(input: TriggerWorkflowInput!): WorkflowExecution!
   updateApiKey(id: Int!, input: UpdateApiKeyDto!): ApiKeyResponseDto!
   updateBug(id: ID!, input: UpdateBugInput!): BugModel!
   updateBugStatus(id: ID!, input: UpdateBugStatusInput!): BugModel!
@@ -1168,6 +1172,9 @@ type Query {
   weiboSubTask(id: Int!): WeiboSubTask!
   weiboSubTasks(filter: WeiboSubTaskFilterInput, taskId: Int!): WeiboSubTaskConnection!
   weiboTaskStatusConsumerStats: ConsumerStats!
+  workflow(id: ID!): Workflow
+  workflowExecutions(cursor: String, limit: Int, workflowId: ID!): WorkflowExecutionConnection!
+  workflows(filter: WorkflowFilterInput): [Workflow!]!
 }
 
 input RawDataFilterInput {
@@ -1282,6 +1289,15 @@ input RetryMessagesInput {
 
 input RunWeiboTaskNowInput {
   reason: String
+}
+
+input SaveWorkflowInput {
+  definition: WorkflowDefinitionInput!
+  description: String
+  id: ID
+  name: String!
+  slug: String!
+  tags: [String!]
 }
 
 type Screen {
@@ -1511,6 +1527,12 @@ type TrendDataPoint {
 
   """时间点"""
   timestamp: String!
+}
+
+input TriggerWorkflowInput {
+  context: JSON
+  revision: Int
+  workflowId: ID!
 }
 
 input UpdateApiKeyDto {
@@ -1907,4 +1929,128 @@ enum WeiboVisibleType {
   Group
   Private
   Public
+}
+
+type Workflow {
+  createdAt: DateTime!
+  createdBy: String
+  definition: WorkflowDefinition!
+  description: String
+  id: ID!
+  name: String!
+  revision: Int!
+  slug: String!
+  tags: [String!]!
+  updatedAt: DateTime!
+  updatedBy: String
+}
+
+type WorkflowCanvasPoint {
+  x: Float!
+  y: Float!
+}
+
+input WorkflowCanvasPointInput {
+  x: Float!
+  y: Float!
+}
+
+type WorkflowDefinition {
+  edges: [WorkflowEdge!]!
+  nodes: [WorkflowNode!]!
+  version: Int!
+}
+
+input WorkflowDefinitionInput {
+  edges: [WorkflowEdgeInput!]!
+  nodes: [WorkflowNodeInput!]!
+  version: Int!
+}
+
+type WorkflowEdge {
+  condition: JSON
+  id: ID!
+  sourceId: ID!
+  sourcePort: String
+  targetId: ID!
+  targetPort: String
+}
+
+input WorkflowEdgeInput {
+  condition: JSONObject
+  id: ID!
+  sourceId: ID!
+  sourcePort: String
+  targetId: ID!
+  targetPort: String
+}
+
+type WorkflowExecution {
+  context: JSON
+  createdAt: DateTime!
+  durationMs: Int
+  finishedAt: DateTime
+  id: ID!
+  logsPointer: String
+  metrics: WorkflowExecutionMetrics
+  revision: Int!
+  startedAt: DateTime!
+  status: String!
+  triggeredBy: String!
+  updatedAt: DateTime!
+  workflowId: ID!
+}
+
+type WorkflowExecutionConnection {
+  edges: [WorkflowExecutionEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type WorkflowExecutionEdge {
+  cursor: String!
+  node: WorkflowExecution!
+}
+
+type WorkflowExecutionMetrics {
+  failedNodes: Int!
+  payloadSize: Int
+  succeededNodes: Int!
+  throughput: Float
+  totalNodes: Int!
+}
+
+input WorkflowFilterInput {
+  search: String
+  tag: String
+}
+
+type WorkflowNode {
+  config: WorkflowNodeConfig!
+  id: ID!
+  key: String!
+  kind: String!
+  metadata: JSON
+  position: WorkflowCanvasPoint
+  title: String!
+}
+
+type WorkflowNodeConfig {
+  schema: JSON!
+  values: JSON!
+}
+
+input WorkflowNodeConfigInput {
+  schema: JSONObject!
+  values: JSONObject!
+}
+
+input WorkflowNodeInput {
+  config: WorkflowNodeConfigInput!
+  id: ID!
+  key: String!
+  kind: String!
+  metadata: JSONObject
+  position: WorkflowCanvasPointInput
+  title: String!
 }

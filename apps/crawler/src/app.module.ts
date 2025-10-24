@@ -3,7 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { MongodbModule } from '@pro/mongodb';
-import { WeiboModule } from '@pro/weibo';
+import { WeiboModule, WeiboWorkflowVisitor } from '@pro/weibo';
+import { WorkflowModule } from '@pro/workflow';
 import { RedisClient, redisConfigFactory } from '@pro/redis';
 import { createDatabaseConfig, WeiboAccountEntity } from '@pro/entities';
 import {
@@ -11,15 +12,14 @@ import {
   createRabbitConfig,
   createWeiboTaskConfig,
 } from './config/crawler.config';
-import { HtmlFetcherService } from './services/html-fetcher.service';
-import { AjaxFetcherService } from './services/ajax-fetcher.service';
 import { StorageService } from './services/storage.service';
-import { TaskFactory } from './tasks/task-factory';
-import { CrawlerService } from './services/crawler.service';
+import { CrawlerServiceV2 } from './services/crawler-v2.service';
+import { WorkflowFactory } from './workflow-factory';
 import { CrawlQueueConsumer } from './crawl-queue.consumer';
 import { BrowserGuardianService } from './services/browser-guardian.service';
 import { WeiboAccountService } from './services/weibo-account.service';
 import { HealthController } from './health/health.controller';
+import { CrawlerWorkflowVisitor } from './services/crawler-workflow.visitor';
 
 @Module({
   imports: [
@@ -33,6 +33,9 @@ import { HealthController } from './health/health.controller';
     ),
     MongodbModule.forRoot(),
     WeiboModule,
+    WorkflowModule.forRoot({
+      isGlobal: true,
+    }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
@@ -42,12 +45,12 @@ import { HealthController } from './health/health.controller';
   controllers: [HealthController],
   providers: [
     BrowserGuardianService,
-    HtmlFetcherService,
-    AjaxFetcherService,
     StorageService,
     WeiboAccountService,
-    TaskFactory,
-    CrawlerService,
+    WorkflowFactory,
+    CrawlerServiceV2,
+    WeiboWorkflowVisitor,
+    CrawlerWorkflowVisitor,
     CrawlQueueConsumer,
     {
       provide: 'CRAWLER_RUNTIME_CONFIG',

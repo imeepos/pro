@@ -74,6 +74,7 @@ export * from './screen.js';
 export * from './auth.js';
 export * from './config.js';
 export * from './raw-data.js';
+export * from './workflow.js';
 
 export * from './mq/index.js';
 export * from './analysis/index.js';
