@@ -42,6 +42,7 @@ import { TagLoader } from './events/tag.loader';
 import { DateTimeScalar } from './common/scalars/date-time.scalar';
 import { McpModule } from './mcp/mcp.module';
 import { GraphqlExecutorModule } from './mcp/graphql-executor.module';
+import { WorkflowModule } from './workflow/workflow.module';
 
 @Module({
   imports: [
@@ -198,6 +199,7 @@ import { GraphqlExecutorModule } from './mcp/graphql-executor.module';
     NotificationsModule,
     BugModule,
     RawDataModule,
+    WorkflowModule,
     DlqModule,
     TasksModule,
     GraphqlExecutorModule,

@@ -1,7 +1,13 @@
-import { createHtmlParserAst, createMqConsumerAst, createMqPublisherAst, createPlaywrightAst, createWorkflowGraphAst } from "./ast"
+import { Ast, createHtmlParserAst, createMqConsumerAst, createMqPublisherAst, createPlaywrightAst, createWorkflowGraphAst } from "./ast"
 
 export function generateAst(state: any) {
     if (!state) throw new Error(`state is null`)
+    if (state instanceof Ast) {
+        return state;
+    }
+    if (state && typeof state.visit === 'function' && typeof state.type === 'string') {
+        return state as Ast;
+    }
     switch (state.type) {
         case "WorkflowGraphAst":
             return createWorkflowGraphAst(state)

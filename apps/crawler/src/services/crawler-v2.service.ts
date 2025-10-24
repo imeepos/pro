@@ -6,6 +6,7 @@ import { StorageService } from './storage.service';
 import { WeiboTaskConfig } from '../config/crawler.config';
 import { SubTaskMessage } from '../types';
 import { WeiboAccountService } from './weibo-account.service';
+import { CrawlerWorkflowVisitor } from './crawler-workflow.visitor';
 
 export interface CrawlResult {
   success: boolean;
@@ -21,6 +22,7 @@ export class CrawlerServiceV2 {
   constructor(
     private readonly workflowFactory: WorkflowFactory,
     private readonly workflowExecutor: WorkflowExecutorService,
+    private readonly workflowVisitor: CrawlerWorkflowVisitor,
     private readonly storage: StorageService,
     private readonly weiboAccountService: WeiboAccountService,
     private readonly weiboStatusService: WeiboStatusService,
@@ -32,7 +34,7 @@ export class CrawlerServiceV2 {
     try {
       const workflow = this.workflowFactory.createWorkflow(message);
       const context = this.createContext();
-      const result = await this.workflowExecutor.execute(workflow, context);
+      const result = await this.workflowExecutor.execute(workflow, context, this.workflowVisitor);
 
       if (result.state === 'success') {
         return {

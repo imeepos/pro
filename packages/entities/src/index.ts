@@ -36,6 +36,8 @@ export * from './analysis-result.entity.js';
 export * from './types/analysis-types.js';
 export * from './hourly-stats.entity.js';
 export * from './daily-stats.entity.js';
+export * from './workflow.entity.js';
+export * from './workflow-execution.entity.js';
 
 export { EventStatus } from '@pro/types';
 
@@ -74,6 +76,8 @@ import { BugNotificationEntity } from './bug-notification.entity.js';
 import { AnalysisResultEntity } from './analysis-result.entity.js';
 import { HourlyStatsEntity } from './hourly-stats.entity.js';
 import { DailyStatsEntity } from './daily-stats.entity.js';
+import { WorkflowEntity } from './workflow.entity.js';
+import { WorkflowExecutionEntity } from './workflow-execution.entity.js';
 
 interface ConfigService {
   get<T = any>(key: string, defaultValue?: T): T;
@@ -114,6 +118,8 @@ const entities = [
   AnalysisResultEntity,
   HourlyStatsEntity,
   DailyStatsEntity,
+  WorkflowEntity,
+  WorkflowExecutionEntity,
 ];
 
 export const createDatabaseConfig = (configService: ConfigService): DataSourceOptions => {

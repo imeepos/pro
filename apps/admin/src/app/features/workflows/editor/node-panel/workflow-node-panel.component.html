@@ -1,0 +1,23 @@
+<aside class="node-panel">
+  <header>
+    <h2>节点库</h2>
+    <p>拖拽或点击以放入画布，每种节点都有其使命。</p>
+  </header>
+
+  <ul>
+    <li *ngFor="let blueprint of blueprints">
+      <button
+        type="button"
+        class="node-panel__card"
+        (click)="requestAdd(blueprint.kind)"
+        [style.--accent]="blueprint.accentColor"
+      >
+        <span class="node-panel__badge"></span>
+        <div class="node-panel__texts">
+          <strong>{{ blueprint.title }}</strong>
+          <small>{{ blueprint.subtitle }}</small>
+        </div>
+      </button>
+    </li>
+  </ul>
+</aside>
