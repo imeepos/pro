@@ -135,6 +135,19 @@ export const MENU_ITEMS: MenuItem[] = [
     ]
   },
   {
+    id: 'workflows',
+    label: '工作流管理',
+    icon: 'cog',
+    children: [
+      {
+        id: 'workflows-list',
+        label: '工作流列表',
+        icon: 'list',
+        route: '/workflows'
+      }
+    ]
+  },
+  {
     id: 'jd',
     label: '京东账号管理',
     icon: 'shopping-cart',
