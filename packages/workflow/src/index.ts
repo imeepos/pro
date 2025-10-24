@@ -23,6 +23,7 @@ export * from './executor';
 export * from './decorator';
 export * from './decorators/workflow-node.decorator';
 export * from './decorators/workflow-visitor.decorator';
+export * from './decorators/visit-method.decorator';
 export * from './utils';
 export * from './errors';
 export * from './generater';

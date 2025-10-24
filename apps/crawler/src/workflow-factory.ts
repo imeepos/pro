@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { WorkflowBuilderService, createWeiboSearchUrlBuilderAst, createAccountInjectorAst, createPlaywrightAst, createStorageAst } from '@pro/workflow';
+import { WorkflowBuilderService, createPlaywrightAst } from '@pro/workflow';
+import { createWeiboSearchUrlBuilderAst, createAccountInjectorAst, createStorageAst } from '@pro/weibo';
 import { SubTaskMessage, NormalizedTask } from './types';
 import { WeiboSearchType, SourceType, SourcePlatform } from '@pro/types';
 
