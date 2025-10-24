@@ -1,7 +1,6 @@
 import { Input, Output } from "./decorator";
 import { Context, HtmlParser, IAstStates, IEdge, INode, Playwright, WorkflowGraph } from "./types";
 import { generateId } from "./utils";
-import { WeiboPost } from "./weibo";
 
 // 抽象语法树的核心表达 - 状态与数据的统一
 export abstract class Ast implements INode {
@@ -53,13 +52,8 @@ export function createPlaywrightAst(options: { url: string, ua: string, cookies:
 export class HtmlParserAst extends Ast implements HtmlParser {
     @Input() html: string | undefined;
     @Input() url: string | undefined;
-    @Input() start: Date | undefined;
 
-    @Output() posts: WeiboPost[] = [];
-    @Output() currentPage: number = 0;
-    @Output() nextPageUrl: string | null = null;
-    @Output() minDate: Date | null = null;
-    @Output() maxPage: number = 0;
+    @Output() result: any;
     type: `HtmlParserAst` = `HtmlParserAst`;
     visit(visitor: Visitor, ctx: Context): Promise<HtmlParser> {
         return visitor.visitHtmlParserAst(this, ctx)
@@ -165,11 +159,10 @@ export class WeiboSharesAst extends Ast {
         return visitor.visitWeiboSharesAst(this, ctx)
     }
 }
-export function createHtmlParserAst({ url, html, start, id, state }: { url: string, start: Date, html: string, id?: string, state?: IAstStates }) {
+export function createHtmlParserAst({ url, html, id, state }: { url?: string, html?: string, id?: string, state?: IAstStates } = {}) {
     const ast = new HtmlParserAst()
     ast.url = url;
     ast.html = html;
-    ast.start = start;
     ast.id = id || generateId();
     ast.state = state || 'pending';
     return ast;

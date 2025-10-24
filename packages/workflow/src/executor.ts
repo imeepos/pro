@@ -1,9 +1,8 @@
-import { Ast, EmptyVisitor, HtmlParserAst, PlaywrightAst, Visitor, WeiboKeywordSearchAst, WorkflowGraphAst } from "./ast";
+import { Ast, EmptyVisitor, PlaywrightAst, Visitor, WorkflowGraphAst } from "./ast";
 import { getOutputs } from "./decorator";
 import { generateAst } from "./generater";
 import { PlaywrightExecutor } from "./PlaywrightExecutor";
 import { Context, IAstStates, IEdge, INode, Playwright, WorkflowGraph } from "./types";
-import { WeiboVisitor } from "./weibo";
 
 export class ExecutorVisitor extends EmptyVisitor {
     visit(ast: Ast, ctx: Context): Promise<any> {
@@ -11,33 +10,6 @@ export class ExecutorVisitor extends EmptyVisitor {
         return ast.visit(this, ctx)
     }
 
-    async visitWeiboKeywordSearchAst(ast: WeiboKeywordSearchAst, _ctx: Context): Promise<any> {
-        const now = new Date();
-        const startDate = ast.start || now;
-        const endDate = now;
-
-        // 格式化日期为微博搜索时间范围格式: YYYY-MM-DD-H
-        const formatDateForWeibo = (date: Date): string => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hour = String(date.getHours()).padStart(2, '0');
-            return `${year}-${month}-${day}-${hour}`;
-        };
-
-        const startTime = formatDateForWeibo(startDate);
-        const endTime = formatDateForWeibo(endDate);
-
-        ast.url = `https://s.weibo.com/weibo?q=${encodeURIComponent(ast.keyword || '')}&typeall=1&suball=1&timescope=custom%3A${startTime}%3A${endTime}&Refer=g`;
-
-        ast.state = 'success'
-        return ast;
-    }
-
-    async visitHtmlParserAst(ast: HtmlParserAst, ctx: Context): Promise<any> {
-        return new WeiboVisitor().visit(ast, ctx)
-    }
-    // 打开浏览器获取html
     async visitPlaywrightAst(ast: PlaywrightAst, _ctx: Context): Promise<Playwright> {
         const html = await new PlaywrightExecutor().execute(ast)
         ast.html = html;

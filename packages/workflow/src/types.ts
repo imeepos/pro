@@ -32,6 +32,7 @@ export interface HtmlParser extends INode {
     type: `HtmlParserAst`;
     html: string | undefined;
     url: string | undefined;
+    result?: any;
 }
 // 状态转换的简单定义
 export interface StateTransition {
