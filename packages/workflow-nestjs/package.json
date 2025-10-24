@@ -1,0 +1,63 @@
+{
+    "name": "@pro/workflow-nestjs",
+    "version": "1.0.0",
+    "description": "NestJS工作流模块集成包 - 为NestJS框架提供DAG工作流支持",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "typecheck": "tsc --noEmit",
+        "clean": "rm -rf dist",
+        "test": "jest",
+        "lint": "eslint src --ext .ts",
+        "lint:fix": "eslint src --ext .ts --fix"
+    },
+    "keywords": [
+        "workflow",
+        "dag",
+        "nestjs",
+        "module",
+        "dependency-injection",
+        "typescript",
+        "async",
+        "parallel-execution"
+    ],
+    "author": "Pro Team",
+    "license": "MIT",
+    "dependencies": {
+        "@pro/workflow-core": "workspace:*",
+        "@nestjs/common": "^10.0.0",
+        "@nestjs/core": "^10.0.0",
+        "reflect-metadata": "^0.2.0",
+        "rxjs": "^7.8.0"
+    },
+    "peerDependencies": {
+        "@nestjs/common": "^10.0.0",
+        "@nestjs/core": "^10.0.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.0.0"
+    },
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "publishConfig": {
+        "access": "restricted",
+        "registry": "https://npm.pkg.github.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/your-org/pro.git",
+        "directory": "packages/workflow-nestjs"
+    },
+    "homepage": "https://github.com/your-org/pro/tree/main/packages/workflow-nestjs#readme",
+    "bugs": {
+        "url": "https://github.com/your-org/pro/issues"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
