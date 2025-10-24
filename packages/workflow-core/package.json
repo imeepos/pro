@@ -9,7 +9,7 @@
         "dev": "tsc --watch",
         "typecheck": "tsc --noEmit",
         "clean": "rm -rf dist",
-        "test": "node dist/test.js",
+        "test": "tsx src/main.ts",
         "lint": "eslint src --ext .ts",
         "lint:fix": "eslint src --ext .ts --fix"
     },

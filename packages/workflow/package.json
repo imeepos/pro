@@ -33,7 +33,8 @@
     },
     "peerDependencies": {
         "@nestjs/common": "^10.0.0",
-        "@nestjs/core": "^10.0.0"
+        "@nestjs/core": "^10.0.0",
+        "@pro/workflow-core": "workspace:*"
     },
     "devDependencies": {
         "tsx": "^4.20.6"
