@@ -4,7 +4,7 @@ import { WeiboProfileService, WeiboStatusService } from '@pro/weibo';
 import { WorkflowFactory } from '../workflow-factory';
 import { StorageService } from './storage.service';
 import { WeiboTaskConfig } from '../config/crawler.config';
-import { SubTaskMessage } from '../tasks/base-task';
+import { SubTaskMessage } from '../types';
 import { WeiboAccountService } from './weibo-account.service';
 
 export interface CrawlResult {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { WorkflowBuilderService, createWeiboSearchUrlBuilderAst, createAccountInjectorAst, createPlaywrightAst, createStorageAst } from '@pro/workflow';
-import { SubTaskMessage, NormalizedTask } from './tasks/base-task';
+import { SubTaskMessage, NormalizedTask } from './types';
 import { WeiboSearchType, SourceType, SourcePlatform } from '@pro/types';
 
 const passthroughKeys = ['searchType', 'statusId', 'userId', 'uid', 'page', 'maxId'] as const;

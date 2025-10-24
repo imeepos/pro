@@ -12,11 +12,7 @@ import {
   createRabbitConfig,
   createWeiboTaskConfig,
 } from './config/crawler.config';
-import { HtmlFetcherService } from './services/html-fetcher.service';
-import { AjaxFetcherService } from './services/ajax-fetcher.service';
 import { StorageService } from './services/storage.service';
-import { TaskFactory } from './tasks/task-factory';
-import { CrawlerService } from './services/crawler.service';
 import { CrawlerServiceV2 } from './services/crawler-v2.service';
 import { WorkflowFactory } from './workflow-factory';
 import { CrawlQueueConsumer } from './crawl-queue.consumer';
@@ -48,13 +44,9 @@ import { HealthController } from './health/health.controller';
   controllers: [HealthController],
   providers: [
     BrowserGuardianService,
-    HtmlFetcherService,
-    AjaxFetcherService,
     StorageService,
     WeiboAccountService,
-    TaskFactory,
     WorkflowFactory,
-    CrawlerService,
     CrawlerServiceV2,
     CrawlQueueConsumer,
     {
