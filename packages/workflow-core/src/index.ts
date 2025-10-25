@@ -1,5 +1,8 @@
-export { Node, Input, Output } from './decorator';
-export { Ast, WorkflowGraphAst } from './ast'
+import { NodeConstructor } from './decorator';
+
+export { Node, Input, Output, Handler } from './decorator';
+export { Ast, WorkflowGraphAst, Visitor } from './ast'
 export { fromJson, toJson } from './generate'
 export { INode, IEdge } from './types'
-export { execute, executeAst } from './executor'
+export { execute, executeAst, ExecutorVisitor } from './executor'
+export function useHandlers(_handlers: NodeConstructor[]|NodeConstructor){}

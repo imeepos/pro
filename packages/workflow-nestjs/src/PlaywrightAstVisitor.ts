@@ -1,5 +1,6 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
-import { Playwright } from './types';
+import { PlaywrightAst, Handler } from '@pro/workflow';
+import { Injectable } from '@nestjs/common';
 export interface CookieData {
     name: string;
     value: string;
@@ -10,11 +11,14 @@ export interface CookieData {
     secure?: boolean;
     sameSite?: 'Strict' | 'Lax' | 'None';
 }
-export class PlaywrightExecutor {
+
+@Handler(PlaywrightAst)
+@Injectable()
+export class PlaywrightAstVisitor {
     private browser: Browser | null = null;
     private context: BrowserContext | null = null;
     private page: Page | null = null;
-    async execute(node: Playwright): Promise<string> {
+    async visit(node: PlaywrightAst): Promise<PlaywrightAst> {
         try {
             // 1. 初始化浏览器（支持复用）
             await this.initializeBrowser(node);
@@ -27,14 +31,15 @@ export class PlaywrightExecutor {
                 waitUntil: 'domcontentloaded',
                 timeout: 30000
             });
-            return await this.page.content();
+            node.html = await this.page.content();
+            return node;
         } finally {
             await this.close()
             console.log(`浏览器已关闭`)
         }
     }
 
-    private async setCookies(node: Playwright): Promise<void> {
+    private async setCookies(node: PlaywrightAst): Promise<void> {
         if (!node.cookies || !this.context) return;
         try {
             // 1. 如果需要清除现有cookies
@@ -59,7 +64,7 @@ export class PlaywrightExecutor {
                     value: cookie.value,
                     domain: cookie.domain || this.extractDomain(node.url!),
                     path: cookie.path || '/',
-                    expires: cookie.expires,
+                    expires: cookie.expires!,
                     httpOnly: cookie.httpOnly || false,
                     secure: cookie.secure || false,
                     sameSite: cookie.sameSite || 'Lax'
@@ -113,18 +118,18 @@ export class PlaywrightExecutor {
             this.browser = null;
         }
     }
-    private async initializeBrowser(node: Playwright): Promise<void> {
+    private async initializeBrowser(node: PlaywrightAst): Promise<void> {
         // 创建新实例
         this.browser = await chromium.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
-        const userAgent = typeof node.ua === 'string' ? node.ua : undefined;
+        const userAgent = typeof node.ua === 'string' ? node.ua : ``;
 
         this.context = await this.browser.newContext({
             viewport: { width: 1920, height: 1080 },
-            userAgent,
+            userAgent: userAgent,
         });
 
         this.page = await this.context.newPage();
