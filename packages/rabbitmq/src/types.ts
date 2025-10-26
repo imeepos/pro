@@ -1,6 +1,29 @@
 import type { QueueName } from '@pro/types';
 
 /**
+ * 队列参数配置
+ */
+export interface QueueOptions {
+  /** 队列是否持久化 */
+  durable?: boolean;
+
+  /** 消息TTL(毫秒) */
+  messageTTL?: number;
+
+  /** 死信交换机 */
+  deadLetterExchange?: string;
+
+  /** 死信路由键 */
+  deadLetterRoutingKey?: string;
+
+  /** 最大队列长度 */
+  maxLength?: number;
+
+  /** 队列模式 (lazy/default) */
+  queueMode?: string;
+}
+
+/**
  * RabbitMQ 配置
  *
  * 存在即合理: 每个配置项都有明确的业务意义
@@ -23,6 +46,12 @@ export interface RabbitMQConfig {
 
   /** 心跳间隔(秒) - 默认 30 */
   heartbeat?: number;
+
+  /** 默认消息TTL(毫秒) - 用于兼容旧配置 */
+  messageTTL?: number;
+
+  /** 队列特定配置 - 键为队列名 */
+  queueOptions?: Record<string, QueueOptions>;
 }
 
 /**

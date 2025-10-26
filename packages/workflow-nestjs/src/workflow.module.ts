@@ -73,6 +73,7 @@ import { UserProfileWorkflow } from './workflows/user-profile.workflow';
                 const rabbitUrl = configService.get('RABBITMQ_URL', 'amqp://localhost:5672');
                 return {
                     url: rabbitUrl.trim(),
+                    messageTTL: 1800000, // 30 分钟，与旧队列配置保持一致
                 };
             },
         }),

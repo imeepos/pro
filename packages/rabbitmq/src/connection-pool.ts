@@ -55,6 +55,9 @@ export class ConnectionPool {
         timestamp: Date.now(),
       });
     } catch (error) {
+      // 清理部分建立的连接
+      await this.cleanup();
+
       this.setState(ConnectionState.ERROR);
       this.emitEvent({
         type: 'error',
@@ -65,6 +68,21 @@ export class ConnectionPool {
 
       this.scheduleReconnect();
       throw error;
+    }
+  }
+
+  private async cleanup(): Promise<void> {
+    try {
+      if (this.channel) {
+        await this.channel.close().catch(() => {});
+        this.channel = null;
+      }
+      if (this.connection) {
+        await this.connection.close().catch(() => {});
+        this.connection = null;
+      }
+    } catch {
+      // 忽略清理错误
     }
   }
 

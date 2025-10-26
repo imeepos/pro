@@ -34,7 +34,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
   constructor(config: RabbitMQConfig) {
     this.connectionPool = new ConnectionPool(config);
-    this.publisher = new RabbitMQPublisher(this.connectionPool);
+    this.publisher = new RabbitMQPublisher(this.connectionPool, config);
     this.consumer = new RabbitMQConsumer(this.connectionPool);
   }
 

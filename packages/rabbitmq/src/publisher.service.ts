@@ -1,6 +1,6 @@
 import type { QueueName } from '@pro/types';
 import type { ConnectionPool } from './connection-pool.js';
-import type { PublishOptions, BatchPublishResult } from './types.js';
+import type { PublishOptions, BatchPublishResult, RabbitMQConfig, QueueOptions } from './types.js';
 
 /**
  * RabbitMQ 发布服务
@@ -17,7 +17,10 @@ import type { PublishOptions, BatchPublishResult } from './types.js';
  * - 消息确认机制
  */
 export class RabbitMQPublisher {
-  constructor(private readonly connectionPool: ConnectionPool) {}
+  constructor(
+    private readonly connectionPool: ConnectionPool,
+    private readonly config?: RabbitMQConfig,
+  ) {}
 
   async publish<T>(
     queueName: QueueName,
@@ -90,10 +93,55 @@ export class RabbitMQPublisher {
 
   private async ensureQueue(queueName: QueueName): Promise<void> {
     const channel = this.connectionPool.getChannel();
+    const queueOptions = this.getQueueOptions(queueName);
 
-    await channel.assertQueue(queueName, {
-      durable: true,
-    });
+    const assertOptions: any = {
+      durable: queueOptions.durable ?? true,
+    };
+
+    // 构建队列参数
+    const args: any = {};
+
+    if (queueOptions.messageTTL !== undefined) {
+      args['x-message-ttl'] = queueOptions.messageTTL;
+    }
+
+    if (queueOptions.deadLetterExchange) {
+      args['x-dead-letter-exchange'] = queueOptions.deadLetterExchange;
+    }
+
+    if (queueOptions.deadLetterRoutingKey) {
+      args['x-dead-letter-routing-key'] = queueOptions.deadLetterRoutingKey;
+    }
+
+    if (queueOptions.maxLength) {
+      args['x-max-length'] = queueOptions.maxLength;
+    }
+
+    if (queueOptions.queueMode) {
+      args['x-queue-mode'] = queueOptions.queueMode;
+    }
+
+    if (Object.keys(args).length > 0) {
+      assertOptions.arguments = args;
+    }
+
+    await channel.assertQueue(queueName, assertOptions);
+  }
+
+  private getQueueOptions(queueName: QueueName): QueueOptions {
+    // 优先使用队列特定配置
+    const specificOptions = this.config?.queueOptions?.[queueName];
+    if (specificOptions) {
+      return specificOptions;
+    }
+
+    // 回退到默认 TTL（兼容旧配置）
+    if (this.config?.messageTTL) {
+      return { messageTTL: this.config.messageTTL };
+    }
+
+    return {};
   }
 
   private buildMessageOptions(
