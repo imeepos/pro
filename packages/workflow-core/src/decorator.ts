@@ -23,6 +23,7 @@ interface NodeMetadata {
 
 const nodeRegistry: Set<NodeConstructor> = new Set();
 const visitorRegistry: Map<NodeConstructor, VisitorConstructor> = new Map();
+const methodHandlerRegistry: Map<NodeConstructor, Map<any, string>> = new Map();
 
 let fieldRegistry: WeakMap<NodeConstructor, NodeMetadata> = new WeakMap();
 
@@ -83,15 +84,32 @@ export function Node(): ClassDecorator {
     };
 }
 
-export function Handler(ast: NodeConstructor): ClassDecorator {
-    return (target) => {
-        const ctor = resolveConstructor(target as object);
-        visitorRegistry.set(ast, ctor);
+export function Handler(ast: NodeConstructor): any {
+    return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor): any => {
+        if (propertyKey !== undefined && descriptor !== undefined) {
+            const ctor = resolveConstructor(target);
+            if (!methodHandlerRegistry.has(ast)) {
+                methodHandlerRegistry.set(ast, new Map());
+            }
+            const methodName = typeof propertyKey === 'string' ? propertyKey : propertyKey.toString();
+            methodHandlerRegistry.get(ast)!.set(ctor, methodName);
+            return descriptor;
+        } else {
+            const ctor = resolveConstructor(target as object);
+            visitorRegistry.set(ast, ctor);
+            return target;
+        }
     };
 }
 
 export const useNodes = (): NodeConstructor[] => [...nodeRegistry];
 export const useVisitors = () => visitorRegistry;
+export const useMethodHandlers = () => methodHandlerRegistry;
+
+export function getHandlerMethod(ast: NodeConstructor, visitorCtor: any): string | undefined {
+    const methods = methodHandlerRegistry.get(ast);
+    return methods?.get(visitorCtor);
+}
 
 export interface NodeDescriptor {
     ctor: NodeConstructor;
@@ -203,4 +221,5 @@ export function clearNodes(): void {
 
 export function clearVisitors(): void {
     visitorRegistry.clear();
+    methodHandlerRegistry.clear();
 }

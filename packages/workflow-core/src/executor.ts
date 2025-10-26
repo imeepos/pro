@@ -1,5 +1,5 @@
 import { Ast, Visitor, WorkflowGraphAst } from "./ast";
-import { getOutputs, Handler, useVisitors, resolveConstructor } from "./decorator";
+import { getOutputs, Handler, useVisitors, resolveConstructor, getHandlerMethod } from "./decorator";
 import type { VisitorFactory } from "./decorator";
 import { fromJson } from "./generate";
 import { IAstStates, IEdge, INode } from "./types";
@@ -167,7 +167,14 @@ export class ExecutorVisitor implements Visitor {
         const handler = useVisitors().get(type);
         if (handler) {
             const instance = this.factory(handler)
-            return instance.visit(ast, ctx);
+            const methodName = getHandlerMethod(type, handler);
+            if (methodName && typeof (instance as any)[methodName] === 'function') {
+                return (instance as any)[methodName](ast, ctx);
+            }
+            if (typeof (instance as any).visit === 'function') {
+                return instance.visit(ast, ctx);
+            }
+            throw new Error(`Handler ${handler.name} has no visit method or @Handler decorated method`)
         }
         throw new Error(`not found handler for ${ast.type}`)
     }
