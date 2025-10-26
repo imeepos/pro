@@ -928,6 +928,7 @@ export type Mutation = {
   cleanupExpiredSessions: Scalars['String']['output'];
   cleanupExpiredStats: Scalars['Int']['output'];
   clearConfigCache: Scalars['Boolean']['output'];
+  cloneWorkflow: Workflow;
   confirmEventAttachmentUpload: EventAttachment;
   copyScreen: Screen;
   createApiKey: ApiKeyResponseDto;
@@ -941,6 +942,7 @@ export type Mutation = {
   createWeiboSearchTask: WeiboSearchTask;
   /** 删除死信队列中的消息 */
   deleteDlqMessages: Scalars['Boolean']['output'];
+  deleteWorkflow: Scalars['Boolean']['output'];
   disableApiKey: Scalars['Boolean']['output'];
   dispatchNotification: Notification;
   draftScreen: Screen;
@@ -976,6 +978,7 @@ export type Mutation = {
   /** 将死信消息重新投递到原队列 */
   retryDlqMessages: Scalars['Boolean']['output'];
   runWeiboSearchTaskNow: WeiboSearchTask;
+  saveWorkflow: Workflow;
   setDefaultScreen: Screen;
   startJdLogin: JdLoginSession;
   startWeiboLogin: WeiboLoginSession;
@@ -985,6 +988,7 @@ export type Mutation = {
   triggerAnalyzeTask: TaskResult;
   /** 手动触发数据清洗任务 */
   triggerCleanTask: TaskResult;
+  triggerWorkflow: WorkflowExecution;
   updateApiKey: ApiKeyResponseDto;
   updateBug: BugModel;
   updateBugStatus: BugModel;
@@ -1034,6 +1038,13 @@ export type MutationCheckWeiboAccountArgs = {
 
 export type MutationClearConfigCacheArgs = {
   type?: InputMaybe<ConfigType>;
+};
+
+
+export type MutationCloneWorkflowArgs = {
+  id: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+  slug: Scalars['String']['input'];
 };
 
 
@@ -1094,6 +1105,11 @@ export type MutationCreateWeiboSearchTaskArgs = {
 
 export type MutationDeleteDlqMessagesArgs = {
   input: DeleteMessagesInput;
+};
+
+
+export type MutationDeleteWorkflowArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -1252,6 +1268,11 @@ export type MutationRunWeiboSearchTaskNowArgs = {
 };
 
 
+export type MutationSaveWorkflowArgs = {
+  input: SaveWorkflowInput;
+};
+
+
 export type MutationSetDefaultScreenArgs = {
   id: Scalars['ID']['input'];
 };
@@ -1269,6 +1290,11 @@ export type MutationTriggerAnalyzeTaskArgs = {
 
 export type MutationTriggerCleanTaskArgs = {
   input: CleanTaskInput;
+};
+
+
+export type MutationTriggerWorkflowArgs = {
+  input: TriggerWorkflowInput;
 };
 
 
@@ -1500,6 +1526,9 @@ export type Query = {
   weiboSubTask: WeiboSubTask;
   weiboSubTasks: WeiboSubTaskConnection;
   weiboTaskStatusConsumerStats: ConsumerStats;
+  workflow?: Maybe<Workflow>;
+  workflowExecutions: WorkflowExecutionConnection;
+  workflows: Array<Workflow>;
 };
 
 
@@ -1780,6 +1809,23 @@ export type QueryWeiboSubTasksArgs = {
   taskId: Scalars['Int']['input'];
 };
 
+
+export type QueryWorkflowArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryWorkflowExecutionsArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  workflowId: Scalars['ID']['input'];
+};
+
+
+export type QueryWorkflowsArgs = {
+  filter?: InputMaybe<WorkflowFilterInput>;
+};
+
 export type RawDataFilterInput = {
   /** 关键词搜索 */
   keyword?: InputMaybe<Scalars['String']['input']>;
@@ -1874,6 +1920,15 @@ export type RetryMessagesInput = {
 
 export type RunWeiboTaskNowInput = {
   reason?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SaveWorkflowInput = {
+  definition: WorkflowDefinitionInput;
+  description?: InputMaybe<Scalars['String']['input']>;
+  id?: InputMaybe<Scalars['ID']['input']>;
+  name: Scalars['String']['input'];
+  slug: Scalars['String']['input'];
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type Screen = {
@@ -2116,6 +2171,12 @@ export type TrendDataPoint = {
   status: ProcessingStatus;
   /** 时间点 */
   timestamp: Scalars['String']['output'];
+};
+
+export type TriggerWorkflowInput = {
+  context?: InputMaybe<Scalars['JSON']['input']>;
+  revision?: InputMaybe<Scalars['Int']['input']>;
+  workflowId: Scalars['ID']['input'];
 };
 
 export type UpdateApiKeyDto = {
@@ -2543,6 +2604,140 @@ export enum WeiboVisibleType {
   Private = 'Private',
   Public = 'Public'
 }
+
+export type Workflow = {
+  __typename?: 'Workflow';
+  createdAt: Scalars['DateTime']['output'];
+  createdBy?: Maybe<Scalars['String']['output']>;
+  definition: WorkflowDefinition;
+  description?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  revision: Scalars['Int']['output'];
+  slug: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
+  updatedAt: Scalars['DateTime']['output'];
+  updatedBy?: Maybe<Scalars['String']['output']>;
+};
+
+export type WorkflowCanvasPoint = {
+  __typename?: 'WorkflowCanvasPoint';
+  x: Scalars['Float']['output'];
+  y: Scalars['Float']['output'];
+};
+
+export type WorkflowCanvasPointInput = {
+  x: Scalars['Float']['input'];
+  y: Scalars['Float']['input'];
+};
+
+export type WorkflowDefinition = {
+  __typename?: 'WorkflowDefinition';
+  edges: Array<WorkflowEdge>;
+  nodes: Array<WorkflowNode>;
+  version: Scalars['Int']['output'];
+};
+
+export type WorkflowDefinitionInput = {
+  edges: Array<WorkflowEdgeInput>;
+  nodes: Array<WorkflowNodeInput>;
+  version: Scalars['Int']['input'];
+};
+
+export type WorkflowEdge = {
+  __typename?: 'WorkflowEdge';
+  condition?: Maybe<Scalars['JSON']['output']>;
+  id: Scalars['ID']['output'];
+  sourceId: Scalars['ID']['output'];
+  sourcePort?: Maybe<Scalars['String']['output']>;
+  targetId: Scalars['ID']['output'];
+  targetPort?: Maybe<Scalars['String']['output']>;
+};
+
+export type WorkflowEdgeInput = {
+  condition?: InputMaybe<Scalars['JSONObject']['input']>;
+  id: Scalars['ID']['input'];
+  sourceId: Scalars['ID']['input'];
+  sourcePort?: InputMaybe<Scalars['String']['input']>;
+  targetId: Scalars['ID']['input'];
+  targetPort?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type WorkflowExecution = {
+  __typename?: 'WorkflowExecution';
+  context?: Maybe<Scalars['JSON']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  durationMs?: Maybe<Scalars['Int']['output']>;
+  finishedAt?: Maybe<Scalars['DateTime']['output']>;
+  id: Scalars['ID']['output'];
+  logsPointer?: Maybe<Scalars['String']['output']>;
+  metrics?: Maybe<WorkflowExecutionMetrics>;
+  revision: Scalars['Int']['output'];
+  startedAt: Scalars['DateTime']['output'];
+  status: Scalars['String']['output'];
+  triggeredBy: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  workflowId: Scalars['ID']['output'];
+};
+
+export type WorkflowExecutionConnection = {
+  __typename?: 'WorkflowExecutionConnection';
+  edges: Array<WorkflowExecutionEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type WorkflowExecutionEdge = {
+  __typename?: 'WorkflowExecutionEdge';
+  cursor: Scalars['String']['output'];
+  node: WorkflowExecution;
+};
+
+export type WorkflowExecutionMetrics = {
+  __typename?: 'WorkflowExecutionMetrics';
+  failedNodes: Scalars['Int']['output'];
+  payloadSize?: Maybe<Scalars['Int']['output']>;
+  succeededNodes: Scalars['Int']['output'];
+  throughput?: Maybe<Scalars['Float']['output']>;
+  totalNodes: Scalars['Int']['output'];
+};
+
+export type WorkflowFilterInput = {
+  search?: InputMaybe<Scalars['String']['input']>;
+  tag?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type WorkflowNode = {
+  __typename?: 'WorkflowNode';
+  config: WorkflowNodeConfig;
+  id: Scalars['ID']['output'];
+  key: Scalars['String']['output'];
+  kind: Scalars['String']['output'];
+  metadata?: Maybe<Scalars['JSON']['output']>;
+  position?: Maybe<WorkflowCanvasPoint>;
+  title: Scalars['String']['output'];
+};
+
+export type WorkflowNodeConfig = {
+  __typename?: 'WorkflowNodeConfig';
+  schema: Scalars['JSON']['output'];
+  values: Scalars['JSON']['output'];
+};
+
+export type WorkflowNodeConfigInput = {
+  schema: Scalars['JSONObject']['input'];
+  values: Scalars['JSONObject']['input'];
+};
+
+export type WorkflowNodeInput = {
+  config: WorkflowNodeConfigInput;
+  id: Scalars['ID']['input'];
+  key: Scalars['String']['input'];
+  kind: Scalars['String']['input'];
+  metadata?: InputMaybe<Scalars['JSONObject']['input']>;
+  position?: InputMaybe<WorkflowCanvasPointInput>;
+  title: Scalars['String']['input'];
+};
 
 export type LoginMutationVariables = Exact<{
   input: LoginDto;
