@@ -1384,9 +1384,9 @@ importers:
       '@pro/weibo':
         specifier: workspace:*
         version: link:../../packages/weibo
-      '@pro/workflow':
+      '@pro/workflow-core':
         specifier: workspace:*
-        version: link:../../packages/workflow
+        version: link:../../packages/workflow-core
       axios:
         specifier: 1.7.9
         version: 1.7.9
@@ -2151,9 +2151,6 @@ importers:
       '@pro/types':
         specifier: workspace:*
         version: link:../types
-      '@pro/workflow':
-        specifier: workspace:*
-        version: link:../workflow
       axios:
         specifier: 1.7.9
         version: 1.7.9
@@ -2176,12 +2173,6 @@ importers:
       typescript:
         specifier: ~5.8.0
         version: 5.8.3
-
-  packages/workflow:
-    dependencies:
-      '@pro/workflow-core':
-        specifier: workspace:*
-        version: link:../workflow-core
 
   packages/workflow-core:
     devDependencies:
@@ -2224,9 +2215,6 @@ importers:
       '@pro/weibo':
         specifier: workspace:*
         version: link:../weibo
-      '@pro/workflow':
-        specifier: workspace:*
-        version: link:../workflow
       '@pro/workflow-core':
         specifier: workspace:*
         version: link:../workflow-core
@@ -26154,7 +26142,7 @@ snapshots:
     dependencies:
       bintrees: 1.0.2
 
-  terser-webpack-plugin@5.3.14(@swc/core@1.13.5)(esbuild@0.25.9)(webpack@5.101.2(@swc/core@1.13.5)):
+  terser-webpack-plugin@5.3.14(@swc/core@1.13.5)(esbuild@0.25.9)(webpack@5.101.2(@swc/core@1.13.5)(esbuild@0.25.9)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
@@ -26174,17 +26162,6 @@ snapshots:
       serialize-javascript: 6.0.2
       terser: 5.44.0
       webpack: 5.100.2(@swc/core@1.13.5)
-    optionalDependencies:
-      '@swc/core': 1.13.5
-
-  terser-webpack-plugin@5.3.14(@swc/core@1.13.5)(webpack@5.101.2(@swc/core@1.13.5)):
-    dependencies:
-      '@jridgewell/trace-mapping': 0.3.31
-      jest-worker: 27.5.1
-      schema-utils: 4.3.3
-      serialize-javascript: 6.0.2
-      terser: 5.44.0
-      webpack: 5.101.2(@swc/core@1.13.5)
     optionalDependencies:
       '@swc/core': 1.13.5
 
@@ -26394,7 +26371,7 @@ snapshots:
       semver: 7.7.3
       source-map: 0.7.4
       typescript: 5.8.3
-      webpack: 5.101.2(@swc/core@1.13.5)
+      webpack: 5.101.2(@swc/core@1.13.5)(esbuild@0.25.9)
 
   ts-log@2.2.7: {}
 
@@ -27130,38 +27107,6 @@ snapshots:
       - esbuild
       - uglify-js
 
-  webpack@5.101.2(@swc/core@1.13.5):
-    dependencies:
-      '@types/eslint-scope': 3.7.7
-      '@types/estree': 1.0.8
-      '@types/json-schema': 7.0.15
-      '@webassemblyjs/ast': 1.14.1
-      '@webassemblyjs/wasm-edit': 1.14.1
-      '@webassemblyjs/wasm-parser': 1.14.1
-      acorn: 8.15.0
-      acorn-import-phases: 1.0.4(acorn@8.15.0)
-      browserslist: 4.26.3
-      chrome-trace-event: 1.0.4
-      enhanced-resolve: 5.18.3
-      es-module-lexer: 1.7.0
-      eslint-scope: 5.1.1
-      events: 3.3.0
-      glob-to-regexp: 0.4.1
-      graceful-fs: 4.2.11
-      json-parse-even-better-errors: 2.3.1
-      loader-runner: 4.3.1
-      mime-types: 2.1.35
-      neo-async: 2.6.2
-      schema-utils: 4.3.3
-      tapable: 2.3.0
-      terser-webpack-plugin: 5.3.14(@swc/core@1.13.5)(webpack@5.101.2(@swc/core@1.13.5))
-      watchpack: 2.4.4
-      webpack-sources: 3.3.3
-    transitivePeerDependencies:
-      - '@swc/core'
-      - esbuild
-      - uglify-js
-
   webpack@5.101.2(@swc/core@1.13.5)(esbuild@0.25.9):
     dependencies:
       '@types/eslint-scope': 3.7.7
@@ -27186,7 +27131,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.3
       tapable: 2.3.0
-      terser-webpack-plugin: 5.3.14(@swc/core@1.13.5)(esbuild@0.25.9)(webpack@5.101.2(@swc/core@1.13.5))
+      terser-webpack-plugin: 5.3.14(@swc/core@1.13.5)(esbuild@0.25.9)(webpack@5.101.2(@swc/core@1.13.5)(esbuild@0.25.9))
       watchpack: 2.4.4
       webpack-sources: 3.3.3
     transitivePeerDependencies:

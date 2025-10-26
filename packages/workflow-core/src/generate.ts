@@ -13,7 +13,7 @@ function coerceRecord(candidate: unknown): Record<string, unknown> {
     return {};
 }
 
-export function fromJson<T extends object = any>(json: INode): T {
+export function fromJson<T extends object = any>(json: any): T {
     const { type, id, state, ...rest } = json;
     const registry = useNodes();
     const ctor = registry.find(node => node.name === type);

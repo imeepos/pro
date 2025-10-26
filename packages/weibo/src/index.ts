@@ -88,6 +88,3 @@ export type {
   WeiboTimelineStatus,
   WeiboTimelineTopic
 } from './types/timeline.js'
-
-// Workflow 扩展
-export * from './workflow/index.js'

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { execute, INode } from '@pro/workflow';
+import { execute, INode } from '@pro/workflow-core';
 
 @Injectable()
 export class ExecutorService {

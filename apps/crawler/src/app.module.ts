@@ -3,8 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { MongodbModule } from '@pro/mongodb';
-import { WeiboModule, WeiboWorkflowVisitor } from '@pro/weibo';
-import { WorkflowModule } from '@pro/workflow';
+import { WeiboModule } from '@pro/weibo';
 import { RedisClient, redisConfigFactory } from '@pro/redis';
 import { createDatabaseConfig, WeiboAccountEntity } from '@pro/entities';
 import {
@@ -19,7 +18,6 @@ import { CrawlQueueConsumer } from './crawl-queue.consumer';
 import { BrowserGuardianService } from './services/browser-guardian.service';
 import { WeiboAccountService } from './services/weibo-account.service';
 import { HealthController } from './health/health.controller';
-import { CrawlerWorkflowVisitor } from './services/crawler-workflow.visitor';
 
 @Module({
   imports: [
@@ -33,9 +31,6 @@ import { CrawlerWorkflowVisitor } from './services/crawler-workflow.visitor';
     ),
     MongodbModule.forRoot(),
     WeiboModule,
-    WorkflowModule.forRoot({
-      isGlobal: true,
-    }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
@@ -49,8 +44,6 @@ import { CrawlerWorkflowVisitor } from './services/crawler-workflow.visitor';
     WeiboAccountService,
     WorkflowFactory,
     CrawlerServiceV2,
-    WeiboWorkflowVisitor,
-    CrawlerWorkflowVisitor,
     CrawlQueueConsumer,
     {
       provide: 'CRAWLER_RUNTIME_CONFIG',

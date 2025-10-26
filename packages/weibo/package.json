@@ -40,7 +40,6 @@
     "@nestjs/common": "^11.0.13",
     "@pro/mongodb": "workspace:*",
     "@pro/types": "workspace:*",
-    "@pro/workflow": "workspace:*",
     "axios": "1.7.9",
     "rxjs": "^7.8.1"
   }

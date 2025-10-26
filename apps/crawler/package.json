@@ -54,7 +54,7 @@
     "@pro/redis": "workspace:*",
     "@pro/types": "workspace:*",
     "@pro/weibo": "workspace:*",
-    "@pro/workflow": "workspace:*",
+    "@pro/workflow-core": "workspace:*",
     "axios": "^1.7.9",
     "playwright": "^1.56.0",
     "reflect-metadata": "^0.2.2",

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { Handler, Visitor, WeiboAccountAst } from "@pro/workflow";
+import { Handler, Visitor, WeiboAccountAst } from "@pro/workflow-core";
 import { WeiboAccountService } from "./services/weibo-account.service";
 
 

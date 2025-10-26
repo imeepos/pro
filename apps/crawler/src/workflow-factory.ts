@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { WorkflowBuilderService, createPlaywrightAst } from '@pro/workflow';
-import { createWeiboSearchUrlBuilderAst, createAccountInjectorAst, createStorageAst } from '@pro/weibo';
+import { fromJson, WorkflowGraphAst } from '@pro/workflow-core';
 import { SubTaskMessage, NormalizedTask } from './types';
 import { WeiboSearchType, SourceType, SourcePlatform } from '@pro/types';
 
@@ -12,7 +11,6 @@ type MetadataBag = Record<OptionalKey | string, unknown>;
 
 @Injectable()
 export class WorkflowFactory {
-  constructor(private readonly builder: WorkflowBuilderService) {}
 
   createWorkflow(message: SubTaskMessage) {
     const task = this.normalize(message);
@@ -41,7 +39,7 @@ export class WorkflowFactory {
     const searchType = options.searchType || WeiboSearchType.DEFAULT;
     const page = options.page || 1;
 
-    const urlBuilder = createWeiboSearchUrlBuilderAst({
+    const urlBuilder = fromJson({
       keyword: task.keyword,
       start: task.start,
       end: task.end,
@@ -49,18 +47,18 @@ export class WorkflowFactory {
       searchType,
     });
 
-    const accountInjector = createAccountInjectorAst({
+    const accountInjector = fromJson({
       taskId: task.taskId,
       taskName: 'WeiboKeywordSearchWorkflow',
     });
 
-    const playwright = createPlaywrightAst({
+    const playwright = fromJson({
       url: '',
       ua: '',
       cookies: '',
     });
 
-    const storage = createStorageAst({
+    const storage = fromJson({
       type: SourceType.WEIBO_KEYWORD_SEARCH,
       platform: SourcePlatform.WEIBO,
       metadata: {
@@ -76,18 +74,16 @@ export class WorkflowFactory {
       },
     });
 
-    return this.builder
-      .createBuilder()
-      .addAst(urlBuilder)
-      .addAst(accountInjector)
-      .addAst(playwright)
-      .addAst(storage)
+    return new WorkflowGraphAst()
+      .addNode(urlBuilder)
+      .addNode(accountInjector)
+      .addNode(playwright)
+      .addNode(storage)
       .addEdge({ from: urlBuilder.id, to: playwright.id, fromProperty: 'url', toProperty: 'url' })
       .addEdge({ from: accountInjector.id, to: playwright.id, fromProperty: 'cookies', toProperty: 'cookies' })
       .addEdge({ from: accountInjector.id, to: playwright.id, fromProperty: 'userAgent', toProperty: 'ua' })
       .addEdge({ from: playwright.id, to: storage.id, fromProperty: 'html', toProperty: 'raw' })
       .addEdge({ from: playwright.id, to: storage.id, fromProperty: 'url', toProperty: 'url' })
-      .build('WeiboKeywordSearchWorkflow');
   }
 
   private normalize(message: SubTaskMessage): NormalizedTask {

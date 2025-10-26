@@ -1,4 +1,4 @@
-import { Handler, Visitor, WeiboSearchUrlBuilderAst } from "@pro/workflow";
+import { Handler, Visitor, WeiboSearchUrlBuilderAst } from "@pro/workflow-core";
 
 const formatDate = (date: Date) => [
     date.getFullYear(),
