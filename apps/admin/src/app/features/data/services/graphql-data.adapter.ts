@@ -397,6 +397,8 @@ export class GraphQLDataAdapter {
       [LegacySourceType.WEIBO_NOTE_DETAIL]: SourceType.WeiboNoteDetail,
       [LegacySourceType.WEIBO_CREATOR_PROFILE]: SourceType.WeiboCreatorProfile,
       [LegacySourceType.WEIBO_COMMENTS]: SourceType.WeiboComments,
+      [LegacySourceType.WEIBO_USER_INFO]: SourceType.WeiboCreatorProfile,
+      [LegacySourceType.WEIBO_DETAIL]: SourceType.WeiboApiJson,
       [LegacySourceType.JD]: SourceType.Jd,
       [LegacySourceType.CUSTOM]: SourceType.Custom
     };
