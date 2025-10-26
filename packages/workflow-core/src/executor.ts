@@ -164,13 +164,20 @@ export class ExecutorVisitor implements Visitor {
     constructor(private readonly factory: VisitorFactory = (ctor) => new ctor()) { }
     visit(ast: Ast, ctx: Visitor): Promise<any> {
         const type = resolveConstructor(ast)
+        // 找到 methods
+        const methods = getHandlerMethod(type);
+        if (methods && methods.size > 0) {
+            // 要最后一个 其他的自动忽略 后面的覆盖前面的
+            const [target, name] = [...methods][methods.size - 1]!;
+            const instance = this.factory(target)
+            if (name && typeof (instance as any)[name] === 'function') {
+                return (instance as any)[name](ast, ctx);
+            }
+        }
+        // 找到 class
         const handler = useVisitors().get(type);
         if (handler) {
             const instance = this.factory(handler)
-            const methodName = getHandlerMethod(type, handler);
-            if (methodName && typeof (instance as any)[methodName] === 'function') {
-                return (instance as any)[methodName](ast, ctx);
-            }
             if (typeof (instance as any).visit === 'function') {
                 return instance.visit(ast, ctx);
             }
