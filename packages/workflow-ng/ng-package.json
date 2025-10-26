@@ -3,5 +3,8 @@
     "lib": {
         "entryFile": "src/index.ts"
     },
-    "dest": "../../dist/packages/workflow-ng"
+    "dest": "../../dist/packages/workflow-ng",
+    "allowedNonPeerDependencies": [
+        "@pro/workflow-core"
+    ]
 }
