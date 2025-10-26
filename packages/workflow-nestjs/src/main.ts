@@ -134,30 +134,41 @@ import { WeiboHtmlParser } from './parsers/weibo-html.parser';
 import { RabbitMQService } from '@pro/rabbitmq';
 import { RawDataSourceService } from '@pro/mongodb';
 import { RedisClient } from '@pro/redis';
+import { Logger } from '@nestjs/common';
+import { EmbeddedCleanerService } from './services/embedded-cleaner.service';
 
+/**
+ * 完整工作流编排器 - 单进程完成采集→清洗→入库
+ *
+ * 流程:
+ * 1. MainSearchWorkflow → MongoDB (原始HTML)
+ * 2. EmbeddedCleanerService → PostgreSQL (结构化数据)
+ * 3. (可选) PostDetailWorkflow + UserProfileWorkflow
+ *
+ * 无需启动额外服务,完全自包含运行
+ */
 export async function main(keyword: string, startDate: Date, endDate: Date) {
+    const logger = new Logger('WorkflowOrchestrator');
     const app = await NestFactory.createApplicationContext(WorkflowModule, {
         logger: ['error', 'warn', 'log'],
     });
 
     try {
-        // 使用类名直接获取服务
+        // 获取所有必要服务
         const redisClient = app.get(RedisClient);
         const accountHealth = app.get(AccountHealthService);
         const distributedLock = app.get(DistributedLockService);
         const htmlParser = app.get(WeiboHtmlParser);
         const rawDataService = app.get(RawDataSourceService);
         const rabbitMQService = app.get(RabbitMQService);
+        const mainSearchWorkflow = app.get(MainSearchWorkflow);
+        const embeddedCleaner = app.get(EmbeddedCleanerService);
 
-        // 修复依赖注入问题：手动注入 RedisClient 到服务
+        // 修复依赖注入问题
         if (!(accountHealth as any).redis) {
             (accountHealth as any).redis = redisClient;
             (distributedLock as any).redis = redisClient;
         }
-
-        const mainSearchWorkflow = app.get(MainSearchWorkflow);
-
-        // 修复依赖注入问题：手动注入服务到 MainSearchWorkflow
         if (!(mainSearchWorkflow as any).distributedLock) {
             (mainSearchWorkflow as any).accountHealth = accountHealth;
             (mainSearchWorkflow as any).distributedLock = distributedLock;
@@ -166,31 +177,64 @@ export async function main(keyword: string, startDate: Date, endDate: Date) {
             (mainSearchWorkflow as any).rabbitMQService = rabbitMQService;
         }
 
-        console.log(`\n========== 微博数据采集工作流启动 ==========`);
-        console.log(`关键词: ${keyword}`);
-        console.log(`时间范围: ${startDate.toISOString()} ~ ${endDate.toISOString()}`);
-        console.log(`==========================================\n`);
+        logger.log(`\n========== 微博数据完整采集与清洗流程 ==========`);
+        logger.log(`关键词: ${keyword}`);
+        logger.log(`时间范围: ${startDate.toISOString()} ~ ${endDate.toISOString()}`);
+        logger.log(`流程: 搜索采集 → MongoDB → 数据清洗 → PostgreSQL`);
+        logger.log(`特性: 单进程运行,无需外部服务`);
+        logger.log(`=================================================\n`);
 
-        const result = await mainSearchWorkflow.execute({
+        // 阶段1: 执行主搜索工作流(采集原始HTML到MongoDB)
+        logger.log('━━━━━━ 阶段1: 数据采集 ━━━━━━');
+        logger.log(`任务: 抓取搜索结果HTML存入MongoDB`);
+
+        const searchResult = await mainSearchWorkflow.execute({
             keyword,
             startDate,
             endDate,
             maxPages: 50,
         });
 
-        console.log(`\n========== 工作流执行完成 ==========`);
-        console.log(`状态: ${result.status}`);
-        console.log(`总帖子数: ${result.totalPostsFound}`);
-        console.log(`总页数: ${result.totalPagesProcessed}`);
-        console.log(`时间窗口数: ${result.timeWindowsProcessed}`);
-        if (result.errorMessage) {
-            console.log(`错误信息: ${result.errorMessage}`);
-        }
-        console.log(`===================================\n`);
+        logger.log(`\n✅ 阶段1完成 - 搜索采集结果:`);
+        logger.log(`  📊 状态: ${searchResult.status}`);
+        logger.log(`  📝 总帖子数: ${searchResult.totalPostsFound}`);
+        logger.log(`  📄 总页数: ${searchResult.totalPagesProcessed}`);
+        logger.log(`  ⏰ 时间窗口数: ${searchResult.timeWindowsProcessed}`);
 
-        return result;
+        if (searchResult.errorMessage) {
+            logger.error(`  ❌ 错误信息: ${searchResult.errorMessage}`);
+            return {
+                phase1: searchResult,
+                phase2: null,
+                success: false,
+            };
+        }
+
+        // 阶段2: 执行数据清洗(MongoDB → PostgreSQL)
+        logger.log(`\n━━━━━━ 阶段2: 数据清洗 ━━━━━━`);
+        logger.log(`任务: 解析HTML并存入PostgreSQL`);
+
+        const cleanResult = await embeddedCleaner.cleanPendingSearchResults(keyword);
+
+        logger.log(`\n✅ 阶段2完成 - 数据清洗结果:`);
+        logger.log(`  🧹 处理文档数: ${cleanResult.totalProcessed}`);
+        logger.log(`  📰 提取微博数: ${cleanResult.totalPosts}`);
+        logger.log(`  👤 提取用户数: ${cleanResult.totalUsers}`);
+
+        // 最终总结
+        logger.log(`\n━━━━━━ 工作流完成总结 ━━━━━━`);
+        logger.log(`✅ 阶段1(采集): ${searchResult.status === 'success' ? '✔️  成功' : '❌ 失败'}`);
+        logger.log(`✅ 阶段2(清洗): ${cleanResult.totalProcessed > 0 ? '✔️  成功' : '❌ 失败'}`);
+        logger.log(`\n数据已完整写入PostgreSQL,可以查询使用`);
+        logger.log(`======================================\n`);
+
+        return {
+            phase1: searchResult,
+            phase2: cleanResult,
+            success: true,
+        };
     } catch (error) {
-        console.error('工作流执行失败:', error);
+        logger.error('工作流执行失败:', error);
         throw error;
     } finally {
         await app.close();

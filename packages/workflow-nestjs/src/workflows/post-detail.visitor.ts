@@ -23,7 +23,7 @@ import {
 export class FetchPostDetailVisitor {
   private readonly logger = new Logger(FetchPostDetailVisitor.name)
 
-  constructor(private readonly weiboStatusService: WeiboStatusService) {}
+  constructor(private readonly weiboStatusService: WeiboStatusService) { }
 
   async visit(node: FetchPostDetailAst): Promise<FetchPostDetailAst> {
     try {
@@ -52,13 +52,12 @@ export class FetchPostDetailVisitor {
   }
 }
 
-@Handler(FetchCommentsAst)
 @Injectable()
 export class FetchCommentsVisitor {
   private readonly logger = new Logger(FetchCommentsVisitor.name)
 
-  constructor(private readonly weiboStatusService: WeiboStatusService) {}
-
+  constructor(private readonly weiboStatusService: WeiboStatusService) { }
+  @Handler(FetchCommentsAst)
   async visit(node: FetchCommentsAst): Promise<FetchCommentsAst> {
     try {
       node.state = 'running'
@@ -108,13 +107,12 @@ export class FetchCommentsVisitor {
   }
 }
 
-@Handler(FetchLikesAst)
 @Injectable()
 export class FetchLikesVisitor {
   private readonly logger = new Logger(FetchLikesVisitor.name)
 
-  constructor(private readonly weiboStatusService: WeiboStatusService) {}
-
+  constructor(private readonly weiboStatusService: WeiboStatusService) { }
+  @Handler(FetchLikesAst)
   async visit(node: FetchLikesAst): Promise<FetchLikesAst> {
     try {
       node.state = 'running'
@@ -155,7 +153,7 @@ export class SavePostDetailVisitor {
   constructor(
     private readonly rawDataSourceService: RawDataSourceService,
     private readonly rabbitMQService: RabbitMQService
-  ) {}
+  ) { }
 
   async visit(node: SavePostDetailAst): Promise<SavePostDetailAst> {
     try {

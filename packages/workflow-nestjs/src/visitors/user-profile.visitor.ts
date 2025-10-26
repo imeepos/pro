@@ -11,16 +11,17 @@ import {
 import { RabbitMQService } from '@pro/rabbitmq'
 import { createHash } from 'crypto'
 import type { UserProfileData, UserPostSummary } from '../types/user-profile.types'
-import type { FetchUserProfileNode } from '../nodes/fetch-user-profile.node'
-import type { FetchUserPostsNode } from '../nodes/fetch-user-posts.node'
-import type { AnalyzeUserBehaviorNode } from '../nodes/analyze-user-behavior.node'
-import type { DetectBotNode } from '../nodes/detect-bot.node'
-import type { DetectSpamNode } from '../nodes/detect-spam.node'
-import type { SaveUserProfileNode } from '../nodes/save-user-profile.node'
+import { FetchUserProfileNode } from '../nodes/fetch-user-profile.node'
+import { FetchUserPostsNode } from '../nodes/fetch-user-posts.node'
+import { AnalyzeUserBehaviorNode } from '../nodes/analyze-user-behavior.node'
+import { DetectBotNode } from '../nodes/detect-bot.node'
+import { DetectSpamNode } from '../nodes/detect-spam.node'
+import { SaveUserProfileNode } from '../nodes/save-user-profile.node'
 import { UserBehaviorAnalyzerService } from '../services/user-behavior-analyzer.service'
 import { BotDetectorService } from '../services/bot-detector.service'
 import { SpamDetectorService } from '../services/spam-detector.service'
 import { RawDataSourceService } from '@pro/mongodb'
+import { Handler } from '@pro/workflow-core'
 
 @Injectable()
 export class UserProfileVisitor {
@@ -37,7 +38,7 @@ export class UserProfileVisitor {
     private readonly rawDataService: RawDataSourceService,
     private readonly rabbitMQService: RabbitMQService
   ) {}
-
+  @Handler(FetchUserProfileNode)
   async visitFetchUserProfile(node: FetchUserProfileNode): Promise<FetchUserProfileNode> {
     try {
       const cacheKey = `${this.cachePrefix}${node.userId}`
@@ -85,6 +86,7 @@ export class UserProfileVisitor {
     return node
   }
 
+  @Handler(FetchUserPostsNode)
   async visitFetchUserPosts(node: FetchUserPostsNode): Promise<FetchUserPostsNode> {
     try {
       const maxPages = node.maxPages || 3
@@ -128,6 +130,7 @@ export class UserProfileVisitor {
     return node
   }
 
+  @Handler(AnalyzeUserBehaviorNode)
   async visitAnalyzeUserBehavior(
     node: AnalyzeUserBehaviorNode
   ): Promise<AnalyzeUserBehaviorNode> {
@@ -147,6 +150,7 @@ export class UserProfileVisitor {
     return node
   }
 
+  @Handler(DetectBotNode)
   async visitDetectBot(node: DetectBotNode): Promise<DetectBotNode> {
     try {
       const config = this.getDefaultConfig()
@@ -167,6 +171,7 @@ export class UserProfileVisitor {
     return node
   }
 
+  @Handler(DetectSpamNode)
   async visitDetectSpam(node: DetectSpamNode): Promise<DetectSpamNode> {
     try {
       const config = this.getDefaultConfig()
@@ -187,6 +192,7 @@ export class UserProfileVisitor {
     return node
   }
 
+  @Handler(SaveUserProfileNode)
   async visitSaveUserProfile(node: SaveUserProfileNode): Promise<SaveUserProfileNode> {
     try {
       const rawContent = JSON.stringify(node.workflowData)

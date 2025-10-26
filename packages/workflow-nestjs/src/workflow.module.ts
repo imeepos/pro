@@ -4,7 +4,17 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { MongodbModule } from '@pro/mongodb';
 import { RabbitMQModule } from '@pro/rabbitmq';
-import { WeiboAccountEntity, createDatabaseConfig } from '@pro/entities';
+import {
+    WeiboAccountEntity,
+    WeiboPostEntity,
+    WeiboCommentEntity,
+    WeiboUserEntity,
+    WeiboHashtagEntity,
+    WeiboPostHashtagEntity,
+    WeiboMediaEntity,
+    WeiboUserStatsEntity,
+    createDatabaseConfig
+} from '@pro/entities';
 import { RedisClient } from '@pro/redis';
 import { WeiboModule } from '@pro/weibo';
 
@@ -30,6 +40,7 @@ import { SpamDetectorService } from './services/spam-detector.service';
 import { UserProfileVisitor } from './visitors/user-profile.visitor';
 import { UserProfileWorkflow } from './workflows/user-profile.workflow';
 import { RateLimiterService } from './services/rate-limiter.service';
+import { EmbeddedCleanerService } from './services/embedded-cleaner.service';
 
 @Global()
 @Module({
@@ -58,7 +69,16 @@ import { RateLimiterService } from './services/rate-limiter.service';
                 };
             },
         }),
-        TypeOrmModule.forFeature([WeiboAccountEntity]),
+        TypeOrmModule.forFeature([
+            WeiboAccountEntity,
+            WeiboPostEntity,
+            WeiboCommentEntity,
+            WeiboUserEntity,
+            WeiboHashtagEntity,
+            WeiboPostHashtagEntity,
+            WeiboMediaEntity,
+            WeiboUserStatsEntity,
+        ]),
         MongodbModule.forRootAsync({
             inject: [ConfigService],
             useFactory: (configService: ConfigService) => {
@@ -126,6 +146,7 @@ import { RateLimiterService } from './services/rate-limiter.service';
         SpamDetectorService,
         UserProfileVisitor,
         UserProfileWorkflow,
+        EmbeddedCleanerService,
     ],
     exports: [
         ExecutorService,
@@ -137,6 +158,7 @@ import { RateLimiterService } from './services/rate-limiter.service';
         WeiboHtmlParser,
         MainSearchWorkflow,
         UserProfileWorkflow,
+        EmbeddedCleanerService,
         RedisClient,
     ],
 })
