@@ -1,22 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { execute } from '@pro/workflow';
-import { Ast, Visitor, INode } from '@pro/workflow';
-import { PlaywrightAstVisitor } from '../PlaywrightAstVisitor';
-import { WeiboAccountAstVisitor } from
-    '../WeiboAccountAstVisitor';
-import { WeiboSearchUrlBuilderAstVisitor } from
-    '../WeiboSearchUrlBuilderAstVisitor';
+import { execute, INode } from '@pro/workflow';
 
 @Injectable()
 export class ExecutorService {
     private readonly logger = new Logger(ExecutorService.name);
-    constructor(
-        private readonly playwrightVisitor: PlaywrightAstVisitor,
-        private readonly weiboAccountVisitor:
-            WeiboAccountAstVisitor,
-        private readonly weiboSearchVisitor:
-            WeiboSearchUrlBuilderAstVisitor,
-    ) { }
+    constructor() { }
     /**
        * 执行单个工作流
        */

@@ -52,7 +52,7 @@ export class WeiboAccountService {
             request.headers.cookie = selection.cookieHeader;
             return selection;
         } catch (error) {
-            const detail = error instanceof Error ? error.message : String(error);
+            this.logger.error('账号注入失败', { error });
             return null;
         }
     }
