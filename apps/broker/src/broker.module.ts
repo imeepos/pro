@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
-import { WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity, createDatabaseConfig } from '@pro/entities';
+import { WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity, FailedTaskEntity, createDatabaseConfig } from '@pro/entities';
 import { RedisClient, redisConfigFactory } from '@pro/redis';
 import { WeiboModule as CoreWeiboModule } from '@pro/weibo';
 import { MongodbModule } from '@pro/mongodb';
@@ -15,6 +15,7 @@ import { DiagnosticService } from './weibo/diagnostic.service';
 import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
 import { AggregateSchedulerService } from './services/aggregate-scheduler.service';
 import { WeiboAccountHealthScheduler } from './weibo/account-health-scheduler.service';
+import { DlqConsumer } from './consumers/dlq.consumer';
 
 /**
  * Broker 模块 - 任务调度的心脏
@@ -62,7 +63,7 @@ import { WeiboAccountHealthScheduler } from './weibo/account-health-scheduler.se
     ScheduleModule.forRoot(),
 
     // 实体之殿 - 数据模型的家园
-    TypeOrmModule.forFeature([WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity]),
+    TypeOrmModule.forFeature([WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity, FailedTaskEntity]),
     CoreWeiboModule,
   ],
 
@@ -73,6 +74,7 @@ import { WeiboAccountHealthScheduler } from './weibo/account-health-scheduler.se
     AggregateSchedulerService,    // 数据聚合的指挥家
     SimpleTaskMonitor,            // 简化的健康守望者
     DiagnosticService,            // 异常诊断的医师
+    DlqConsumer,                  // 死信队列的守望者
     {
       provide: RedisClient,
       useFactory: (configService: ConfigService) => {

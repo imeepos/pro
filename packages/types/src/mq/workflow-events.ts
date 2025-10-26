@@ -59,6 +59,15 @@ export interface UserProfileCompletedEvent {
   /** 垃圾账号嫌疑 */
   isSpammerSuspect: boolean;
 
+  /** 行为评分 - 量化检测置信度 */
+  behaviorScore: {
+    /** 机器人置信度 0-100 */
+    botConfidence: number;
+
+    /** 水军置信度 0-100 */
+    spamConfidence: number;
+  };
+
   /** 元数据 - 提供上下文信息 */
   metadata?: {
     /** 数据来源 */

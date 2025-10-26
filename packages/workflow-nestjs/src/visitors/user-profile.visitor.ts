@@ -221,30 +221,44 @@ export class UserProfileVisitor {
         createdAt: new Date().toISOString(),
       }
 
-      await this.rabbitMQService.publish(
-        QUEUE_NAMES.RAW_DATA_READY,
-        rawDataReadyEvent
-      )
+      try {
+        await this.rabbitMQService.publish(
+          QUEUE_NAMES.RAW_DATA_READY,
+          rawDataReadyEvent
+        )
+      } catch (error) {
+        this.logger.error(`发布 RawDataReady 事件失败: ${node.userId}`, error)
+      }
 
       const userProfileCompletedEvent: UserProfileCompletedEvent = {
         userId: node.userId,
         rawDataId: node.rawDataId,
         isBotSuspect: node.workflowData.botDetection.isSuspicious,
         isSpammerSuspect: node.workflowData.spamDetection.isSuspicious,
+        behaviorScore: {
+          botConfidence: node.workflowData.botDetection.confidence,
+          spamConfidence: node.workflowData.spamDetection.confidence,
+        },
         createdAt: new Date().toISOString(),
       }
 
-      await this.rabbitMQService.publish(
-        QUEUE_NAMES.RAW_DATA_READY,
-        userProfileCompletedEvent
-      )
+      try {
+        await this.rabbitMQService.publish(
+          QUEUE_NAMES.USER_PROFILE_COMPLETED,
+          userProfileCompletedEvent
+        )
+      } catch (error) {
+        this.logger.error(`发布 UserProfileCompleted 事件失败: ${node.userId}`, error)
+      }
 
       node.state = 'success'
 
       this.logger.log(`用户画像已保存并发布事件: ${node.userId}`, {
         rawDataId: node.rawDataId,
         isBotSuspect: node.workflowData.botDetection.isSuspicious,
-        isSpammerSuspect: node.workflowData.spamDetection.isSuspicious
+        isSpammerSuspect: node.workflowData.spamDetection.isSuspicious,
+        botConfidence: node.workflowData.botDetection.confidence,
+        spamConfidence: node.workflowData.spamDetection.confidence,
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)

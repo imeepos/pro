@@ -39,6 +39,7 @@ export * from './daily-stats.entity.js';
 export * from './workflow.entity.js';
 export * from './workflow-execution.entity.js';
 export * from './workflow-state.entity.js';
+export * from './failed-task.entity.js';
 
 export { EventStatus } from '@pro/types';
 
@@ -80,6 +81,7 @@ import { DailyStatsEntity } from './daily-stats.entity.js';
 import { WorkflowEntity } from './workflow.entity.js';
 import { WorkflowExecutionEntity } from './workflow-execution.entity.js';
 import { WorkflowStateEntity } from './workflow-state.entity.js';
+import { FailedTaskEntity } from './failed-task.entity.js';
 
 interface ConfigService {
   get<T = any>(key: string, defaultValue?: T): T;
@@ -123,6 +125,7 @@ const entities = [
   WorkflowEntity,
   WorkflowExecutionEntity,
   WorkflowStateEntity,
+  FailedTaskEntity,
 ];
 
 export const createDatabaseConfig = (configService: ConfigService): DataSourceOptions => {

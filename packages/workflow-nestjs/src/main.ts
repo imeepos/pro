@@ -199,7 +199,7 @@ export async function main(keyword: string, startDate: Date, endDate: Date) {
 
 if (require.main === module) {
     // 使用新的测试关键词避免唯一索引冲突
-    const testKeyword = `测试${Date.now()}`;
+    const testKeyword = `国庆`;
     main(testKeyword, new Date(`2025-10-25 00:00:00`), new Date())
         .then(() => {
             console.log('任务完成');

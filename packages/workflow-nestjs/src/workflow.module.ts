@@ -29,6 +29,7 @@ import { BotDetectorService } from './services/bot-detector.service';
 import { SpamDetectorService } from './services/spam-detector.service';
 import { UserProfileVisitor } from './visitors/user-profile.visitor';
 import { UserProfileWorkflow } from './workflows/user-profile.workflow';
+import { RateLimiterService } from './services/rate-limiter.service';
 
 @Global()
 @Module({
@@ -110,6 +111,7 @@ import { UserProfileWorkflow } from './workflows/user-profile.workflow';
         AccountHealthService,
         DistributedLockService,
         PriorityQueueService,
+        RateLimiterService,
         WeiboHtmlParser,
         MainSearchWorkflow,
         PlaywrightAstVisitor,
@@ -131,6 +133,7 @@ import { UserProfileWorkflow } from './workflows/user-profile.workflow';
         AccountHealthService,
         DistributedLockService,
         PriorityQueueService,
+        RateLimiterService,
         WeiboHtmlParser,
         MainSearchWorkflow,
         UserProfileWorkflow,

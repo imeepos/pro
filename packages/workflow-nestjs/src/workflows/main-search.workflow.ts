@@ -11,6 +11,8 @@ import { createHash } from 'crypto';
 import { AccountHealthService } from '../services/account-health.service';
 import { DistributedLockService } from '../services/distributed-lock.service';
 import { WeiboHtmlParser } from '../parsers/weibo-html.parser';
+import { RateLimiterService } from '../services/rate-limiter.service';
+import { RATE_LIMIT_CONFIGS } from '../constants/rate-limit.constants';
 import {
   calculateNextTimeRange,
   shouldStopCrawling,
@@ -52,6 +54,7 @@ export class MainSearchWorkflow {
     private readonly htmlParser: WeiboHtmlParser,
     private readonly rawDataService: RawDataSourceService,
     private readonly rabbitMQService: RabbitMQService,
+    private readonly rateLimiter: RateLimiterService,
   ) {}
 
   async execute(
@@ -227,6 +230,26 @@ export class MainSearchWorkflow {
     if (!account) {
       this.logger.error('无可用账号');
       return null;
+    }
+
+    const rateLimitResult = await this.rateLimiter.checkRateLimit(
+      `account:${account.id}`,
+      RATE_LIMIT_CONFIGS.ACCOUNT
+    );
+
+    if (!rateLimitResult.allowed) {
+      this.logger.warn('账号超过速率限制，等待重置', {
+        accountId: account.id,
+        resetAt: rateLimitResult.resetAt,
+        current: rateLimitResult.current,
+      });
+
+      const waitMs = rateLimitResult.resetAt.getTime() - Date.now();
+      if (waitMs > 0 && waitMs < 60000) {
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      } else {
+        throw new Error('速率限制未重置，跳过本次请求');
+      }
     }
 
     const url = this.buildSearchUrl(keyword, window, page);

@@ -29,6 +29,12 @@ export const QUEUE_NAMES = {
 
   /** System → Aggregator: 触发聚合任务 */
   AGGREGATE_TASK: 'aggregate_task_queue',
+
+  /** Workflow → Downstream: 帖子详情工作流完成 */
+  POST_DETAIL_COMPLETED: 'post_detail_completed_queue',
+
+  /** Workflow → Downstream: 用户画像工作流完成 */
+  USER_PROFILE_COMPLETED: 'user_profile_completed_queue',
 } as const;
 
 export type QueueName = typeof QUEUE_NAMES[keyof typeof QUEUE_NAMES];

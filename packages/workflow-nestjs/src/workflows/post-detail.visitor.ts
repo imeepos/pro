@@ -218,7 +218,7 @@ export class SavePostDetailVisitor {
       }
 
       await this.rabbitMQService.publish(
-        QUEUE_NAMES.RAW_DATA_READY,
+        QUEUE_NAMES.POST_DETAIL_COMPLETED,
         postDetailCompletedEvent
       )
 
