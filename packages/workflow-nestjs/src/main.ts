@@ -125,17 +125,46 @@
  * 
  */
 
-export async function main(keyword: string, startDate: Date, endDate: Date) {
-    const { NestFactory } = await import('@nestjs/core');
-    const { WorkflowModule } = await import('./workflow.module');
+import { NestFactory } from '@nestjs/core';
+import { WorkflowModule } from './workflow.module';
+import { MainSearchWorkflow } from './workflows/main-search.workflow';
+import { AccountHealthService } from './services/account-health.service';
+import { DistributedLockService } from './services/distributed-lock.service';
+import { WeiboHtmlParser } from './parsers/weibo-html.parser';
+import { RabbitMQService } from '@pro/rabbitmq';
+import { RawDataSourceService } from '@pro/mongodb';
+import { RedisClient } from '@pro/redis';
 
+export async function main(keyword: string, startDate: Date, endDate: Date) {
     const app = await NestFactory.createApplicationContext(WorkflowModule, {
         logger: ['error', 'warn', 'log'],
     });
 
     try {
-        const { MainSearchWorkflow } = await import('./workflows/main-search.workflow');
+        // 使用类名直接获取服务
+        const redisClient = app.get(RedisClient);
+        const accountHealth = app.get(AccountHealthService);
+        const distributedLock = app.get(DistributedLockService);
+        const htmlParser = app.get(WeiboHtmlParser);
+        const rawDataService = app.get(RawDataSourceService);
+        const rabbitMQService = app.get(RabbitMQService);
+
+        // 修复依赖注入问题：手动注入 RedisClient 到服务
+        if (!(accountHealth as any).redis) {
+            (accountHealth as any).redis = redisClient;
+            (distributedLock as any).redis = redisClient;
+        }
+
         const mainSearchWorkflow = app.get(MainSearchWorkflow);
+
+        // 修复依赖注入问题：手动注入服务到 MainSearchWorkflow
+        if (!(mainSearchWorkflow as any).distributedLock) {
+            (mainSearchWorkflow as any).accountHealth = accountHealth;
+            (mainSearchWorkflow as any).distributedLock = distributedLock;
+            (mainSearchWorkflow as any).htmlParser = htmlParser;
+            (mainSearchWorkflow as any).rawDataService = rawDataService;
+            (mainSearchWorkflow as any).rabbitMQService = rabbitMQService;
+        }
 
         console.log(`\n========== 微博数据采集工作流启动 ==========`);
         console.log(`关键词: ${keyword}`);
@@ -169,7 +198,9 @@ export async function main(keyword: string, startDate: Date, endDate: Date) {
 }
 
 if (require.main === module) {
-    main(`国庆`, new Date(`2025-10-25 00:00:00`), new Date())
+    // 使用新的测试关键词避免唯一索引冲突
+    const testKeyword = `测试${Date.now()}`;
+    main(testKeyword, new Date(`2025-10-25 00:00:00`), new Date())
         .then(() => {
             console.log('任务完成');
             process.exit(0);

@@ -4,8 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { MongodbModule } from '@pro/mongodb';
 import { RabbitMQModule } from '@pro/rabbitmq';
-import { WeiboAccountEntity } from '@pro/entities';
+import { WeiboAccountEntity, createDatabaseConfig } from '@pro/entities';
 import { RedisClient } from '@pro/redis';
+import { WeiboModule } from '@pro/weibo';
 
 import { PlaywrightAstVisitor } from './PlaywrightAstVisitor';
 import { WeiboSearchUrlBuilderAstVisitor } from './WeiboSearchUrlBuilderAstVisitor';
@@ -47,41 +48,43 @@ import { UserProfileWorkflow } from './workflows/user-profile.workflow';
         }),
         TypeOrmModule.forRootAsync({
             inject: [ConfigService],
-            useFactory: (configService: ConfigService) => ({
-                type: 'postgres',
-                host: configService.get('DB_HOST', 'localhost'),
-                port: configService.get('DB_PORT', 5432),
-                username: configService.get('DB_USERNAME', 'postgres'),
-                password: configService.get('DB_PASSWORD', ''),
-                database: configService.get('DB_NAME', 'pro'),
-                entities: [WeiboAccountEntity],
-                synchronize: false,
-                retryAttempts: 1,
-                retryDelay: 1000,
-                autoLoadEntities: false,
-            }),
+            useFactory: (configService: ConfigService) => {
+                const config = createDatabaseConfig(configService);
+                return {
+                    ...config,
+                    retryAttempts: 1,
+                    retryDelay: 1000,
+                };
+            },
         }),
         TypeOrmModule.forFeature([WeiboAccountEntity]),
         MongodbModule.forRootAsync({
             inject: [ConfigService],
-            useFactory: (configService: ConfigService) => ({
-                uri: configService.get('MONGODB_URL', 'mongodb://localhost:27017/pro'),
-            }),
+            useFactory: (configService: ConfigService) => {
+                const mongoUrl = configService.get('MONGODB_URL', 'mongodb://localhost:27017/pro');
+                return {
+                    uri: mongoUrl.trim(),
+                };
+            },
         }),
         RabbitMQModule.forRootAsync({
             inject: [ConfigService],
-            useFactory: (configService: ConfigService) => ({
-                url: configService.get('RABBITMQ_URL', 'amqp://localhost:5672'),
-            }),
+            useFactory: (configService: ConfigService) => {
+                const rabbitUrl = configService.get('RABBITMQ_URL', 'amqp://localhost:5672');
+                return {
+                    url: rabbitUrl.trim(),
+                };
+            },
         }),
+        WeiboModule,
     ],
     providers: [
         {
-            provide: RedisClient,
+            provide: 'REDIS_CLIENT',
             useFactory: (configService: ConfigService) => {
                 const redisUrl = configService.get('REDIS_URL');
                 if (redisUrl) {
-                    return new RedisClient(redisUrl);
+                    return new RedisClient(redisUrl.trim());
                 }
                 const redisConfig: any = {
                     host: configService.get('REDIS_HOST', 'localhost'),
@@ -95,6 +98,11 @@ import { UserProfileWorkflow } from './workflows/user-profile.workflow';
                 return new RedisClient(redisConfig);
             },
             inject: [ConfigService],
+        },
+        {
+            provide: RedisClient,
+            useFactory: (redisClient: RedisClient) => redisClient,
+            inject: ['REDIS_CLIENT'],
         },
         ExecutorService,
         WeiboAccountService,
