@@ -23,6 +23,17 @@ export class RawDataSourceService {
   async create(dto: CreateRawDataSourceDto): Promise<RawDataSourceDoc> {
     const contentHash = calculateContentHash(dto.rawContent);
 
+    // 如果 contentHash 已存在就返回现有记录
+    const existing = await this.rawDataSourceModel
+      .findOne({ contentHash })
+      .exec();
+
+    if (existing) {
+      this.logger.debug(`Content already exists with hash: ${contentHash}`);
+      return existing;
+    }
+
+    // contentHash 不存在，插入新记录
     const data = new this.rawDataSourceModel({
       sourceType: dto.sourceType,
       sourceUrl: dto.sourceUrl,
