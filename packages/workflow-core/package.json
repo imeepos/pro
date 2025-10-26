@@ -26,7 +26,9 @@
     ],
     "author": "Pro Team",
     "license": "MIT",
-    "dependencies": {},
+    "dependencies": {
+        "@pro/core": "workspace:*"
+    },
     "devDependencies": {
         "typescript": "^5.0.0"
     },

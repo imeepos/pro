@@ -1,6 +1,6 @@
+import { root } from "@pro/core";
 import { Ast, Visitor, WorkflowGraphAst } from "./ast";
-import { getOutputs, Handler, useVisitors, resolveConstructor, getHandlerMethod } from "./decorator";
-import type { VisitorFactory } from "./decorator";
+import { HANDLER, Handler, HANDLER_METHOD, OUTPUT, resolveConstructor } from "./decorator";
 import { fromJson } from "./generate";
 import { IAstStates, IEdge, INode } from "./types";
 
@@ -98,11 +98,11 @@ export class WorkflowExecutorVisitor {
     private extractNodeOutputs(node: INode): any {
         // 根据节点类型和装饰器提取输出
         const ast = fromJson(node);
-        const outputs = getOutputs(ast);
+        const outputs = root.get(OUTPUT)
         const outputData: any = {};
-        outputs.forEach(outputProp => {
-            if ((node as any)[outputProp] !== undefined) {
-                outputData[outputProp] = (node as any)[outputProp];
+        outputs.filter(it=>it.target === ast).map(it => {
+            if ((node as any)[it.propertyKey] !== undefined) {
+                outputData[it.propertyKey] = (node as any)[it.propertyKey];
             }
         });
 
@@ -161,27 +161,31 @@ export class WorkflowExecutorVisitor {
 }
 
 export class ExecutorVisitor implements Visitor {
-    constructor(private readonly factory: VisitorFactory = (ctor) => new ctor()) { }
     visit(ast: Ast, ctx: Visitor): Promise<any> {
         const type = resolveConstructor(ast)
         // 找到 methods
-        const methods = getHandlerMethod(type);
-        if (methods && methods.size > 0) {
+        const methods = root.get(HANDLER_METHOD);
+        if (methods && methods.length > 0) {
             // 要最后一个 其他的自动忽略 后面的覆盖前面的
-            const [target, name] = [...methods][methods.size - 1]!;
-            const instance = this.factory(target)
-            if (name && typeof (instance as any)[name] === 'function') {
-                return (instance as any)[name](ast, ctx);
+            const method = methods.find(it => it.ast === type);
+            if (method) {
+                const instance = root.get(method.target)
+                if (method.property && typeof (instance as any)[method.property] === 'function') {
+                    return (instance as any)[method.property](ast, ctx);
+                }
+
             }
+
         }
         // 找到 class
-        const handler = useVisitors().get(type);
+        const nodes = root.get(HANDLER)
+        const handler = nodes.find(it => it.ast === type);
         if (handler) {
-            const instance = this.factory(handler)
+            const instance = root.get(handler.target)
             if (typeof (instance as any).visit === 'function') {
                 return instance.visit(ast, ctx);
             }
-            throw new Error(`Handler ${handler.name} has no visit method or @Handler decorated method`)
+            throw new Error(`Handler ${handler.target.name} has no visit method or @Handler decorated method`)
         }
         throw new Error(`not found handler for ${ast.type}`)
     }
