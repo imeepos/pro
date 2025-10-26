@@ -1,6 +1,5 @@
 import * as cheerio from 'cheerio';
-import { PinoLogger } from '@pro/logger';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 export interface ParsedSearchResult {
   postIds: string[];
@@ -11,9 +10,9 @@ export interface ParsedSearchResult {
 
 @Injectable()
 export class WeiboHtmlParser {
-  constructor(private readonly logger: PinoLogger) {
-    this.logger.setContext(WeiboHtmlParser.name);
-  }
+  private readonly logger = new Logger(WeiboHtmlParser.name);
+
+  constructor() {}
 
   parseSearchResultHtml(html: string): ParsedSearchResult {
     try {

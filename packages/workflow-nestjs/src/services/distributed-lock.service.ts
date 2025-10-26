@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RedisClient } from '@pro/redis';
-import { PinoLogger } from '@pro/logger';
 
 export interface LockOptions {
   ttl?: number;
@@ -10,17 +9,13 @@ export interface LockOptions {
 
 @Injectable()
 export class DistributedLockService {
+  private readonly logger = new Logger(DistributedLockService.name);
   private readonly defaultTTL = 30;
   private readonly defaultRetryAttempts = 3;
   private readonly defaultRetryDelay = 100;
   private readonly lockPrefix = 'workflow:lock:';
 
-  constructor(
-    private readonly redis: RedisClient,
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(DistributedLockService.name);
-  }
+  constructor(private readonly redis: RedisClient) {}
 
   async acquireLock(
     key: string,

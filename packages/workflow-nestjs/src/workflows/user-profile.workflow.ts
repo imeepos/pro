@@ -1,5 +1,4 @@
-import { Injectable } from '@nestjs/common'
-import { PinoLogger } from '@pro/logger'
+import { Injectable, Logger } from '@nestjs/common'
 import { RedisClient } from '@pro/redis'
 import type {
   UserProfileWorkflowInput,
@@ -19,20 +18,18 @@ export class UserProfileWorkflow {
   private readonly deduplicationPrefix = 'user-profile:processed:'
   private readonly deduplicationTTL = 86400
   private readonly queueConcurrency = 5
+  private readonly logger = new Logger(UserProfileWorkflow.name);
 
   constructor(
-    private readonly logger: PinoLogger,
     private readonly redis: RedisClient,
     private readonly visitor: UserProfileVisitor
-  ) {
-    this.logger.setContext(UserProfileWorkflow.name)
-  }
+  ) {}
 
   async execute(input: UserProfileWorkflowInput): Promise<UserProfileWorkflowOutput> {
     const userIds = Array.isArray(input.userId) ? input.userId : [input.userId]
     const maxPostPages = input.maxPostPages || 3
 
-    this.logger.info(`开始用户画像工作流`, {
+    this.logger.log(`开始用户画像工作流`, {
       totalUsers: userIds.length,
       maxPostPages
     })
@@ -41,7 +38,7 @@ export class UserProfileWorkflow {
 
     const success = results.every(r => !r.error)
 
-    this.logger.info(`用户画像工作流完成`, {
+    this.logger.log(`用户画像工作流完成`, {
       total: results.length,
       success: results.filter(r => !r.error).length,
       failed: results.filter(r => r.error).length

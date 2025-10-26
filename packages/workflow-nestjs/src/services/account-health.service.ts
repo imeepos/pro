@@ -1,8 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RedisClient } from '@pro/redis';
-import { PinoLogger } from '@pro/logger';
 import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
 
 export interface AccountHealthSelection {
@@ -19,15 +18,13 @@ export class AccountHealthService {
   private readonly maxHealthScore = 100;
   private readonly initialHealthScore = 100;
   private readonly maxSelectionAttempts = 5;
+  private readonly logger = new Logger(AccountHealthService.name);
 
   constructor(
     @InjectRepository(WeiboAccountEntity)
     private readonly accounts: Repository<WeiboAccountEntity>,
     private readonly redis: RedisClient,
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(AccountHealthService.name);
-  }
+  ) {}
 
   async getBestHealthAccount(): Promise<AccountHealthSelection | null> {
     for (let attempt = 0; attempt < this.maxSelectionAttempts; attempt++) {
@@ -165,7 +162,7 @@ export class AccountHealthService {
 
     await pipeline.exec();
 
-    this.logger.info('初始化账号健康度完成', {
+    this.logger.log('初始化账号健康度完成', {
       accountCount: activeAccounts.length,
       initialScore: this.initialHealthScore,
     });

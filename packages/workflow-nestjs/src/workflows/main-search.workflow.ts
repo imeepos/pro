@@ -1,5 +1,4 @@
-import { Injectable } from '@nestjs/common';
-import { PinoLogger } from '@pro/logger';
+import { Injectable, Logger } from '@nestjs/common';
 import { RawDataSourceService } from '@pro/mongodb';
 import {
   SourceType,
@@ -45,6 +44,7 @@ export interface SearchPageResult {
 export class MainSearchWorkflow {
   private readonly defaultMaxPages = 50;
   private readonly lockTTL = 300;
+  private readonly logger = new Logger(MainSearchWorkflow.name);
 
   constructor(
     private readonly accountHealth: AccountHealthService,
@@ -52,10 +52,7 @@ export class MainSearchWorkflow {
     private readonly htmlParser: WeiboHtmlParser,
     private readonly rawDataService: RawDataSourceService,
     private readonly rabbitMQService: RabbitMQService,
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(MainSearchWorkflow.name);
-  }
+  ) {}
 
   async execute(
     input: MainSearchWorkflowInput
@@ -101,7 +98,7 @@ export class MainSearchWorkflow {
     };
 
     while (!shouldStopCrawling(currentWindow.end, input.startDate)) {
-      this.logger.info('处理时间窗口', {
+      this.logger.log('处理时间窗口', {
         window: currentWindow,
         keyword: input.keyword,
       });
@@ -117,7 +114,7 @@ export class MainSearchWorkflow {
       timeWindowsProcessed += 1;
 
       if (!windowResult.lastPostTime) {
-        this.logger.info('时间窗口无更多数据', { window: currentWindow });
+        this.logger.log('时间窗口无更多数据', { window: currentWindow });
         break;
       }
 
@@ -127,7 +124,7 @@ export class MainSearchWorkflow {
       );
 
       if (nextWindowResult.shouldStop || !nextWindowResult.nextWindow) {
-        this.logger.info('已到达搜索起始时间，停止爬取', {
+        this.logger.log('已到达搜索起始时间，停止爬取', {
           lastPostTime: windowResult.lastPostTime,
           startDate: input.startDate,
         });
@@ -137,7 +134,7 @@ export class MainSearchWorkflow {
       currentWindow = nextWindowResult.nextWindow;
     }
 
-    this.logger.info('主搜索工作流完成', {
+    this.logger.log('主搜索工作流完成', {
       keyword: input.keyword,
       totalPostsFound,
       totalPagesProcessed,

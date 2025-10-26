@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RedisClient } from '@pro/redis';
-import { PinoLogger } from '@pro/logger';
 
 export interface QueueTask {
   id: string;
@@ -11,13 +10,11 @@ export interface QueueTask {
 @Injectable()
 export class PriorityQueueService {
   private readonly queuePrefix = 'workflow:priority-queue:';
+  private readonly logger = new Logger(PriorityQueueService.name);
 
   constructor(
     private readonly redis: RedisClient,
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(PriorityQueueService.name);
-  }
+  ) {}
 
   async enqueue(
     queueName: string,
@@ -123,7 +120,7 @@ export class PriorityQueueService {
     const queueKey = this.queuePrefix + queueName;
     await this.redis.del(queueKey);
 
-    this.logger.info('清空队列', { queueName });
+    this.logger.log('清空队列', { queueName });
   }
 
   async remove(queueName: string, taskId: string): Promise<boolean> {

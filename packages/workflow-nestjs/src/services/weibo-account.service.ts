@@ -1,7 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PinoLogger } from '@pro/logger';
 import { RedisClient } from '@pro/redis';
 import {
     WeiboAccountEntity,
@@ -26,15 +25,13 @@ export interface WeiboAccountSelection {
 export class WeiboAccountService {
     private readonly healthKey = 'weibo:account:health';
     private readonly maxAttempts = 5;
+    private readonly logger = new Logger(WeiboAccountService.name);
 
     constructor(
         @InjectRepository(WeiboAccountEntity)
         private readonly accounts: Repository<WeiboAccountEntity>,
         private readonly redis: RedisClient,
-        private readonly logger: PinoLogger,
-    ) {
-        this.logger.setContext(WeiboAccountService.name);
-    }
+    ) {}
 
     async injectCookies<T extends RequestWithHeaders>(
         request: T

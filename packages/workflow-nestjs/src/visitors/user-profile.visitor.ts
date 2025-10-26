@@ -1,7 +1,6 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { WeiboProfileService } from '@pro/weibo'
 import { RedisClient } from '@pro/redis'
-import { PinoLogger } from '@pro/logger'
 import {
   SourceType,
   SourcePlatform,
@@ -27,19 +26,17 @@ import { RawDataSourceService } from '@pro/mongodb'
 export class UserProfileVisitor {
   private readonly cachePrefix = 'user-profile:cache:'
   private readonly cacheTTL = 86400
+  private readonly logger = new Logger(UserProfileVisitor.name);
 
   constructor(
     private readonly weiboProfileService: WeiboProfileService,
     private readonly redis: RedisClient,
-    private readonly logger: PinoLogger,
     private readonly behaviorAnalyzer: UserBehaviorAnalyzerService,
     private readonly botDetector: BotDetectorService,
     private readonly spamDetector: SpamDetectorService,
     private readonly rawDataService: RawDataSourceService,
     private readonly rabbitMQService: RabbitMQService
-  ) {
-    this.logger.setContext(UserProfileVisitor.name)
-  }
+  ) {}
 
   async visitFetchUserProfile(node: FetchUserProfileNode): Promise<FetchUserProfileNode> {
     try {
@@ -244,7 +241,7 @@ export class UserProfileVisitor {
 
       node.state = 'success'
 
-      this.logger.info(`用户画像已保存并发布事件: ${node.userId}`, {
+      this.logger.log(`用户画像已保存并发布事件: ${node.userId}`, {
         rawDataId: node.rawDataId,
         isBotSuspect: node.workflowData.botDetection.isSuspicious,
         isSpammerSuspect: node.workflowData.spamDetection.isSuspicious
