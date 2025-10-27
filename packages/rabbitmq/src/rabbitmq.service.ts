@@ -1,4 +1,3 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import type { QueueName } from '@pro/types';
 import { ConnectionPool } from './connection-pool.js';
 import { RabbitMQPublisher } from './publisher.service.js';
@@ -11,6 +10,7 @@ import type {
   ConnectionState,
   ConnectionEvent,
 } from './types.js';
+import { Injectable, OnDestroy } from '@pro/core';
 
 /**
  * RabbitMQ 统一服务
@@ -25,8 +25,13 @@ import type {
  * - 自动管理资源生命周期
  * - 清晰的职责划分
  */
-@Injectable()
-export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
+@Injectable({
+  useFactory: () => {
+    return new RabbitMQService({ url: process.env.RABBITMQ_URL } as RabbitMQConfig)
+  },
+  deps: []
+})
+export class RabbitMQService implements OnDestroy {
   private connectionPool: ConnectionPool;
   private publisher: RabbitMQPublisher;
   private consumer: RabbitMQConsumer;
@@ -47,7 +52,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     this.isInitialized = true;
   }
 
-  async onModuleDestroy(): Promise<void> {
+  async ngOnDestroy(): Promise<void> {
     if (!this.isInitialized) {
       return;
     }

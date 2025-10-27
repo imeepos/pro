@@ -59,7 +59,13 @@ export function Injectable(options: InjectableOptions = {}): ClassDecorator {
     Reflect.defineMetadata(INJECTABLE_METADATA_KEY, options, target);
     const providedIn = options.providedIn || 'root'
     if (providedIn === 'root') {
-      root.set([{ provide: target, useClass: target as any }])
+      const providedIn = options.providedIn || target;
+      console.log({providedIn})
+      if (options.useFactory) {
+        root.set([{ provide: providedIn, useFactory: options.useFactory as any, deps: options.deps || [] }])
+      } else {
+        root.set([{ provide: providedIn, useClass: target as any }])
+      }
     }
     return target;
   };

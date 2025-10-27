@@ -1998,6 +1998,9 @@ importers:
 
   packages/rabbitmq:
     dependencies:
+      '@pro/core':
+        specifier: workspace:*
+        version: link:../core
       '@pro/types':
         specifier: workspace:*
         version: link:../types
@@ -2005,12 +2008,6 @@ importers:
         specifier: ^0.10.9
         version: 0.10.9
     devDependencies:
-      '@nestjs/common':
-        specifier: ^11.0.13
-        version: 11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1)
-      '@nestjs/core':
-        specifier: ^11.0.13
-        version: 11.1.6(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/microservices@11.1.6)(@nestjs/platform-express@11.1.6)(@nestjs/websockets@11.1.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
       '@pro/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config

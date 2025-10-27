@@ -1,9 +1,3 @@
-// NestJS Module
-export { RabbitMQModule, type RabbitMQAsyncOptions } from './rabbitmq.module.js';
-
-// Decorators
-export { InjectRabbitMQ } from './decorators.js';
-
 // Core Services
 export { ConnectionPool } from './connection-pool.js';
 export { RabbitMQPublisher } from './publisher.service.js';
