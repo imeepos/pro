@@ -10,6 +10,32 @@ import {
 import { WorkflowExecutionEntity } from './workflow-execution.entity.js';
 import { Entity } from './decorator.js';
 
+/** 节点状态 */
+export type NodeState = 'pending' | 'running' | 'success' | 'fail';
+
+/** 节点序列化快照 */
+export interface SerializedNode {
+  type: string;
+  id?: string;
+  state?: NodeState;
+  [key: string]: any;
+}
+
+/** 边关系 */
+export interface SerializedEdge {
+  from: string;
+  to: string;
+  fromProperty?: string;
+  toProperty?: string;
+}
+
+/** 工作流状态元数据 */
+export interface WorkflowStateMetadata {
+  nodes: SerializedNode[];
+  edges: SerializedEdge[];
+  context?: Record<string, unknown> | undefined;
+}
+
 /** 工作流运行时状态枚举 */
 export enum WorkflowStatus {
   /** 等待执行 */
@@ -53,9 +79,9 @@ export class WorkflowStateEntity {
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'current_step' })
   currentStep: string | null;
 
-  /** 运行时元数据：中间结果、上下文、进度信息 */
+  /** 运行时元数据：节点序列化快照、边关系、执行上下文 */
   @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, any>;
+  metadata: WorkflowStateMetadata;
 
   /** 错误信息（状态为 FAILED 时） */
   @Column({ type: 'text', nullable: true, name: 'error_message' })

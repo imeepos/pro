@@ -172,7 +172,11 @@ export class WorkflowService {
       state.executionId = savedExecution.id;
       state.status = WorkflowStatus.RUNNING;
       state.currentStep = null;
-      state.metadata = context || {};
+      state.metadata = {
+        nodes: [],
+        edges: [],
+        context: context
+      };
 
       const savedState = await manager.save(state);
 
@@ -194,6 +198,18 @@ export class WorkflowService {
         console.log(`[WorkflowService] Starting execution of workflow ${workflowId}`);
         const result = await executeAst(workflow);
         console.log(`[WorkflowService] Workflow ${workflowId} executed successfully`);
+
+        // 序列化节点和边到 metadata
+        savedState.metadata = {
+          nodes: result.nodes.map((node: any) => toJson(node)),
+          edges: result.edges.map((edge: any) => ({
+            from: edge.from,
+            to: edge.to,
+            fromProperty: edge.fromProperty,
+            toProperty: edge.toProperty
+          })),
+          context: context
+        };
 
         // 更新执行记录
         savedExecution.status = WorkflowExecutionStatus.SUCCEEDED;
@@ -225,6 +241,21 @@ export class WorkflowService {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`[WorkflowService] Workflow ${workflowId} execution failed:`, errorMessage);
 
+        // 尝试获取当前工作流状态用于保存
+        const workflow = await this.getWorkflow(workflowId);
+        if (workflow) {
+          savedState.metadata = {
+            nodes: workflow.nodes.map((node: any) => toJson(node)),
+            edges: workflow.edges.map((edge: any) => ({
+              from: edge.from,
+              to: edge.to,
+              fromProperty: edge.fromProperty,
+              toProperty: edge.toProperty
+            })),
+            context: context
+          };
+        }
+
         // 更新执行记录为失败
         savedExecution.status = WorkflowExecutionStatus.FAILED;
         savedExecution.finishedAt = new Date();
@@ -252,6 +283,149 @@ export class WorkflowService {
         }), 3600);
 
         throw new Error(`Workflow execution failed: ${errorMessage}`);
+      }
+    });
+  }
+
+  /**
+   * 恢复并继续执行工作流
+   */
+  async resumeWorkflow(executionId: string): Promise<{ execution: WorkflowExecutionEntity; state: WorkflowStateEntity; result: any }> {
+    return await useTranslation(async (manager) => {
+      // 获取执行记录和状态
+      const execution = await manager.findOne(WorkflowExecutionEntity, { where: { id: executionId } });
+      if (!execution) {
+        throw new Error(`Execution ${executionId} not found`);
+      }
+
+      const state = await manager.findOne(WorkflowStateEntity, { where: { executionId } });
+      if (!state) {
+        throw new Error(`State for execution ${executionId} not found`);
+      }
+
+      // 检查是否可以恢复
+      if (state.status === WorkflowStatus.SUCCESS) {
+        throw new Error(`Workflow already completed successfully`);
+      }
+
+      // 从 metadata 恢复工作流
+      const { nodes, edges, context } = state.metadata;
+      if (!nodes || !edges) {
+        throw new Error(`Cannot resume: metadata is incomplete`);
+      }
+
+      // 重建 WorkflowGraphAst
+      const workflow = new (await import('@pro/workflow-core')).WorkflowGraphAst();
+
+      // 恢复节点
+      nodes.forEach((nodeJson: any) => {
+        const node = fromJson(nodeJson);
+        workflow.addNode(node);
+      });
+
+      // 恢复边
+      edges.forEach((edge: any) => {
+        workflow.addEdge({
+          from: edge.from,
+          to: edge.to,
+          fromProperty: edge.fromProperty,
+          toProperty: edge.toProperty
+        });
+      });
+
+      // 更新状态为运行中
+      state.status = WorkflowStatus.RUNNING;
+      state.retryCount += 1;
+      await manager.save(state);
+
+      execution.status = WorkflowExecutionStatus.RUNNING;
+      await manager.save(execution);
+
+      try {
+        console.log(`[WorkflowService] Resuming execution of workflow ${execution.workflowId}`);
+        const result = await executeAst(workflow);
+        console.log(`[WorkflowService] Workflow ${execution.workflowId} resumed successfully`);
+
+        // 序列化节点和边到 metadata
+        state.metadata = {
+          nodes: result.nodes.map((node: any) => toJson(node)),
+          edges: result.edges.map((edge: any) => ({
+            from: edge.from,
+            to: edge.to,
+            fromProperty: edge.fromProperty,
+            toProperty: edge.toProperty
+          })),
+          context: context
+        };
+
+        // 更新执行记录
+        execution.status = WorkflowExecutionStatus.SUCCEEDED;
+        execution.finishedAt = new Date();
+        execution.durationMs = Date.now() - execution.startedAt.getTime();
+        await manager.save(execution);
+
+        // 更新运行时状态
+        state.status = WorkflowStatus.SUCCESS;
+        state.completedAt = new Date();
+        await manager.save(state);
+
+        // 更新缓存
+        await this.redis.set(`workflow:execution:${execution.id}`, JSON.stringify({
+          status: execution.status,
+          result,
+          duration: execution.durationMs
+        }), 3600);
+
+        await this.redis.set(`workflow:execution:state:${execution.id}`, JSON.stringify({
+          id: state.id,
+          status: state.status,
+          completedAt: state.completedAt
+        }), 3600);
+
+        return { execution, state, result };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[WorkflowService] Workflow ${execution.workflowId} resume failed:`, errorMessage);
+
+        // 保存当前状态
+        state.metadata = {
+          nodes: workflow.nodes.map((node: any) => toJson(node)),
+          edges: workflow.edges.map((edge: any) => ({
+            from: edge.from,
+            to: edge.to,
+            fromProperty: edge.fromProperty,
+            toProperty: edge.toProperty
+          })),
+          context: context
+        };
+
+        // 更新执行记录为失败
+        execution.status = WorkflowExecutionStatus.FAILED;
+        execution.finishedAt = new Date();
+        execution.durationMs = Date.now() - execution.startedAt.getTime();
+        await manager.save(execution);
+
+        // 更新运行时状态为失败
+        state.status = WorkflowStatus.FAILED;
+        state.errorMessage = errorMessage;
+        state.completedAt = new Date();
+        await manager.save(state);
+
+        // 更新缓存
+        await this.redis.set(`workflow:execution:${execution.id}`, JSON.stringify({
+          status: execution.status,
+          error: errorMessage,
+          duration: execution.durationMs
+        }), 3600);
+
+        await this.redis.set(`workflow:execution:state:${execution.id}`, JSON.stringify({
+          id: state.id,
+          status: state.status,
+          error: errorMessage,
+          completedAt: state.completedAt
+        }), 3600);
+
+        throw new Error(`Workflow resume failed: ${errorMessage}`);
       }
     });
   }
