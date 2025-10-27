@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 
 export interface QueueTask {
@@ -10,8 +10,6 @@ export interface QueueTask {
 @Injectable()
 export class PriorityQueueService {
   private readonly queuePrefix = 'workflow:priority-queue:';
-  private readonly logger = new Logger(PriorityQueueService.name);
-
   constructor(
     private readonly redis: RedisClient,
   ) {}
@@ -24,12 +22,6 @@ export class PriorityQueueService {
     const taskData = JSON.stringify(task.data);
 
     await this.redis.zadd(queueKey, task.priority, `${task.id}:${taskData}`);
-
-    this.logger.debug('任务入队', {
-      queueName,
-      taskId: task.id,
-      priority: task.priority,
-    });
   }
 
   async dequeue(queueName: string): Promise<QueueTask | null> {
@@ -50,25 +42,12 @@ export class PriorityQueueService {
 
     try {
       const data = JSON.parse(taskDataJson);
-
-      this.logger.debug('任务出队', {
-        queueName,
-        taskId,
-        priority: result.score,
-      });
-
       return {
         id: taskId,
         data,
         priority: result.score,
       };
     } catch (error) {
-      this.logger.error('解析任务数据失败', {
-        queueName,
-        taskId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
       return null;
     }
   }
@@ -119,8 +98,6 @@ export class PriorityQueueService {
   async clear(queueName: string): Promise<void> {
     const queueKey = this.queuePrefix + queueName;
     await this.redis.del(queueKey);
-
-    this.logger.log('清空队列', { queueName });
   }
 
   async remove(queueName: string, taskId: string): Promise<boolean> {
@@ -131,7 +108,6 @@ export class PriorityQueueService {
       if (member.startsWith(`${taskId}:`)) {
         const removed = await this.redis.zrem(queueKey, member);
         if (removed > 0) {
-          this.logger.debug('移除任务', { queueName, taskId });
           return true;
         }
       }
@@ -153,13 +129,6 @@ export class PriorityQueueService {
 
       if (member && member.startsWith(`${taskId}:`)) {
         await this.redis.zadd(queueKey, newPriority, member);
-
-        this.logger.debug('更新任务优先级', {
-          queueName,
-          taskId,
-          newPriority,
-        });
-
         return true;
       }
     }

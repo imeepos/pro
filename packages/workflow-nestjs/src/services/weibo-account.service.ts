@@ -1,8 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 import {
+    useEntityManager,
     WeiboAccountEntity,
     WeiboAccountStatus,
 } from '@pro/entities';
@@ -25,11 +24,8 @@ export interface WeiboAccountSelection {
 export class WeiboAccountService {
     private readonly healthKey = 'weibo:account:health';
     private readonly maxAttempts = 5;
-    private readonly logger = new Logger(WeiboAccountService.name);
 
     constructor(
-        @InjectRepository(WeiboAccountEntity)
-        private readonly accounts: Repository<WeiboAccountEntity>,
         private readonly redis: RedisClient,
     ) {}
 
@@ -49,7 +45,6 @@ export class WeiboAccountService {
             request.headers.cookie = selection.cookieHeader;
             return selection;
         } catch (error) {
-            this.logger.error('账号注入失败', { error });
             return null;
         }
     }
@@ -67,12 +62,6 @@ export class WeiboAccountService {
         if (clamped !== updated) {
             await this.redis.zadd(this.healthKey, clamped, member);
         }
-
-        this.logger.debug('微博账号健康度已扣减', {
-            accountId,
-            deducted: Math.abs(amount),
-            updatedScore: clamped,
-        });
     }
 
     private async selectBestAccount(): Promise<WeiboAccountSelection | null> {
@@ -89,7 +78,11 @@ export class WeiboAccountService {
                 continue;
             }
 
-            const account = await this.accounts.findOne({ where: { id: accountId } });
+            const account = await useEntityManager(async m=>{
+                return m.findOne(WeiboAccountEntity, {
+                    where: { id: accountId } 
+                })
+            })
 
             if (!account) {
                 continue;

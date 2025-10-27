@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 import { WorkflowProgressService } from './workflow-progress.service';
 import { CrawlStatisticsService } from './crawl-statistics.service';
 import { AccountAlertService } from './account-alert.service';

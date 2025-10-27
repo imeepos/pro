@@ -1,7 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable } from '@pro/core';
 import {
+    useEntityManager,
     WeiboPostEntity,
     WeiboUserEntity,
 } from '@pro/entities';
@@ -16,34 +15,24 @@ import * as cheerio from 'cheerio';
  */
 @Injectable()
 export class EmbeddedCleanerService {
-    private readonly logger = new Logger(EmbeddedCleanerService.name);
-
     constructor(
         private readonly rawDataService: RawDataSourceService,
-        @InjectRepository(WeiboUserEntity)
-        private readonly userRepo: Repository<WeiboUserEntity>,
-        @InjectRepository(WeiboPostEntity)
-        private readonly postRepo: Repository<WeiboPostEntity>,
-    ) {}
+    ) { }
 
     /**
      * 清洗所有待处理的搜索结果数据
      */
-    async cleanPendingSearchResults(keyword: string): Promise<{
+    async cleanPendingSearchResults(): Promise<{
         totalProcessed: number;
         totalPosts: number;
         totalUsers: number;
     }> {
-        this.logger.log(`开始清洗搜索关键词: ${keyword} 的原始数据`);
-
         const result = await this.rawDataService.findWithFilters({
             status: ProcessingStatus.PENDING,
             sourceType: SourceType.WEIBO_KEYWORD_SEARCH,
         });
 
         const pendingDocs = result.items;
-
-        this.logger.log(`找到 ${pendingDocs.length} 条待处理记录`);
 
         let totalProcessed = 0;
         let totalPosts = 0;
@@ -57,25 +46,13 @@ export class EmbeddedCleanerService {
                 totalUsers += result.usersCount;
 
                 await this.rawDataService.markCompleted(String(doc._id));
-
-                this.logger.debug(`处理完成: ${doc._id}`, {
-                    posts: result.postsCount,
-                    users: result.usersCount,
-                });
             } catch (error) {
-                this.logger.error(`处理失败: ${doc._id}`, error);
                 await this.rawDataService.markFailed(
                     String(doc._id),
                     error instanceof Error ? error.message : String(error)
                 );
             }
         }
-
-        this.logger.log(`清洗完成`, {
-            totalProcessed,
-            totalPosts,
-            totalUsers,
-        });
 
         return { totalProcessed, totalPosts, totalUsers };
     }
@@ -140,7 +117,6 @@ export class EmbeddedCleanerService {
                     });
                 }
             } catch (error) {
-                this.logger.warn(`解析微博卡片失败`, { error });
             }
         });
 
@@ -158,13 +134,17 @@ export class EmbeddedCleanerService {
                 }));
 
             if (userValues.length > 0) {
-                await this.userRepo.upsert(userValues as any, ['weiboId']);
+                await useEntityManager(async m => {
+                    await m.upsert(WeiboUserEntity, userValues, ['weiboId'])
+                })
             }
         }
 
         // 批量保存微博
         if (posts.length > 0) {
-            await this.postRepo.upsert(posts as any, ['weiboId']);
+            await useEntityManager(async m => {
+                await m.upsert(WeiboPostEntity, posts as any[], ['weiboId'])
+            })
         }
 
         return {

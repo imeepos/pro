@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 
 export interface CrawlStats {
@@ -14,7 +14,6 @@ export interface CrawlStats {
 
 @Injectable()
 export class CrawlStatisticsService {
-  private readonly logger = new Logger(CrawlStatisticsService.name);
   private readonly statsKey = 'crawl:stats:global';
   private readonly dailyStatsPrefix = 'crawl:stats:daily:';
 
@@ -115,6 +114,5 @@ export class CrawlStatisticsService {
 
   async resetStats(): Promise<void> {
     await this.redis.del(this.statsKey);
-    this.logger.log('全局统计已重置');
   }
 }

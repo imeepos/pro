@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable } from '@pro/core'
 import { RedisClient } from '@pro/redis'
 import type {
   UserProfileWorkflowInput,
@@ -18,7 +18,6 @@ export class UserProfileWorkflow {
   private readonly deduplicationPrefix = 'user-profile:processed:'
   private readonly deduplicationTTL = 86400
   private readonly queueConcurrency = 5
-  private readonly logger = new Logger(UserProfileWorkflow.name);
 
   constructor(
     private readonly redis: RedisClient,
@@ -29,20 +28,9 @@ export class UserProfileWorkflow {
     const userIds = Array.isArray(input.userId) ? input.userId : [input.userId]
     const maxPostPages = input.maxPostPages || 3
 
-    this.logger.log(`开始用户画像工作流`, {
-      totalUsers: userIds.length,
-      maxPostPages
-    })
-
     const results = await this.processBatch(userIds, maxPostPages)
 
     const success = results.every(r => !r.error)
-
-    this.logger.log(`用户画像工作流完成`, {
-      total: results.length,
-      success: results.filter(r => !r.error).length,
-      failed: results.filter(r => r.error).length
-    })
 
     return { success, results }
   }
@@ -83,7 +71,6 @@ export class UserProfileWorkflow {
   ): Promise<UserProfileWorkflowOutput['results'][0]> {
     const isDuplicate = await this.checkDuplication(userId)
     if (isDuplicate) {
-      this.logger.debug(`用户已处理过，跳过: ${userId}`)
       return {
         userId,
         isBotSuspect: false,
@@ -177,7 +164,6 @@ export class UserProfileWorkflow {
       return result
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      this.logger.error(`处理用户失败: ${userId}`, error)
 
       return {
         userId,

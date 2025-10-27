@@ -1,6 +1,6 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
 import { PlaywrightAst, Handler } from '@pro/workflow-core';
-import { Injectable } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 export interface CookieData {
     name: string;
     value: string;

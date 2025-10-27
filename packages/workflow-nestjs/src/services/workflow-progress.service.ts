@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 
 export interface WorkflowProgress {
@@ -14,11 +14,10 @@ export interface WorkflowProgress {
 
 @Injectable()
 export class WorkflowProgressService {
-  private readonly logger = new Logger(WorkflowProgressService.name);
   private readonly keyPrefix = 'workflow:progress:';
   private readonly ttl = 7 * 24 * 60 * 60;
 
-  constructor(private readonly redis: RedisClient) {}
+  constructor(private readonly redis: RedisClient) { }
 
   async startWorkflow(
     workflowId: string,
@@ -42,7 +41,6 @@ export class WorkflowProgressService {
       JSON.stringify(progress),
     );
 
-    this.logger.log(`工作流已启动: ${workflowId}`, { totalSteps, metadata });
   }
 
   async updateProgress(
@@ -54,7 +52,6 @@ export class WorkflowProgressService {
     const existing = await this.redis.get(key);
 
     if (!existing) {
-      this.logger.warn(`工作流进度不存在: ${workflowId}`);
       return;
     }
 
@@ -86,7 +83,6 @@ export class WorkflowProgressService {
 
     await this.redis.setex(key, this.ttl, JSON.stringify(progress));
 
-    this.logger.log(`工作流已完成: ${workflowId}`);
   }
 
   async failWorkflow(workflowId: string, error?: string): Promise<void> {
@@ -107,7 +103,6 @@ export class WorkflowProgressService {
 
     await this.redis.setex(key, this.ttl, JSON.stringify(progress));
 
-    this.logger.error(`工作流失败: ${workflowId}`, { error });
   }
 
   async getProgress(workflowId: string): Promise<WorkflowProgress | null> {

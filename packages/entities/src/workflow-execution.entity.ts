@@ -4,12 +4,14 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import type { WorkflowExecutionMetrics } from '@pro/types';
 import { WorkflowExecutionStatus } from '@pro/types';
 import { WorkflowEntity } from './workflow.entity.js';
+import { WorkflowStateEntity } from './workflow-state.entity.js';
 import { Entity } from './decorator.js';
 
 @Entity('workflow_execution')
@@ -20,9 +22,6 @@ export class WorkflowExecutionEntity {
   @Index()
   @Column({ type: 'uuid', name: 'workflow_id' })
   workflowId!: string;
-
-  @Column({ type: 'integer' })
-  revision!: number;
 
   @Index()
   @Column({
@@ -69,4 +68,9 @@ export class WorkflowExecutionEntity {
   })
   @JoinColumn({ name: 'workflow_id' })
   workflow!: WorkflowEntity;
+
+  @OneToOne(() => WorkflowStateEntity, (state) => state.execution, {
+    cascade: true,
+  })
+  state!: WorkflowStateEntity;
 }

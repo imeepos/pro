@@ -1,7 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
+import { Injectable } from '@pro/core';
+import { useEntityManager, WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
 import { AccountHealthService } from './account-health.service';
 
 export interface AccountAlert {
@@ -15,15 +13,12 @@ export interface AccountAlert {
 
 @Injectable()
 export class AccountAlertService {
-  private readonly logger = new Logger(AccountAlertService.name);
   private readonly lowHealthThreshold = 10;
   private readonly criticalHealthThreshold = 5;
 
   constructor(
-    @InjectRepository(WeiboAccountEntity)
-    private readonly accountRepo: Repository<WeiboAccountEntity>,
     private readonly healthService: AccountHealthService,
-  ) {}
+  ) { }
 
   async checkAccountHealth(): Promise<AccountAlert[]> {
     const alerts: AccountAlert[] = [];
@@ -33,11 +28,11 @@ export class AccountAlertService {
       if (score >= this.lowHealthThreshold) {
         continue;
       }
-
-      const account = await this.accountRepo.findOne({
-        where: { id: accountId },
-      });
-
+      const account = await useEntityManager(async m => {
+        return m.findOne(WeiboAccountEntity, {
+          where: { id: accountId },
+        })
+      })
       if (!account) {
         continue;
       }
@@ -53,23 +48,14 @@ export class AccountAlertService {
         severity,
         timestamp: new Date(),
       });
-
-      if (severity === 'critical') {
-        this.logger.error(`账号健康度严重不足`, {
-          accountId: account.id,
-          health: score,
-        });
-      } else {
-        this.logger.warn(`账号健康度偏低`, {
-          accountId: account.id,
-          health: score,
-        });
-      }
     }
 
-    const bannedAccounts = await this.accountRepo.find({
-      where: { status: WeiboAccountStatus.BANNED },
-    });
+
+    const bannedAccounts = await useEntityManager(async m => {
+      return m.find(WeiboAccountEntity, {
+        where: { status: WeiboAccountStatus.BANNED },
+      })
+    })
 
     for (const account of bannedAccounts) {
       alerts.push({
@@ -85,34 +71,4 @@ export class AccountAlertService {
     return alerts;
   }
 
-  async alertLowHealth(accountId: number): Promise<void> {
-    const score = await this.healthService.getHealthScore(accountId);
-
-    if (score === null) {
-      return;
-    }
-
-    if (score < this.criticalHealthThreshold) {
-      this.logger.error(`账号健康度严重不足，建议立即补充`, {
-        accountId,
-        health: score,
-      });
-    } else if (score < this.lowHealthThreshold) {
-      this.logger.warn(`账号健康度偏低，建议关注`, {
-        accountId,
-        health: score,
-      });
-    }
-  }
-
-  async monitorAccounts(): Promise<void> {
-    const alerts = await this.checkAccountHealth();
-
-    if (alerts.length > 0) {
-      this.logger.warn(`检测到 ${alerts.length} 个账号异常`, {
-        criticalCount: alerts.filter((a) => a.severity === 'critical').length,
-        highCount: alerts.filter((a) => a.severity === 'high').length,
-      });
-    }
-  }
 }

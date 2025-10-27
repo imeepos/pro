@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable } from '@pro/core'
 import type { UserPostSummary, UserBehaviorFeatures } from '../types/user-profile.types'
 
 @Injectable()

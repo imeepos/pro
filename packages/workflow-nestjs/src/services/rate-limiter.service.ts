@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 
 export interface RateLimitConfig {
@@ -15,8 +15,6 @@ export interface RateLimitResult {
 
 @Injectable()
 export class RateLimiterService {
-  private readonly logger = new Logger(RateLimiterService.name);
-
   constructor(private readonly redis: RedisClient) {}
 
   async checkRateLimit(
@@ -58,7 +56,6 @@ export class RateLimiterService {
         current: current + 1,
       };
     } catch (error) {
-      this.logger.error('速率限制检查失败', { key, error });
       return {
         allowed: true,
         remaining: config.limit,

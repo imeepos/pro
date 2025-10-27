@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 import { RawDataSourceService } from '@pro/mongodb';
 import {
   SourceType,
@@ -46,7 +46,6 @@ export interface SearchPageResult {
 export class MainSearchWorkflow {
   private readonly defaultMaxPages = 50;
   private readonly lockTTL = 300;
-  private readonly logger = new Logger(MainSearchWorkflow.name);
 
   constructor(
     private readonly accountHealth: AccountHealthService,
@@ -67,9 +66,6 @@ export class MainSearchWorkflow {
     });
 
     if (!locked) {
-      this.logger.warn('无法获取锁，该搜索任务可能正在执行', {
-        keyword: input.keyword,
-      });
 
       return {
         totalPostsFound: 0,
@@ -101,10 +97,6 @@ export class MainSearchWorkflow {
     };
 
     while (!shouldStopCrawling(currentWindow.end, input.startDate)) {
-      this.logger.log('处理时间窗口', {
-        window: currentWindow,
-        keyword: input.keyword,
-      });
 
       const windowResult = await this.processTimeWindow(
         input.keyword,
@@ -117,7 +109,6 @@ export class MainSearchWorkflow {
       timeWindowsProcessed += 1;
 
       if (!windowResult.lastPostTime) {
-        this.logger.log('时间窗口无更多数据', { window: currentWindow });
         break;
       }
 
@@ -127,23 +118,11 @@ export class MainSearchWorkflow {
       );
 
       if (nextWindowResult.shouldStop || !nextWindowResult.nextWindow) {
-        this.logger.log('已到达搜索起始时间，停止爬取', {
-          lastPostTime: windowResult.lastPostTime,
-          startDate: input.startDate,
-        });
         break;
       }
 
       currentWindow = nextWindowResult.nextWindow;
     }
-
-    this.logger.log('主搜索工作流完成', {
-      keyword: input.keyword,
-      totalPostsFound,
-      totalPagesProcessed,
-      timeWindowsProcessed,
-    });
-
     return {
       totalPostsFound,
       totalPagesProcessed,
@@ -167,12 +146,6 @@ export class MainSearchWorkflow {
     let currentPage = 1;
 
     while (currentPage <= maxPages) {
-      this.logger.debug('处理页面', {
-        keyword,
-        page: currentPage,
-        window,
-      });
-
       const pageResult = await this.processSearchPage(
         keyword,
         window,
@@ -180,10 +153,6 @@ export class MainSearchWorkflow {
       );
 
       if (!pageResult) {
-        this.logger.warn('页面处理失败，跳过', {
-          keyword,
-          page: currentPage,
-        });
         break;
       }
 
@@ -195,10 +164,6 @@ export class MainSearchWorkflow {
       }
 
       if (!pageResult.hasNextPage) {
-        this.logger.debug('无下一页，结束时间窗口处理', {
-          keyword,
-          page: currentPage,
-        });
         break;
       }
 
@@ -228,7 +193,6 @@ export class MainSearchWorkflow {
     const account = await this.accountHealth.getBestHealthAccount();
 
     if (!account) {
-      this.logger.error('无可用账号');
       return null;
     }
 
@@ -238,11 +202,6 @@ export class MainSearchWorkflow {
     );
 
     if (!rateLimitResult.allowed) {
-      this.logger.warn('账号超过速率限制，等待重置', {
-        accountId: account.id,
-        resetAt: rateLimitResult.resetAt,
-        current: rateLimitResult.current,
-      });
 
       const waitMs = rateLimitResult.resetAt.getTime() - Date.now();
       if (waitMs > 0 && waitMs < 60000) {
@@ -317,27 +276,12 @@ export class MainSearchWorkflow {
       await this.accountHealth.deductHealth(account.id, 1);
 
       const parsed = this.htmlParser.parseSearchResultHtml(html);
-
-      this.logger.debug('页面抓取成功', {
-        keyword,
-        page,
-        postCount: parsed.postIds.length,
-        hasNextPage: parsed.hasNextPage,
-      });
-
       return {
         postIds: parsed.postIds,
         hasNextPage: parsed.hasNextPage,
         lastPostTime: parsed.lastPostTime,
       };
     } catch (error) {
-      this.logger.error('页面抓取失败', {
-        keyword,
-        page,
-        url,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
       throw error;
     } finally {
       if (playwrightPage) await playwrightPage.close();

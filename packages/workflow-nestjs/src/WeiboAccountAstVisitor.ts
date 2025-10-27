@@ -1,12 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable } from "@pro/core";
 import { Handler, Visitor, WeiboAccountAst } from "@pro/workflow-core";
 import { WeiboAccountService } from "./services/weibo-account.service";
 
-
-@Handler(WeiboAccountAst)
 @Injectable()
 export class WeiboAccountAstVisitor {
     constructor(private weiboAccountService: WeiboAccountService) { }
+    @Handler(WeiboAccountAst)
     async visit(ast: WeiboAccountAst, _ctx: Visitor) {
         const request: { headers: Record<string, string> } = { headers: {} };
         const selection = await this.weiboAccountService.injectCookies(request);

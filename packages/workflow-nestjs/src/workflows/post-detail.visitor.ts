@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable } from '@pro/core'
 import { Handler } from '@pro/workflow-core'
 import { WeiboStatusService } from '@pro/weibo'
 import { RawDataSourceService } from '@pro/mongodb'
@@ -21,8 +21,6 @@ import {
 @Handler(FetchPostDetailAst)
 @Injectable()
 export class FetchPostDetailVisitor {
-  private readonly logger = new Logger(FetchPostDetailVisitor.name)
-
   constructor(private readonly weiboStatusService: WeiboStatusService) { }
 
   async visit(node: FetchPostDetailAst): Promise<FetchPostDetailAst> {
@@ -42,10 +40,8 @@ export class FetchPostDetailVisitor {
       node.authorId = detail.user?.idstr
 
       node.state = 'success'
-      this.logger.log(`抓取帖子详情成功: ${node.postId}`)
     } catch (error) {
       node.state = 'fail'
-      this.logger.error(`抓取帖子详情失败: ${node.postId}`, error)
     }
 
     return node
@@ -54,8 +50,6 @@ export class FetchPostDetailVisitor {
 
 @Injectable()
 export class FetchCommentsVisitor {
-  private readonly logger = new Logger(FetchCommentsVisitor.name)
-
   constructor(private readonly weiboStatusService: WeiboStatusService) { }
   @Handler(FetchCommentsAst)
   async visit(node: FetchCommentsAst): Promise<FetchCommentsAst> {
@@ -95,10 +89,8 @@ export class FetchCommentsVisitor {
       node.totalComments = allComments.length
 
       node.state = 'success'
-      this.logger.log(`抓取评论成功: ${node.postId}, 共${allComments.length}条`)
     } catch (error) {
       node.state = 'fail'
-      this.logger.error(`抓取评论失败: ${node.postId}`, error)
       node.comments = []
       node.totalComments = 0
     }
@@ -109,7 +101,6 @@ export class FetchCommentsVisitor {
 
 @Injectable()
 export class FetchLikesVisitor {
-  private readonly logger = new Logger(FetchLikesVisitor.name)
 
   constructor(private readonly weiboStatusService: WeiboStatusService) { }
   @Handler(FetchLikesAst)
@@ -133,10 +124,8 @@ export class FetchLikesVisitor {
       node.totalLikes = response.total_number || likeAttitudes.length
 
       node.state = 'success'
-      this.logger.log(`抓取点赞成功: ${node.postId}, 共${node.totalLikes}个`)
     } catch (error) {
       node.state = 'fail'
-      this.logger.error(`抓取点赞失败: ${node.postId}`, error)
       node.likes = []
       node.totalLikes = 0
     }
@@ -148,8 +137,6 @@ export class FetchLikesVisitor {
 @Handler(SavePostDetailAst)
 @Injectable()
 export class SavePostDetailVisitor {
-  private readonly logger = new Logger(SavePostDetailVisitor.name)
-
   constructor(
     private readonly rawDataSourceService: RawDataSourceService,
     private readonly rabbitMQService: RabbitMQService
@@ -221,13 +208,9 @@ export class SavePostDetailVisitor {
       )
 
       node.state = 'success'
-      this.logger.log(
-        `保存帖子详情成功: ${node.postId}, ID: ${node.rawDataId}, 已发布事件`
-      )
     } catch (error) {
       node.state = 'fail'
       node.success = false
-      this.logger.error(`保存帖子详情失败: ${node.postId}`, error)
     }
 
     return node

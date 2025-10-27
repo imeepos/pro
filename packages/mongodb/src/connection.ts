@@ -1,7 +1,5 @@
 import mongoose from 'mongoose';
-import { getModelForClass } from '@typegoose/typegoose';
 import { createMongoDBConfig } from './config.js';
-import { RawDataSource } from './schemas/raw-data-source.schema.js';
 import { root } from '@pro/core';
 import { MONGO_CONNECTION } from './tokens.js';
 

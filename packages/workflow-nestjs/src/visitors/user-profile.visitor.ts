@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable } from '@pro/core'
 import { WeiboProfileService } from '@pro/weibo'
 import { RedisClient } from '@pro/redis'
 import {
@@ -27,7 +27,6 @@ import { Handler } from '@pro/workflow-core'
 export class UserProfileVisitor {
   private readonly cachePrefix = 'user-profile:cache:'
   private readonly cacheTTL = 86400
-  private readonly logger = new Logger(UserProfileVisitor.name);
 
   constructor(
     private readonly weiboProfileService: WeiboProfileService,
@@ -37,7 +36,7 @@ export class UserProfileVisitor {
     private readonly spamDetector: SpamDetectorService,
     private readonly rawDataService: RawDataSourceService,
     private readonly rabbitMQService: RabbitMQService
-  ) {}
+  ) { }
   @Handler(FetchUserProfileNode)
   async visitFetchUserProfile(node: FetchUserProfileNode): Promise<FetchUserProfileNode> {
     try {
@@ -45,7 +44,6 @@ export class UserProfileVisitor {
       const cached = await this.redis.get<UserProfileData>(cacheKey)
 
       if (cached) {
-        this.logger.debug(`使用缓存的用户信息: ${node.userId}`)
         node.profile = cached
         node.state = 'success'
         return node
@@ -78,7 +76,6 @@ export class UserProfileVisitor {
       node.state = 'success'
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      this.logger.error(`抓取用户信息失败: ${node.userId}`, error)
       node.error = message
       node.state = 'fail'
     }
@@ -122,7 +119,6 @@ export class UserProfileVisitor {
       node.state = 'success'
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      this.logger.error(`抓取用户发帖列表失败: ${node.userId}`, error)
       node.error = message
       node.state = 'fail'
     }
@@ -143,7 +139,6 @@ export class UserProfileVisitor {
       node.behaviorFeatures = features
       node.state = 'success'
     } catch (error) {
-      this.logger.error('分析用户行为特征失败', error)
       node.state = 'fail'
     }
 
@@ -164,7 +159,6 @@ export class UserProfileVisitor {
       node.botDetection = detection
       node.state = 'success'
     } catch (error) {
-      this.logger.error('机器人检测失败', error)
       node.state = 'fail'
     }
 
@@ -185,7 +179,6 @@ export class UserProfileVisitor {
       node.spamDetection = detection
       node.state = 'success'
     } catch (error) {
-      this.logger.error('水军检测失败', error)
       node.state = 'fail'
     }
 
@@ -233,7 +226,6 @@ export class UserProfileVisitor {
           rawDataReadyEvent
         )
       } catch (error) {
-        this.logger.error(`发布 RawDataReady 事件失败: ${node.userId}`, error)
       }
 
       const userProfileCompletedEvent: UserProfileCompletedEvent = {
@@ -254,21 +246,11 @@ export class UserProfileVisitor {
           userProfileCompletedEvent
         )
       } catch (error) {
-        this.logger.error(`发布 UserProfileCompleted 事件失败: ${node.userId}`, error)
       }
 
       node.state = 'success'
-
-      this.logger.log(`用户画像已保存并发布事件: ${node.userId}`, {
-        rawDataId: node.rawDataId,
-        isBotSuspect: node.workflowData.botDetection.isSuspicious,
-        isSpammerSuspect: node.workflowData.spamDetection.isSuspicious,
-        botConfidence: node.workflowData.botDetection.confidence,
-        spamConfidence: node.workflowData.spamDetection.confidence,
-      })
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      this.logger.error(`保存用户画像失败: ${node.userId}`, error)
       node.error = message
       node.state = 'fail'
     }

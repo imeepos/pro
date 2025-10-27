@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 
 export interface LockOptions {
@@ -9,7 +9,6 @@ export interface LockOptions {
 
 @Injectable()
 export class DistributedLockService {
-  private readonly logger = new Logger(DistributedLockService.name);
   private readonly defaultTTL = 30;
   private readonly defaultRetryAttempts = 3;
   private readonly defaultRetryDelay = 100;
@@ -35,13 +34,6 @@ export class DistributedLockService {
 
       if (acquired === 1) {
         await this.redis.expire(lockKey, ttl);
-
-        this.logger.debug('获取分布式锁成功', {
-          key,
-          ttl,
-          attempt: attempt + 1,
-        });
-
         return true;
       }
 
@@ -50,11 +42,6 @@ export class DistributedLockService {
       }
     }
 
-    this.logger.warn('获取分布式锁失败', {
-      key,
-      retryAttempts,
-    });
-
     return false;
   }
 
@@ -62,7 +49,6 @@ export class DistributedLockService {
     const lockKey = this.lockPrefix + key;
     await this.redis.del(lockKey);
 
-    this.logger.debug('释放分布式锁', { key });
   }
 
   async extendLock(key: string, ttl: number): Promise<boolean> {
@@ -70,14 +56,12 @@ export class DistributedLockService {
     const exists = await this.redis.exists(lockKey);
 
     if (!exists) {
-      this.logger.warn('锁不存在，无法延长', { key });
       return false;
     }
 
     const result = await this.redis.expire(lockKey, ttl);
 
     if (result === 1) {
-      this.logger.debug('延长锁TTL成功', { key, ttl });
       return true;
     }
 
@@ -92,7 +76,6 @@ export class DistributedLockService {
     const acquired = await this.acquireLock(key, options);
 
     if (!acquired) {
-      this.logger.warn('无法获取锁，跳过执行', { key });
       return null;
     }
 
