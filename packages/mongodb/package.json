@@ -17,6 +17,7 @@
     "build": "tsup && tsc --project tsconfig.types.json",
     "build:js": "tsup",
     "build:types": "tsc --project tsconfig.types.json",
+    "main": "tsx src/main.ts",
     "clean": "rimraf dist",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
@@ -31,9 +32,11 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@pro/types": "workspace:*",
     "@pro/core": "workspace:*",
-    "mongoose": "^8.0.0"
+    "@pro/types": "workspace:*",
+    "@typegoose/typegoose": "^12.0.0",
+    "dotenv": "^16.0.0",
+    "mongoose": "8.19.1"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
