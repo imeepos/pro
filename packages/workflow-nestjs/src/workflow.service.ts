@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 import { useEntityManager, useTranslation } from '@pro/entities';
-import { WorkflowEntity, WorkflowExecutionEntity, WorkflowStateEntity, WorkflowStatus } from '@pro/entities';
+import { WorkflowEntity, WorkflowExecutionEntity, WorkflowStateEntity, WorkflowStatus, mapAstStateToWorkflowStatus } from '@pro/entities';
 import { WorkflowExecutionStatus } from '@pro/types';
 import { executeAst, fromJson, toJson, WorkflowGraphAst } from '@pro/workflow-core';
 import { WorkflowDefinition } from '@pro/types';
@@ -172,11 +172,7 @@ export class WorkflowService {
       state.executionId = savedExecution.id;
       state.status = WorkflowStatus.RUNNING;
       state.currentStep = null;
-      state.metadata = {
-        nodes: [],
-        edges: [],
-        context: context
-      };
+      state.metadata = {};
 
       const savedState = await manager.save(state);
 
@@ -199,28 +195,17 @@ export class WorkflowService {
         const result = await executeAst(workflow);
         console.log(`[WorkflowService] Workflow ${workflowId} executed successfully`);
 
-        // 序列化节点和边到 metadata
-        savedState.metadata = {
-          nodes: result.nodes.map((node: any) => toJson(node)),
-          edges: result.edges.map((edge: any) => ({
-            from: edge.from,
-            to: edge.to,
-            fromProperty: edge.fromProperty,
-            toProperty: edge.toProperty
-          })),
-          context: context
-        };
+        // 序列化整个 AST 到 metadata
+        savedState.metadata = toJson(result);
+        savedState.status = mapAstStateToWorkflowStatus(result.state);
+        savedState.completedAt = new Date();
+        await manager.save(savedState);
 
         // 更新执行记录
         savedExecution.status = WorkflowExecutionStatus.SUCCEEDED;
         savedExecution.finishedAt = new Date();
         savedExecution.durationMs = Date.now() - savedExecution.startedAt.getTime();
         await manager.save(savedExecution);
-
-        // 更新运行时状态
-        savedState.status = WorkflowStatus.SUCCESS;
-        savedState.completedAt = new Date();
-        await manager.save(savedState);
 
         // 缓存执行结果
         await this.redis.set(`workflow:execution:${savedExecution.id}`, JSON.stringify({
@@ -241,32 +226,24 @@ export class WorkflowService {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`[WorkflowService] Workflow ${workflowId} execution failed:`, errorMessage);
 
-        // 尝试获取当前工作流状态用于保存
+        // 尝试保存当前工作流状态
         const workflow = await this.getWorkflow(workflowId);
         if (workflow) {
-          savedState.metadata = {
-            nodes: workflow.nodes.map((node: any) => toJson(node)),
-            edges: workflow.edges.map((edge: any) => ({
-              from: edge.from,
-              to: edge.to,
-              fromProperty: edge.fromProperty,
-              toProperty: edge.toProperty
-            })),
-            context: context
-          };
+          savedState.metadata = toJson(workflow);
+          savedState.status = mapAstStateToWorkflowStatus(workflow.state);
+        } else {
+          savedState.status = WorkflowStatus.FAILED;
         }
+
+        savedState.errorMessage = errorMessage;
+        savedState.completedAt = new Date();
+        await manager.save(savedState);
 
         // 更新执行记录为失败
         savedExecution.status = WorkflowExecutionStatus.FAILED;
         savedExecution.finishedAt = new Date();
         savedExecution.durationMs = Date.now() - savedExecution.startedAt.getTime();
         await manager.save(savedExecution);
-
-        // 更新运行时状态为失败
-        savedState.status = WorkflowStatus.FAILED;
-        savedState.errorMessage = errorMessage;
-        savedState.completedAt = new Date();
-        await manager.save(savedState);
 
         // 缓存错误信息
         await this.redis.set(`workflow:execution:${savedExecution.id}`, JSON.stringify({
@@ -308,30 +285,12 @@ export class WorkflowService {
         throw new Error(`Workflow already completed successfully`);
       }
 
-      // 从 metadata 恢复工作流
-      const { nodes, edges, context } = state.metadata;
-      if (!nodes || !edges) {
-        throw new Error(`Cannot resume: metadata is incomplete`);
+      // 直接从 metadata 恢复 WorkflowGraphAst
+      if (!state.metadata || Object.keys(state.metadata).length === 0) {
+        throw new Error(`Cannot resume: metadata is empty`);
       }
 
-      // 重建 WorkflowGraphAst
-      const workflow = new (await import('@pro/workflow-core')).WorkflowGraphAst();
-
-      // 恢复节点
-      nodes.forEach((nodeJson: any) => {
-        const node = fromJson(nodeJson);
-        workflow.addNode(node);
-      });
-
-      // 恢复边
-      edges.forEach((edge: any) => {
-        workflow.addEdge({
-          from: edge.from,
-          to: edge.to,
-          fromProperty: edge.fromProperty,
-          toProperty: edge.toProperty
-        });
-      });
+      const workflow = fromJson(state.metadata) as WorkflowGraphAst;
 
       // 更新状态为运行中
       state.status = WorkflowStatus.RUNNING;
@@ -346,28 +305,17 @@ export class WorkflowService {
         const result = await executeAst(workflow);
         console.log(`[WorkflowService] Workflow ${execution.workflowId} resumed successfully`);
 
-        // 序列化节点和边到 metadata
-        state.metadata = {
-          nodes: result.nodes.map((node: any) => toJson(node)),
-          edges: result.edges.map((edge: any) => ({
-            from: edge.from,
-            to: edge.to,
-            fromProperty: edge.fromProperty,
-            toProperty: edge.toProperty
-          })),
-          context: context
-        };
+        // 序列化整个 AST 到 metadata
+        state.metadata = toJson(result);
+        state.status = mapAstStateToWorkflowStatus(result.state);
+        state.completedAt = new Date();
+        await manager.save(state);
 
         // 更新执行记录
         execution.status = WorkflowExecutionStatus.SUCCEEDED;
         execution.finishedAt = new Date();
         execution.durationMs = Date.now() - execution.startedAt.getTime();
         await manager.save(execution);
-
-        // 更新运行时状态
-        state.status = WorkflowStatus.SUCCESS;
-        state.completedAt = new Date();
-        await manager.save(state);
 
         // 更新缓存
         await this.redis.set(`workflow:execution:${execution.id}`, JSON.stringify({
@@ -388,28 +336,17 @@ export class WorkflowService {
         console.error(`[WorkflowService] Workflow ${execution.workflowId} resume failed:`, errorMessage);
 
         // 保存当前状态
-        state.metadata = {
-          nodes: workflow.nodes.map((node: any) => toJson(node)),
-          edges: workflow.edges.map((edge: any) => ({
-            from: edge.from,
-            to: edge.to,
-            fromProperty: edge.fromProperty,
-            toProperty: edge.toProperty
-          })),
-          context: context
-        };
+        state.metadata = toJson(workflow);
+        state.status = mapAstStateToWorkflowStatus(workflow.state);
+        state.errorMessage = errorMessage;
+        state.completedAt = new Date();
+        await manager.save(state);
 
         // 更新执行记录为失败
         execution.status = WorkflowExecutionStatus.FAILED;
         execution.finishedAt = new Date();
         execution.durationMs = Date.now() - execution.startedAt.getTime();
         await manager.save(execution);
-
-        // 更新运行时状态为失败
-        state.status = WorkflowStatus.FAILED;
-        state.errorMessage = errorMessage;
-        state.completedAt = new Date();
-        await manager.save(state);
 
         // 更新缓存
         await this.redis.set(`workflow:execution:${execution.id}`, JSON.stringify({

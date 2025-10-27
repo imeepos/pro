@@ -10,44 +10,27 @@ import {
 import { WorkflowExecutionEntity } from './workflow-execution.entity.js';
 import { Entity } from './decorator.js';
 
-/** 节点状态 */
-export type NodeState = 'pending' | 'running' | 'success' | 'fail';
-
-/** 节点序列化快照 */
-export interface SerializedNode {
-  type: string;
-  id?: string;
-  state?: NodeState;
-  [key: string]: any;
-}
-
-/** 边关系 */
-export interface SerializedEdge {
-  from: string;
-  to: string;
-  fromProperty?: string;
-  toProperty?: string;
-}
-
-/** 工作流状态元数据 */
-export interface WorkflowStateMetadata {
-  nodes: SerializedNode[];
-  edges: SerializedEdge[];
-  context?: Record<string, unknown> | undefined;
-}
+/** AST 状态类型 */
+export type IAstStates = 'pending' | 'running' | 'success' | 'fail';
 
 /** 工作流运行时状态枚举 */
 export enum WorkflowStatus {
-  /** 等待执行 */
   PENDING = 'pending',
-  /** 正在运行 */
   RUNNING = 'running',
-  /** 执行成功 */
   SUCCESS = 'success',
-  /** 执行失败 */
   FAILED = 'failed',
-  /** 已暂停（支持恢复） */
   PAUSED = 'paused',
+}
+
+/** 将 AST 状态映射到 WorkflowStatus */
+export function mapAstStateToWorkflowStatus(state: IAstStates): WorkflowStatus {
+  const mapping: Record<IAstStates, WorkflowStatus> = {
+    pending: WorkflowStatus.PENDING,
+    running: WorkflowStatus.RUNNING,
+    success: WorkflowStatus.SUCCESS,
+    fail: WorkflowStatus.FAILED,
+  };
+  return mapping[state];
 }
 
 /**
@@ -79,9 +62,9 @@ export class WorkflowStateEntity {
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'current_step' })
   currentStep: string | null;
 
-  /** 运行时元数据：节点序列化快照、边关系、执行上下文 */
+  /** 运行时元数据：存储整个 WorkflowGraphAst 的 toJson 序列化结果 */
   @Column({ type: 'jsonb', default: {} })
-  metadata: WorkflowStateMetadata;
+  metadata: Record<string, any>;
 
   /** 错误信息（状态为 FAILED 时） */
   @Column({ type: 'text', nullable: true, name: 'error_message' })
