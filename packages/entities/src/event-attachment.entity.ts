@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -9,6 +8,7 @@ import {
 } from 'typeorm';
 import { EventEntity } from './event.entity.js';
 import { FileType } from '@pro/types';
+import { Entity } from './decorator.js';
 
 @Entity('event_attachment')
 export class EventAttachmentEntity {

@@ -19,6 +19,7 @@ import { EnvironmentInjector } from './environment-injector';
 import { Provider } from './provider';
 import { Injector } from './injector';
 import { NullInjector } from './null-injector';
+import { InjectionToken } from './injection-token';
 export {
   type Provider,
   type BaseProvider,
@@ -312,4 +313,4 @@ export function createFeatureInjector(
 }
 
 
-export const root = createRootInjector([])
+export const root: Injector = createRootInjector([])

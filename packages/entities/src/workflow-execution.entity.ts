@@ -1,7 +1,6 @@
 import {
   Column,
   CreateDateColumn,
-  Entity,
   Index,
   JoinColumn,
   ManyToOne,
@@ -11,6 +10,7 @@ import {
 import type { WorkflowExecutionMetrics } from '@pro/types';
 import { WorkflowExecutionStatus } from '@pro/types';
 import { WorkflowEntity } from './workflow.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('workflow_execution')
 export class WorkflowExecutionEntity {

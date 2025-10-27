@@ -1,15 +1,15 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+import { Entity } from './decorator.js';
 
 @Entity('failed_tasks')
-@Index(['original_queue', 'status'])
-@Index(['failed_at'])
+@Index(['originalQueue', 'status'])
+@Index(['failedAt'])
 export class FailedTaskEntity {
   @PrimaryGeneratedColumn('increment')
   id: number;

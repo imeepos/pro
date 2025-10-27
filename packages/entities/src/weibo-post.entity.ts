@@ -2,7 +2,6 @@ import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
-  Entity,
   Index,
   JoinColumn,
   ManyToOne,
@@ -11,6 +10,7 @@ import {
   RelationId,
   UpdateDateColumn,
 } from 'typeorm';
+import { Entity } from './decorator.js';
 import { WeiboVisibleType, WeiboMediaType } from './enums/weibo.enums.js';
 import { WeiboUserEntity } from './weibo-user.entity.js';
 import { WeiboMediaEntity } from './weibo-media.entity.js';

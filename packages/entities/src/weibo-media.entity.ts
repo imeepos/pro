@@ -1,6 +1,5 @@
 import {
   Column,
-  Entity,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -8,6 +7,7 @@ import {
 } from 'typeorm';
 import { WeiboMediaType } from './enums/weibo.enums.js';
 import { WeiboPostEntity } from './weibo-post.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('weibo_media')
 export class WeiboMediaEntity {

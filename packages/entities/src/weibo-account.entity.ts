@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -10,7 +9,7 @@ import {
 } from 'typeorm';
 import { UserEntity } from './user.entity.js';
 import { WeiboAccountStatus } from '@pro/types';
-
+import { Entity } from './decorator.js';
 // 重新导出枚举，保持向后兼容
 export { WeiboAccountStatus } from '@pro/types';
 

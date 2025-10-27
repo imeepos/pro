@@ -1,3 +1,5 @@
+import { root } from ".";
+
 /**
  * 注入器作用域类型
  */
@@ -37,7 +39,7 @@ export interface InjectableOptions {
 /**
  * Injectable 元数据
  */
-export interface InjectableMetadata extends InjectableOptions {}
+export interface InjectableMetadata extends InjectableOptions { }
 
 /**
  * 元数据存储键
@@ -55,6 +57,10 @@ export function Injectable(options: InjectableOptions = {}): ClassDecorator {
   return function <T extends Function>(target: T): T {
     // 存储 Injectable 元数据
     Reflect.defineMetadata(INJECTABLE_METADATA_KEY, options, target);
+    const providedIn = options.providedIn || 'root'
+    if (providedIn === 'root') {
+      root.set([{ provide: target, useClass: target as any }])
+    }
     return target;
   };
 }

@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -7,6 +6,7 @@ import {
   ManyToMany,
 } from 'typeorm';
 import { BugEntity } from './bug.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('bug_tags')
 @Index(['name'], { unique: true })

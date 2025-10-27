@@ -1,12 +1,12 @@
 import {
   Column,
   CreateDateColumn,
-  Entity,
   Index,
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { WeiboPostHashtagEntity } from './weibo-post-hashtag.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('weibo_hashtags')
 @Index(['tagId'], { unique: true })

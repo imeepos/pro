@@ -1,7 +1,6 @@
 import {
   Column,
   CreateDateColumn,
-  Entity,
   Index,
   JoinColumn,
   ManyToOne,
@@ -9,6 +8,7 @@ import {
   RelationId,
 } from 'typeorm';
 import { WeiboUserEntity } from './weibo-user.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('weibo_user_stats')
 @Index(['user', 'snapshotTime'], { unique: true })

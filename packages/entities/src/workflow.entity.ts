@@ -1,7 +1,6 @@
 import {
   Column,
   CreateDateColumn,
-  Entity,
   Index,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -9,6 +8,7 @@ import {
 } from 'typeorm';
 import type { WorkflowDefinition } from '@pro/types';
 import { WorkflowExecutionEntity } from './workflow-execution.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('workflow')
 export class WorkflowEntity {

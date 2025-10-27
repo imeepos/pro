@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -10,6 +9,7 @@ import {
 } from 'typeorm';
 import { UserEntity } from './user.entity.js';
 import { ApiKeyType } from '@pro/types';
+import { Entity } from './decorator.js';
 
 /**
  * API Key 实体

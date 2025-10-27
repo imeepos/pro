@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -9,6 +8,7 @@ import {
 } from 'typeorm';
 import { EventEntity } from './event.entity.js';
 import { TagEntity } from './tag.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('event_tag')
 @Index(['eventId', 'tagId'], { unique: true })

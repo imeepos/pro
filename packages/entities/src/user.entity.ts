@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -9,6 +8,7 @@ import {
 } from 'typeorm';
 import { UserStatus } from '@pro/types';
 import { BugEntity } from './bug.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('users')
 export class UserEntity {

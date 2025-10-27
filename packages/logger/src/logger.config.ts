@@ -1,5 +1,3 @@
-import type { LoggerModuleAsyncParams } from 'nestjs-pino';
-
 interface LoggerOptions {
   serviceName: string;
   logLevel?: string;

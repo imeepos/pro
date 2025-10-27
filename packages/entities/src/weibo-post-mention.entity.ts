@@ -1,11 +1,11 @@
 import {
-  Entity,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
 import { WeiboPostEntity } from './weibo-post.entity.js';
 import { WeiboUserEntity } from './weibo-user.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('weibo_posts_mentions')
 export class WeiboPostMentionEntity {

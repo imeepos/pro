@@ -42,6 +42,6 @@ export abstract class Injector {
    * @param token 注入令牌
    * @returns 依赖实例
    */
-  abstract get<T>(token: InjectionTokenType<T>): T;
+  abstract get<T>(token: InjectionTokenType<T>, def?: T): T;
   abstract set(providers: Provider[]): void;
 }

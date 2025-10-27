@@ -1,4 +1,3 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
 /**
@@ -35,8 +34,6 @@ export class RawDataSource {
 }
 
 export type RawDataSourceDoc = RawDataSource & Document;
-
 export const RawDataSourceSchema = SchemaFactory.createForClass(RawDataSource);
-
 // 创建复合索引
 RawDataSourceSchema.index({ status: 1, createdAt: 1 });

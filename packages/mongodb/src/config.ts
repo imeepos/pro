@@ -1,7 +1,11 @@
-import { ConfigService } from '@nestjs/config';
+import type { ConnectOptions } from 'mongoose';
 
-export const createMongoDBConfig = (configService: ConfigService) => {
+export interface MongoDBConfig extends ConnectOptions {
+  uri: string;
+}
+
+export const createMongoDBConfig = (): MongoDBConfig => {
   return {
-    uri: configService.get<string>('MONGODB_URL', 'mongodb://localhost:27017/pro'),
+    uri: process.env.MONGODB_URL || 'mongodb://localhost:27017/pro'
   };
 };

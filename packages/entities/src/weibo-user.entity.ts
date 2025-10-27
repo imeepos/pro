@@ -1,7 +1,6 @@
 import {
   Column,
   CreateDateColumn,
-  Entity,
   Index,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -12,6 +11,7 @@ import { WeiboCommentEntity } from './weibo-comment.entity.js';
 import { WeiboInteractionEntity } from './weibo-interaction.entity.js';
 import { WeiboUserStatsEntity } from './weibo-user-stats.entity.js';
 import { WeiboPostMentionEntity } from './weibo-post-mention.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('weibo_users')
 @Index(['weiboId'], { unique: true })

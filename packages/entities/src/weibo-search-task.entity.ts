@@ -1,7 +1,6 @@
 import {
   Column,
   CreateDateColumn,
-  Entity,
   Index,
   JoinColumn,
   ManyToOne,
@@ -9,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-
+import { Entity } from './decorator.js';
 import { UserEntity } from './user.entity.js';
 import { WeiboSubTaskEntity } from './weibo-sub-task.entity.js';
 

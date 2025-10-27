@@ -1,37 +1,36 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-
+import { Entity } from './decorator.js';
 @Entity('hourly_stats')
 @Index(['keyword', 'hourTimestamp'], { unique: true })
 export class HourlyStatsEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column('varchar')
   keyword: string;
 
   @Column('timestamp')
   hourTimestamp: Date;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   postCount: number;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   commentCount: number;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   positiveCount: number;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   neutralCount: number;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   negativeCount: number;
 
   @Column('float', { default: 0.0 })

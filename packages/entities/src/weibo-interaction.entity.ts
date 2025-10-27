@@ -2,13 +2,13 @@ import {
   Check,
   Column,
   CreateDateColumn,
-  Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   RelationId,
 } from 'typeorm';
+import { Entity } from './decorator.js';
 import {
   WeiboInteractionType,
   WeiboTargetType,

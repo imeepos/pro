@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -14,6 +13,7 @@ import {
   ModelProvider,
   AnalysisModelConfig
 } from './types/analysis-types.js';
+import { Entity } from './decorator.js';
 
 @Entity('analysis_results')
 @Index(['dataId', 'dataType'])

@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -14,6 +13,7 @@ export enum WorkflowStatus {
   FAILED = 'failed',
   PAUSED = 'paused',
 }
+import { Entity } from './decorator.js';
 
 @Entity('workflow_states')
 @Index(['workflowId'])

@@ -164,7 +164,7 @@ export class ExecutorVisitor implements Visitor {
     visit(ast: Ast, ctx: Visitor): Promise<any> {
         const type = resolveConstructor(ast)
         // 找到 methods
-        const methods = root.get(HANDLER_METHOD);
+        const methods = root.get(HANDLER_METHOD, []);
         if (methods && methods.length > 0) {
             // 要最后一个 其他的自动忽略 后面的覆盖前面的
             const method = methods.find(it => it.ast === type);
@@ -173,12 +173,10 @@ export class ExecutorVisitor implements Visitor {
                 if (method.property && typeof (instance as any)[method.property] === 'function') {
                     return (instance as any)[method.property](ast, ctx);
                 }
-
             }
-
         }
         // 找到 class
-        const nodes = root.get(HANDLER)
+        const nodes = root.get(HANDLER, [])
         const handler = nodes.find(it => it.ast === type);
         if (handler) {
             const instance = root.get(handler.target)

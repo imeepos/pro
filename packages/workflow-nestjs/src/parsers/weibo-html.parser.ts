@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 
 export interface ParsedSearchResult {
   postIds: string[];
@@ -10,8 +10,6 @@ export interface ParsedSearchResult {
 
 @Injectable()
 export class WeiboHtmlParser {
-  private readonly logger = new Logger(WeiboHtmlParser.name);
-
   constructor() {}
 
   parseSearchResultHtml(html: string): ParsedSearchResult {
@@ -22,14 +20,6 @@ export class WeiboHtmlParser {
       const hasNextPage = this.hasNextPage($);
       const lastPostTime = this.extractLastPostTime($);
       const totalCount = this.extractTotalCount($);
-
-      this.logger.debug('HTML解析完成', {
-        postIdsCount: postIds.length,
-        hasNextPage,
-        lastPostTime,
-        totalCount,
-      });
-
       return {
         postIds,
         hasNextPage,
@@ -37,10 +27,6 @@ export class WeiboHtmlParser {
         totalCount,
       };
     } catch (error) {
-      this.logger.error('HTML解析失败', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-
       return {
         postIds: [],
         hasNextPage: false,

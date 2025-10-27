@@ -17,6 +17,7 @@
     "build": "tsup && tsc --project tsconfig.types.json",
     "build:js": "tsup",
     "build:types": "tsc --project tsconfig.types.json",
+    "main": "tsx src/main.ts",
     "clean": "rimraf dist",
     "dev": "tsup --watch",
     "lint": "eslint src/**/*.ts",
@@ -34,6 +35,7 @@
   "license": "UNLICENSED",
   "dependencies": {
     "@pro/types": "workspace:*",
+    "@pro/core": "workspace:*",
     "reflect-metadata": "0.2.2",
     "typeorm": "^0.3.20"
   },

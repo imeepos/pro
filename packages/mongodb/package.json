@@ -31,15 +31,8 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@nestjs/common": "^11.0.13",
-    "@nestjs/core": "^11.0.13",
-    "@nestjs/config": "^4.0.2",
-    "@nestjs/microservices": "^11.0.0",
-    "@nestjs/mongoose": "^11.0.3",
-    "@nestjs/platform-express": "^11.0.13",
-    "@nestjs/platform-socket.io": "^11.0.0",
-    "@nestjs/websockets": "^11.0.0",
     "@pro/types": "workspace:*",
+    "@pro/core": "workspace:*",
     "mongoose": "^8.0.0"
   },
   "devDependencies": {

@@ -225,7 +225,7 @@ export class EnvironmentInjector extends Injector {
    * @param token 注入令牌
    * @returns 依赖实例
    */
-  get<T>(token: InjectionTokenType<T>): T {
+  get<T>(token: InjectionTokenType<T>, def?: T): T {
     // 解析ForwardRef
     const resolvedToken = resolveForwardRefCached(token);
     const tokenName = this.getTokenName(resolvedToken);
@@ -272,7 +272,7 @@ export class EnvironmentInjector extends Injector {
           this.instances.set(resolvedToken, result);
         } else {
           // 委托给父注入器
-          result = this.parent!.get(resolvedToken);
+          result = this.parent!.get(resolvedToken, def);
         }
       }
 

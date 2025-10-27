@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -12,6 +11,7 @@ import {
 import { BugEntity } from './bug.entity.js';
 import { UserEntity } from './user.entity.js';
 import { BugAttachmentEntity } from './bug-attachment.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('bug_comments')
 export class BugCommentEntity {

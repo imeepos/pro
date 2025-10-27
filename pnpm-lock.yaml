@@ -1746,6 +1746,9 @@ importers:
 
   packages/entities:
     dependencies:
+      '@pro/core':
+        specifier: workspace:*
+        version: link:../core
       '@pro/types':
         specifier: workspace:*
         version: link:../types
@@ -1937,30 +1940,9 @@ importers:
 
   packages/mongodb:
     dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.13
-        version: 11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1)
-      '@nestjs/config':
-        specifier: ^4.0.2
-        version: 4.0.2(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(rxjs@7.8.1)
-      '@nestjs/core':
-        specifier: ^11.0.13
-        version: 11.1.6(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/microservices@11.1.6)(@nestjs/platform-express@11.1.6)(@nestjs/websockets@11.1.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
-      '@nestjs/microservices':
-        specifier: ^11.0.0
-        version: 11.1.6(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.1.6)(@nestjs/websockets@11.1.6)(amqplib@0.10.9)(cache-manager@7.2.4)(ioredis@5.8.1)(reflect-metadata@0.2.2)(rxjs@7.8.1)
-      '@nestjs/mongoose':
-        specifier: ^11.0.3
-        version: 11.0.3(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.1.6)(mongoose@8.8.4(socks@2.8.7))(rxjs@7.8.1)
-      '@nestjs/platform-express':
-        specifier: ^11.0.13
-        version: 11.1.6(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.1.6)
-      '@nestjs/platform-socket.io':
-        specifier: ^11.0.0
-        version: 11.1.6(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/websockets@11.1.6)(rxjs@7.8.1)
-      '@nestjs/websockets':
-        specifier: ^11.0.0
-        version: 11.1.6(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.1.6)(@nestjs/platform-socket.io@11.1.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      '@pro/core':
+        specifier: workspace:*
+        version: link:../core
       '@pro/types':
         specifier: workspace:*
         version: link:../types
@@ -2217,6 +2199,9 @@ importers:
       '@nestjs/typeorm':
         specifier: ^11.0.0
         version: 11.0.0(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.1.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)(typeorm@0.3.27(ioredis@5.8.1)(mongodb@6.20.0(socks@2.8.7))(pg@8.13.1)(redis@4.7.1)(reflect-metadata@0.2.2)(ts-node@10.9.2(@swc/core@1.13.5)(@types/node@20.19.23)(typescript@5.8.3)))
+      '@pro/core':
+        specifier: workspace:*
+        version: link:../core
       '@pro/entities':
         specifier: workspace:*
         version: link:../entities

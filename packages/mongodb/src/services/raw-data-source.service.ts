@@ -1,49 +1,46 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model } from 'mongoose';
-import { RawDataSource, RawDataSourceDoc } from '../schemas/raw-data-source.schema.js';
+import { Injectable } from '@pro/core';
+import { FilterQuery } from 'mongoose';
+import { RawDataSourceDoc, RawDataSourceSchema } from '../schemas/raw-data-source.schema.js';
 import { CreateRawDataSourceDto, ProcessingStatus, SourceType } from '@pro/types';
 import { calculateContentHash } from '../utils/hash.util.js';
+import { useMongoDb } from '../factory.js';
 
 /**
  * 原始数据源服务
  */
 @Injectable()
 export class RawDataSourceService {
-  private readonly logger = new Logger(RawDataSourceService.name);
-
-  constructor(
-    @InjectModel(RawDataSource.name)
-    private readonly rawDataSourceModel: Model<RawDataSourceDoc>,
-  ) {}
-
   /**
    * 创建原始数据记录
    */
   async create(dto: CreateRawDataSourceDto): Promise<RawDataSourceDoc> {
-    const contentHash = calculateContentHash(dto.rawContent);
 
     // 如果 contentHash 已存在就返回现有记录
-    const existing = await this.rawDataSourceModel
-      .findOne({ contentHash })
-      .exec();
+    useMongoDb(async c => {
+      const contentHash = calculateContentHash(dto.rawContent);
 
-    if (existing) {
-      this.logger.debug(`Content already exists with hash: ${contentHash}`);
-      return existing;
-    }
+      const existing = await c.model(``, RawDataSourceSchema)
+        .findOne({ contentHash })
+        .exec();
 
-    // contentHash 不存在，插入新记录
-    const data = new this.rawDataSourceModel({
-      sourceType: dto.sourceType,
-      sourceUrl: dto.sourceUrl,
-      rawContent: dto.rawContent,
-      contentHash,
-      metadata: dto.metadata,
-      status: ProcessingStatus.PENDING,
-    });
+      if (existing) {
+        return existing;
+      }
 
-    return data.save();
+      // contentHash 不存在，插入新记录
+      const data = new this.rawDataSourceModel({
+        sourceType: dto.sourceType,
+        sourceUrl: dto.sourceUrl,
+        rawContent: dto.rawContent,
+        contentHash,
+        metadata: dto.metadata,
+        status: ProcessingStatus.PENDING,
+      });
+
+      return data.save();
+
+    })
+
   }
 
   /**
@@ -149,7 +146,6 @@ export class RawDataSourceService {
       })
       .exec();
 
-    this.logger.log(`Deleted ${result.deletedCount} old completed records`);
     return result.deletedCount || 0;
   }
 
@@ -335,7 +331,6 @@ export class RawDataSourceService {
       { limit }
     );
 
-    this.logger.log(`Reset ${result.modifiedCount} failed records to pending`);
     return result.modifiedCount || 0;
   }
 

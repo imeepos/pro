@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -7,6 +6,7 @@ import {
   Index,
 } from 'typeorm';
 import { MediaTypeStatus } from '@pro/types';
+import { Entity } from './decorator.js';
 
 @Entity('media_type')
 export class MediaTypeEntity {

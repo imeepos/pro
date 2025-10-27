@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -19,6 +18,7 @@ import { BugWatchEntity } from './bug-watch.entity.js';
 import { BugActivityEntity } from './bug-activity.entity.js';
 import { BugTimeTrackingEntity } from './bug-time-tracking.entity.js';
 import { BugStatus, BugPriority, BugCategory } from '@pro/types';
+import { Entity } from './decorator.js';
 
 @Entity('bugs')
 export class BugEntity {

@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -9,6 +8,7 @@ import {
 } from 'typeorm';
 import { BugEntity } from './bug.entity.js';
 import { UserEntity } from './user.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('bug_time_tracking')
 export class BugTimeTrackingEntity {

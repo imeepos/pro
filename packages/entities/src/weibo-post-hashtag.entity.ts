@@ -1,9 +1,9 @@
 import {
-  Entity,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
+import { Entity } from './decorator.js';
 import { WeiboPostEntity } from './weibo-post.entity.js';
 import { WeiboHashtagEntity } from './weibo-hashtag.entity.js';
 

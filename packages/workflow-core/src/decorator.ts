@@ -24,14 +24,19 @@ export function Handler(ast: Type<any>): any {
         if (propertyKey !== undefined && descriptor !== undefined) {
             const ctor = resolveConstructor(target);
             root.set([{
-                provide: HANDLER_METHOD, multi: true, useValue: {
+                provide: HANDLER_METHOD,
+                multi: true,
+                useValue: {
                     ast: ast, target: ctor, property: propertyKey
                 }
+            }, {
+                provide: ctor,
+                useClass: ctor
             }])
             return descriptor;
         } else {
             const ctor = resolveConstructor(target as object);
-            root.set([{ provide: HANDLER, useValue: { ast, target: ctor }, multi: true }])
+            root.set([{ provide: ctor, useClass: ctor }, { provide: HANDLER, useValue: { ast, target: ctor }, multi: true }])
             return target;
         }
     };
