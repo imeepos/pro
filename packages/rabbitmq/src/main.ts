@@ -9,6 +9,7 @@ export async function main(){
     await mq.onModuleInit()
     console.log(`mq is connected is ${mq.isConnected()}`)
     await mq.ngOnDestroy()
+    process.exit(0)
 }
 
 main()

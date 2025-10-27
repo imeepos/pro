@@ -235,7 +235,17 @@ export class ConnectionPool {
       this.healthCheckTimer = null;
     }
 
+    this.eventListeners.clear();
+
     try {
+      if (this.connection) {
+        this.connection.removeAllListeners();
+      }
+
+      if (this.channel) {
+        this.channel.removeAllListeners();
+      }
+
       if (this.channel) {
         await this.channel.close();
         this.channel = null;
