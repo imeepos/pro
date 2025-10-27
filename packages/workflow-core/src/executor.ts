@@ -30,11 +30,11 @@ export class WorkflowExecutorVisitor {
         // 🔑 关键：合并所有节点的状态
         const updatedNodes = this.mergeNodeStates(ast.nodes, newlyExecutedNodes);
         // 5. 检查是否所有节点都已完成
-        const allCompleted = this.areAllNodesCompleted(updatedNodes);
+        const allReachableCompleted = this.areAllReachableNodesCompleted(updatedNodes, ast.edges);
         const hasFailures = updatedNodes.some(node => node.state === 'fail');
         // 6. 状态转移：running → success/fail 或继续 running
         let finalState: IAstStates;
-        if (allCompleted) {
+        if (allReachableCompleted) {
             finalState = hasFailures ? 'fail' : 'success';
         } else {
             finalState = 'running'; // 还有节点未完成，继续运行
@@ -47,16 +47,28 @@ export class WorkflowExecutorVisitor {
 
     // 找到当前可以执行的节点
     private findExecutableNodes(nodes: INode[], edges: IEdge[]): INode[] {
-        const completedNodes = new Set(
-            nodes.filter(n => n.state === 'success').map(n => n.id)
-        );
         return nodes.filter(node => {
             if (node.state !== 'pending') return false;
             // 检查所有前置依赖是否已完成
-            const dependencies = edges
-                .filter(edge => edge.to === node.id)
-                .map(edge => edge.from);
-            return dependencies.every(dep => completedNodes.has(dep));
+            const incomingEdges = edges.filter(edge => edge.to === node.id);
+
+            // 如果没有任何边指向此节点，说明是起始节点
+            if (incomingEdges.length === 0) return true;
+
+            // 检查是否有任意一条边满足条件
+            return incomingEdges.some(edge => {
+                const sourceNode = nodes.find(n => n.id === edge.from);
+                if (!sourceNode || sourceNode.state !== 'success') return false;
+
+                // 如果边有条件，检查条件是否满足
+                if (edge.condition) {
+                    const actualValue = (sourceNode as any)[edge.condition.property];
+                    return actualValue === edge.condition.value;
+                }
+
+                // 无条件边，只需源节点完成即可
+                return true;
+            });
         });
     }
     // 执行当前批次的节点
@@ -137,11 +149,53 @@ export class WorkflowExecutorVisitor {
             }
         });
     }
-    // 检查是否所有节点都已完成
-    private areAllNodesCompleted(nodes: INode[]): boolean {
-        return nodes.every(node =>
+    // 检查是否所有可达节点都已完成
+    private areAllReachableNodesCompleted(nodes: INode[], edges: IEdge[]): boolean {
+        // 找出所有可达节点
+        const reachableNodes = this.findReachableNodes(nodes, edges);
+
+        // 检查所有可达节点是否都已完成
+        return reachableNodes.every(node =>
             node.state === 'success' || node.state === 'fail'
         );
+    }
+
+    // 找出从起始节点出发可以到达的所有节点
+    private findReachableNodes(nodes: INode[], edges: IEdge[]): INode[] {
+        // 找出所有起始节点（没有入边的节点）
+        const startNodes = nodes.filter(node =>
+            !edges.some(edge => edge.to === node.id)
+        );
+
+        const reachable = new Set<string>();
+        const queue = [...startNodes.map(n => n.id)];
+
+        while (queue.length > 0) {
+            const currentId = queue.shift()!;
+            if (reachable.has(currentId)) continue;
+
+            reachable.add(currentId);
+            const currentNode = nodes.find(n => n.id === currentId);
+
+            // 找出从当前节点出发的所有边
+            const outgoingEdges = edges.filter(edge => edge.from === currentId);
+
+            for (const edge of outgoingEdges) {
+                // 如果边有条件且当前节点已完成，检查条件
+                if (edge.condition && currentNode?.state === 'success') {
+                    const actualValue = (currentNode as any)[edge.condition.property];
+                    // 只有条件满足时才将目标节点加入队列
+                    if (actualValue === edge.condition.value) {
+                        queue.push(edge.to);
+                    }
+                } else if (!edge.condition) {
+                    // 无条件边，直接加入队列
+                    queue.push(edge.to);
+                }
+            }
+        }
+
+        return nodes.filter(node => reachable.has(node.id));
     }
     // 🔑 关键方法：合并节点状态
     private mergeNodeStates(

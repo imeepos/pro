@@ -28,6 +28,10 @@ export class WorkflowGraphAst extends Ast {
         this.edges.push(edge)
         return this;
     }
+    addConditionalEdge(edge: IEdge & { condition: { property: string; value: any } }) {
+        this.edges.push(edge)
+        return this;
+    }
     setName(name: string) {
         this.name = name;
         return this;

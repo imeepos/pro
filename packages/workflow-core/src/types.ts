@@ -12,4 +12,9 @@ export interface IEdge {
     fromProperty?: string;
     to: string;
     toProperty?: string;
+    // 条件边：根据源节点的属性值决定是否激活此边
+    condition?: {
+        property: string;  // 要检查的属性名
+        value: any;        // 期望的值（通常是 true/false）
+    };
 }
