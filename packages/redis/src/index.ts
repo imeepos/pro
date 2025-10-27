@@ -1,7 +1,8 @@
-import { Redis, RedisOptions } from 'ioredis';
+import { Inject, Injectable, InjectionToken, root } from '@pro/core';
+import { Redis, RedisOptions, ChainableCommander } from 'ioredis';
 
 export class RedisPipeline {
-  constructor(private pipeline: any) {}
+  constructor(private pipeline: ChainableCommander) { }
 
   get(key: string): RedisPipeline {
     this.pipeline.get(key);
@@ -44,19 +45,15 @@ export class RedisPipeline {
     return this;
   }
 
-  async exec(): Promise<[Error | null, any][]> {
+  async exec(): Promise<[Error | null, any][] | null> {
     return await this.pipeline.exec();
   }
 }
 
-export class RedisClient {
-  private client: Redis;
 
-  constructor(options: RedisOptions | string) {
-    this.client = typeof options === 'string'
-      ? new Redis(options)
-      : new Redis(options);
-  }
+@Injectable()
+export class RedisClient {
+  constructor(@Inject(Redis) private client: Redis) { }
 
   async get<T = string>(key: string): Promise<T | null> {
     const value = await this.client.get(key);
@@ -261,19 +258,19 @@ export class RedisClient {
   }
 }
 
-import { ConfigService } from '@nestjs/config';
-
-export const redisConfigFactory = (configService: ConfigService): RedisOptions | string => {
-  const redisUrl = configService.get<string>('REDIS_URL');
-
+export const redisConfigFactory = (): string => {
+  const redisUrl = process.env.REDIS_URL;
   if (redisUrl) {
     return redisUrl;
   }
-
-  return {
-    host: configService.get<string>('REDIS_HOST', 'localhost'),
-    port: configService.get<number>('REDIS_PORT', 6379),
-    password: configService.get<string>('REDIS_PASSWORD'),
-    retryStrategy: (times: number) => Math.min(times * 50, 2000),
-  };
+  throw new Error(`REDIS_URL NOT FOUND`)
 };
+
+export const REDIS_OPTIONS = new InjectionToken<RedisOptions | string>(`REDIS_OPTIONS`)
+export const initRedis = () => {
+  root.set([{
+    provide: Redis, useFactory: () => {
+      return new Redis(redisConfigFactory())
+    }
+  }])
+}
