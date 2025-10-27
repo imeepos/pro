@@ -1,5 +1,5 @@
-import { Inject, Injectable, InjectionToken, root } from '@pro/core';
-import { Redis, RedisOptions, ChainableCommander } from 'ioredis';
+import { Inject, Injectable } from '@pro/core';
+import { Redis, ChainableCommander } from 'ioredis';
 
 export class RedisPipeline {
   constructor(private pipeline: ChainableCommander) { }
@@ -51,9 +51,14 @@ export class RedisPipeline {
 }
 
 
-@Injectable()
+@Injectable({
+  useFactory: () => {
+    return new RedisClient(new Redis(redisConfigFactory()))
+  },
+  deps: []
+})
 export class RedisClient {
-  constructor(@Inject(Redis) private client: Redis) { }
+  constructor(private client: Redis) { }
 
   async get<T = string>(key: string): Promise<T | null> {
     const value = await this.client.get(key);
@@ -265,12 +270,3 @@ export const redisConfigFactory = (): string => {
   }
   throw new Error(`REDIS_URL NOT FOUND`)
 };
-
-export const REDIS_OPTIONS = new InjectionToken<RedisOptions | string>(`REDIS_OPTIONS`)
-export const initRedis = () => {
-  root.set([{
-    provide: Redis, useFactory: () => {
-      return new Redis(redisConfigFactory())
-    }
-  }])
-}
