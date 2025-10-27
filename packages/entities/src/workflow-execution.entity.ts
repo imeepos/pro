@@ -67,8 +67,6 @@ export class WorkflowExecutionEntity {
   @JoinColumn({ name: 'workflow_id' })
   workflow!: WorkflowEntity;
 
-  @OneToOne(() => WorkflowStateEntity, (state) => state.execution, {
-    cascade: true,
-  })
+  @OneToOne(() => WorkflowStateEntity, (state) => state.execution)
   state!: WorkflowStateEntity;
 }

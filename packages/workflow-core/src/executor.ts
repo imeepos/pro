@@ -13,16 +13,20 @@ export class WorkflowExecutorVisitor {
      * 单次执行WorkflowGraph
      */
     async visit(ast: WorkflowGraphAst, ctx: Visitor): Promise<INode> {
+        console.log('[WorkflowExecutorVisitor] Starting visit, workflow state:', ast.state);
         const { state } = ast;
         // 1. 状态验证：只有pending状态才能执行
         if (state === 'success' || state === 'fail') {
+            console.log('[WorkflowExecutorVisitor] Workflow already completed with state:', state);
             return ast; // 不是pending状态，直接返回
         }
         ast.state = 'running'
         // 3. 找到当前可以执行的节点（无依赖或依赖已完成）
         const executableNodes = this.findExecutableNodes(ast.nodes, ast.edges);
+        console.log('[WorkflowExecutorVisitor] Found executable nodes:', executableNodes.map(n => ({ id: n.id, type: n.type })));
         // 执行当前批次的节点
         const { nodes: newlyExecutedNodes } = await this.executeCurrentBatch(executableNodes, ctx, ast.edges, ast.nodes);
+        console.log('[WorkflowExecutorVisitor] Batch execution completed, newly executed:', newlyExecutedNodes.map(n => ({ id: n.id, state: n.state })));
         // 🔑 关键：合并所有节点的状态
         const updatedNodes = this.mergeNodeStates(ast.nodes, newlyExecutedNodes);
         // 5. 检查是否所有节点都已完成
@@ -37,6 +41,7 @@ export class WorkflowExecutorVisitor {
         }
         ast.nodes = updatedNodes;
         ast.state = finalState;
+        console.log('[WorkflowExecutorVisitor] Visit completed, final state:', finalState);
         return ast;
     }
 
@@ -155,8 +160,11 @@ export class WorkflowExecutorVisitor {
 
     // 每次执行都会更新状态
     private async executeNode(node: INode, ctx: Visitor) {
+        console.log('[WorkflowExecutorVisitor] Executing node:', { id: node.id, type: node.type, state: node.state });
         const ast = fromJson(node);
-        return ctx.visit(ast, ctx)
+        const result = await ctx.visit(ast, ctx);
+        console.log('[WorkflowExecutorVisitor] Node execution completed:', { id: result.id, type: result.type, state: result.state });
+        return result;
     }
 }
 

@@ -1,28 +1,58 @@
 import "reflect-metadata"
 import "dotenv/config"
 
-import { PlaywrightAst, useHandlers, WeiboSearchUrlBuilderAst, WorkflowGraphAst } from "@pro/workflow-core";
+console.log('[main] Starting imports...');
+
+import { HtmlParserAst, PlaywrightAst, useHandlers, WeiboAccountAst, WeiboSearchUrlBuilderAst, WorkflowGraphAst } from "@pro/workflow-core";
+console.log('[main] Imported workflow-core');
+
 import { UserProfileVisitor } from "./visitors/user-profile.visitor";
+console.log('[main] Imported UserProfileVisitor');
+
 import { WeiboSearchUrlBuilderAstVisitor } from "./WeiboSearchUrlBuilderAstVisitor";
+console.log('[main] Imported WeiboSearchUrlBuilderAstVisitor');
+
 import { root } from "@pro/core";
+console.log('[main] Imported root from core');
+
 import { PlaywrightAstVisitor } from "./PlaywrightAstVisitor";
+console.log('[main] Imported PlaywrightAstVisitor');
+
 import { WorkflowService, WorkflowWithMetadata } from "./workflow.service";
+console.log('[main] Imported WorkflowService');
+
+import { WeiboAccountAstVisitor } from "./WeiboAccountAstVisitor";
+console.log('[main] Imported WeiboAccountAstVisitor');
+
+import { HtmlParserAstVisitor } from "./HtmlParserAstVisitor";
+console.log('[main] Imported HtmlParserAstVisitor');
+console.log('[main] All imports completed');
 
 /**
  * 运行 workflow 示例 - 使用单一版本架构 + 运行时状态追踪
  */
 export async function runWorkflow() {
+    console.log('[runWorkflow] Function started');
+
+    console.log('[runWorkflow] Registering handlers...');
     useHandlers([
         UserProfileVisitor,
         WeiboSearchUrlBuilderAstVisitor,
-        PlaywrightAstVisitor
+        PlaywrightAstVisitor,
+        WeiboAccountAstVisitor,
+        HtmlParserAstVisitor
     ]);
+    console.log('[runWorkflow] Handlers registered');
 
+    console.log('[runWorkflow] Getting WorkflowService from root container...');
     const workflowService = root.get(WorkflowService);
+    console.log('[runWorkflow] WorkflowService obtained');
 
     try {
         // 尝试从数据库获取已存在的 workflow
+        console.log('[runWorkflow] Calling getWorkflowBySlug...');
         let workflowMetadata = await workflowService.getWorkflowBySlug('weibo-1761572800189');
+        console.log('[runWorkflow] getWorkflowBySlug returned:', workflowMetadata ? 'found' : 'not found');
 
         if (!workflowMetadata) {
             console.log('Workflow not found, creating new one...');
@@ -51,6 +81,8 @@ export async function runWorkflow() {
         const currentState = await workflowService.getExecutionState(execution.id);
         console.log('Current State:', currentState?.status);
 
+        process.exit(0)
+
     } catch (error) {
         console.error('Workflow execution failed:', error);
         throw error;
@@ -69,11 +101,33 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
 
     // 网页抓取器
     const playwright = new PlaywrightAst();
+    const account = new WeiboAccountAst();
+    const htmlParserAst = new HtmlParserAst()
 
     // 构建 workflow 图
     const workflow = new WorkflowGraphAst()
         .addNode(urlBuilder)
         .addNode(playwright)
+        .addNode(account)
+        .addNode(htmlParserAst)
+        .addEdge({
+            from: playwright.id,
+            to: htmlParserAst.id,
+            fromProperty: 'html',
+            toProperty: 'html'
+        })
+        .addEdge({
+            from: account.id,
+            fromProperty: `cookies`,
+            to: playwright.id,
+            toProperty: `cookies`
+        })
+        .addEdge({
+            from: account.id,
+            to: playwright.id,
+            fromProperty: 'userAgent',
+            toProperty: `ua`
+        })
         .addEdge({
             from: urlBuilder.id,
             fromProperty: 'url',
@@ -111,49 +165,6 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
         console.error('Failed to create workflow:', error);
         throw error;
     }
-}
-
-/**
- * 演示如何更新 workflow（单一版本模式）
- */
-export async function updateWorkflowExample(workflowId: string): Promise<void> {
-    const workflowService = root.get(WorkflowService);
-
-    // 获取现有 workflow
-    const existingWorkflow = await workflowService.getWorkflow(workflowId);
-    if (!existingWorkflow) {
-        throw new Error(`Workflow ${workflowId} not found`);
-    }
-
-    // 修改 workflow（例如：更新搜索关键词）
-    const urlBuilder = new WeiboSearchUrlBuilderAst();
-    urlBuilder.keyword = `国庆75周年`;
-    urlBuilder.start = new Date(`2025-10-01 00:00:00`);
-    urlBuilder.end = new Date();
-
-    const playwright = new PlaywrightAst();
-
-    const updatedWorkflow = new WorkflowGraphAst()
-        .addNode(urlBuilder)
-        .addNode(playwright)
-        .addEdge({
-            from: urlBuilder.id,
-            fromProperty: 'url',
-            to: playwright.id,
-            toProperty: 'url'
-        });
-
-    // 更新 workflow（直接覆盖）
-    await workflowService.updateWorkflow(
-        workflowId,
-        updatedWorkflow,
-        {
-            description: '更新搜索关键词为"国庆75周年"',
-            updatedBy: 'system'
-        }
-    );
-
-    console.log(`Workflow ${workflowId} updated successfully`);
 }
 
 // 如果直接运行此文件，执行示例

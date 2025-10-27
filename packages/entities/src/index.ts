@@ -69,18 +69,28 @@ export const createDatabaseConfig = (): DataSourceOptions => {
 export const createDataSource = () => {
   return new DataSource(createDatabaseConfig())
 }
-
+let ds: DataSource | null = null;
 export const useDataSource = async () => {
-  const ds = createDataSource()
+  if (ds) {
+    if (ds.isInitialized) return ds;
+    await ds.initialize();
+    return ds;
+  }
+  console.log('[useDataSource] Creating DataSource...');
+  ds = createDataSource()
+  console.log('[useDataSource] Initializing DataSource...');
   await ds.initialize();
+  console.log('[useDataSource] DataSource initialized successfully');
   return ds;
 }
 
 export const useEntityManager = async <T>(h: (m: EntityManager) => Promise<T>): Promise<T> => {
+  console.log('[useEntityManager] Getting DataSource...');
   const ds = await useDataSource()
+  console.log('[useEntityManager] Creating EntityManager...');
   const m = ds.createEntityManager()
+  console.log('[useEntityManager] Calling handler...');
   const res = await h(m)
-  await ds.destroy()
   return res;
 }
 

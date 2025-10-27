@@ -40,7 +40,7 @@ export class WeiboAccountAst extends Ast {
     @Output() userAgent!: string;
     @Output() selectedAccountId?: number;
 
-    type = 'AccountInjectorAst' as const;
+    type = 'WeiboAccountAst' as const;
 }
 
 

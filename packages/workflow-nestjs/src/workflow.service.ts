@@ -151,8 +151,12 @@ export class WorkflowService {
    * 根据 slug 获取包含元数据的 workflow
    */
   async getWorkflowBySlug(slug: string): Promise<WorkflowWithMetadata | null> {
+    console.log(`[WorkflowService] getWorkflowBySlug called with slug: ${slug}`);
+    console.log(`[WorkflowService] Calling useEntityManager...`);
     return await useEntityManager(async (manager) => {
+      console.log(`[WorkflowService] Inside useEntityManager callback`);
       const workflow = await manager.findOne(WorkflowEntity, { where: { slug } });
+      console.log(`[WorkflowService] findOne result:`, workflow ? 'found' : 'not found');
 
       if (!workflow) {
         return null;
@@ -219,10 +223,15 @@ export class WorkflowService {
 
       try {
         console.log(`[WorkflowService] Starting execution of workflow ${workflowId}`);
+        console.log(`[WorkflowService] Initial workflow state: ${currentWorkflow.state}`);
+        console.log(`[WorkflowService] Workflow nodes:`, currentWorkflow.nodes.map(n => ({ id: n.id, type: n.type, state: n.state })));
 
         // 循环执行工作流，每次迭代后更新数据库状态
+        console.log(`[WorkflowService] Entering execution loop...`);
         while (currentWorkflow.state === 'pending' || currentWorkflow.state === 'running') {
+          console.log(`[WorkflowService] Loop iteration, state: ${currentWorkflow.state}`);
           currentWorkflow = await executeAst(currentWorkflow);
+          console.log(`[WorkflowService] Iteration complete, new state: ${currentWorkflow.state}`);
 
           // 每次执行后计算并更新状态
           const { progress } = this.calculateMetrics(currentWorkflow);

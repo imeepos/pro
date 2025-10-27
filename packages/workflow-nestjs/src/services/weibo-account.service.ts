@@ -1,4 +1,4 @@
-import { Injectable } from '@pro/core';
+import { Inject, Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 import {
     useEntityManager,
@@ -26,8 +26,8 @@ export class WeiboAccountService {
     private readonly maxAttempts = 5;
 
     constructor(
-        private readonly redis: RedisClient,
-    ) {}
+        @Inject(RedisClient) private readonly redis: RedisClient,
+    ) { }
 
     async injectCookies<T extends RequestWithHeaders>(
         request: T
@@ -42,7 +42,8 @@ export class WeiboAccountService {
             if (!request.headers) {
                 request.headers = {};
             }
-            request.headers.cookie = selection.cookieHeader;
+            request.headers.Cookie = selection.cookieHeader;
+            request.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
             return selection;
         } catch (error) {
             return null;
@@ -78,9 +79,9 @@ export class WeiboAccountService {
                 continue;
             }
 
-            const account = await useEntityManager(async m=>{
+            const account = await useEntityManager(async m => {
                 return m.findOne(WeiboAccountEntity, {
-                    where: { id: accountId } 
+                    where: { id: accountId }
                 })
             })
 
