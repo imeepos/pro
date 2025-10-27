@@ -1,4 +1,4 @@
-import { prop, getModelForClass, index, Severity } from '@typegoose/typegoose';
+import { prop, index, Severity } from '@typegoose/typegoose';
 import { type Document } from 'mongoose';
 import { Schema } from './decorator.js';
 
@@ -45,9 +45,3 @@ export class RawDataSource {
 }
 
 export type RawDataSourceDoc = RawDataSource & Document;
-
-// Typegoose 方式创建 Schema 和 Model
-// 注意：使用 Typegoose 时，Model 会自动使用 mongoose.connection（默认连接）
-// 确保在调用 connectMongoDB() 之后再使用这些 Model
-export const RawDataSourceModel = getModelForClass(RawDataSource);
-export const RawDataSourceSchema = RawDataSourceModel.schema;

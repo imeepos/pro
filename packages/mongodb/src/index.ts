@@ -1,9 +1,6 @@
 // Connection Management
 export * from './connection.js';
 
-// Factory
-export * from './factory.js';
-
 // Config
 export * from './config.js';
 

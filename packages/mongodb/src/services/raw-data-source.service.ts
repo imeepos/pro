@@ -1,6 +1,6 @@
-import { Injectable } from '@pro/core';
-import { FilterQuery } from 'mongoose';
-import { RawDataSourceDoc, RawDataSourceModel } from '../schemas/raw-data-source.schema.js';
+import { Inject, Injectable } from '@pro/core';
+import { FilterQuery, type Model } from 'mongoose';
+import { RawDataSource, RawDataSourceDoc } from '../schemas/raw-data-source.schema.js';
 import { CreateRawDataSourceDto, ProcessingStatus, SourceType } from '@pro/types';
 import { calculateContentHash } from '../utils/hash.util.js';
 
@@ -9,8 +9,7 @@ import { calculateContentHash } from '../utils/hash.util.js';
  */
 @Injectable()
 export class RawDataSourceService {
-  private readonly model = RawDataSourceModel;
-
+  constructor(@Inject(RawDataSource) private model: Model<RawDataSourceDoc>) { }
   /**
    * 创建原始数据记录
    */
@@ -155,7 +154,6 @@ export class RawDataSourceService {
         },
       },
     ]);
-
     return result.reduce((acc, item) => {
       acc[item._id] = item.count;
       return acc;
