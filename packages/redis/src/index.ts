@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@pro/core';
+import { Injectable } from '@pro/core';
 import { Redis, ChainableCommander } from 'ioredis';
 
 export class RedisPipeline {

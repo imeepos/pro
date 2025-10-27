@@ -1,6 +1,6 @@
 import { Ast } from "./ast";
-import { Input, Output } from "./decorator";
-
+import { Input, Node, Output } from "./decorator";
+@Node()
 export class PlaywrightAst extends Ast {
     @Input() @Output() url: string | undefined;
     @Input() cookies: string | undefined;
@@ -9,6 +9,7 @@ export class PlaywrightAst extends Ast {
     type: `PlaywrightAst` = `PlaywrightAst`
 }
 
+@Node()
 export class HtmlParserAst extends Ast {
     @Input() html: string | undefined;
     @Input() url: string | undefined;
@@ -17,17 +18,20 @@ export class HtmlParserAst extends Ast {
     type: `HtmlParserAst` = `HtmlParserAst`;
 }
 
+@Node()
 export class MqConsumerAst extends Ast {
     @Input() queue: string | undefined;
     type: `MqConsumerAst` = `MqConsumerAst`
 }
 
+@Node()
 export class MqPublisherAst extends Ast {
     @Input() queue: string | undefined;
     @Input() event: any;
     type: `MqPublisherAst` = `MqPublisherAst`
 }
 
+@Node()
 export class WeiboAccountAst extends Ast {
     @Input() accountId: string | undefined = undefined;
 
@@ -39,6 +43,8 @@ export class WeiboAccountAst extends Ast {
     type = 'AccountInjectorAst' as const;
 }
 
+
+@Node()
 export class WeiboSearchUrlBuilderAst extends Ast {
   @Input() keyword!: string;
   @Input() start!: Date;

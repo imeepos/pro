@@ -25,7 +25,9 @@ export class PlaywrightAstVisitor {
             // 2. 设置Cookies
             await this.setCookies(node);
             if (!this.page) throw new Error(`创建页面失败`)
-            if (!node.url) throw new Error(`页面链接不能为空`)
+            if (!node.url) {
+                throw new Error(`页面链接不能为空`)
+            }
             // 3. 访问页面
             await this.page.goto(node.url, {
                 waitUntil: 'domcontentloaded',

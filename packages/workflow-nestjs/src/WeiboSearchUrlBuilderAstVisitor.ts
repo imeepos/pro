@@ -1,11 +1,14 @@
 import { Handler, Visitor, WeiboSearchUrlBuilderAst } from "@pro/workflow-core";
 
-const formatDate = (date: Date) => [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-    String(date.getHours()).padStart(2, '0'),
-].join('-');
+const formatDate = (date: Date) => {
+    const time = new Date(date)
+    return [
+        time.getFullYear(),
+        String(time.getMonth() + 1).padStart(2, '0'),
+        String(time.getDate()).padStart(2, '0'),
+        String(time.getHours()).padStart(2, '0'),
+    ].join('-')
+};
 
 @Handler(WeiboSearchUrlBuilderAst)
 export class WeiboSearchUrlBuilderAstVisitor {

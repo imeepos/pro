@@ -98,14 +98,14 @@ export class WorkflowExecutorVisitor {
     private extractNodeOutputs(node: INode): any {
         // 根据节点类型和装饰器提取输出
         const ast = fromJson(node);
+        const ctor = resolveConstructor(ast)
         const outputs = root.get(OUTPUT)
         const outputData: any = {};
-        outputs.filter(it=>it.target === ast).map(it => {
+        outputs.filter(it=>it.target === ctor).map(it => {
             if ((node as any)[it.propertyKey] !== undefined) {
                 outputData[it.propertyKey] = (node as any)[it.propertyKey];
             }
         });
-
         return outputData;
     }
     // 根据边关系将前驱节点输出映射到当前节点输入
