@@ -1,8 +1,7 @@
 import { Inject, Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 import { useEntityManager, useTranslation } from '@pro/entities';
-import { WorkflowEntity, WorkflowExecutionEntity, WorkflowStateEntity, WorkflowStatus, mapAstStateToWorkflowStatus } from '@pro/entities';
-import { WorkflowExecutionStatus } from '@pro/types';
+import { WorkflowEntity, WorkflowExecutionEntity, WorkflowStateEntity } from '@pro/entities';
 import { executeAst, fromJson, toJson, WorkflowGraphAst } from '@pro/workflow-core';
 import { WorkflowDefinition } from '@pro/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -160,7 +159,7 @@ export class WorkflowService {
       const execution = new WorkflowExecutionEntity();
       execution.id = uuidv4();
       execution.workflowId = workflowId;
-      execution.status = WorkflowExecutionStatus.RUNNING;
+      execution.status = 'running';
       execution.triggeredBy = triggeredBy;
       execution.context = context || null;
 
@@ -170,7 +169,7 @@ export class WorkflowService {
       const state = new WorkflowStateEntity();
       state.id = uuidv4();
       state.executionId = savedExecution.id;
-      state.status = WorkflowStatus.RUNNING;
+      state.status = 'running';
       state.currentStep = null;
       state.metadata = {};
 
@@ -197,12 +196,12 @@ export class WorkflowService {
 
         // 序列化整个 AST 到 metadata
         savedState.metadata = toJson(result);
-        savedState.status = mapAstStateToWorkflowStatus(result.state);
+        savedState.status = result.state;
         savedState.completedAt = new Date();
         await manager.save(savedState);
 
         // 更新执行记录
-        savedExecution.status = WorkflowExecutionStatus.SUCCEEDED;
+        savedExecution.status = result.state;
         savedExecution.finishedAt = new Date();
         savedExecution.durationMs = Date.now() - savedExecution.startedAt.getTime();
         await manager.save(savedExecution);
@@ -230,9 +229,9 @@ export class WorkflowService {
         const workflow = await this.getWorkflow(workflowId);
         if (workflow) {
           savedState.metadata = toJson(workflow);
-          savedState.status = mapAstStateToWorkflowStatus(workflow.state);
+          savedState.status = workflow.state;
         } else {
-          savedState.status = WorkflowStatus.FAILED;
+          savedState.status = 'fail';
         }
 
         savedState.errorMessage = errorMessage;
@@ -240,7 +239,7 @@ export class WorkflowService {
         await manager.save(savedState);
 
         // 更新执行记录为失败
-        savedExecution.status = WorkflowExecutionStatus.FAILED;
+        savedExecution.status = 'fail';
         savedExecution.finishedAt = new Date();
         savedExecution.durationMs = Date.now() - savedExecution.startedAt.getTime();
         await manager.save(savedExecution);
@@ -281,7 +280,7 @@ export class WorkflowService {
       }
 
       // 检查是否可以恢复
-      if (state.status === WorkflowStatus.SUCCESS) {
+      if (state.status === 'success') {
         throw new Error(`Workflow already completed successfully`);
       }
 
@@ -293,11 +292,11 @@ export class WorkflowService {
       const workflow = fromJson(state.metadata) as WorkflowGraphAst;
 
       // 更新状态为运行中
-      state.status = WorkflowStatus.RUNNING;
+      state.status = 'running';
       state.retryCount += 1;
       await manager.save(state);
 
-      execution.status = WorkflowExecutionStatus.RUNNING;
+      execution.status = 'running';
       await manager.save(execution);
 
       try {
@@ -307,12 +306,12 @@ export class WorkflowService {
 
         // 序列化整个 AST 到 metadata
         state.metadata = toJson(result);
-        state.status = mapAstStateToWorkflowStatus(result.state);
+        state.status = result.state;
         state.completedAt = new Date();
         await manager.save(state);
 
         // 更新执行记录
-        execution.status = WorkflowExecutionStatus.SUCCEEDED;
+        execution.status = result.state;
         execution.finishedAt = new Date();
         execution.durationMs = Date.now() - execution.startedAt.getTime();
         await manager.save(execution);
@@ -337,13 +336,13 @@ export class WorkflowService {
 
         // 保存当前状态
         state.metadata = toJson(workflow);
-        state.status = mapAstStateToWorkflowStatus(workflow.state);
+        state.status = workflow.state;
         state.errorMessage = errorMessage;
         state.completedAt = new Date();
         await manager.save(state);
 
         // 更新执行记录为失败
-        execution.status = WorkflowExecutionStatus.FAILED;
+        execution.status = workflow.state;
         execution.finishedAt = new Date();
         execution.durationMs = Date.now() - execution.startedAt.getTime();
         await manager.save(execution);
@@ -376,7 +375,7 @@ export class WorkflowService {
     if (cached) {
       const stateData = typeof cached === 'string' ? JSON.parse(cached) : cached;
       // Redis 中只存储了部分字段，需要从数据库获取完整数据
-      if (stateData.status === WorkflowStatus.RUNNING) {
+      if (stateData.status === 'running') {
         return await useEntityManager(async (manager) => {
           return await manager.findOne(WorkflowStateEntity, {
             where: { id: stateData.id }
