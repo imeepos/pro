@@ -33,7 +33,6 @@ export class WorkflowService {
    */
   private calculateMetrics(ast: WorkflowGraphAst): {
     metrics: WorkflowExecutionMetrics;
-    currentStep: string | null;
     progress: number;
   } {
     const nodes = ast.nodes || [];
@@ -44,10 +43,6 @@ export class WorkflowService {
 
     const progress = totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0;
 
-    // 找到当前正在运行的节点，如果没有则为 null
-    const runningNode = nodes.find((n: any) => n.state === 'running');
-    const currentStep = runningNode ? (runningNode as any).id : null;
-
     return {
       metrics: {
         totalNodes,
@@ -56,7 +51,6 @@ export class WorkflowService {
         throughput: null,
         payloadSize: null,
       },
-      currentStep,
       progress,
     };
   }
@@ -203,18 +197,14 @@ export class WorkflowService {
       state.id = uuidv4();
       state.executionId = savedExecution.id;
       state.status = 'running';
-      state.currentStep = 'initializing';
       state.metadata = {};
 
-      console.log(`[WorkflowService] Before save - currentStep:`, state.currentStep);
       const savedState = await manager.save(state);
-      console.log(`[WorkflowService] After save - currentStep:`, savedState.currentStep);
 
       // 缓存运行时状态到 Redis（实时更新）
       await this.redis.set(`workflow:execution:state:${savedExecution.id}`, JSON.stringify({
         id: savedState.id,
         status: savedState.status,
-        currentStep: savedState.currentStep,
         startedAt: savedState.createdAt
       }), 3600);
 
@@ -235,17 +225,16 @@ export class WorkflowService {
           currentWorkflow = await executeAst(currentWorkflow);
 
           // 每次执行后计算并更新状态
-          const { currentStep, progress } = this.calculateMetrics(currentWorkflow);
+          const { progress } = this.calculateMetrics(currentWorkflow);
 
           savedState.metadata = toJson(currentWorkflow);
           savedState.status = currentWorkflow.state;
-          savedState.currentStep = currentStep;
           savedState.progress = progress;
 
           // 实时更新到数据库
           await manager.save(savedState);
 
-          console.log(`[WorkflowService] Progress: ${progress}%, currentStep: ${currentStep}, status: ${currentWorkflow.state}`);
+          console.log(`[WorkflowService] Progress: ${progress}%, status: ${currentWorkflow.state}`);
         }
 
         const result = currentWorkflow;
@@ -285,11 +274,10 @@ export class WorkflowService {
         console.error(`[WorkflowService] Workflow ${workflowId} execution failed:`, errorMessage);
 
         // 保存当前工作流状态（使用已经部分执行的工作流）
-        const { metrics, currentStep, progress } = this.calculateMetrics(currentWorkflow);
+        const { metrics, progress } = this.calculateMetrics(currentWorkflow);
 
         savedState.metadata = toJson(currentWorkflow);
         savedState.status = 'fail';
-        savedState.currentStep = currentStep;
         savedState.progress = progress;
         savedState.errorMessage = errorMessage;
         savedState.completedAt = new Date();
@@ -368,17 +356,16 @@ export class WorkflowService {
           currentWorkflow = await executeAst(currentWorkflow);
 
           // 每次执行后计算并更新状态
-          const { currentStep, progress } = this.calculateMetrics(currentWorkflow);
+          const { progress } = this.calculateMetrics(currentWorkflow);
 
           state.metadata = toJson(currentWorkflow);
           state.status = currentWorkflow.state;
-          state.currentStep = currentStep;
           state.progress = progress;
 
           // 实时更新到数据库
           await manager.save(state);
 
-          console.log(`[WorkflowService] Resume Progress: ${progress}%, currentStep: ${currentStep}, status: ${currentWorkflow.state}`);
+          console.log(`[WorkflowService] Resume Progress: ${progress}%, status: ${currentWorkflow.state}`);
         }
 
         const result = currentWorkflow;
@@ -417,11 +404,10 @@ export class WorkflowService {
         console.error(`[WorkflowService] Workflow ${execution.workflowId} resume failed:`, errorMessage);
 
         // 保存当前工作流状态（使用已经部分执行的工作流）
-        const { metrics, currentStep, progress } = this.calculateMetrics(currentWorkflow);
+        const { metrics, progress } = this.calculateMetrics(currentWorkflow);
 
         state.metadata = toJson(currentWorkflow);
         state.status = 'fail';
-        state.currentStep = currentStep;
         state.progress = progress;
         state.errorMessage = errorMessage;
         state.completedAt = new Date();

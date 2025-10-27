@@ -36,10 +36,6 @@ export class WorkflowStateEntity {
   })
   status: IAstStates;
 
-  /** 当前执行到的节点/步骤标识 */
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'current_step' })
-  currentStep: string | null;
-
   /** 执行进度百分比 (0-100) */
   @Column({ type: 'int', default: 0 })
   progress: number;
