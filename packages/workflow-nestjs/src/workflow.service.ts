@@ -203,7 +203,7 @@ export class WorkflowService {
       state.id = uuidv4();
       state.executionId = savedExecution.id;
       state.status = 'running';
-      state.currentStep = null;
+      state.currentStep = 'initializing';
       state.metadata = {};
 
       const savedState = await manager.save(state);
