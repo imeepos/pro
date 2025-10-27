@@ -34,6 +34,7 @@ export class PlaywrightAstVisitor {
                 timeout: 30000
             });
             node.html = await this.page.content();
+            node.state = 'success'
             return node;
         } finally {
             await this.close()

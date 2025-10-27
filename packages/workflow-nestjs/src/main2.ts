@@ -20,7 +20,6 @@ export async function runWorkflow() {
         await createWorkflow()
         return;
     }
-    console.log(item)
     const w = fromJson(item)
     const node = await executeAst(w)
     await redis.set(`workflow`, JSON.stringify(node))
