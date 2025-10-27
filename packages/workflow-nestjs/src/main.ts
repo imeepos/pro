@@ -103,7 +103,7 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
     const playwright = new PlaywrightAst();
     const account = new WeiboAccountAst();
     const htmlParserAst = new HtmlParserAst()
-
+    
     // 构建 workflow 图
     const workflow = new WorkflowGraphAst()
         .addNode(urlBuilder)
