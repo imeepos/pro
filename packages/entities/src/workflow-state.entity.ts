@@ -9,29 +9,8 @@ import {
 } from 'typeorm';
 import { WorkflowExecutionEntity } from './workflow-execution.entity.js';
 import { Entity } from './decorator.js';
+import { type IAstStates } from '@pro/workflow-core'
 
-/** AST 状态类型 */
-export type IAstStates = 'pending' | 'running' | 'success' | 'fail';
-
-/** 工作流运行时状态枚举 */
-export enum WorkflowStatus {
-  PENDING = 'pending',
-  RUNNING = 'running',
-  SUCCESS = 'success',
-  FAILED = 'failed',
-  PAUSED = 'paused',
-}
-
-/** 将 AST 状态映射到 WorkflowStatus */
-export function mapAstStateToWorkflowStatus(state: IAstStates): WorkflowStatus {
-  const mapping: Record<IAstStates, WorkflowStatus> = {
-    pending: WorkflowStatus.PENDING,
-    running: WorkflowStatus.RUNNING,
-    success: WorkflowStatus.SUCCESS,
-    fail: WorkflowStatus.FAILED,
-  };
-  return mapping[state];
-}
 
 /**
  * 工作流运行时状态实体
@@ -52,15 +31,18 @@ export class WorkflowStateEntity {
 
   /** 当前运行状态 */
   @Column({
-    type: 'enum',
-    enum: WorkflowStatus,
-    default: WorkflowStatus.PENDING,
+    type: 'varchar',
+    default: `pending`
   })
-  status: WorkflowStatus;
+  status: IAstStates;
 
   /** 当前执行到的节点/步骤标识 */
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'current_step' })
   currentStep: string | null;
+
+  /** 执行进度百分比 (0-100) */
+  @Column({ type: 'int', default: 0 })
+  progress: number;
 
   /** 运行时元数据：存储整个 WorkflowGraphAst 的 toJson 序列化结果 */
   @Column({ type: 'jsonb', default: {} })

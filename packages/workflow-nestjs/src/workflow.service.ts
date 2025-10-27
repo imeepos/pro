@@ -3,7 +3,7 @@ import { RedisClient } from '@pro/redis';
 import { useEntityManager, useTranslation } from '@pro/entities';
 import { WorkflowEntity, WorkflowExecutionEntity, WorkflowStateEntity } from '@pro/entities';
 import { executeAst, fromJson, toJson, WorkflowGraphAst } from '@pro/workflow-core';
-import { WorkflowDefinition } from '@pro/types';
+import { WorkflowDefinition, WorkflowExecutionMetrics } from '@pro/types';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -27,6 +27,39 @@ export interface WorkflowWithMetadata {
 @Injectable()
 export class WorkflowService {
   constructor(@Inject(RedisClient) private readonly redis: RedisClient) {}
+
+  /**
+   * 从 WorkflowGraphAst 计算执行指标
+   */
+  private calculateMetrics(ast: WorkflowGraphAst): {
+    metrics: WorkflowExecutionMetrics;
+    currentStep: string | null;
+    progress: number;
+  } {
+    const nodes = ast.nodes || [];
+    const totalNodes = nodes.length;
+    const succeededNodes = nodes.filter((n: any) => n.state === 'success').length;
+    const failedNodes = nodes.filter((n: any) => n.state === 'fail').length;
+    const completedNodes = succeededNodes + failedNodes;
+
+    const progress = totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0;
+
+    // 找到当前正在运行的节点，如果没有则为 null
+    const runningNode = nodes.find((n: any) => n.state === 'running');
+    const currentStep = runningNode ? (runningNode as any).id : null;
+
+    return {
+      metrics: {
+        totalNodes,
+        succeededNodes,
+        failedNodes,
+        throughput: null,
+        payloadSize: null,
+      },
+      currentStep,
+      progress,
+    };
+  }
 
   /**
    * 创建并持久化 workflow
@@ -194,14 +227,20 @@ export class WorkflowService {
         const result = await executeAst(workflow);
         console.log(`[WorkflowService] Workflow ${workflowId} executed successfully`);
 
+        // 计算执行指标
+        const { metrics, currentStep, progress } = this.calculateMetrics(result);
+
         // 序列化整个 AST 到 metadata
         savedState.metadata = toJson(result);
         savedState.status = result.state;
+        savedState.currentStep = currentStep;
+        savedState.progress = progress;
         savedState.completedAt = new Date();
         await manager.save(savedState);
 
         // 更新执行记录
         savedExecution.status = result.state;
+        savedExecution.metrics = metrics;
         savedExecution.finishedAt = new Date();
         savedExecution.durationMs = Date.now() - savedExecution.startedAt.getTime();
         await manager.save(savedExecution);
@@ -228,8 +267,14 @@ export class WorkflowService {
         // 尝试保存当前工作流状态
         const workflow = await this.getWorkflow(workflowId);
         if (workflow) {
+          const { metrics, currentStep, progress } = this.calculateMetrics(workflow);
+
           savedState.metadata = toJson(workflow);
           savedState.status = workflow.state;
+          savedState.currentStep = currentStep;
+          savedState.progress = progress;
+
+          savedExecution.metrics = metrics;
         } else {
           savedState.status = 'fail';
         }
@@ -304,14 +349,20 @@ export class WorkflowService {
         const result = await executeAst(workflow);
         console.log(`[WorkflowService] Workflow ${execution.workflowId} resumed successfully`);
 
+        // 计算执行指标
+        const { metrics, currentStep, progress } = this.calculateMetrics(result);
+
         // 序列化整个 AST 到 metadata
         state.metadata = toJson(result);
         state.status = result.state;
+        state.currentStep = currentStep;
+        state.progress = progress;
         state.completedAt = new Date();
         await manager.save(state);
 
         // 更新执行记录
         execution.status = result.state;
+        execution.metrics = metrics;
         execution.finishedAt = new Date();
         execution.durationMs = Date.now() - execution.startedAt.getTime();
         await manager.save(execution);
@@ -335,14 +386,19 @@ export class WorkflowService {
         console.error(`[WorkflowService] Workflow ${execution.workflowId} resume failed:`, errorMessage);
 
         // 保存当前状态
+        const { metrics, currentStep, progress } = this.calculateMetrics(workflow);
+
         state.metadata = toJson(workflow);
         state.status = workflow.state;
+        state.currentStep = currentStep;
+        state.progress = progress;
         state.errorMessage = errorMessage;
         state.completedAt = new Date();
         await manager.save(state);
 
         // 更新执行记录为失败
         execution.status = workflow.state;
+        execution.metrics = metrics;
         execution.finishedAt = new Date();
         execution.durationMs = Date.now() - execution.startedAt.getTime();
         await manager.save(execution);

@@ -34,8 +34,10 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@pro/types": "workspace:*",
     "@pro/core": "workspace:*",
+    "@pro/types": "workspace:*",
+    "@pro/workflow-core": "workspace:*",
+    "build": "^0.1.4",
     "reflect-metadata": "0.2.2",
     "typeorm": "^0.3.20"
   },
