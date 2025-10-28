@@ -76,20 +76,14 @@ export const useDataSource = async () => {
     await ds.initialize();
     return ds;
   }
-  console.log('[useDataSource] Creating DataSource...');
   ds = createDataSource()
-  console.log('[useDataSource] Initializing DataSource...');
   await ds.initialize();
-  console.log('[useDataSource] DataSource initialized successfully');
   return ds;
 }
 
 export const useEntityManager = async <T>(h: (m: EntityManager) => Promise<T>): Promise<T> => {
-  console.log('[useEntityManager] Getting DataSource...');
   const ds = await useDataSource()
-  console.log('[useEntityManager] Creating EntityManager...');
   const m = ds.createEntityManager()
-  console.log('[useEntityManager] Calling handler...');
   const res = await h(m)
   return res;
 }

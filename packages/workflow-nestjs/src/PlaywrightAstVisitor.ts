@@ -47,8 +47,6 @@ export class PlaywrightAstVisitor {
         try {
             // 1. 如果需要清除现有cookies
             await this.context.clearCookies();
-            console.log('🧹 已清除现有cookies');
-
             // 2. 解析cookies数据
             let cookies: CookieData[] = [];
 
@@ -74,7 +72,6 @@ export class PlaywrightAstVisitor {
                 }));
 
                 await this.context.addCookies(playwrightCookies);
-                console.log(`✅ 成功设置 ${cookies.length} 个cookies`);
             }
 
         } catch (error) {
