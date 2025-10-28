@@ -17,19 +17,32 @@ export class HtmlParserAstVisitor {
 
     try {
       const result = this.parser.parseSearchResultHtml(ast.html);
+      console.log(`---------------------`)
+      console.log(result)
+      console.log(`---------------------`)
+
       // 提取循环所需属性到顶层，便于条件边检查
       ast.hasNextPage = result.hasNextPage;
       ast.nextPageLink = result.nextPageLink;
+
+      // 判断是否需要缩小日期范围继续搜索
+      // 两种情况会触发：
+      // 1. 当前页达到50页封顶 → 数据量大，必须缩小日期范围
+      // 2. 无下一页 + 时间差>=1小时 → 当前范围爬完但还有更早数据
       if (result.lastPostTime && ast.startDate) {
-        const lastPostTime = new Date(result.lastPostTime!)
-        const startDate = new Date(ast.startDate!)
-        const decTime = lastPostTime.getTime() - startDate.getTime()
-        if (decTime >= 1 * 60 * 60 * 1000) {
+        const lastPostTime = new Date(result.lastPostTime);
+        const startDate = new Date(ast.startDate);
+        const timeGapMs = lastPostTime.getTime() - startDate.getTime();
+        const isMaxPage = result.currentPage >= 50;
+        const hasTimeGap = timeGapMs >= 1 * 60 * 60 * 1000;
+
+        if (isMaxPage || (!result.hasNextPage && hasTimeGap)) {
           ast.hasNextSearch = true;
           ast.nextEndDate = lastPostTime;
         }
       }
 
+      ast.result = result;
       ast.state = 'success';
     } catch (error) {
       ast.state = 'fail';

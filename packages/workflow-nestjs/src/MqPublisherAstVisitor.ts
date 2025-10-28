@@ -13,12 +13,12 @@ export class MqPublisherAstVisitor {
 
     if (!ast.queue) {
       ast.state = 'fail';
-      throw new Error('MqPublisherAst: queue 字段为空');
+      return ast;
     }
 
     if (!ast.event) {
       ast.state = 'fail';
-      throw new Error('MqPublisherAst: event 字段为空');
+      return ast;
     }
 
     try {

@@ -30,10 +30,7 @@ export class WorkflowExecutorVisitor {
         // 🔑 关键：合并所有节点的状态
         let updatedNodes = this.mergeNodeStates(ast.nodes, newlyExecutedNodes);
 
-        // 🔄 循环边检测：检查是否有满足条件的循环边，重置目标节点为 pending
-        updatedNodes = this.checkAndResetLoopNodes(updatedNodes, ast.edges);
-
-        // 5. 检查是否所有节点都已完成
+        // 检查是否所有节点都已完成
         const allReachableCompleted = this.areAllReachableNodesCompleted(updatedNodes, ast.edges);
         const hasFailures = updatedNodes.some(node => node.state === 'fail');
         // 6. 状态转移：running → success/fail 或继续 running
@@ -53,25 +50,43 @@ export class WorkflowExecutorVisitor {
     private findExecutableNodes(nodes: INode[], edges: IEdge[]): INode[] {
         return nodes.filter(node => {
             if (node.state !== 'pending') return false;
-            // 检查所有前置依赖是否已完成
+
             const incomingEdges = edges.filter(edge => edge.to === node.id);
 
             // 如果没有任何边指向此节点，说明是起始节点
             if (incomingEdges.length === 0) return true;
 
-            // 检查是否有任意一条边满足条件
-            return incomingEdges.some(edge => {
+            // 分离无条件边和条件边
+            const unconditionalEdges = incomingEdges.filter(e => !e.condition);
+            const conditionalEdges = incomingEdges.filter(e => e.condition);
+
+            // 1. 所有无条件边的源节点必须完成（AND 逻辑）
+            const allUnconditionalReady = unconditionalEdges.every(edge => {
+                const sourceNode = nodes.find(n => n.id === edge.from);
+                return sourceNode?.state === 'success';
+            });
+
+            if (!allUnconditionalReady) return false;
+
+            // 2. 条件边的处理（OR 逻辑）
+            if (conditionalEdges.length === 0) return true;
+
+            // 检查是否所有条件边的源节点都还未执行（说明是初始状态或循环反馈）
+            const allConditionalSourcesPending = conditionalEdges.every(edge => {
+                const sourceNode = nodes.find(n => n.id === edge.from);
+                return !sourceNode || sourceNode.state === 'pending';
+            });
+
+            // 如果所有条件边源节点都是 pending，允许作为起始节点执行
+            if (allConditionalSourcesPending) return true;
+
+            // 否则，至少一条条件边必须满足
+            return conditionalEdges.some(edge => {
                 const sourceNode = nodes.find(n => n.id === edge.from);
                 if (!sourceNode || sourceNode.state !== 'success') return false;
 
-                // 如果边有条件，检查条件是否满足
-                if (edge.condition) {
-                    const actualValue = (sourceNode as any)[edge.condition.property];
-                    return actualValue === edge.condition.value;
-                }
-
-                // 无条件边，只需源节点完成即可
-                return true;
+                const actualValue = (sourceNode as any)[edge.condition!.property];
+                return actualValue === edge.condition!.value;
             });
         });
     }
@@ -90,14 +105,23 @@ export class WorkflowExecutorVisitor {
         // 对每个可执行节点进行输入赋值并执行
         const promises = nodes.map(async (node) => {
             // 🎯 关键：在执行节点前，根据边关系进行输入赋值
-            this.assignInputsToNode(node, allOutputs, edges);
+            this.assignInputsToNode(node, allOutputs, edges, workflowNodes);
 
             const resultNode = await this.executeNode(node, ctx);
             const outputs = this.extractNodeOutputs(resultNode);
 
-            // 🔑 节点执行完成后，立即将所有下游节点重置为 pending
+            // 🔑 节点执行完成后，将满足条件的下游节点重置为 pending
             const outgoingEdges = edges.filter(e => e.from === node.id);
             outgoingEdges.forEach(edge => {
+                // 如果边有条件，检查条件是否满足
+                if (edge.condition) {
+                    const actualValue = (resultNode as any)[edge.condition.property];
+                    if (actualValue !== edge.condition.value) {
+                        return; // 条件不满足，跳过失效
+                    }
+                }
+
+                // 无条件边或条件满足的边，失效目标节点
                 const downstream = workflowNodes.find(n => n.id === edge.to);
                 if (downstream) {
                     downstream.state = 'pending';
@@ -139,14 +163,33 @@ export class WorkflowExecutorVisitor {
         return outputData;
     }
     // 根据边关系将前驱节点输出映射到当前节点输入
-    private assignInputsToNode(targetNode: INode, allOutputs: Map<string, any>, edges: IEdge[]): void {
+    private assignInputsToNode(targetNode: INode, allOutputs: Map<string, any>, edges: IEdge[], allNodes: INode[]): void {
         // 找到所有指向目标节点的边
         const incomingEdges = edges.filter(edge => edge.to === targetNode.id);
 
-        incomingEdges.forEach(edge => {
+        // 关键优化：条件边优先级高于无条件边
+        // 先执行无条件边，再执行条件边，让条件边的赋值覆盖无条件边
+        const sortedEdges = [...incomingEdges].sort((a, b) => {
+            const aPriority = a.condition ? 1 : 0;  // 条件边优先级 = 1
+            const bPriority = b.condition ? 1 : 0;  // 无条件边优先级 = 0
+            return aPriority - bPriority;  // 升序：无条件边先执行，条件边后执行
+        });
+
+        sortedEdges.forEach(edge => {
             // 直接从输出数据Map中获取源节点的输出
             const sourceOutputs = allOutputs.get(edge.from);
             if (!sourceOutputs) return;
+
+            // 🔑 关键：如果是条件边，检查条件是否满足
+            if (edge.condition) {
+                const sourceNode = allNodes.find(n => n.id === edge.from);
+                if (!sourceNode || sourceNode.state !== 'success') return;
+
+                const actualValue = (sourceNode as any)[edge.condition.property];
+                if (actualValue !== edge.condition.value) {
+                    return; // 条件不满足，跳过此边的数据赋值
+                }
+            }
 
             // 如果指定了属性映射，则进行精确映射
             if (edge.fromProperty && edge.toProperty) {
@@ -222,38 +265,6 @@ export class WorkflowExecutorVisitor {
             const executedNode = executedNodeMap.get(originalNode.id);
             // 如果节点被重新执行，使用新状态；否则保持原状态
             return executedNode || originalNode;
-        });
-    }
-
-    // 🔄 循环边检测：检查满足条件的循环边，重置目标节点为 pending
-    private checkAndResetLoopNodes(nodes: INode[], edges: IEdge[]): INode[] {
-        const nodesToReset = new Set<string>();
-
-        // 遍历所有有条件的边
-        edges.forEach(edge => {
-            if (!edge.condition) return;
-
-            const sourceNode = nodes.find(n => n.id === edge.from);
-            if (!sourceNode || sourceNode.state !== 'success') return;
-
-            // 检查条件是否满足
-            const actualValue = (sourceNode as any)[edge.condition.property];
-            if (actualValue === edge.condition.value) {
-                // 条件满足，标记目标节点需要重置
-                nodesToReset.add(edge.to);
-                console.log(`[WorkflowExecutorVisitor] Loop condition satisfied: ${edge.from} -> ${edge.to} (${edge.condition.property} === ${edge.condition.value})`);
-            }
-        });
-
-        // 重置标记的节点状态为 pending
-        // 当这些节点重新执行后，其输出改变会通过 assignInputsToNode 触发下游节点的 setter
-        // setter 会自动检测输入变化并将 success 节点重置为 pending，实现增量式失效传播
-        return nodes.map(node => {
-            if (nodesToReset.has(node.id) && node.state === 'success') {
-                console.log(`[WorkflowExecutorVisitor] Resetting node ${node.id} (${node.type}) to pending for loop execution`);
-                return { ...node, state: 'pending' as IAstStates };
-            }
-            return node;
         });
     }
 

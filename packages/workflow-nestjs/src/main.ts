@@ -16,7 +16,7 @@ import { RabbitMQService } from "@pro/rabbitmq";
 /**
  * 运行 workflow 示例 - 使用单一版本架构 + 运行时状态追踪
  */
-export async function runWorkflow() {
+export async function runWorkflow(keyword: string, startDate: Date) {
     useHandlers([
         UserProfileVisitor,
         WeiboSearchUrlBuilderAstVisitor,
@@ -36,27 +36,12 @@ export async function runWorkflow() {
         }
 
         // 执行 workflow 并记录执行历史和运行时状态
-        const { execution, state, result } = await workflowService.executeWorkflow(
+        const { state } = await workflowService.executeWorkflow(
             workflowMetadata.id,
             'system',
-            { keyword: '国庆', startDate: '2025-10-01' }
-        );
-
-        console.log(`Workflow executed successfully in ${execution.durationMs}ms`);
-        console.log('Execution ID:', execution.id);
-        console.log('State ID:', state.id);
-        console.log('Final Status:', state.status);
-        console.log('Result:', JSON.stringify(result, null, 2));
-
-        // 获取执行历史
-        const history = await workflowService.getExecutionHistory(workflowMetadata.id);
-        console.log(`Total executions: ${history.length}`);
-
-        // 查询当前执行的运行时状态
-        const currentState = await workflowService.getExecutionState(execution.id);
-        console.log('Current State:', currentState?.status);
-
-        process.exit(0)
+            { keyword: keyword, startDate: startDate }
+        )
+        return state
 
     } catch (error) {
         console.error('Workflow execution failed:', error);
@@ -89,11 +74,18 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
         .addNode(htmlParserAst)
         .addNode(mqPublisher)
         .addEdge({
+            from: urlBuilder.id,
+            to: htmlParserAst.id,
+            fromProperty: `start`,
+            toProperty: `startDate`
+        })
+        .addEdge({
             from: htmlParserAst.id,
             to: mqPublisher.id,
             fromProperty: 'result',
             toProperty: 'event'
         })
+        // 分支1: 有下一页 → 继续爬取下一页
         .addEdge({
             from: htmlParserAst.id,
             to: playwright.id,
@@ -101,6 +93,17 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
             toProperty: 'url',
             condition: {
                 property: "hasNextPage",
+                value: true
+            }
+        })
+        // 分支2: 50页封顶 OR 当前范围爬完但还有更早数据 → 缩小日期范围重新搜索
+        .addEdge({
+            from: htmlParserAst.id,
+            to: urlBuilder.id,
+            fromProperty: `nextEndDate`,
+            toProperty: `end`,
+            condition: {
+                property: `hasNextSearch`,
                 value: true
             }
         })
@@ -163,5 +166,5 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
 
 // 如果直接运行此文件，执行示例
 if (require.main === module) {
-    runWorkflow().catch(console.error);
+    runWorkflow(`国庆`, new Date(`2025-10-7`)).catch(console.error);
 }
