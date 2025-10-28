@@ -39,3 +39,13 @@ export function hasOnInitMetadata(target: any): boolean {
   }
   return Reflect.getMetadata(ON_INIT_METADATA_KEY, target) === true;
 }
+
+
+export interface OnInit {
+  onInit(): Promise<void>;
+}
+
+export function isOnInit(obj: any): obj is OnInit {
+  if (!obj) return false;
+  return typeof obj.onInit === 'function';
+}

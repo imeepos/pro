@@ -10,7 +10,7 @@ import type {
   ConnectionState,
   ConnectionEvent,
 } from './types.js';
-import { Injectable, OnDestroy } from '@pro/core';
+import { Injectable, OnDestroy, OnInit } from '@pro/core';
 
 /**
  * RabbitMQ 统一服务
@@ -31,6 +31,7 @@ import { Injectable, OnDestroy } from '@pro/core';
   },
   deps: []
 })
+@OnInit()
 export class RabbitMQService implements OnDestroy {
   private connectionPool: ConnectionPool;
   private publisher: RabbitMQPublisher;
@@ -43,7 +44,7 @@ export class RabbitMQService implements OnDestroy {
     this.consumer = new RabbitMQConsumer(this.connectionPool);
   }
 
-  async onModuleInit(): Promise<void> {
+  async onInit(): Promise<void> {
     if (this.isInitialized) {
       return;
     }
@@ -52,7 +53,7 @@ export class RabbitMQService implements OnDestroy {
     this.isInitialized = true;
   }
 
-  async ngOnDestroy(): Promise<void> {
+  async onDestroy(): Promise<void> {
     if (!this.isInitialized) {
       return;
     }

@@ -23,6 +23,8 @@ export class ConnectionPool {
   private healthCheckTimer: NodeJS.Timeout | null = null;
   private eventListeners: Map<string, ((event: ConnectionEvent) => void)[]> =
     new Map();
+  private reconnectAttempts: number = 0;
+  private reconnectStartedAt: number = 0;
 
   constructor(
     private readonly config: RabbitMQConfig,
@@ -49,11 +51,25 @@ export class ConnectionPool {
       this.setState(ConnectionState.CONNECTED);
       this.startHealthCheck();
 
+      const wasReconnecting = this.reconnectAttempts > 0;
+      const reconnectDuration = wasReconnecting
+        ? Date.now() - this.reconnectStartedAt
+        : 0;
+
       this.emitEvent({
         type: 'connected',
         state: this.state,
         timestamp: Date.now(),
+        metadata: wasReconnecting
+          ? {
+              reconnectAttempts: this.reconnectAttempts,
+              reconnectDurationMs: reconnectDuration,
+            }
+          : undefined,
       });
+
+      this.reconnectAttempts = 0;
+      this.reconnectStartedAt = 0;
     } catch (error) {
       // 清理部分建立的连接
       await this.cleanup();
@@ -150,6 +166,11 @@ export class ConnectionPool {
     }
 
     this.setState(ConnectionState.RECONNECTING);
+
+    if (this.reconnectAttempts === 0) {
+      this.reconnectStartedAt = Date.now();
+    }
+    this.reconnectAttempts++;
 
     const reconnectDelay = 5000;
     this.reconnectTimer = setTimeout(async () => {

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { createMongoDBConfig } from './config.js';
-import { root } from '@pro/core';
+import { Injectable, OnInit, root } from '@pro/core';
 import { MONGO_CONNECTION } from './tokens.js';
 
 /**
@@ -70,4 +70,12 @@ export function getMongoDBConnection(): mongoose.Connection {
  */
 export function isConnected(): boolean {
   return mongoose.connection.readyState === 1;
+}
+
+@Injectable()
+@OnInit()
+export class MongodbModule implements OnInit {
+  async onInit(): Promise<void> {
+    await connectMongoDB()
+  }
 }

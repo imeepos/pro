@@ -14,12 +14,3 @@ export function isOnDestroy(obj: any): obj is OnDestroy {
   return typeof obj.onDestroy === 'function';
 }
 
-
-export interface onModelInit {
-  onModelInit(): Promise<void>;
-}
-
-export function isOnModelInit(obj: any): obj is onModelInit {
-  if (!obj) return false;
-  return typeof obj.onModelInit === 'function';
-}

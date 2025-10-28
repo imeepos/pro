@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
 import { CrawlQueueConsumer } from './crawl-queue.consumer';
+import { MongodbModule } from '@pro/mongodb';
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { CrawlQueueConsumer } from './crawl-queue.consumer';
   ],
   controllers: [],
   providers: [
-    CrawlQueueConsumer
+    CrawlQueueConsumer,
+    MongodbModule
   ],
 })
 export class AppModule {}

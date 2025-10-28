@@ -57,8 +57,8 @@ export {
   validateInjectOptionsConflicts,
   flagsToString,
 } from './internal-inject-flags';
-export { type OnDestroy, isOnDestroy, type onModelInit, isOnModelInit } from './lifecycle';
-export { OnInit, hasOnInitMetadata } from './on-init';
+export { type OnDestroy, isOnDestroy } from './lifecycle';
+export { OnInit, hasOnInitMetadata, isOnInit } from './on-init';
 export {
   forwardRef,
   ForwardRef,

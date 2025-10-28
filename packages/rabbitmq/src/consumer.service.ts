@@ -6,6 +6,7 @@ import type {
   MessageMetadata,
   RetryStrategy,
 } from './types.js';
+import { logger } from '@pro/logger';
 
 /**
  * 消息处理函数类型
@@ -16,6 +17,14 @@ export type MessageHandler<T> = (
 ) => Promise<void>;
 
 /**
+ * 订阅信息
+ */
+interface Subscription<T = any> {
+  handler: MessageHandler<T>;
+  options?: ConsumerOptions;
+}
+
+/**
  * RabbitMQ 消费者服务
  *
  * 错误处理如为人处世的哲学:
@@ -23,6 +32,7 @@ export type MessageHandler<T> = (
  * - 自动 ACK/NACK 管理
  * - 死信队列支持
  * - 详细的错误上下文
+ * - 连接恢复时自动重新订阅
  */
 export class RabbitMQConsumer {
   private defaultRetryStrategy: RetryStrategy = {
@@ -31,9 +41,23 @@ export class RabbitMQConsumer {
     maxBackoffMs: 30000,
   };
 
-  constructor(private readonly connectionPool: ConnectionPool) {}
+  private subscriptions = new Map<QueueName, Subscription>();
+
+  constructor(private readonly connectionPool: ConnectionPool) {
+    this.setupConnectionRecovery();
+  }
 
   async consume<T>(
+    queueName: QueueName,
+    handler: MessageHandler<T>,
+    options?: ConsumerOptions,
+  ): Promise<void> {
+    this.subscriptions.set(queueName, { handler, options });
+
+    await this.subscribeToQueue(queueName, handler, options);
+  }
+
+  private async subscribeToQueue<T>(
     queueName: QueueName,
     handler: MessageHandler<T>,
     options?: ConsumerOptions,
@@ -172,6 +196,35 @@ export class RabbitMQConsumer {
     await channel.assertQueue(queueName, {
       durable: true,
       arguments: queueArgs,
+    });
+  }
+
+  private setupConnectionRecovery(): void {
+    this.connectionPool.on('connected', async () => {
+      if (this.subscriptions.size === 0) {
+        return;
+      }
+
+      logger.info(
+        { queueCount: this.subscriptions.size },
+        'Connection recovered, resubscribing to queues',
+      );
+
+      for (const [queueName, subscription] of this.subscriptions.entries()) {
+        try {
+          await this.subscribeToQueue(
+            queueName,
+            subscription.handler,
+            subscription.options,
+          );
+          logger.info({ queueName }, 'Queue resubscribed successfully');
+        } catch (error) {
+          logger.error(
+            { queueName, error },
+            'Failed to resubscribe to queue after reconnection',
+          );
+        }
+      }
     });
   }
 }

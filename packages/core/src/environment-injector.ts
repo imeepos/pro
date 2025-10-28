@@ -9,12 +9,12 @@ import {
   convertInjectOptionsToFlags,
   hasFlag,
 } from './internal-inject-flags';
-import { isOnDestroy, isOnModelInit } from './lifecycle';
+import { isOnDestroy } from './lifecycle';
 import {
   resolveForwardRefCached,
   resolveForwardRefsInDeps,
 } from './forward-ref';
-import { hasOnInitMetadata } from './on-init';
+import { hasOnInitMetadata, isOnInit } from './on-init';
 
 import { EnvironmentInjectorUtils } from './environment-injector-utils';
 
@@ -545,7 +545,7 @@ export class EnvironmentInjector extends Injector {
 
     // 第一步：初始化已有实例
     for (const instance of this.instances.values()) {
-      if (isOnModelInit(instance)) {
+      if (isOnInit(instance)) {
         await this.initInstance(instance);
         initializedInstances.add(instance);
       }
@@ -560,7 +560,7 @@ export class EnvironmentInjector extends Injector {
           const instance = this.get(token);
 
           // 避免重复初始化同一个实例
-          if (!initializedInstances.has(instance) && isOnModelInit(instance)) {
+          if (!initializedInstances.has(instance) && isOnInit(instance)) {
             await this.initInstance(instance);
             initializedInstances.add(instance);
           }

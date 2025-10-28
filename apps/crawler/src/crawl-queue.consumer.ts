@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { RabbitMQClient, RabbitMQService } from '@pro/rabbitmq';
+import { RabbitMQService } from '@pro/rabbitmq';
 import { SubTaskMessage } from './types';
 import { runWeiBoKeywordSearchWorkflow } from '@pro/workflow-nestjs';
 import { root } from '@pro/core';
@@ -7,14 +7,11 @@ import { root } from '@pro/core';
 @Injectable()
 export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CrawlQueueConsumer.name);
-  private client: RabbitMQClient | null = null;
 
   constructor() { }
 
   async onModuleInit(): Promise<void> {
     const rs = root.get(RabbitMQService)
-    await rs.onModuleInit()
-    console.log(`consume weibo_crawl_queue`)
     rs.consume(`weibo_crawl_queue`, (message: SubTaskMessage, metadata) => {
       return this.process(message)
     }, {
@@ -23,8 +20,7 @@ export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    const rs = root.get(RabbitMQService)
-    await rs.ngOnDestroy()
+    await root.destroy();
   }
 
   private async process(message: SubTaskMessage): Promise<void> {
