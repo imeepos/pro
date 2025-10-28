@@ -293,6 +293,17 @@ export class MainSearchWorkflow {
         lastPostTime: parsed.lastPostTime,
       };
     } catch (error) {
+      // 捕获登录失效错误，更新账号状态
+      if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
+        console.log(`[MainSearchWorkflow] 检测到账号登录失效: ${account.id}`);
+
+        try {
+          await this.accountHealth.markAccountAsExpired(account.id);
+        } catch (markError) {
+          console.error(`[MainSearchWorkflow] 标记账号失效时出错:`, markError);
+        }
+      }
+
       throw error;
     } finally {
       if (playwrightPage) await playwrightPage.close();

@@ -170,4 +170,41 @@ export class AccountHealthService {
 
     return healthData;
   }
+
+  async markAccountAsExpired(accountId: number): Promise<void> {
+    if (!Number.isFinite(accountId)) {
+      console.warn('[AccountHealthService] 无效的 accountId:', accountId);
+      return;
+    }
+
+    try {
+      // 1. 更新数据库账号状态
+      await useEntityManager(async m => {
+        const account = await m.findOne(WeiboAccountEntity, {
+          where: { id: accountId }
+        });
+
+        if (!account) {
+          console.warn(`[AccountHealthService] 账号不存在: ${accountId}`);
+          return;
+        }
+
+        account.status = WeiboAccountStatus.SUSPENDED;
+        account.lastCheckAt = new Date();
+
+        await m.save(account);
+
+        console.log(`[AccountHealthService] 账号已标记为登录失效: ${accountId} (${account.weiboNickname || account.weiboUid})`);
+      });
+
+      // 2. 从 Redis 健康度队列移除
+      const member = accountId.toString();
+      await this.redis.zrem(this.healthKey, member);
+
+      console.log(`[AccountHealthService] 账号已从健康度队列移除: ${accountId}`);
+    } catch (error) {
+      console.error(`[AccountHealthService] 标记账号失效失败: ${accountId}`, error);
+      throw error;
+    }
+  }
 }
