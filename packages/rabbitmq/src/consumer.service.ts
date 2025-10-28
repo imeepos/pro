@@ -6,7 +6,6 @@ import type {
   MessageMetadata,
   RetryStrategy,
 } from './types.js';
-import { logger } from '@pro/logger';
 
 /**
  * 消息处理函数类型
@@ -105,6 +104,12 @@ export class RabbitMQConsumer {
       await handler(content, metadata);
 
       if (!noAck) {
+        if (!this.connectionPool.isConnected()) {
+          console.warn(
+            `[RabbitMQ] Connection lost during message processing for queue ${queueName}, message will be redelivered after reconnection`,
+          );
+          return;
+        }
         channel.ack(msg);
       }
     } catch (error) {
@@ -121,11 +126,18 @@ export class RabbitMQConsumer {
   private async handleError(
     msg: amqp.ConsumeMessage,
     _error: Error,
-    _queueName: QueueName,
+    queueName: QueueName,
     retryStrategy: RetryStrategy,
     noAck: boolean,
   ): Promise<void> {
     if (noAck) {
+      return;
+    }
+
+    if (!this.connectionPool.isConnected()) {
+      console.warn(
+        `[RabbitMQ] Connection lost during error handling for queue ${queueName}, message will be redelivered after reconnection`,
+      );
       return;
     }
 
@@ -205,9 +217,8 @@ export class RabbitMQConsumer {
         return;
       }
 
-      logger.info(
-        { queueCount: this.subscriptions.size },
-        'Connection recovered, resubscribing to queues',
+      console.log(
+        `[RabbitMQ] Connection recovered, resubscribing to ${this.subscriptions.size} queue(s)`,
       );
 
       for (const [queueName, subscription] of this.subscriptions.entries()) {
@@ -217,11 +228,11 @@ export class RabbitMQConsumer {
             subscription.handler,
             subscription.options,
           );
-          logger.info({ queueName }, 'Queue resubscribed successfully');
+          console.log(`[RabbitMQ] Queue ${queueName} resubscribed successfully`);
         } catch (error) {
-          logger.error(
-            { queueName, error },
-            'Failed to resubscribe to queue after reconnection',
+          console.error(
+            `[RabbitMQ] Failed to resubscribe to queue ${queueName} after reconnection:`,
+            error,
           );
         }
       }
