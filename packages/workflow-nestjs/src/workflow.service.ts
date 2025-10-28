@@ -61,6 +61,7 @@ export class WorkflowService {
   async createWorkflow(
     name: string,
     definition: WorkflowGraphAst,
+    slug: string,
     options: {
       description?: string;
       tags?: string[];
@@ -70,7 +71,7 @@ export class WorkflowService {
     const workflowEntity = new WorkflowEntity();
     workflowEntity.id = uuidv4();
     workflowEntity.name = name;
-    workflowEntity.slug = this.generateSlug(name);
+    workflowEntity.slug = slug || this.generateSlug(name);
     workflowEntity.description = options.description || null;
     workflowEntity.tags = options.tags || [];
     workflowEntity.definition = this.convertToWorkflowDefinition(definition);

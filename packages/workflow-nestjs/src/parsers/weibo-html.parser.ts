@@ -2,8 +2,7 @@ import * as cheerio from 'cheerio';
 import { Injectable } from '@pro/core';
 
 export interface ParsedSearchResult {
-  postIds: string[];
-  uids: string[];
+  posts: { mid: string, uid: string, postAt: Date | null }[];
   hasNextPage: boolean;
   lastPostTime: Date | null;
   totalCount: number;
@@ -14,22 +13,29 @@ export interface ParsedSearchResult {
 
 @Injectable()
 export class WeiboHtmlParser {
-  constructor() {}
+  constructor() { }
 
   parseSearchResultHtml(html: string): ParsedSearchResult {
     try {
       const $ = cheerio.load(html);
 
-      const { postIds, uids } = this.extractPostsInfo($);
-      const lastPostTime = this.extractLastPostTime($);
+      const posts = this.extractPostsInfo($);
+      const postIds = posts.map((p) => p.mid);
+
+      // 从 posts 数组中找出最早的时间（即最后一条微博的时间）
+      const lastPostTime = posts.reduce<Date | null>((earliest, post) => {
+        if (!post.postAt) return earliest;
+        if (!earliest) return post.postAt;
+        return post.postAt < earliest ? post.postAt : earliest;
+      }, null);
+
       const totalCount = this.extractTotalCount(postIds);
       const nextPageLink = this.extractNextPageLink($);
       const currentPage = this.extractCurrentPage($);
       const totalPage = this.extractTotalPage($);
 
       return {
-        postIds,
-        uids,
+        posts,
         hasNextPage: currentPage !== totalPage,
         lastPostTime,
         totalCount,
@@ -39,8 +45,7 @@ export class WeiboHtmlParser {
       };
     } catch (error) {
       return {
-        postIds: [],
-        uids: [],
+        posts: [],
         hasNextPage: false,
         lastPostTime: null,
         totalCount: 0,
@@ -51,11 +56,11 @@ export class WeiboHtmlParser {
     }
   }
 
-  private extractPostsInfo($: cheerio.CheerioAPI): { postIds: string[]; uids: string[] } {
-    const postIds: string[] = [];
-    const uids: string[] = [];
+  private extractPostsInfo($: cheerio.CheerioAPI): Array<{ uid: string; mid: string; postAt: Date | null }> {
+    const posts: Array<{ uid: string; mid: string; postAt: Date | null }> = [];
+    const seenMids = new Set<string>();
 
-    // 策略1（主）：从详情链接提取 mid 和 uid
+    // 策略1（主）：从详情链接提取 mid、uid 和 postAt
     // 格式：//weibo.com/:uid/:mid
     $('div.card').each((_index: number, element: any) => {
       const $card = $(element);
@@ -74,53 +79,44 @@ export class WeiboHtmlParser {
           const mid = match[2];
 
           // 去重检查
-          if (!postIds.includes(mid)) {
-            postIds.push(mid);
-            uids.push(uid);
+          if (!seenMids.has(mid)) {
+            seenMids.add(mid);
+
+            // 提取时间信息（从同一个 a 标签的文本）
+            const timeText = detailLink.text().trim();
+            const postAt = this.parseTimeText(timeText);
+
+            posts.push({ uid, mid, postAt });
           }
         }
       }
     });
 
     // 策略2（备用）：从 div[mid] 属性提取（数字型ID）
-    if (postIds.length === 0) {
+    if (posts.length === 0) {
       $('div[action-type="feed_list_item"]').each((_index: number, element: any) => {
         const $item = $(element);
         const mid = $item.attr('mid');
 
-        if (mid && !postIds.includes(mid)) {
-          postIds.push(mid);
+        if (mid && !seenMids.has(mid)) {
+          seenMids.add(mid);
 
           // 尝试从用户链接提取 uid
           const userLink = $item.find('div.avator a, a.name').first().attr('href');
           const uidMatch = userLink?.match(/\/\/weibo\.com\/(\d+)/);
-          uids.push(uidMatch?.[1] || '');
+          const uid = uidMatch?.[1] || '';
+
+          // 提取时间
+          const timeElement = $item.find('div.from > a').first();
+          const timeText = timeElement.text().trim();
+          const postAt = this.parseTimeText(timeText);
+
+          posts.push({ uid, mid, postAt });
         }
       });
     }
 
-    return { postIds, uids };
-  }
-
-  private extractLastPostTime($: cheerio.CheerioAPI): Date | null {
-    // 查找所有卡片中的时间信息
-    const timeElements = $('div.card p.from a').filter((_i: number, el: any) => {
-      const href = $(el).attr('href');
-      // 只取详情链接，过滤掉超话链接等
-      if (!href) {
-        return false;
-      }
-      return href.includes('/weibo.com/') && /\/\d+\/[A-Za-z0-9]+/.test(href);
-    });
-
-    if (timeElements.length === 0) {
-      return null;
-    }
-
-    const lastTimeElement = timeElements.last();
-    const timeText = lastTimeElement.text().trim();
-
-    return this.parseTimeText(timeText);
+    return posts;
   }
 
   private parseTimeText(timeText: string): Date | null {
@@ -151,6 +147,20 @@ export class WeiboHtmlParser {
       const match = timeText.match(/(\d{1,2}):(\d{2})/);
       if (match && match[1] && match[2]) {
         const result = new Date(now);
+        result.setHours(Number.parseInt(match[1], 10));
+        result.setMinutes(Number.parseInt(match[2], 10));
+        result.setSeconds(0);
+        result.setMilliseconds(0);
+        return result;
+      }
+    }
+
+    // 处理 "昨天 HH:MM"
+    if (timeText.includes('昨天')) {
+      const match = timeText.match(/(\d{1,2}):(\d{2})/);
+      if (match && match[1] && match[2]) {
+        const result = new Date(now);
+        result.setDate(result.getDate() - 1);
         result.setHours(Number.parseInt(match[1], 10));
         result.setMinutes(Number.parseInt(match[2], 10));
         result.setSeconds(0);

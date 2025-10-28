@@ -30,7 +30,7 @@ export async function runWorkflow(keyword: string, startDate: Date) {
     const workflowService = root.get(WorkflowService);
     try {
         // 尝试从数据库获取已存在的 workflow
-        let workflowMetadata = await workflowService.getWorkflowBySlug('weibo-1761572800189');
+        let workflowMetadata = await workflowService.getWorkflowBySlug('weibo-keyworkd-search');
         if (!workflowMetadata) {
             workflowMetadata = await createWorkflow();
         }
@@ -136,8 +136,9 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
 
     try {
         const savedWorkflow = await workflowService.createWorkflow(
-            'Weibo搜索-国庆节',
+            '微博关键字搜索',
             workflow,
+            "weibo-keyworkd-search",
             {
                 description: '搜索微博上关于国庆节的内容',
                 tags: ['weibo', 'search', 'national-day'],
