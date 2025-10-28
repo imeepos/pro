@@ -3,9 +3,13 @@ import { Injectable } from '@pro/core';
 
 export interface ParsedSearchResult {
   postIds: string[];
+  uids: string[];
   hasNextPage: boolean;
   lastPostTime: Date | null;
   totalCount: number;
+  nextPageLink: string | undefined;
+  currentPage: number;
+  totalPage: number;
 }
 
 @Injectable()
@@ -16,63 +20,87 @@ export class WeiboHtmlParser {
     try {
       const $ = cheerio.load(html);
 
-      const postIds = this.extractPostIds($);
+      const { postIds, uids } = this.extractPostsInfo($);
       const hasNextPage = this.hasNextPage($);
       const lastPostTime = this.extractLastPostTime($);
-      const totalCount = this.extractTotalCount($);
+      const totalCount = this.extractTotalCount(postIds);
+      const nextPageLink = this.extractNextPageLink($);
+      const currentPage = this.extractCurrentPage($);
+      const totalPage = this.extractTotalPage($);
+
       return {
         postIds,
+        uids,
         hasNextPage,
         lastPostTime,
         totalCount,
+        nextPageLink,
+        currentPage,
+        totalPage,
       };
     } catch (error) {
       return {
         postIds: [],
+        uids: [],
         hasNextPage: false,
         lastPostTime: null,
         totalCount: 0,
+        nextPageLink: undefined,
+        currentPage: 1,
+        totalPage: 0,
       };
     }
   }
 
-  private extractPostIds($: cheerio.CheerioAPI): string[] {
+  private extractPostsInfo($: cheerio.CheerioAPI): { postIds: string[]; uids: string[] } {
     const postIds: string[] = [];
+    const uids: string[] = [];
 
-    // 从详情链接中提取 mid，格式：//weibo.com/:uid/:mid
+    // 策略1（主）：从详情链接提取 mid 和 uid
+    // 格式：//weibo.com/:uid/:mid
     $('div.card').each((_index: number, element: any) => {
       const $card = $(element);
 
-      // 查找所有可能的详情链接
-      const detailLinks = $card.find('p.from a, div.func a[href*="/weibo.com/"]');
+      // 正确的选择器：div.from > a（不是 p.from a）
+      const detailLink = $card.find('div.from > a[href*="/weibo.com/"]').first();
+      const href = detailLink.attr('href');
 
-      detailLinks.each((_i: number, link: any) => {
-        const href = $(link).attr('href');
-        if (href) {
-          // 匹配格式：//weibo.com/:uid/:mid 或 //:uid/:mid
-          const match = href.match(/\/\/weibo\.com\/\d+\/([A-Za-z0-9]+)/);
-          if (match && match[1]) {
-            const mid = match[1];
-            // 过滤掉无效的 mid（太短或包含问号）
-            if (mid.length > 5 && !mid.includes('?') && !postIds.includes(mid)) {
-              postIds.push(mid);
-            }
+      if (href) {
+        // 匹配格式：//weibo.com/:uid/:mid
+        // 示例：//weibo.com/7838912856/Qb83goWjj?refer_flag=1001030103_
+        const match = href.match(/\/\/weibo\.com\/(\d+)\/([A-Za-z0-9]+)/);
+
+        if (match && match[1] && match[2]) {
+          const uid = match[1];
+          const mid = match[2];
+
+          // 去重检查
+          if (!postIds.includes(mid)) {
+            postIds.push(mid);
+            uids.push(uid);
           }
         }
-      });
+      }
     });
 
-    // 如果上面的方法没有找到，尝试备用方法：从 action-data 或 mid 属性中提取
+    // 策略2（备用）：从 div[mid] 属性提取（数字型ID）
     if (postIds.length === 0) {
       $('div[action-type="feed_list_item"]').each((_index: number, element: any) => {
-        const mid = $(element).attr('mid');
+        const $item = $(element);
+        const mid = $item.attr('mid');
+
         if (mid && !postIds.includes(mid)) {
           postIds.push(mid);
+
+          // 尝试从用户链接提取 uid
+          const userLink = $item.find('div.avator a, a.name').first().attr('href');
+          const uidMatch = userLink?.match(/\/\/weibo\.com\/(\d+)/);
+          uids.push(uidMatch?.[1] || '');
         }
       });
     }
 
-    return [...new Set(postIds)];
+    return { postIds, uids };
   }
 
   private hasNextPage($: cheerio.CheerioAPI): boolean {
@@ -177,43 +205,53 @@ export class WeiboHtmlParser {
     return null;
   }
 
-  private extractTotalCount($: cheerio.CheerioAPI): number {
-    // 方法1：从顶部统计信息提取 "找到 XXX 条"
-    const countText = $('span.s-text2').first().text();
-    let match = countText.match(/找到\s*([\d,]+)\s*条/);
+  private extractTotalCount(postIds: string[]): number {
+    // 直接返回当前页抓取到的数量
+    return postIds.length;
+  }
 
+  private extractNextPageLink($: cheerio.CheerioAPI): string | undefined {
+    // 从 a.next 提取下一页链接
+    const nextLink = $('div.m-page a.next').attr('href');
+    if (nextLink) {
+      return nextLink.startsWith('http') ? nextLink : `https://s.weibo.com${nextLink}`;
+    }
+    return undefined;
+  }
+
+  private extractCurrentPage($: cheerio.CheerioAPI): number {
+    // 方法1：从 .pagenum 提取
+    const pageText = $('div.m-page .pagenum').first().text();
+    const match = pageText.match(/第(\d+)页/);
     if (match && match[1]) {
-      return Number.parseInt(match[1].replace(/,/g, ''), 10);
+      return Number.parseInt(match[1], 10);
     }
 
-    // 方法2：从分页信息推算总数（最大页码 × 每页数量）
-    const pageLinks = $('div.m-page ul li a');
+    // 方法2：从 .s-scroll 中查找 .cur 类
+    const curPageText = $('div.m-page .s-scroll li.cur a').text();
+    const curMatch = curPageText.match(/第(\d+)页/);
+    if (curMatch && curMatch[1]) {
+      return Number.parseInt(curMatch[1], 10);
+    }
+
+    return 1; // 默认第1页
+  }
+
+  private extractTotalPage($: cheerio.CheerioAPI): number {
     let maxPage = 0;
 
-    pageLinks.each((_i: number, link: any) => {
+    // 从分页列表中提取所有页码
+    $('div.m-page .s-scroll li a').each((_i: number, link: any) => {
       const text = $(link).text().trim();
-      const pageMatch = text.match(/第(\d+)页/);
-      if (pageMatch && pageMatch[1]) {
-        const page = Number.parseInt(pageMatch[1], 10);
+      const match = text.match(/第(\d+)页/);
+      if (match && match[1]) {
+        const page = Number.parseInt(match[1], 10);
         if (page > maxPage) {
           maxPage = page;
         }
       }
     });
 
-    // 如果找到最大页码，假设每页10-20条（这里用保守估计）
-    if (maxPage > 0) {
-      // 保守估计：最大页 × 10
-      // 实际可能更多，但至少能表明有数据
-      return maxPage * 10;
-    }
-
-    // 方法3：如果有微博卡片，至少返回卡片数量
-    const cardCount = $('div.card').length;
-    if (cardCount > 0) {
-      return cardCount;
-    }
-
-    return 0;
+    return maxPage;
   }
 }
