@@ -6,6 +6,7 @@ import type {
   MessageMetadata,
   RetryStrategy,
 } from './types.js';
+import { NoRetryError } from '@pro/workflow-core';
 
 /**
  * 消息处理函数类型
@@ -125,7 +126,7 @@ export class RabbitMQConsumer {
 
   private async handleError(
     msg: amqp.ConsumeMessage,
-    _error: Error,
+    error: Error,
     queueName: QueueName,
     retryStrategy: RetryStrategy,
     noAck: boolean,
@@ -142,6 +143,13 @@ export class RabbitMQConsumer {
     }
 
     const channel = this.connectionPool.getChannel();
+
+    // 如果是 NoRetryError，直接 nack 发送到死信队列，不重试
+    if (error instanceof NoRetryError) {
+      channel.nack(msg, false, false);
+      return;
+    }
+
     const retryCount = this.getRetryCount(msg);
 
     if (retryCount >= retryStrategy.maxRetries) {

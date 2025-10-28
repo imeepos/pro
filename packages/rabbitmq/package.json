@@ -32,6 +32,7 @@
   "dependencies": {
     "@pro/types": "workspace:*",
     "@pro/core": "workspace:*",
+    "@pro/workflow-core": "workspace:*",
     "amqplib": "^0.10.9"
   },
   "peerDependencies": {
