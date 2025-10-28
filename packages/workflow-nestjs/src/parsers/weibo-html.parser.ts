@@ -19,13 +19,18 @@ export class WeiboHtmlParser {
     try {
       // 检测登录失效：检查是否包含登录跳转链接
       if (html.includes('passport.weibo.com/sso/signin')) {
+        console.log('[WeiboHtmlParser] 检测到登录失效');
         throw new Error('LOGIN_EXPIRED');
       }
+
+      console.log(`[WeiboHtmlParser] 开始解析 HTML，长度: ${html.length}`);
 
       const $ = cheerio.load(html);
 
       const posts = this.extractPostsInfo($);
       const postIds = posts.map((p) => p.mid);
+
+      console.log(`[WeiboHtmlParser] 提取到 ${posts.length} 条微博`);
 
       // 从 posts 数组中找出最早的时间（即最后一条微博的时间）
       const lastPostTime = posts.reduce<Date | null>((earliest, post) => {
@@ -39,9 +44,16 @@ export class WeiboHtmlParser {
       const currentPage = this.extractCurrentPage($);
       const totalPage = this.extractTotalPage($);
 
+      console.log(`[WeiboHtmlParser] 分页信息: currentPage=${currentPage}, totalPage=${totalPage}, nextPageLink=${nextPageLink}`);
+
+      // 修复逻辑：只有在有 posts 且有 nextPageLink 时才认为有下一页
+      const hasNextPage = posts.length > 0 && !!nextPageLink && currentPage < totalPage;
+
+      console.log(`[WeiboHtmlParser] hasNextPage=${hasNextPage}`);
+
       return {
         posts,
-        hasNextPage: currentPage !== totalPage,
+        hasNextPage,
         lastPostTime,
         totalCount,
         nextPageLink,
@@ -53,6 +65,8 @@ export class WeiboHtmlParser {
       if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
         throw error;
       }
+
+      console.error('[WeiboHtmlParser] 解析失败:', error);
 
       // 其他解析错误返回空结果
       return {

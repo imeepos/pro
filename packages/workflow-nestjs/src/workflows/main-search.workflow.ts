@@ -243,39 +243,50 @@ export class MainSearchWorkflow {
       const html = await playwrightPage.content();
       const contentHash = createHash('md5').update(html).digest('hex');
 
-      const doc = await this.rawDataService.create({
-        sourceType: SourceType.WEIBO_KEYWORD_SEARCH,
-        sourceUrl: url,
-        rawContent: html,
-        metadata: {
-          keyword,
-          page,
-          timeWindow: window,
-          accountId: account.id,
-        },
-      });
+      // 先解析HTML，检查是否有数据
+      const parsed = this.htmlParser.parseSearchResultHtml(html);
 
-      const rawDataReadyEvent: RawDataReadyEvent = {
-        rawDataId: String(doc._id),
-        sourceType: SourceType.WEIBO_KEYWORD_SEARCH,
-        sourcePlatform: SourcePlatform.WEIBO,
-        sourceUrl: url,
-        contentHash,
-        metadata: {
-          keyword,
-          fileSize: Buffer.byteLength(html, 'utf-8'),
-        },
-        createdAt: new Date().toISOString(),
-      };
+      console.log(`[MainSearchWorkflow] 解析结果: posts数量=${parsed.posts.length}, hasNextPage=${parsed.hasNextPage}`);
 
-      await this.rabbitMQService.publish(
-        QUEUE_NAMES.RAW_DATA_READY,
-        rawDataReadyEvent
-      );
+      // 只有当解析到数据时才保存和发送MQ消息
+      if (parsed.posts.length > 0) {
+        const doc = await this.rawDataService.create({
+          sourceType: SourceType.WEIBO_KEYWORD_SEARCH,
+          sourceUrl: url,
+          rawContent: html,
+          metadata: {
+            keyword,
+            page,
+            timeWindow: window,
+            accountId: account.id,
+          },
+        });
+
+        const rawDataReadyEvent: RawDataReadyEvent = {
+          rawDataId: String(doc._id),
+          sourceType: SourceType.WEIBO_KEYWORD_SEARCH,
+          sourcePlatform: SourcePlatform.WEIBO,
+          sourceUrl: url,
+          contentHash,
+          metadata: {
+            keyword,
+            fileSize: Buffer.byteLength(html, 'utf-8'),
+          },
+          createdAt: new Date().toISOString(),
+        };
+
+        await this.rabbitMQService.publish(
+          QUEUE_NAMES.RAW_DATA_READY,
+          rawDataReadyEvent
+        );
+
+        console.log(`[MainSearchWorkflow] 已发送 ${parsed.posts.length} 条数据到 MQ`);
+      } else {
+        console.log(`[MainSearchWorkflow] 跳过空结果，不发送到 MQ`);
+      }
 
       await this.accountHealth.deductHealth(account.id, 1);
 
-      const parsed = this.htmlParser.parseSearchResultHtml(html);
       return {
         postIds: parsed.posts.map(p => p.mid),
         hasNextPage: parsed.hasNextPage,
