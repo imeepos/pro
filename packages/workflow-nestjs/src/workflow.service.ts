@@ -158,9 +158,12 @@ export class WorkflowService {
         return null;
       }
 
-      // 缓存 workflow 定义到 Redis
-      await this.redis.set(`workflow:slug:${slug}`, JSON.stringify(workflow.definition));
-      await this.redis.set(`workflow:${workflow.id}`, JSON.stringify(workflow.definition));
+      const definition = JSON.stringify(workflow.definition);
+      await this.redis
+        .pipeline()
+        .set(`workflow:slug:${slug}`, definition)
+        .set(`workflow:${workflow.id}`, definition)
+        .exec();
 
       return {
         workflow: this.convertFromWorkflowDefinition(workflow.definition),
@@ -219,27 +222,29 @@ export class WorkflowService {
     let currentWorkflow = workflow;
 
     try {
-      // 循环执行工作流，每次迭代使用独立事务更新状态
+      // 执行工作流，仅通过 Redis 维护实时状态
       while (currentWorkflow.state === 'pending' || currentWorkflow.state === 'running') {
         currentWorkflow = await executeAst(currentWorkflow);
 
         const { progress } = this.calculateMetrics(currentWorkflow);
 
-        // 每次迭代使用独立事务更新状态
-        await useTranslation(async (manager) => {
-          savedState.metadata = toJson(currentWorkflow);
-          savedState.status = currentWorkflow.state;
-          savedState.progress = progress;
-
-          await manager.save(savedState);
-        });
+        // 更新 Redis 缓存以支持实时监控（轻量级）
+        await this.redis.set(`workflow:execution:state:${savedExecution.id}`, JSON.stringify({
+          id: savedState.id,
+          status: currentWorkflow.state,
+          progress,
+          startedAt: savedState.createdAt
+        }), 3600);
       }
 
       const result = currentWorkflow;
-      const { metrics } = this.calculateMetrics(result);
+      const { metrics, progress } = this.calculateMetrics(result);
 
-      // 完成阶段：保存最终结果
+      // 完成阶段：保存最终结果（包含完整状态）
       await useTranslation(async (manager) => {
+        savedState.metadata = toJson(result);
+        savedState.status = result.state;
+        savedState.progress = progress;
         savedState.completedAt = new Date();
         await manager.save(savedState);
 
@@ -341,27 +346,29 @@ export class WorkflowService {
     let currentWorkflow = workflow;
 
     try {
-      // 循环执行工作流，每次迭代使用独立事务更新状态
+      // 执行工作流，仅通过 Redis 维护实时状态
       while (currentWorkflow.state === 'pending' || currentWorkflow.state === 'running') {
         currentWorkflow = await executeAst(currentWorkflow);
 
         const { progress } = this.calculateMetrics(currentWorkflow);
 
-        // 每次迭代使用独立事务更新状态
-        await useTranslation(async (manager) => {
-          state.metadata = toJson(currentWorkflow);
-          state.status = currentWorkflow.state;
-          state.progress = progress;
-
-          await manager.save(state);
-        });
+        // 更新 Redis 缓存以支持实时监控（轻量级）
+        await this.redis.set(`workflow:execution:state:${execution.id}`, JSON.stringify({
+          id: state.id,
+          status: currentWorkflow.state,
+          progress,
+          startedAt: state.createdAt
+        }), 3600);
       }
 
       const result = currentWorkflow;
-      const { metrics } = this.calculateMetrics(result);
+      const { metrics, progress } = this.calculateMetrics(result);
 
-      // 完成阶段：保存最终结果
+      // 完成阶段：保存最终结果（包含完整状态）
       await useTranslation(async (manager) => {
+        state.metadata = toJson(result);
+        state.status = result.state;
+        state.progress = progress;
         state.completedAt = new Date();
         await manager.save(state);
 
