@@ -57,8 +57,13 @@ export const createDatabaseConfig = (): DataSourceOptions => {
       entities,
       synchronize: true,
       logging: false,
+      poolSize: 10,
       extra: {
         timezone: 'UTC',
+        max: 10,
+        min: 2,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
       },
     };
   }
@@ -73,11 +78,15 @@ let ds: DataSource | null = null;
 export const useDataSource = async () => {
   if (ds) {
     if (ds.isInitialized) return ds;
+    const start = Date.now();
     await ds.initialize();
+    console.log(`[DataSource] initialized in ${Date.now() - start}ms`);
     return ds;
   }
+  const start = Date.now();
   ds = createDataSource()
   await ds.initialize();
+  console.log(`[DataSource] created and initialized in ${Date.now() - start}ms`);
   return ds;
 }
 
