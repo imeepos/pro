@@ -16,6 +16,7 @@ export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
       return this.process(message)
     }, {
       messageTTL: 30 * 60 * 1000, // 30分钟TTL，匹配broker配置
+      deadLetterExchange: 'dlx.direct', // 配置死信交换机，nack 的消息进入 weibo_crawl_queue.dlq
     })
   }
 
