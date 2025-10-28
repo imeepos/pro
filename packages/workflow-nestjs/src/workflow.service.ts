@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 import { useEntityManager, useTranslation } from '@pro/entities';
 import { WorkflowEntity, WorkflowExecutionEntity, WorkflowStateEntity } from '@pro/entities';
-import { executeAst, fromJson, NodeJsonPayload, toJson, WorkflowGraphAst } from '@pro/workflow-core';
+import { executeAst, fromJson, NodeJsonPayload, toJson, WorkflowGraphAst, NoRetryError } from '@pro/workflow-core';
 import { WorkflowExecutionMetrics } from '@pro/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -303,6 +303,11 @@ export class WorkflowService {
         completedAt: savedState.completedAt
       }), 3600);
 
+      // 透传 NoRetryError，保持错误类型
+      if (error instanceof NoRetryError) {
+        throw error;
+      }
+
       throw new Error(`Workflow execution failed: ${errorMessage}`);
     }
   }
@@ -428,6 +433,11 @@ export class WorkflowService {
         error: errorMessage,
         completedAt: state.completedAt
       }), 3600);
+
+      // 透传 NoRetryError，保持错误类型
+      if (error instanceof NoRetryError) {
+        throw error;
+      }
 
       throw new Error(`Workflow resume failed: ${errorMessage}`);
     }
