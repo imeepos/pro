@@ -17,7 +17,7 @@ export class HtmlParserAstVisitor {
 
     try {
       const result = this.parser.parseSearchResultHtml(ast.html);
-      console.log(result)
+      console.log({result, html: ast.html})
       // 提取循环所需属性到顶层，便于条件边检查
       ast.hasNextPage = result.hasNextPage;
       ast.nextPageLink = result.nextPageLink;

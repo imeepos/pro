@@ -1,4 +1,3 @@
-export { WeiboModule } from './weibo.module.js'
 export {
   WeiboStatusService,
   type BatchFetchOptions,

@@ -8,7 +8,6 @@ import {
   WeiboPostEntity,
   WeiboInteractionEntity,
 } from '@pro/entities';
-import { WeiboModule as CoreWeiboModule } from '@pro/weibo';
 import { WeiboAccountService } from './weibo-account.service';
 import { WeiboAuthService } from './weibo-auth.service';
 import { WeiboHealthCheckService } from './weibo-health-check.service';
@@ -46,8 +45,7 @@ import { ConfigService } from '@nestjs/config';
       WeiboInteractionEntity,
     ]),
     forwardRef(() => ScreensModule),
-    AuthModule,
-    CoreWeiboModule,
+    AuthModule
   ],
   controllers: [],
   providers: [

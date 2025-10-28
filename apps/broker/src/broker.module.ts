@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule, createLoggerConfig } from '@pro/logger-nestjs';
-import { WeiboModule as CoreWeiboModule } from '@pro/weibo';
 
 // 核心服务导入 - 每个导入都有其存在的意义
 import { SimpleIntervalScheduler } from './weibo/simple-interval-scheduler.service';
@@ -44,8 +43,6 @@ import { DlqConsumer } from './consumers/dlq.consumer';
 
     // 时间之舞 - 定时任务的舞台
     ScheduleModule.forRoot(),
-
-    CoreWeiboModule,
   ],
 
   // 服务之群 - 业务逻辑的守护者
