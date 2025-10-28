@@ -3,6 +3,7 @@ import { RabbitMQService } from '@pro/rabbitmq';
 import { SubTaskMessage } from './types';
 import { runWeiBoKeywordSearchWorkflow } from '@pro/workflow-nestjs';
 import { root } from '@pro/core';
+import { NoRetryError } from '@pro/workflow-core';
 
 @Injectable()
 export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
@@ -27,8 +28,8 @@ export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
   private async process(message: SubTaskMessage): Promise<void> {
     this.logger.log(`收到消息`, message)
     if (!message?.keyword || !message?.start) {
-      this.logger.warn('忽略缺少必需字段的消息', { keyword: message?.keyword, start: message?.start });
-      return;
+      this.logger.warn('消息缺少必需字段，发送到死信队列', { keyword: message?.keyword, start: message?.start });
+      throw new NoRetryError(`消息缺少必需字段: keyword=${message?.keyword}, start=${message?.start}`);
     }
 
     const startedAt = Date.now();
