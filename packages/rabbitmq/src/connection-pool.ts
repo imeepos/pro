@@ -256,6 +256,9 @@ export class ConnectionPool {
       this.healthCheckTimer = null;
     }
 
+    this.reconnectAttempts = 0;
+    this.reconnectStartedAt = 0;
+
     this.eventListeners.clear();
 
     try {
