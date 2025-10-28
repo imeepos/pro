@@ -1,7 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common'
-import { HttpService } from '@nestjs/axios'
-import { isAxiosError } from 'axios'
-import { firstValueFrom } from 'rxjs'
+import { Injectable } from '@pro/core'
+import axios, { isAxiosError, type AxiosInstance } from 'axios'
 
 import { RawDataSourceService, type RawDataSourceDoc } from '@pro/mongodb'
 import { SourceType, type CreateRawDataSourceDto } from '@pro/types'
@@ -14,12 +12,11 @@ import { WeiboRequestError } from './weibo.error.js'
 
 @Injectable()
 export class WeiboStatusService {
-  private readonly logger = new Logger(WeiboStatusService.name)
+  private readonly axios: AxiosInstance
 
-  constructor(
-    private readonly httpService: HttpService,
-    private readonly rawDataSourceService: RawDataSourceService
-  ) {}
+  constructor(private readonly rawDataSourceService: RawDataSourceService) {
+    this.axios = axios.create()
+  }
 
   async fetchStatusDetails(
     statusIds: readonly string[],
@@ -62,11 +59,6 @@ export class WeiboStatusService {
 
           if (onError) {
             await onError(statusId, enriched)
-          } else {
-            this.logger.warn(`Failed to fetch Weibo status detail`, {
-              statusId,
-              reason: enriched.message
-            })
           }
         }
       }
@@ -92,14 +84,12 @@ export class WeiboStatusService {
     ])
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<WeiboStatusDetailResponse>('ajax/statuses/show', {
-          headers: context.headers,
-          params,
-          baseURL: context.baseUrl,
-          timeout: context.timeout
-        })
-      )
+      const response = await this.axios.get<WeiboStatusDetailResponse>('ajax/statuses/show', {
+        headers: context.headers,
+        params,
+        baseURL: context.baseUrl,
+        timeout: context.timeout
+      })
 
       const payload = response.data
 
@@ -142,14 +132,12 @@ export class WeiboStatusService {
     ])
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<WeiboStatusLikeShowResponse>('ajax/statuses/likeShow', {
-          headers: context.headers,
-          params,
-          baseURL: context.baseUrl,
-          timeout: context.timeout
-        })
-      )
+      const response = await this.axios.get<WeiboStatusLikeShowResponse>('ajax/statuses/likeShow', {
+        headers: context.headers,
+        params,
+        baseURL: context.baseUrl,
+        timeout: context.timeout
+      })
 
       const payload = response.data
 
@@ -213,14 +201,12 @@ export class WeiboStatusService {
     }
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<WeiboBuildCommentsResponse>('ajax/statuses/buildComments', {
-          headers: context.headers,
-          params,
-          baseURL: context.baseUrl,
-          timeout: context.timeout
-        })
-      )
+      const response = await this.axios.get<WeiboBuildCommentsResponse>('ajax/statuses/buildComments', {
+        headers: context.headers,
+        params,
+        baseURL: context.baseUrl,
+        timeout: context.timeout
+      })
 
       const payload = response.data
 

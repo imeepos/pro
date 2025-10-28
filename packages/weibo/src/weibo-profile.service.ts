@@ -1,7 +1,5 @@
-import { Injectable } from '@nestjs/common'
-import { HttpService } from '@nestjs/axios'
-import { isAxiosError } from 'axios'
-import { firstValueFrom } from 'rxjs'
+import { Injectable } from '@pro/core'
+import axios, { isAxiosError, type AxiosInstance } from 'axios'
 
 import { resolveWeiboRequestOptions, type WeiboRequestOptions } from './weibo.options.js'
 import { WeiboRequestError } from './weibo.error.js'
@@ -11,7 +9,11 @@ import type { WeiboProfileInfoResponse } from './types/profile-info.js'
 
 @Injectable()
 export class WeiboProfileService {
-  constructor(private readonly httpService: HttpService) {}
+  private readonly axios: AxiosInstance
+
+  constructor() {
+    this.axios = axios.create()
+  }
 
   async fetchProfileInfo(
     uid: string,
@@ -67,14 +69,12 @@ export class WeiboProfileService {
     ])
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<T>(endpoint, {
-          headers: context.headers,
-          params,
-          baseURL: context.baseUrl,
-          timeout: context.timeout
-        })
-      )
+      const response = await this.axios.get<T>(endpoint, {
+        headers: context.headers,
+        params,
+        baseURL: context.baseUrl,
+        timeout: context.timeout
+      })
 
       const payload = response.data
 

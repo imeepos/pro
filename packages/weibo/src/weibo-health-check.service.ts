@@ -1,7 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common'
-import { HttpService } from '@nestjs/axios'
-import { AxiosError } from 'axios'
-import { firstValueFrom } from 'rxjs'
+import { Injectable } from '@pro/core'
+import axios, { AxiosError, type AxiosInstance } from 'axios'
 
 import { WeiboAccountStatus } from '@pro/types'
 
@@ -24,9 +22,11 @@ export interface WeiboAccountHealthEntry {
 
 @Injectable()
 export class WeiboHealthCheckService {
-  private readonly logger = new Logger(WeiboHealthCheckService.name)
+  private readonly axios: AxiosInstance
 
-  constructor(private readonly http: HttpService) {}
+  constructor() {
+    this.axios = axios.create()
+  }
 
   async checkAccountHealth(
     accountId: number,
@@ -55,26 +55,14 @@ export class WeiboHealthCheckService {
     }
 
     try {
-      const response = await firstValueFrom(
-        this.http.get(url.toString(), {
-          headers: this.createRequestHeaders(cookieHeader, weiboUid),
-          timeout: 30000,
-          validateStatus: () => true
-        })
-      )
+      const response = await this.axios.get(url.toString(), {
+        headers: this.createRequestHeaders(cookieHeader, weiboUid),
+        timeout: 30000,
+        validateStatus: () => true
+      })
 
       const assessed = this.assessResponse(response)
       const isValid = assessed.status === WeiboAccountStatus.ACTIVE
-
-      if (!isValid) {
-        this.logger.debug('Weibo 健康检查判定为异常', {
-          accountId,
-          uid: weiboUid ?? null,
-          status: assessed.status,
-          errorType: assessed.errorType,
-          reason: assessed.errorMessage
-        })
-      }
 
       return {
         accountId,
@@ -86,13 +74,6 @@ export class WeiboHealthCheckService {
       }
     } catch (error) {
       const fault = this.resolveNetworkFault(error)
-
-      this.logger.warn('Weibo 健康检查请求失败', {
-        accountId,
-        uid: weiboUid ?? null,
-        errorType: fault.errorType,
-        reason: fault.errorMessage
-      })
 
       return {
         accountId,
