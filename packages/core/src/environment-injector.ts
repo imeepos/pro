@@ -577,6 +577,11 @@ export class EnvironmentInjector extends Injector {
       return resolveForwardRefCached(provider.useClass);
     }
 
+    // useFactory: 检查 provider.provide 本身是否是带有 @OnInit() 元数据的类
+    if ('useFactory' in provider && typeof provider.provide === 'function') {
+      return provider.provide;
+    }
+
     // ConstructorProvider（直接使用 provide 作为类）
     if (
       !('useValue' in provider) &&
@@ -595,7 +600,7 @@ export class EnvironmentInjector extends Injector {
    */
   private async initInstance(instance: any): Promise<void> {
     try {
-      await instance.onModelInit();
+      await instance.onInit();
     } catch (error) {
       // 静默处理错误，不影响其他实例初始化
       // 生产环境可记录日志
