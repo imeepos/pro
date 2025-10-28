@@ -277,7 +277,7 @@ export class MainSearchWorkflow {
 
       const parsed = this.htmlParser.parseSearchResultHtml(html);
       return {
-        postIds: parsed.postIds,
+        postIds: parsed.posts.map(p => p.mid),
         hasNextPage: parsed.hasNextPage,
         lastPostTime: parsed.lastPostTime,
       };

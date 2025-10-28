@@ -18,7 +18,7 @@ export class HtmlParserAstVisitor {
     try {
       const result = this.parser.parseSearchResultHtml(ast.html);
       console.log(`---------------------`)
-      console.log(result)
+      console.log('[HtmlParserAst] Parse result:', result)
       console.log(`---------------------`)
 
       // 提取循环所需属性到顶层，便于条件边检查
@@ -33,12 +33,29 @@ export class HtmlParserAstVisitor {
         const lastPostTime = new Date(result.lastPostTime);
         const startDate = new Date(ast.startDate);
         const timeGapMs = lastPostTime.getTime() - startDate.getTime();
-        const isMaxPage = result.currentPage >= 50;
+        const isMaxPage = result.currentPage === 50;
         const hasTimeGap = timeGapMs >= 1 * 60 * 60 * 1000;
 
         if (isMaxPage || (!result.hasNextPage && hasTimeGap)) {
           ast.hasNextSearch = true;
           ast.nextEndDate = lastPostTime;
+          console.log('[HtmlParserAst] Time window switch triggered:', {
+            isMaxPage,
+            hasNextPage: result.hasNextPage,
+            hasTimeGap,
+            timeGapMs,
+            nextEndDate: lastPostTime.toISOString(),
+            startDate: startDate.toISOString()
+          });
+        } else {
+          console.log('[HtmlParserAst] Time window switch NOT triggered:', {
+            isMaxPage,
+            hasNextPage: result.hasNextPage,
+            hasTimeGap,
+            timeGapMs,
+            lastPostTime: lastPostTime.toISOString(),
+            startDate: startDate.toISOString()
+          });
         }
       }
 
