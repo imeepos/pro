@@ -222,16 +222,9 @@ export class WorkflowService {
       let currentWorkflow = workflow;
 
       try {
-        console.log(`[WorkflowService] Starting execution of workflow ${workflowId}`);
-        console.log(`[WorkflowService] Initial workflow state: ${currentWorkflow.state}`);
-        console.log(`[WorkflowService] Workflow nodes:`, currentWorkflow.nodes.map(n => ({ id: n.id, type: n.type, state: n.state })));
-
         // 循环执行工作流，每次迭代后更新数据库状态
-        console.log(`[WorkflowService] Entering execution loop...`);
         while (currentWorkflow.state === 'pending' || currentWorkflow.state === 'running') {
-          console.log(`[WorkflowService] Loop iteration, state: ${currentWorkflow.state}`);
           currentWorkflow = await executeAst(currentWorkflow);
-          console.log(`[WorkflowService] Iteration complete, new state: ${currentWorkflow.state}`);
 
           // 每次执行后计算并更新状态
           const { progress } = this.calculateMetrics(currentWorkflow);
@@ -243,11 +236,9 @@ export class WorkflowService {
           // 实时更新到数据库
           await manager.save(savedState);
 
-          console.log(`[WorkflowService] Progress: ${progress}%, status: ${currentWorkflow.state}`);
         }
 
         const result = currentWorkflow;
-        console.log(`[WorkflowService] Workflow ${workflowId} executed successfully`);
 
         // 计算最终指标
         const { metrics } = this.calculateMetrics(result);
@@ -280,7 +271,6 @@ export class WorkflowService {
         return { execution: savedExecution, state: savedState, result };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[WorkflowService] Workflow ${workflowId} execution failed:`, errorMessage);
 
         // 保存当前工作流状态（使用已经部分执行的工作流）
         const { metrics, progress } = this.calculateMetrics(currentWorkflow);
@@ -358,8 +348,6 @@ export class WorkflowService {
       let currentWorkflow = workflow;
 
       try {
-        console.log(`[WorkflowService] Resuming execution of workflow ${execution.workflowId}`);
-
         // 循环执行工作流，每次迭代后更新数据库状态
         while (currentWorkflow.state === 'pending' || currentWorkflow.state === 'running') {
           currentWorkflow = await executeAst(currentWorkflow);
@@ -373,12 +361,9 @@ export class WorkflowService {
 
           // 实时更新到数据库
           await manager.save(state);
-
-          console.log(`[WorkflowService] Resume Progress: ${progress}%, status: ${currentWorkflow.state}`);
         }
 
         const result = currentWorkflow;
-        console.log(`[WorkflowService] Workflow ${execution.workflowId} resumed successfully`);
 
         // 计算最终指标
         const { metrics } = this.calculateMetrics(result);

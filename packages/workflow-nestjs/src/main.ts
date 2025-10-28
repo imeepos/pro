@@ -44,7 +44,6 @@ export async function runWorkflow(keyword: string, startDate: Date) {
         return state
 
     } catch (error) {
-        console.error('Workflow execution failed:', error);
         throw error;
     }
 }
@@ -145,9 +144,6 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
                 createdBy: 'system',
             }
         );
-
-        console.log(`Workflow created with ID: ${savedWorkflow.id}`);
-        console.log(`Slug: ${savedWorkflow.slug}`);
 
         // 返回包含元数据的对象
         return {
