@@ -3,7 +3,7 @@ import "dotenv/config"
 
 console.log('[main] Starting imports...');
 
-import { HtmlParserAst, PlaywrightAst, useHandlers, WeiboAccountAst, WeiboSearchUrlBuilderAst, WorkflowGraphAst } from "@pro/workflow-core";
+import { HtmlParserAst, PlaywrightAst, useHandlers, WeiboAccountAst, WeiboSearchUrlBuilderAst, WorkflowGraphAst, MqPublisherAst } from "@pro/workflow-core";
 console.log('[main] Imported workflow-core');
 
 import { UserProfileVisitor } from "./visitors/user-profile.visitor";
@@ -26,6 +26,11 @@ console.log('[main] Imported WeiboAccountAstVisitor');
 
 import { HtmlParserAstVisitor } from "./HtmlParserAstVisitor";
 console.log('[main] Imported HtmlParserAstVisitor');
+
+import { MqPublisherAstVisitor } from "./MqPublisherAstVisitor";
+import { QUEUE_NAMES } from "@pro/types";
+import { RabbitMQService } from "@pro/rabbitmq";
+console.log('[main] Imported MqPublisherAstVisitor');
 console.log('[main] All imports completed');
 
 /**
@@ -40,8 +45,11 @@ export async function runWorkflow() {
         WeiboSearchUrlBuilderAstVisitor,
         PlaywrightAstVisitor,
         WeiboAccountAstVisitor,
-        HtmlParserAstVisitor
+        HtmlParserAstVisitor,
+        MqPublisherAstVisitor
     ]);
+    const mq = root.get(RabbitMQService)
+    await mq.onModuleInit();
     console.log('[runWorkflow] Handlers registered');
 
     console.log('[runWorkflow] Getting WorkflowService from root container...');
@@ -103,13 +111,32 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
     const playwright = new PlaywrightAst();
     const account = new WeiboAccountAst();
     const htmlParserAst = new HtmlParserAst()
-    
+    const mqPublisher = new MqPublisherAst()
+    mqPublisher.queue = QUEUE_NAMES.WEIBO_LIST_CRAWL;
+
     // 构建 workflow 图
     const workflow = new WorkflowGraphAst()
         .addNode(urlBuilder)
         .addNode(playwright)
         .addNode(account)
         .addNode(htmlParserAst)
+        .addNode(mqPublisher)
+        .addEdge({
+            from: htmlParserAst.id,
+            to: mqPublisher.id,
+            fromProperty: 'result',
+            toProperty: 'event'
+        })
+        .addEdge({
+            from: htmlParserAst.id,
+            to: playwright.id,
+            fromProperty: "nextPageLink",
+            toProperty: 'url',
+            condition: {
+                property: "hasNextPage",
+                value: true
+            }
+        })
         .addEdge({
             from: playwright.id,
             to: htmlParserAst.id,

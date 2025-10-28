@@ -6,9 +6,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import type { WorkflowDefinition } from '@pro/types';
 import { WorkflowExecutionEntity } from './workflow-execution.entity.js';
 import { Entity } from './decorator.js';
+import { type NodeJsonPayload } from '@pro/workflow-core';
 
 /**
  * 工作流定义实体
@@ -39,7 +39,7 @@ export class WorkflowEntity {
 
   /** 工作流核心定义：节点、边、配置 */
   @Column({ type: 'jsonb' })
-  definition!: WorkflowDefinition;
+  definition!: NodeJsonPayload;
 
   /** 创建者标识 */
   @Column({ type: 'varchar', length: 64, nullable: true, name: 'created_by' })

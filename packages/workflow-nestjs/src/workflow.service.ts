@@ -2,8 +2,8 @@ import { Inject, Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 import { useEntityManager, useTranslation } from '@pro/entities';
 import { WorkflowEntity, WorkflowExecutionEntity, WorkflowStateEntity } from '@pro/entities';
-import { executeAst, fromJson, toJson, WorkflowGraphAst } from '@pro/workflow-core';
-import { WorkflowDefinition, WorkflowExecutionMetrics } from '@pro/types';
+import { executeAst, fromJson, NodeJsonPayload, toJson, WorkflowGraphAst } from '@pro/workflow-core';
+import { WorkflowExecutionMetrics } from '@pro/types';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -26,7 +26,7 @@ export interface WorkflowWithMetadata {
 
 @Injectable()
 export class WorkflowService {
-  constructor(@Inject(RedisClient) private readonly redis: RedisClient) {}
+  constructor(@Inject(RedisClient) private readonly redis: RedisClient) { }
 
   /**
    * 从 WorkflowGraphAst 计算执行指标
@@ -500,62 +500,14 @@ export class WorkflowService {
   /**
    * 将WorkflowGraphAst转换为WorkflowDefinition
    */
-  private convertToWorkflowDefinition(workflow: WorkflowGraphAst): WorkflowDefinition {
-    return {
-      version: 1,
-      nodes: workflow.nodes.map(node => ({
-        id: node.id,
-        key: node.type,
-        title: node.type, // 可以从node的其他属性获取更好的标题
-        kind: node.type as any, // 需要根据实际的WorkflowNodeKind映射
-        config: {
-          schema: {},
-          values: toJson(node)
-        },
-        metadata: {}
-      })),
-      edges: workflow.edges.map(edge => ({
-        id: `${edge.from}-${edge.to}`,
-        sourceId: edge.from,
-        targetId: edge.to,
-        sourcePort: edge.fromProperty || null,
-        targetPort: edge.toProperty || null,
-        condition: edge.condition || null
-      }))
-    };
+  private convertToWorkflowDefinition(workflow: WorkflowGraphAst) {
+    return toJson(workflow);
   }
 
   /**
    * 从WorkflowDefinition重建WorkflowGraphAst
    */
-  private convertFromWorkflowDefinition(definition: WorkflowDefinition): WorkflowGraphAst {
-    const workflow = new WorkflowGraphAst();
-
-    // 重建nodes
-    definition.nodes.forEach(nodeDef => {
-      const node = fromJson(nodeDef.config.values);
-      workflow.addNode(node);
-    });
-
-    // 重建edges
-    definition.edges.forEach(edgeDef => {
-      if (edgeDef.sourcePort && edgeDef.targetPort) {
-        workflow.addEdge({
-          from: edgeDef.sourceId,
-          to: edgeDef.targetId,
-          fromProperty: edgeDef.sourcePort,
-          toProperty: edgeDef.targetPort,
-          ...(edgeDef.condition && { condition: edgeDef.condition as any })
-        });
-      } else {
-        workflow.addEdge({
-          from: edgeDef.sourceId,
-          to: edgeDef.targetId,
-          ...(edgeDef.condition && { condition: edgeDef.condition as any })
-        });
-      }
-    });
-
-    return workflow;
+  private convertFromWorkflowDefinition(definition: NodeJsonPayload): WorkflowGraphAst {
+    return fromJson(definition)
   }
 }

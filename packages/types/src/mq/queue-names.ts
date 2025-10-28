@@ -9,6 +9,9 @@ export const QUEUE_NAMES = {
   /** Broker/API → Crawler: 触发爬虫任务 */
   CRAWL_TASK: 'weibo_crawl_queue',
 
+  // 微博详情列表采集
+  WEIBO_LIST_CRAWL: `weibo_list_crawl_queue`,
+
   /** SearchCrawler → DetailCrawler: 触发微博详情采集 */
   WEIBO_DETAIL_CRAWL: 'weibo_detail_crawl_queue',
 

@@ -21,7 +21,6 @@ export class WeiboHtmlParser {
       const $ = cheerio.load(html);
 
       const { postIds, uids } = this.extractPostsInfo($);
-      const hasNextPage = this.hasNextPage($);
       const lastPostTime = this.extractLastPostTime($);
       const totalCount = this.extractTotalCount(postIds);
       const nextPageLink = this.extractNextPageLink($);
@@ -31,7 +30,7 @@ export class WeiboHtmlParser {
       return {
         postIds,
         uids,
-        hasNextPage,
+        hasNextPage: currentPage !== totalPage,
         lastPostTime,
         totalCount,
         nextPageLink,
@@ -101,22 +100,6 @@ export class WeiboHtmlParser {
     }
 
     return { postIds, uids };
-  }
-
-  private hasNextPage($: cheerio.CheerioAPI): boolean {
-    const nextPageLink = $('a.next');
-    if (nextPageLink.length > 0) {
-      return true;
-    }
-
-    const pageLinks = $('div.m-page a');
-    if (pageLinks.length > 0) {
-      const lastLink = pageLinks.last();
-      const text = lastLink.text().trim();
-      return text === '下一页' || text.includes('next');
-    }
-
-    return false;
   }
 
   private extractLastPostTime($: cheerio.CheerioAPI): Date | null {

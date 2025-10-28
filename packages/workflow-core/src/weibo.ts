@@ -26,7 +26,7 @@ export class MqConsumerAst extends Ast {
 
 @Node()
 export class MqPublisherAst extends Ast {
-    @Input() queue: string | undefined;
+    @Input() queue: string = `workflow`;
     @Input() event: any;
     type: `MqPublisherAst` = `MqPublisherAst`
 }
@@ -46,12 +46,12 @@ export class WeiboAccountAst extends Ast {
 
 @Node()
 export class WeiboSearchUrlBuilderAst extends Ast {
-  @Input() keyword!: string;
-  @Input() start!: Date;
-  @Input() end!: Date;
-  @Input() page?: number;
-  
-  @Output() url!: string;
+    @Input() keyword!: string;
+    @Input() start!: Date;
+    @Input() end!: Date;
+    @Input() page?: number;
 
-  type = 'WeiboSearchUrlBuilderAst' as const;
+    @Output() url!: string;
+
+    type = 'WeiboSearchUrlBuilderAst' as const;
 }

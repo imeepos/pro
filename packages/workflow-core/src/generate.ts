@@ -3,7 +3,7 @@ import { Ast } from "./ast";
 import { INode } from "./types";
 import { NODE, INPUT, OUTPUT } from "./decorator";
 
-type NodeJsonPayload = Omit<Partial<INode>, 'type'> & Record<string, unknown> & {
+export type NodeJsonPayload = Omit<Partial<INode>, 'type'> & Record<string, unknown> & {
     type: string;
 };
 

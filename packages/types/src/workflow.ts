@@ -40,11 +40,6 @@ export interface WorkflowEdgeDefinition {
   condition?: Record<string, unknown> | null;
 }
 
-export interface WorkflowDefinition {
-  version: number;
-  nodes: WorkflowNodeDefinition[];
-  edges: WorkflowEdgeDefinition[];
-}
 
 export enum WorkflowExecutionStatus {
   QUEUED = 'QUEUED',
@@ -76,7 +71,7 @@ export interface Workflow {
   description?: string | null;
   tags: string[];
   revision: number;
-  definition: WorkflowDefinition;
+  definition: any;
   createdAt: Date;
   updatedAt: Date;
   createdBy?: string | null;
