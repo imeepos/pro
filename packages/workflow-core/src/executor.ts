@@ -107,22 +107,11 @@ export class WorkflowExecutorVisitor {
 
             // 🔑 节点执行完成后，将满足条件的下游节点重置为 pending
             const outgoingEdges = edges.filter(e => e.from === node.id);
-            console.log(`[Executor] Node ${resultNode.type} completed with state: ${resultNode.state}, checking ${outgoingEdges.length} outgoing edges`);
 
             outgoingEdges.forEach(edge => {
                 // 如果边有条件，检查条件是否满足
                 if (edge.condition) {
                     const actualValue = (resultNode as any)[edge.condition.property];
-                    const targetNode = workflowNodes.find(n => n.id === edge.to);
-                    console.log(`[Executor] Conditional edge check:`, {
-                        from: resultNode.type,
-                        to: targetNode?.type,
-                        condition: edge.condition.property,
-                        expectedValue: edge.condition.value,
-                        actualValue: actualValue,
-                        satisfied: actualValue === edge.condition.value
-                    });
-
                     if (actualValue !== edge.condition.value) {
                         return; // 条件不满足，跳过失效
                     }
@@ -131,7 +120,6 @@ export class WorkflowExecutorVisitor {
                 // 无条件边或条件满足的边，失效目标节点
                 const downstream = workflowNodes.find(n => n.id === edge.to);
                 if (downstream) {
-                    console.log(`[Executor] Resetting downstream node ${downstream.type} (${downstream.id}) to pending`);
                     downstream.state = 'pending';
                 }
             });
@@ -193,17 +181,7 @@ export class WorkflowExecutorVisitor {
             // 🔑 关键：如果是条件边，检查条件是否满足
             if (edge.condition) {
                 if (!sourceNode || sourceNode.state !== 'success') return;
-
                 const actualValue = (sourceNode as any)[edge.condition.property];
-                console.log(`[Executor] Data assignment - conditional edge:`, {
-                    from: sourceNode.type,
-                    to: targetNode.type,
-                    condition: edge.condition.property,
-                    expectedValue: edge.condition.value,
-                    actualValue: actualValue,
-                    satisfied: actualValue === edge.condition.value
-                });
-
                 if (actualValue !== edge.condition.value) {
                     return; // 条件不满足，跳过此边的数据赋值
                 }
@@ -213,7 +191,6 @@ export class WorkflowExecutorVisitor {
             if (edge.fromProperty && edge.toProperty) {
                 const sourceValue = sourceOutputs[edge.fromProperty];
                 if (sourceValue !== undefined) {
-                    console.log(`[Executor] Data transfer: ${sourceNode?.type}.${edge.fromProperty} -> ${targetNode.type}.${edge.toProperty} = ${JSON.stringify(sourceValue).slice(0, 100)}`);
                     (targetNode as any)[edge.toProperty] = sourceValue;
                 }
             } else {
