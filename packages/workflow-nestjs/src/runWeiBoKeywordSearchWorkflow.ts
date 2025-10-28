@@ -11,7 +11,6 @@ import { WeiboAccountAstVisitor } from "./WeiboAccountAstVisitor";
 import { HtmlParserAstVisitor } from "./HtmlParserAstVisitor";
 import { MqPublisherAstVisitor } from "./MqPublisherAstVisitor";
 import { QUEUE_NAMES } from "@pro/types";
-import { RabbitMQService } from "@pro/rabbitmq";
 
 /**
  * 运行 workflow 示例 - 使用单一版本架构 + 运行时状态追踪
@@ -25,8 +24,7 @@ export async function runWeiBoKeywordSearchWorkflow(keyword: string, startDate: 
         HtmlParserAstVisitor,
         MqPublisherAstVisitor
     ]);
-    const mq = root.get(RabbitMQService)
-    await mq.onModuleInit();
+    
     const workflowService = root.get(WorkflowService);
     try {
         // 尝试从数据库获取已存在的 workflow

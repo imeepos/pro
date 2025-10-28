@@ -7,12 +7,3 @@ export interface SubTaskMessage {
   metadata?: Record<string, unknown>;
   [key: string]: unknown;
 }
-
-export interface NormalizedTask {
-  taskId: number;
-  type: string;
-  keyword: string;
-  start: Date;
-  end: Date;
-  metadata: Record<string, unknown>;
-}

@@ -1,56 +1,55 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Inject, Logger } from '@nestjs/common';
-import { RabbitMQClient } from '@pro/rabbitmq';
-import { CrawlerServiceV2 } from './services/crawler-v2.service';
-import { RabbitConfig } from './config/crawler.config';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { RabbitMQClient, RabbitMQService } from '@pro/rabbitmq';
 import { SubTaskMessage } from './types';
+import { runWeiBoKeywordSearchWorkflow } from '@pro/workflow-nestjs';
+import { root } from '@pro/core';
 
 @Injectable()
 export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CrawlQueueConsumer.name);
   private client: RabbitMQClient | null = null;
 
-  constructor(
-    private readonly crawlerService: CrawlerServiceV2,
-    @Inject('RABBIT_CONFIG') private readonly config: RabbitConfig,
-  ) {}
+  constructor( ) {}
 
   async onModuleInit(): Promise<void> {
-    const queue = this.config.queues.crawl;
-    this.client = new RabbitMQClient({ url: this.config.url, queue });
-    await this.client.connect();
-    await this.client.consume(queue, (message: SubTaskMessage) => this.process(message));
-    this.logger.log(`Crawler queue ready: ${queue}`);
+    const rs = root.get(RabbitMQService)
+    await rs.onModuleInit()
+    rs.consume(`weibo_crawl_queue`, (message: SubTaskMessage, metadata)=>{
+      return this.process(message)
+    })
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.client?.isConnected()) {
-      await this.client.close();
-    }
+    const rs = root.get(RabbitMQService)
+    await rs.ngOnDestroy()
   }
 
   private async process(message: SubTaskMessage): Promise<void> {
-    if (typeof message?.taskId !== 'number') {
-      this.logger.warn('忽略缺少 taskId 的消息');
+    if (!message?.keyword || !message?.start) {
+      this.logger.warn('忽略缺少必需字段的消息', { keyword: message?.keyword, start: message?.start });
       return;
     }
 
     const startedAt = Date.now();
+    const keyword = message.keyword;
+    const startDate = typeof message.start === 'string' ? new Date(message.start) : message.start;
 
     try {
-      const result = await this.crawlerService.execute(message);
+      const state = await runWeiBoKeywordSearchWorkflow(keyword, startDate);
 
-      if (!result.success) {
-        throw new Error(result.error ?? '任务执行失败');
+      if (state.status === 'fail') {
+        throw new Error(state.errorMessage || 'Workflow 执行失败');
       }
 
-      this.logger.log(`任务完成: ${message.taskId}`, {
+      this.logger.log(`Workflow 执行完成: ${keyword}`, {
         durationMs: Date.now() - startedAt,
-        pageCount: result.pageCount,
-        notes: result.notes,
+        executionId: state.executionId,
+        status: state.status,
+        progress: state.progress,
       });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      this.logger.error(`任务失败: ${message.taskId}`, { error: detail });
+      this.logger.error(`Workflow 执行失败: ${keyword}`, { error: detail });
       throw error;
     }
   }
