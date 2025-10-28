@@ -17,13 +17,14 @@ export class HtmlParserAstVisitor {
 
     try {
       const result = this.parser.parseSearchResultHtml(ast.html);
-      console.log(`---------------------`)
-      console.log('[HtmlParserAst] Parse result:', result)
-      console.log(`---------------------`)
 
       // 提取循环所需属性到顶层，便于条件边检查
       ast.hasNextPage = result.hasNextPage;
       ast.nextPageLink = result.nextPageLink;
+
+      // 默认重置为 false，避免保留上一次的值
+      ast.hasNextSearch = false;
+      ast.nextEndDate = undefined;
 
       // 判断是否需要缩小日期范围继续搜索
       // 两种情况会触发：
@@ -39,23 +40,6 @@ export class HtmlParserAstVisitor {
         if (isMaxPage || (!result.hasNextPage && hasTimeGap)) {
           ast.hasNextSearch = true;
           ast.nextEndDate = lastPostTime;
-          console.log('[HtmlParserAst] Time window switch triggered:', {
-            isMaxPage,
-            hasNextPage: result.hasNextPage,
-            hasTimeGap,
-            timeGapMs,
-            nextEndDate: lastPostTime.toISOString(),
-            startDate: startDate.toISOString()
-          });
-        } else {
-          console.log('[HtmlParserAst] Time window switch NOT triggered:', {
-            isMaxPage,
-            hasNextPage: result.hasNextPage,
-            hasTimeGap,
-            timeGapMs,
-            lastPostTime: lastPostTime.toISOString(),
-            startDate: startDate.toISOString()
-          });
         }
       }
 

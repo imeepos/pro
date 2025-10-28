@@ -84,7 +84,7 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
             fromProperty: 'result',
             toProperty: 'event'
         })
-        // 分支1: 有下一页 → 继续爬取下一页
+        // 分支1: 有下一页 → 继续爬取下一页（直接使用 nextPageLink，不触发 urlBuilder）
         .addEdge({
             from: htmlParserAst.id,
             to: playwright.id,
@@ -156,7 +156,6 @@ export async function createWorkflow(): Promise<WorkflowWithMetadata> {
             tags: savedWorkflow.tags
         };
     } catch (error) {
-        console.error('Failed to create workflow:', error);
         throw error;
     }
 }
