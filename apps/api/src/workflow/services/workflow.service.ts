@@ -53,7 +53,7 @@ export class WorkflowService {
   ): Promise<WorkflowEntity> {
     return useEntityManager(async (m) => {
       const tags = input.tags?.filter(Boolean) ?? [];
-      const definition = input.definition as unknown as NodeJsonPayload;
+      const definition = input.definition as any;
       const workflowRepo = m.getRepository(WorkflowEntity);
 
       if (input.id) {
@@ -135,7 +135,7 @@ export class WorkflowService {
 
       const execution = executionRepo.create({
         workflowId: workflow.id,
-        status: 'pending' as IAstStates,
+        status: 'pending' as any,
         triggeredBy: actorId ?? 'system',
         context: input.context ?? null,
         metrics: null,
@@ -191,8 +191,8 @@ export class WorkflowService {
   }
 
   private hasDefinitionChanged(
-    previous: NodeJsonPayload,
-    next: NodeJsonPayload,
+    previous: any,
+    next: any,
   ): boolean {
     return JSON.stringify(previous) !== JSON.stringify(next);
   }
