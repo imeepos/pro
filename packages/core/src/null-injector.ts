@@ -25,4 +25,12 @@ export class NullInjector extends Injector {
   set(_providers: Provider[]): void {
     throw new Error(`NullInjector: No set method`)
   }
+
+  async init(): Promise<void> {
+    // NullInjector 无需初始化
+  }
+
+  async destroy(): Promise<void> {
+    // NullInjector 无需销毁
+  }
 }

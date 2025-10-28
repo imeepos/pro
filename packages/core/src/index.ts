@@ -19,7 +19,6 @@ import { EnvironmentInjector } from './environment-injector';
 import { Provider } from './provider';
 import { Injector } from './injector';
 import { NullInjector } from './null-injector';
-import { InjectionToken } from './injection-token';
 export {
   type Provider,
   type BaseProvider,
@@ -58,7 +57,8 @@ export {
   validateInjectOptionsConflicts,
   flagsToString,
 } from './internal-inject-flags';
-export { type OnDestroy, isOnDestroy } from './lifecycle';
+export { type OnDestroy, isOnDestroy, type onModelInit, isOnModelInit } from './lifecycle';
+export { OnInit, hasOnInitMetadata } from './on-init';
 export {
   forwardRef,
   ForwardRef,

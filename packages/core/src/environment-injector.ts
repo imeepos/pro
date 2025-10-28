@@ -9,11 +9,12 @@ import {
   convertInjectOptionsToFlags,
   hasFlag,
 } from './internal-inject-flags';
-import { isOnDestroy } from './lifecycle';
+import { isOnDestroy, isOnModelInit } from './lifecycle';
 import {
   resolveForwardRefCached,
   resolveForwardRefsInDeps,
 } from './forward-ref';
+import { hasOnInitMetadata } from './on-init';
 
 import { EnvironmentInjectorUtils } from './environment-injector-utils';
 
@@ -529,9 +530,83 @@ export class EnvironmentInjector extends Injector {
   }
 
   /**
+   * 初始化注入器，调用所有标记 @OnInit() 的服务的 onModelInit() 方法
+   *
+   * 策略：
+   * 1. 先初始化已实例化的服务（快速路径）
+   * 2. 扫描 providers 元数据，按需实例化标记 @OnInit() 的服务
+   *
+   * 优势：
+   * - 避免过早实例化：只创建标记 @OnInit() 的服务
+   * - 零运行时开销：基于编译时元数据
+   */
+  async init(): Promise<void> {
+    const initializedInstances = new Set<any>();
+
+    // 第一步：初始化已有实例
+    for (const instance of this.instances.values()) {
+      if (isOnModelInit(instance)) {
+        await this.initInstance(instance);
+        initializedInstances.add(instance);
+      }
+    }
+
+    // 第二步：扫描 providers，按需实例化标记 @OnInit() 的服务
+    for (const [token, providers] of this.providers.entries()) {
+      for (const provider of providers) {
+        const targetClass = this.extractClassFromProvider(provider);
+        if (targetClass && hasOnInitMetadata(targetClass)) {
+          // 按需实例化（利用缓存机制避免重复创建）
+          const instance = this.get(token);
+
+          // 避免重复初始化同一个实例
+          if (!initializedInstances.has(instance) && isOnModelInit(instance)) {
+            await this.initInstance(instance);
+            initializedInstances.add(instance);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * 从 Provider 中提取类定义
+   */
+  private extractClassFromProvider(provider: Provider): any {
+    if ('useClass' in provider) {
+      return resolveForwardRefCached(provider.useClass);
+    }
+
+    // ConstructorProvider（直接使用 provide 作为类）
+    if (
+      !('useValue' in provider) &&
+      !('useFactory' in provider) &&
+      !('useExisting' in provider) &&
+      typeof provider.provide === 'function'
+    ) {
+      return provider.provide;
+    }
+
+    return null;
+  }
+
+  /**
+   * 初始化单个实例
+   */
+  private async initInstance(instance: any): Promise<void> {
+    try {
+      await instance.onModelInit();
+    } catch (error) {
+      // 静默处理错误，不影响其他实例初始化
+      // 生产环境可记录日志
+      console.error('Error during instance initialization:', error);
+    }
+  }
+
+  /**
    * 销毁注入器，清理所有实例并调用 OnDestroy 生命周期钩子
    */
-  destroy(): void {
+  async destroy(): Promise<void> {
     if (this.isDestroyed) {
       return; // 防止重复销毁
     }
@@ -540,7 +615,7 @@ export class EnvironmentInjector extends Injector {
 
     // 销毁所有普通实例
     for (const instance of this.instances.values()) {
-      this.destroyInstance(instance);
+      await this.destroyInstance(instance);
     }
     // 清理所有数据结构
     this.instances.clear();
@@ -551,11 +626,11 @@ export class EnvironmentInjector extends Injector {
   /**
    * 销毁单个实例
    */
-  private destroyInstance(instance: any): void {
+  private async destroyInstance(instance: any): Promise<void> {
     try {
       // 检查是否实现了 OnDestroy 接口
       if (isOnDestroy(instance)) {
-        instance.ngOnDestroy();
+        await instance.onDestroy();
       }
     } catch (error) {
       // 吞没销毁过程中的错误，不影响其他实例的销毁
