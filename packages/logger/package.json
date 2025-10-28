@@ -1,7 +1,7 @@
 {
   "name": "@pro/logger",
   "version": "1.0.0",
-  "description": "Unified logging configuration for Pro monorepo",
+  "description": "Framework-agnostic Pino logger for Pro monorepo",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
