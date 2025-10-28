@@ -6,10 +6,20 @@ export interface OnDestroy {
   /**
    * 在实例销毁时调用的清理方法
    */
-  ngOnDestroy(): void;
+  onDestroy(): Promise<void>;
 }
 
 export function isOnDestroy(obj: any): obj is OnDestroy {
   if (!obj) return false;
-  return typeof obj.ngOnDestroy === 'function';
+  return typeof obj.onDestroy === 'function';
+}
+
+
+export interface onModelInit {
+  onModelInit(): Promise<void>;
+}
+
+export function isOnModelInit(obj: any): obj is onModelInit {
+  if (!obj) return false;
+  return typeof obj.onModelInit === 'function';
 }

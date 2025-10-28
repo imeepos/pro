@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { root } from '@pro/core';
 import { PinoLogger } from '@pro/logger';
 import { RedisClient } from '@pro/redis';
 import { WeiboAccountEntity, useEntityManager } from '@pro/entities';
@@ -17,12 +18,13 @@ import {
 export class WeiboAccountHealthScheduler {
   private readonly healthKey = 'weibo:account:health';
   private readonly metricsKeyPrefix = 'weibo:account';
+  private readonly redis: RedisClient;
 
   constructor(
-    private readonly redis: RedisClient,
     private readonly logger: PinoLogger,
     private readonly weiboHealthInspector: WeiboCoreHealthCheckService,
   ) {
+    this.redis = root.get(RedisClient);
     this.logger.setContext(WeiboAccountHealthScheduler.name);
   }
 

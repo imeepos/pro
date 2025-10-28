@@ -44,4 +44,6 @@ export abstract class Injector {
    */
   abstract get<T>(token: InjectionTokenType<T>, def?: T): T;
   abstract set(providers: Provider[]): void;
+  abstract destroy(): Promise<void>;
+  abstract init(): Promise<void>;
 }

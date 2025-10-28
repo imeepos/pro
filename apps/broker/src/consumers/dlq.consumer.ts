@@ -1,12 +1,16 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { root } from '@pro/core';
 import { RabbitMQService } from '@pro/rabbitmq';
 import { FailedTaskEntity, useEntityManager } from '@pro/entities';
 
 @Injectable()
 export class DlqConsumer implements OnModuleInit {
   private readonly logger = new Logger(DlqConsumer.name);
+  private readonly rabbitMQ: RabbitMQService;
 
-  constructor(private readonly rabbitMQ: RabbitMQService) {}
+  constructor() {
+    this.rabbitMQ = root.get(RabbitMQService);
+  }
 
   async onModuleInit() {
     this.logger.log('DLQ Consumer 初始化');
