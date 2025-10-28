@@ -189,17 +189,21 @@ export class RabbitMQConsumer {
   ): Promise<void> {
     const channel = this.connectionPool.getChannel();
 
-    const dlxExchange = options?.deadLetterExchange ?? `${queueName}.dlx`;
-    const dlqQueue = `${queueName}.dlq`;
+    // 构建队列参数
+    const queueArgs: Record<string, any> = {};
 
-    await channel.assertExchange(dlxExchange, 'direct', { durable: true });
-    await channel.assertQueue(dlqQueue, { durable: true });
-    await channel.bindQueue(dlqQueue, dlxExchange, queueName);
+    // 只在显式指定 DLX 时才配置死信队列
+    if (options?.deadLetterExchange) {
+      const dlxExchange = options.deadLetterExchange;
+      const dlqQueue = `${queueName}.dlq`;
 
-    const queueArgs: Record<string, any> = {
-      'x-dead-letter-exchange': dlxExchange,
-      'x-dead-letter-routing-key': queueName,
-    };
+      await channel.assertExchange(dlxExchange, 'direct', { durable: true });
+      await channel.assertQueue(dlqQueue, { durable: true });
+      await channel.bindQueue(dlqQueue, dlxExchange, queueName);
+
+      queueArgs['x-dead-letter-exchange'] = dlxExchange;
+      queueArgs['x-dead-letter-routing-key'] = queueName;
+    }
 
     if (options?.messageTTL) {
       queueArgs['x-message-ttl'] = options.messageTTL;
@@ -207,7 +211,7 @@ export class RabbitMQConsumer {
 
     await channel.assertQueue(queueName, {
       durable: true,
-      arguments: queueArgs,
+      arguments: Object.keys(queueArgs).length > 0 ? queueArgs : undefined,
     });
   }
 

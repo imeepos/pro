@@ -40,7 +40,7 @@ export class RabbitMQService implements OnDestroy {
 
   constructor(config: RabbitMQConfig) {
     this.connectionPool = new ConnectionPool(config);
-    this.publisher = new RabbitMQPublisher(this.connectionPool, config);
+    this.publisher = new RabbitMQPublisher(this.connectionPool);
     this.consumer = new RabbitMQConsumer(this.connectionPool);
   }
 

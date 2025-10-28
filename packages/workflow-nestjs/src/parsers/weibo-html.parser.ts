@@ -17,6 +17,11 @@ export class WeiboHtmlParser {
 
   parseSearchResultHtml(html: string): ParsedSearchResult {
     try {
+      // 检测登录失效：检查是否包含登录跳转链接
+      if (html.includes('passport.weibo.com/sso/signin')) {
+        throw new Error('LOGIN_EXPIRED');
+      }
+
       const $ = cheerio.load(html);
 
       const posts = this.extractPostsInfo($);
@@ -44,6 +49,12 @@ export class WeiboHtmlParser {
         totalPage,
       };
     } catch (error) {
+      // 如果是登录失效错误，向上抛出
+      if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
+        throw error;
+      }
+
+      // 其他解析错误返回空结果
       return {
         posts: [],
         hasNextPage: false,

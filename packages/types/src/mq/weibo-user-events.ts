@@ -12,34 +12,4 @@ import { TaskPriority } from './clean-events.js';
 export interface UserProfileCrawlEvent {
   /** 微博用户唯一标识 */
   userId: string;
-
-  /** 调度优先级, 影响消费顺序 */
-  priority?: TaskPriority;
-
-  /** 发现来源上下文, 帮助还原任务链路 */
-  sourceContext?: {
-    /** 触发此次发现的任务ID */
-    taskId?: number;
-
-    /** 搜索关键词或主题 */
-    keyword?: string;
-
-    /** 发现来源（帖子作者、评论者、点赞者） */
-    source?: 'post-author' | 'commenter' | 'liker';
-
-    /** 关联的帖子ID（如果从帖子中发现） */
-    relatedPostId?: string;
-
-    /** 分布式追踪标识 */
-    traceId?: string;
-  };
-
-  /** 首次发现时间 - ISO 8601 */
-  discoveredAt?: string;
-
-  /** 当前重试次数, 首次为0 */
-  retryCount?: number;
-
-  /** 消息发布时间 - ISO 8601 */
-  createdAt?: string;
 }

@@ -1,3 +1,5 @@
+import "reflect-metadata";
+import "dotenv/config";
 import { root } from "@pro/core";
 import { RabbitMQService } from "@pro/rabbitmq";
 import {
@@ -23,7 +25,7 @@ async function main() {
 
     rabbitMQService.consume(QUEUE_NAMES.WEIBO_LIST_CRAWL, async (message: WeiboListMessage) => {
         const startTime = Date.now()
-
+        console.log(message)
         if (!message.posts || !Array.isArray(message.posts)) {
             console.warn('[WeiboListHandler] 消息格式错误：缺少 posts 数组')
             return

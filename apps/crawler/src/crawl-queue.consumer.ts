@@ -16,6 +16,12 @@ export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
       return this.process(message)
     }, {
       messageTTL: 30 * 60 * 1000, // 30分钟TTL，匹配broker配置
+      deadLetterExchange: 'dlx.weibo', // 配置死信交换机
+      retryStrategy: {
+        maxRetries: 0, // 登录失效不重试，直接进入死信队列
+        backoffMs: 0,
+        maxBackoffMs: 0,
+      }
     })
   }
 
@@ -38,7 +44,15 @@ export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
       const state = await runWeiBoKeywordSearchWorkflow(keyword, startDate);
 
       if (state.status === 'fail') {
-        throw new Error(state.errorMessage || 'Workflow 执行失败');
+        const errorMessage = state.errorMessage || 'Workflow 执行失败';
+
+        // 检查是否是登录失效错误
+        if (errorMessage.includes('LOGIN_EXPIRED')) {
+          this.logger.error(`账号登录失效: ${keyword}`, { error: errorMessage });
+          throw new Error('LOGIN_EXPIRED');
+        }
+
+        throw new Error(errorMessage);
       }
 
       this.logger.log(`Workflow 执行完成: ${keyword}`, {
@@ -49,6 +63,13 @@ export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
       });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
+
+      // 登录失效错误直接抛出，进入死信队列
+      if (detail.includes('LOGIN_EXPIRED')) {
+        this.logger.error(`账号登录失效，任务进入死信队列: ${keyword}`, { error: detail });
+        throw error;
+      }
+
       this.logger.error(`Workflow 执行失败: ${keyword}`, { error: detail });
       throw error;
     }

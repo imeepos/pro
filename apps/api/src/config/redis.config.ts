@@ -17,6 +17,9 @@ export const redisConfigFactory = (configService: ConfigService): RedisOptions |
 };
 
 export const createRedisClient = (config: RedisOptions | string) => {
+  if (typeof config === 'string') {
+    return new Redis(config);
+  }
   return new Redis(config);
 };
 

@@ -614,6 +614,9 @@ importers:
       '@nestjs/websockets':
         specifier: ^11.0.0
         version: 11.1.6(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.1.6)(@nestjs/platform-socket.io@11.1.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      '@pro/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@pro/entities':
         specifier: workspace:*
         version: link:../../packages/entities
