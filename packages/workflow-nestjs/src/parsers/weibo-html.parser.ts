@@ -17,9 +17,15 @@ export class WeiboHtmlParser {
 
   parseSearchResultHtml(html: string): ParsedSearchResult {
     try {
-      // 检测登录失效：检查是否包含登录跳转链接
-      if (html.includes('passport.weibo.com/sso/signin')) {
-        console.log('[WeiboHtmlParser] 检测到登录失效');
+      // 检测登录失效：多特征检测（兼容新旧版本登录页面）
+      const isLoginPage =
+        html.includes('passport.weibo.com/sso/signin') ||  // 旧版登录页
+        html.includes('h5.sinaimg.cn/m/login/') ||          // 新版登录页资源
+        html.includes('<title>登录 - 微博</title>') ||      // 登录页标题
+        html.includes('扫描二维码登录');                      // 登录页面文本
+
+      if (isLoginPage) {
+        console.log('[WeiboHtmlParser] 检测到登录失效（登录页面）');
         throw new Error('LOGIN_EXPIRED');
       }
 
