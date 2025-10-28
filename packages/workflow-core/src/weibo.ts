@@ -15,6 +15,8 @@ export class HtmlParserAst extends Ast {
     @Input() url: string | undefined;
 
     @Output() result: any;
+    @Output() hasNextPage: boolean | undefined;
+    @Output() nextPageLink: string | undefined;
     type: `HtmlParserAst` = `HtmlParserAst`;
 }
 
