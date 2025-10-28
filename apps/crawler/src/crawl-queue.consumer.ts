@@ -34,19 +34,24 @@ export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
     const keyword = message.keyword;
     const startDate = typeof message.start === 'string' ? new Date(message.start) : message.start;
 
-    const state = await runWeiBoKeywordSearchWorkflow(keyword, startDate);
+    try {
+      const state = await runWeiBoKeywordSearchWorkflow(keyword, startDate);
 
-    if (state.status === 'fail') {
-      const errorMessage = state.errorMessage || 'Workflow 执行失败';
-      this.logger.error(`Workflow 执行失败: ${keyword}`, { error: errorMessage });
-      throw new Error(errorMessage);
+      if (state.status === 'fail') {
+        const errorMessage = state.errorMessage || 'Workflow 执行失败';
+        this.logger.error(`Workflow 执行失败: ${keyword}`, { error: errorMessage });
+        throw new Error(errorMessage);
+      }
+
+      this.logger.log(`Workflow 执行完成: ${keyword}`, {
+        durationMs: Date.now() - startedAt,
+        executionId: state.executionId,
+        status: state.status,
+        progress: state.progress,
+      });
+    } catch (error) {
+      // 直接抛出错误，让 RabbitMQ Consumer 底层统一处理
+      throw error;
     }
-
-    this.logger.log(`Workflow 执行完成: ${keyword}`, {
-      durationMs: Date.now() - startedAt,
-      executionId: state.executionId,
-      status: state.status,
-      progress: state.progress,
-    });
   }
 }
