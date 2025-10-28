@@ -53,8 +53,8 @@ export class WeiboAccountAst extends Ast {
 @Node()
 export class WeiboSearchUrlBuilderAst extends Ast {
     @Input() keyword!: string;
-    @Input() start!: Date;
-    @Input() end!: Date;
+    @Input() @Output() start!: Date;
+    @Input() @Output() end!: Date;
     @Input() page?: number;
 
     @Output() url!: string;
