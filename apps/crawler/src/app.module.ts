@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
-import { WeiboModule } from '@pro/weibo';
 import { CrawlQueueConsumer } from './crawl-queue.consumer';
 
 @Module({
@@ -13,8 +12,7 @@ import { CrawlQueueConsumer } from './crawl-queue.consumer';
       createLoggerConfig({
         serviceName: '@pro/crawler',
       }),
-    ),
-    WeiboModule,
+    )
   ],
   controllers: [],
   providers: [

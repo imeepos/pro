@@ -112,6 +112,9 @@ export interface ConsumerOptions {
 
   /** 消费者标签 - 用于监控和管理 */
   consumerTag?: string;
+
+  /** 消息TTL(毫秒) - 队列中消息的过期时间 */
+  messageTTL?: number;
 }
 
 /**

@@ -160,12 +160,18 @@ export class RabbitMQConsumer {
     await channel.assertQueue(dlqQueue, { durable: true });
     await channel.bindQueue(dlqQueue, dlxExchange, queueName);
 
+    const queueArgs: Record<string, any> = {
+      'x-dead-letter-exchange': dlxExchange,
+      'x-dead-letter-routing-key': queueName,
+    };
+
+    if (options?.messageTTL) {
+      queueArgs['x-message-ttl'] = options.messageTTL;
+    }
+
     await channel.assertQueue(queueName, {
       durable: true,
-      arguments: {
-        'x-dead-letter-exchange': dlxExchange,
-        'x-dead-letter-routing-key': queueName,
-      },
+      arguments: queueArgs,
     });
   }
 }

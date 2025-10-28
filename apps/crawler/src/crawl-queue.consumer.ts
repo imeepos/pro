@@ -9,13 +9,16 @@ export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CrawlQueueConsumer.name);
   private client: RabbitMQClient | null = null;
 
-  constructor( ) {}
+  constructor() { }
 
   async onModuleInit(): Promise<void> {
     const rs = root.get(RabbitMQService)
     await rs.onModuleInit()
-    rs.consume(`weibo_crawl_queue`, (message: SubTaskMessage, metadata)=>{
+    console.log(`consume weibo_crawl_queue`)
+    rs.consume(`weibo_crawl_queue`, (message: SubTaskMessage, metadata) => {
       return this.process(message)
+    }, {
+      messageTTL: 30 * 60 * 1000, // 30分钟TTL，匹配broker配置
     })
   }
 
@@ -25,6 +28,7 @@ export class CrawlQueueConsumer implements OnModuleInit, OnModuleDestroy {
   }
 
   private async process(message: SubTaskMessage): Promise<void> {
+    this.logger.log(`收到消息`, message)
     if (!message?.keyword || !message?.start) {
       this.logger.warn('忽略缺少必需字段的消息', { keyword: message?.keyword, start: message?.start });
       return;

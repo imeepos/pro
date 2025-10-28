@@ -1,14 +1,23 @@
 import { Module } from '@nestjs/common'
 import { HttpModule } from '@nestjs/axios'
-import { MongodbModule } from '@pro/mongodb'
+import { root } from '@pro/core'
+import { RawDataSourceService } from '@pro/mongodb'
 
 import { WeiboStatusService } from './weibo.service.js'
 import { WeiboProfileService } from './weibo-profile.service.js'
 import { WeiboHealthCheckService } from './weibo-health-check.service.js'
 
 @Module({
-  imports: [HttpModule, MongodbModule.forFeature()],
-  providers: [WeiboStatusService, WeiboProfileService, WeiboHealthCheckService],
+  imports: [HttpModule],
+  providers: [
+    {
+      provide: RawDataSourceService,
+      useFactory: () => root.get(RawDataSourceService)
+    },
+    WeiboStatusService,
+    WeiboProfileService,
+    WeiboHealthCheckService
+  ],
   exports: [WeiboStatusService, WeiboProfileService, WeiboHealthCheckService]
 })
 export class WeiboModule {}

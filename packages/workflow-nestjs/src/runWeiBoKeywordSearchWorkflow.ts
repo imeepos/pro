@@ -32,7 +32,7 @@ export async function runWeiBoKeywordSearchWorkflow(keyword: string, startDate: 
         if (!workflowMetadata) {
             workflowMetadata = await creatWeiBoKeywordSearcheWorkflow();
         }
-
+        
         // 执行 workflow 并记录执行历史和运行时状态
         const { state } = await workflowService.executeWorkflow(
             workflowMetadata.id,
