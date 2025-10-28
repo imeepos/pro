@@ -9,8 +9,12 @@ export class RedisPipeline {
     return this;
   }
 
-  set(key: string, value: string): RedisPipeline {
-    this.pipeline.set(key, value);
+  set(key: string, value: string, ttl?: number): RedisPipeline {
+    if (ttl) {
+      this.pipeline.setex(key, ttl, value);
+    } else {
+      this.pipeline.set(key, value);
+    }
     return this;
   }
 
