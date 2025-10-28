@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { InjectRepository } from '@nestjs/typeorm';
 import { PinoLogger } from '@pro/logger';
-import { LessThanOrEqual, Repository, IsNull } from 'typeorm';
+import { LessThanOrEqual, IsNull } from 'typeorm';
 
-import { WeiboSearchTaskEntity, WeiboSubTaskEntity } from '@pro/entities';
+import {
+  WeiboSearchTaskEntity,
+  WeiboSubTaskEntity,
+  useEntityManager,
+  useTranslation
+} from '@pro/entities';
 
 import { RabbitMQConfigService } from '../rabbitmq/rabbitmq-config.service';
 import { SubTaskMessage } from './interfaces/sub-task-message.interface';
-
-const toUTC = (date: Date): Date => {
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-};
 
 const formatDateTime = (date: Date): string => {
   const utc = new Date(date.toISOString());
@@ -41,10 +41,6 @@ const parseIntervalToMs = (interval: string): number => {
 export class SimpleIntervalScheduler {
   constructor(
     private readonly logger: PinoLogger,
-    @InjectRepository(WeiboSearchTaskEntity)
-    private readonly taskRepository: Repository<WeiboSearchTaskEntity>,
-    @InjectRepository(WeiboSubTaskEntity)
-    private readonly subTaskRepository: Repository<WeiboSubTaskEntity>,
     private readonly rabbitMQService: RabbitMQConfigService,
   ) {
     this.logger.setContext(SimpleIntervalScheduler.name);
@@ -73,30 +69,32 @@ export class SimpleIntervalScheduler {
   }
 
   private async loadPendingTasks(now: Date): Promise<WeiboSearchTaskEntity[]> {
-    const tasks = await this.taskRepository.find({
-      where: [
-        { enabled: true, nextRunAt: IsNull() },
-        { enabled: true, nextRunAt: LessThanOrEqual(now) },
-      ],
-      order: { nextRunAt: 'ASC' },
+    return await useEntityManager(async (m) => {
+      const tasks = await m.find(WeiboSearchTaskEntity, {
+        where: [
+          { enabled: true, nextRunAt: IsNull() },
+          { enabled: true, nextRunAt: LessThanOrEqual(now) },
+        ],
+        order: { nextRunAt: 'ASC' },
+      });
+
+      this.logger.debug(`数据库查询 - 当前时间: ${formatDateTime(now)}`);
+
+      const allEnabledTasks = await m.find(WeiboSearchTaskEntity, {
+        where: { enabled: true },
+        select: ['id', 'keyword', 'enabled', 'nextRunAt', 'crawlInterval'],
+      });
+
+      this.logger.debug(`所有启用的任务 (${allEnabledTasks.length}):`);
+      for (const task of allEnabledTasks) {
+        const status = task.nextRunAt ?
+          (task.nextRunAt <= now ? '✓ 已到期' : `○ 等待中 (${formatDateTime(task.nextRunAt)})`) :
+          '⚠ 未设置 nextRunAt';
+        this.logger.debug(`  - 任务 ${task.id}(${task.keyword}): ${status}`);
+      }
+
+      return tasks;
     });
-
-    this.logger.debug(`数据库查询 - 当前时间: ${formatDateTime(now)}`);
-
-    const allEnabledTasks = await this.taskRepository.find({
-      where: { enabled: true },
-      select: ['id', 'keyword', 'enabled', 'nextRunAt', 'crawlInterval'],
-    });
-
-    this.logger.debug(`所有启用的任务 (${allEnabledTasks.length}):`);
-    for (const task of allEnabledTasks) {
-      const status = task.nextRunAt ?
-        (task.nextRunAt <= now ? '✓ 已到期' : `○ 等待中 (${formatDateTime(task.nextRunAt)})`) :
-        '⚠ 未设置 nextRunAt';
-      this.logger.debug(`  - 任务 ${task.id}(${task.keyword}): ${status}`);
-    }
-
-    return tasks;
   }
 
   private async dispatchSubTask(task: WeiboSearchTaskEntity, now: Date): Promise<void> {
@@ -111,38 +109,40 @@ export class SimpleIntervalScheduler {
       keyword: task.keyword,
     };
 
-    const subTaskRecord = this.subTaskRepository.create({
-      taskId: task.id,
-      metadata,
-      type: 'KEYWORD_SEARCH',
-      status: 'PENDING',
+    await useTranslation(async (m) => {
+      const subTaskRecord = m.create(WeiboSubTaskEntity, {
+        taskId: task.id,
+        metadata,
+        type: 'KEYWORD_SEARCH',
+        status: 'PENDING',
+      });
+
+      await m.save(subTaskRecord);
+
+      const message: SubTaskMessage = {
+        taskId: task.id,
+        type: subTaskRecord.type,
+        metadata,
+        keyword: task.keyword,
+        start,
+        end,
+        isInitialCrawl: !task.latestCrawlTime,
+        enableAccountRotation: true,
+      };
+
+      await this.rabbitMQService.publishSubTask(message);
+
+      const nextRunTime = new Date(now.getTime() + parseIntervalToMs(task.crawlInterval));
+
+      await m.update(WeiboSearchTaskEntity, task.id, {
+        latestCrawlTime: end,
+        nextRunAt: nextRunTime,
+      });
+
+      this.logger.info(
+        `已为任务 ${task.id}（${task.keyword}）生成子任务 ${subTaskRecord.id}，时间段 ${metadata.startTime} ~ ${metadata.endTime}`,
+      );
+      this.logger.info(`任务 ${task.id} 下次执行时间: ${formatDateTime(nextRunTime)} (间隔: ${task.crawlInterval})`);
     });
-
-    await this.subTaskRepository.save(subTaskRecord);
-
-    const message: SubTaskMessage = {
-      taskId: task.id,
-      type: subTaskRecord.type,
-      metadata,
-      keyword: task.keyword,
-      start,
-      end,
-      isInitialCrawl: !task.latestCrawlTime,
-      enableAccountRotation: true,
-    };
-
-    await this.rabbitMQService.publishSubTask(message);
-
-    const nextRunTime = new Date(now.getTime() + parseIntervalToMs(task.crawlInterval));
-
-    await this.taskRepository.update(task.id, {
-      latestCrawlTime: end,
-      nextRunAt: nextRunTime,
-    });
-
-    this.logger.info(
-      `已为任务 ${task.id}（${task.keyword}）生成子任务 ${subTaskRecord.id}，时间段 ${metadata.startTime} ~ ${metadata.endTime}`,
-    );
-    this.logger.info(`任务 ${task.id} 下次执行时间: ${formatDateTime(nextRunTime)} (间隔: ${task.crawlInterval})`);
   }
 }

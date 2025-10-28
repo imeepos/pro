@@ -1,18 +1,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { RabbitMQService } from '@pro/rabbitmq';
-import { FailedTaskEntity } from '@pro/entities';
+import { FailedTaskEntity, useEntityManager } from '@pro/entities';
 
 @Injectable()
 export class DlqConsumer implements OnModuleInit {
   private readonly logger = new Logger(DlqConsumer.name);
 
-  constructor(
-    @InjectRepository(FailedTaskEntity)
-    private readonly failedTaskRepo: Repository<FailedTaskEntity>,
-    private readonly rabbitMQ: RabbitMQService,
-  ) {}
+  constructor(private readonly rabbitMQ: RabbitMQService) {}
 
   async onModuleInit() {
     this.logger.log('DLQ Consumer 初始化');
@@ -29,12 +23,14 @@ export class DlqConsumer implements OnModuleInit {
 
       const messageBody = message.content?.toString() || JSON.stringify(message);
 
-      await this.failedTaskRepo.save({
-        originalQueue,
-        messageBody,
-        failureCount,
-        errorMessage,
-        status: 'pending_review',
+      await useEntityManager(async manager => {
+        await manager.save(FailedTaskEntity, {
+          originalQueue,
+          messageBody,
+          failureCount,
+          errorMessage,
+          status: 'pending_review',
+        });
       });
 
       this.logger.warn('已记录失败消息', {

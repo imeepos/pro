@@ -41,6 +41,7 @@
     "@pro/mongodb": "workspace:*",
     "@pro/rabbitmq": "workspace:*",
     "@pro/redis": "workspace:*",
+    "@pro/core": "workspace:*",
     "@pro/types": "workspace:*",
     "@pro/utils": "workspace:*",
     "@pro/weibo": "workspace:*",

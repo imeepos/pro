@@ -1,12 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule, createLoggerConfig } from '@pro/logger';
-import { WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity, FailedTaskEntity, createDatabaseConfig } from '@pro/entities';
-import { RedisClient, redisConfigFactory } from '@pro/redis';
 import { WeiboModule as CoreWeiboModule } from '@pro/weibo';
-import { MongodbModule } from '@pro/mongodb';
 
 // 核心服务导入 - 每个导入都有其存在的意义
 import { SimpleIntervalScheduler } from './weibo/simple-interval-scheduler.service';
@@ -45,25 +41,10 @@ import { DlqConsumer } from './consumers/dlq.consumer';
         (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
     })),
 
-    // 数据之根 - 持久化的基石
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
-    }),
-
-    // MongoDB 之库 - 原始数据的归宿
-    MongodbModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URL', 'mongodb://localhost:27017/pro'),
-      }),
-    }),
 
     // 时间之舞 - 定时任务的舞台
     ScheduleModule.forRoot(),
 
-    // 实体之殿 - 数据模型的家园
-    TypeOrmModule.forFeature([WeiboAccountEntity, WeiboSearchTaskEntity, WeiboSubTaskEntity, FailedTaskEntity]),
     CoreWeiboModule,
   ],
 
@@ -75,13 +56,6 @@ import { DlqConsumer } from './consumers/dlq.consumer';
     SimpleTaskMonitor,            // 简化的健康守望者
     DiagnosticService,            // 异常诊断的医师
     DlqConsumer,                  // 死信队列的守望者
-    {
-      provide: RedisClient,
-      useFactory: (configService: ConfigService) => {
-        return new RedisClient(redisConfigFactory(configService));
-      },
-      inject: [ConfigService],
-    },
     WeiboAccountHealthScheduler,  // 微博账号健康度的守护者
   ],
 
