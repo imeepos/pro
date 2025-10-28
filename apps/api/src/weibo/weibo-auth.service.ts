@@ -8,11 +8,10 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PinoLogger } from '@pro/logger-nestjs';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual } from 'typeorm';
+import { MoreThanOrEqual } from 'typeorm';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
 import { Subject, Observable, Subscription } from 'rxjs';
-import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
+import { WeiboAccountEntity, WeiboAccountStatus, useEntityManager } from '@pro/entities';
 import { ScreensGateway } from '../screens/screens.gateway';
 import { WeiboSessionStorage, SessionData } from './weibo-session-storage.service';
 import { PubSubService } from '../common/pubsub/pubsub.service';
@@ -91,8 +90,6 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly logger: PinoLogger,
-    @InjectRepository(WeiboAccountEntity)
-    private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
     @Inject(forwardRef(() => ScreensGateway))
     private readonly screensGateway: ScreensGateway,
     private readonly pubSub: PubSubService,
@@ -548,43 +545,47 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     cookies: Cookie[],
     userInfo: WeiboUserInfo,
   ): Promise<WeiboAccountEntity> {
-    this.logger.info(`保存微博账号: userId=${userId}, weiboUid=${userInfo.uid}`);
+    return useEntityManager(async (m) => {
+      this.logger.info(`保存微博账号: userId=${userId}, weiboUid=${userInfo.uid}`);
 
-    // 检查是否已存在
-    const existing = await this.weiboAccountRepo.findOne({
-      where: { userId, weiboUid: userInfo.uid },
-    });
+      const repo = m.getRepository(WeiboAccountEntity);
 
-    let savedAccount: WeiboAccountEntity;
-
-    if (existing) {
-      // 更新现有账号
-      existing.weiboNickname = userInfo.nickname;
-      existing.weiboAvatar = userInfo.avatar;
-      existing.cookies = JSON.stringify(cookies);
-      existing.status = WeiboAccountStatus.ACTIVE;
-      existing.lastCheckAt = new Date();
-
-      savedAccount = await this.weiboAccountRepo.save(existing);
-    } else {
-      // 创建新账号
-      const account = this.weiboAccountRepo.create({
-        userId,
-        weiboUid: userInfo.uid,
-        weiboNickname: userInfo.nickname,
-        weiboAvatar: userInfo.avatar,
-        cookies: JSON.stringify(cookies),
-        status: WeiboAccountStatus.ACTIVE,
-        lastCheckAt: new Date(),
+      // 检查是否已存在
+      const existing = await repo.findOne({
+        where: { userId, weiboUid: userInfo.uid },
       });
 
-      savedAccount = await this.weiboAccountRepo.save(account);
-    }
+      let savedAccount: WeiboAccountEntity;
 
-    // 推送微博用户统计更新
-    await this.notifyWeiboStatsUpdate();
+      if (existing) {
+        // 更新现有账号
+        existing.weiboNickname = userInfo.nickname;
+        existing.weiboAvatar = userInfo.avatar;
+        existing.cookies = JSON.stringify(cookies);
+        existing.status = WeiboAccountStatus.ACTIVE;
+        existing.lastCheckAt = new Date();
 
-    return savedAccount;
+        savedAccount = await repo.save(existing);
+      } else {
+        // 创建新账号
+        const account = repo.create({
+          userId,
+          weiboUid: userInfo.uid,
+          weiboNickname: userInfo.nickname,
+          weiboAvatar: userInfo.avatar,
+          cookies: JSON.stringify(cookies),
+          status: WeiboAccountStatus.ACTIVE,
+          lastCheckAt: new Date(),
+        });
+
+        savedAccount = await repo.save(account);
+      }
+
+      // 推送微博用户统计更新
+      await this.notifyWeiboStatsUpdate();
+
+      return savedAccount;
+    });
   }
 
   /**
@@ -653,26 +654,30 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
    */
   private async notifyWeiboStatsUpdate() {
     try {
-      // 获取微博用户统计
-      const total = await this.weiboAccountRepo.count();
+      return useEntityManager(async (m) => {
+        const repo = m.getRepository(WeiboAccountEntity);
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+        // 获取微博用户统计
+        const total = await repo.count();
 
-      const todayNew = await this.weiboAccountRepo.count({
-        where: {
-          createdAt: MoreThanOrEqual(today),
-        },
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const todayNew = await repo.count({
+          where: {
+            createdAt: MoreThanOrEqual(today),
+          },
+        });
+
+        const online = await repo.count({
+          where: {
+            status: WeiboAccountStatus.ACTIVE,
+          },
+        });
+
+        const stats = { total, todayNew, online };
+        this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
       });
-
-      const online = await this.weiboAccountRepo.count({
-        where: {
-          status: WeiboAccountStatus.ACTIVE,
-        },
-      });
-
-      const stats = { total, todayNew, online };
-      this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
     } catch (error) {
       this.logger.error('推送微博用户统计更新失败:', error);
     }

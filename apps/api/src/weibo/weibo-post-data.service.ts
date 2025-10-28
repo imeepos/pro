@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
-import { WeiboPostEntity } from '@pro/entities';
+import { SelectQueryBuilder } from 'typeorm';
+import { WeiboPostEntity, useEntityManager } from '@pro/entities';
 import { PinoLogger } from '@pro/logger-nestjs';
 import {
   PostFilterDto,
@@ -15,8 +14,6 @@ import { PageInfoModel, OFFSET_CURSOR_PREFIX } from '../common/models/pagination
 export class WeiboPostDataService {
   constructor(
     private readonly logger: PinoLogger,
-    @InjectRepository(WeiboPostEntity)
-    private readonly postRepo: Repository<WeiboPostEntity>,
   ) {
     this.logger.setContext(WeiboPostDataService.name);
   }
@@ -26,48 +23,54 @@ export class WeiboPostDataService {
     pagination?: PaginationDto,
     sort?: SortDto,
   ): Promise<WeiboPostConnection> {
-    const page = pagination?.page ?? 1;
-    const limit = pagination?.limit ?? 20;
-    const offset = (page - 1) * limit;
+    return useEntityManager(async (m) => {
+      const page = pagination?.page ?? 1;
+      const limit = pagination?.limit ?? 20;
+      const offset = (page - 1) * limit;
 
-    const qb = this.postRepo.createQueryBuilder('post');
-    this.applyFilters(qb, filter);
-    this.applySort(qb, sort);
+      const qb = m.getRepository(WeiboPostEntity).createQueryBuilder('post');
+      this.applyFilters(qb, filter);
+      this.applySort(qb, sort);
 
-    qb.leftJoinAndSelect('post.author', 'author');
+      qb.leftJoinAndSelect('post.author', 'author');
 
-    const [items, total] = await qb
-      .skip(offset)
-      .take(limit)
-      .getManyAndCount();
+      const [items, total] = await qb
+        .skip(offset)
+        .take(limit)
+        .getManyAndCount();
 
-    return this.buildConnection(items, total, page, limit);
+      return this.buildConnection(items, total, page, limit);
+    });
   }
 
   async findPostById(id: string): Promise<WeiboPostEntity | null> {
-    return this.postRepo.findOne({
-      where: { id },
-      relations: ['author', 'media'],
+    return useEntityManager(async (m) => {
+      return m.getRepository(WeiboPostEntity).findOne({
+        where: { id },
+        relations: ['author', 'media'],
+      });
     });
   }
 
   async getPostStats(filter?: PostFilterDto): Promise<PostStatsModel> {
-    const qb = this.postRepo.createQueryBuilder('post');
-    this.applyFilters(qb, filter);
+    return useEntityManager(async (m) => {
+      const qb = m.getRepository(WeiboPostEntity).createQueryBuilder('post');
+      this.applyFilters(qb, filter);
 
-    const result = await qb
-      .select('COUNT(*)', 'totalPosts')
-      .addSelect('COALESCE(SUM(post.repostsCount), 0)', 'totalReposts')
-      .addSelect('COALESCE(SUM(post.commentsCount), 0)', 'totalComments')
-      .addSelect('COALESCE(SUM(post.attitudesCount), 0)', 'totalLikes')
-      .getRawOne();
+      const result = await qb
+        .select('COUNT(*)', 'totalPosts')
+        .addSelect('COALESCE(SUM(post.repostsCount), 0)', 'totalReposts')
+        .addSelect('COALESCE(SUM(post.commentsCount), 0)', 'totalComments')
+        .addSelect('COALESCE(SUM(post.attitudesCount), 0)', 'totalLikes')
+        .getRawOne();
 
-    return {
-      totalPosts: Number.parseInt(result.totalPosts, 10),
-      totalReposts: Number.parseInt(result.totalReposts, 10),
-      totalComments: Number.parseInt(result.totalComments, 10),
-      totalLikes: Number.parseInt(result.totalLikes, 10),
-    };
+      return {
+        totalPosts: Number.parseInt(result.totalPosts, 10),
+        totalReposts: Number.parseInt(result.totalReposts, 10),
+        totalComments: Number.parseInt(result.totalComments, 10),
+        totalLikes: Number.parseInt(result.totalLikes, 10),
+      };
+    });
   }
 
   private applyFilters(qb: SelectQueryBuilder<WeiboPostEntity>, filter?: PostFilterDto): void {

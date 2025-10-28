@@ -5,11 +5,11 @@ import {
   forwardRef,
   Inject,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual } from 'typeorm';
+import { MoreThanOrEqual } from 'typeorm';
 import {
   WeiboAccountEntity,
   WeiboAccountStatus,
+  useEntityManager,
 } from '@pro/entities';
 import { LoggedInUsersStats } from '@pro/types';
 import { ScreensGateway } from '../screens/screens.gateway';
@@ -21,8 +21,6 @@ import { ScreensGateway } from '../screens/screens.gateway';
 @Injectable()
 export class WeiboAccountService {
   constructor(
-    @InjectRepository(WeiboAccountEntity)
-    private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
     @Inject(forwardRef(() => ScreensGateway))
     private readonly screensGateway: ScreensGateway,
   ) {}
@@ -49,9 +47,11 @@ export class WeiboAccountService {
   }
 
   async findAccounts(userId: string): Promise<WeiboAccountEntity[]> {
-    return this.weiboAccountRepo.find({
-      where: { userId },
-      order: { createdAt: 'DESC' },
+    return useEntityManager(async (m) => {
+      return m.getRepository(WeiboAccountEntity).find({
+        where: { userId },
+        order: { createdAt: 'DESC' },
+      });
     });
   }
 
@@ -60,27 +60,31 @@ export class WeiboAccountService {
    * 包含权限验证：只能删除自己的账号
    */
   async deleteAccount(userId: string, accountId: number) {
-    const account = await this.findOwnedAccount(userId, accountId);
-    await this.weiboAccountRepo.delete(accountId);
+    return useEntityManager(async (m) => {
+      const account = await this.findOwnedAccount(userId, accountId);
+      await m.getRepository(WeiboAccountEntity).delete(accountId);
 
-    // 推送微博用户统计更新
-    await this.notifyWeiboStatsUpdate();
+      // 推送微博用户统计更新
+      await this.notifyWeiboStatsUpdate();
 
-    return { success: true };
+      return { success: true };
+    });
   }
 
   async findOwnedAccount(userId: string, accountId: number): Promise<WeiboAccountEntity> {
-    const account = await this.weiboAccountRepo.findOne({ where: { id: accountId } });
+    return useEntityManager(async (m) => {
+      const account = await m.getRepository(WeiboAccountEntity).findOne({ where: { id: accountId } });
 
-    if (!account) {
-      throw new NotFoundException('账号不存在');
-    }
+      if (!account) {
+        throw new NotFoundException('账号不存在');
+      }
 
-    if (account.userId !== userId) {
-      throw new ForbiddenException('无权访问该账号');
-    }
+      if (account.userId !== userId) {
+        throw new ForbiddenException('无权访问该账号');
+      }
 
-    return account;
+      return account;
+    });
   }
 
   /**
@@ -88,31 +92,35 @@ export class WeiboAccountService {
    * 返回总数、今日新增、在线用户数
    */
   async getLoggedInUsersStats(): Promise<LoggedInUsersStats> {
-    // 总用户数
-    const total = await this.weiboAccountRepo.count();
+    return useEntityManager(async (m) => {
+      const repo = m.getRepository(WeiboAccountEntity);
 
-    // 今日新增（今天 00:00:00 之后创建的）
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+      // 总用户数
+      const total = await repo.count();
 
-    const todayNew = await this.weiboAccountRepo.count({
-      where: {
-        createdAt: MoreThanOrEqual(today),
-      },
+      // 今日新增（今天 00:00:00 之后创建的）
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const todayNew = await repo.count({
+        where: {
+          createdAt: MoreThanOrEqual(today),
+        },
+      });
+
+      // 在线用户数（状态为 ACTIVE 的账号）
+      const online = await repo.count({
+        where: {
+          status: WeiboAccountStatus.ACTIVE,
+        },
+      });
+
+      return {
+        total,
+        todayNew,
+        online,
+      };
     });
-
-    // 在线用户数（状态为 ACTIVE 的账号）
-    const online = await this.weiboAccountRepo.count({
-      where: {
-        status: WeiboAccountStatus.ACTIVE,
-      },
-    });
-
-    return {
-      total,
-      todayNew,
-      online,
-    };
   }
 
   /**
@@ -133,21 +141,23 @@ export class WeiboAccountService {
    * 供爬虫服务使用
    */
   async getAccountsWithCookies() {
-    const accounts = await this.weiboAccountRepo.find({
-      where: { status: WeiboAccountStatus.ACTIVE },
-      order: { lastCheckAt: 'ASC' }, // 优先使用最近检查过的账号
-    });
+    return useEntityManager(async (m) => {
+      const accounts = await m.getRepository(WeiboAccountEntity).find({
+        where: { status: WeiboAccountStatus.ACTIVE },
+        order: { lastCheckAt: 'ASC' }, // 优先使用最近检查过的账号
+      });
 
-    return {
-      accounts: accounts.map((account) => ({
-        id: account.id,
-        weiboUid: account.weiboUid,
-        weiboNickname: account.weiboNickname,
-        status: account.status,
-        cookies: account.cookies, // 包含敏感的cookies信息
-        lastCheckAt: account.lastCheckAt,
-      })),
-    };
+      return {
+        accounts: accounts.map((account) => ({
+          id: account.id,
+          weiboUid: account.weiboUid,
+          weiboNickname: account.weiboNickname,
+          status: account.status,
+          cookies: account.cookies, // 包含敏感的cookies信息
+          lastCheckAt: account.lastCheckAt,
+        })),
+      };
+    });
   }
 
   /**
@@ -155,21 +165,25 @@ export class WeiboAccountService {
    * 供爬虫服务使用
    */
   async markAccountBanned(accountId: number) {
-    const account = await this.weiboAccountRepo.findOne({
-      where: { id: accountId },
+    return useEntityManager(async (m) => {
+      const repo = m.getRepository(WeiboAccountEntity);
+
+      const account = await repo.findOne({
+        where: { id: accountId },
+      });
+
+      if (!account) {
+        throw new NotFoundException('账号不存在');
+      }
+
+      // 更新账号状态为banned
+      account.status = WeiboAccountStatus.BANNED;
+      await repo.save(account);
+
+      // 推送统计更新
+      await this.notifyWeiboStatsUpdate();
+
+      return { success: true, message: '账号已标记为banned状态' };
     });
-
-    if (!account) {
-      throw new NotFoundException('账号不存在');
-    }
-
-    // 更新账号状态为banned
-    account.status = WeiboAccountStatus.BANNED;
-    await this.weiboAccountRepo.save(account);
-
-    // 推送统计更新
-    await this.notifyWeiboStatsUpdate();
-
-    return { success: true, message: '账号已标记为banned状态' };
   }
 }

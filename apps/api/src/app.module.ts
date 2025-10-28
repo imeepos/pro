@@ -26,7 +26,7 @@ import { DlqModule } from './dlq/dlq.module';
 import { RabbitMQModule as BaseRabbitMQModule } from '@pro/rabbitmq';
 import { RabbitMQModule } from './rabbitmq/rabbitmq.module';
 import { TasksModule } from './tasks/tasks.module';
-import { createDatabaseConfig } from './config';
+import { createDatabaseConfig } from '@pro/entities';
 import { AugmentedRequest, GraphqlContext } from './common/utils/context.utils';
 import { UserLoader } from './user/user.loader';
 import { GraphqlLoaders } from './common/dataloaders/types';

@@ -5,15 +5,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
-import { UserEntity } from '@pro/entities';
+import { UserEntity, useEntityManager } from '@pro/entities';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
 import { AuthResponse, JwtPayload, User, UserStatus } from '@pro/types';
 import { RedisClient } from '@pro/redis';
 import { redisConfigFactory, getRefreshTokenExpiresIn } from '../config';
 import { ConfigService } from '@nestjs/config';
+import { Redis } from 'ioredis';
 
 @Injectable()
 export class AuthService {
@@ -22,66 +21,70 @@ export class AuthService {
   private readonly REFRESH_TOKEN_PREFIX = 'refresh:';
 
   constructor(
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
-    this.redisClient = new RedisClient(redisConfigFactory(configService));
+    this.redisClient = new RedisClient(new Redis(redisConfigFactory(configService)));
   }
 
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
-    const { username, email, password } = registerDto;
+    return useEntityManager(async (m) => {
+      const { username, email, password } = registerDto;
 
-    const existingUser = await this.userRepository.findOne({
-      where: [{ username }, { email }],
-    });
+      const userRepository = m.getRepository(UserEntity);
+      const existingUser = await userRepository.findOne({
+        where: [{ username }, { email }],
+      });
 
-    if (existingUser) {
-      if (existingUser.username === username) {
-        throw new ConflictException('用户名已存在');
+      if (existingUser) {
+        if (existingUser.username === username) {
+          throw new ConflictException('用户名已存在');
+        }
+        if (existingUser.email === email) {
+          throw new ConflictException('邮箱已被注册');
+        }
       }
-      if (existingUser.email === email) {
-        throw new ConflictException('邮箱已被注册');
-      }
-    }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = this.userRepository.create({
-      username,
-      email,
-      password: hashedPassword,
-      status: UserStatus.ACTIVE,
+      const user = userRepository.create({
+        username,
+        email,
+        password: hashedPassword,
+        status: UserStatus.ACTIVE,
+      });
+
+      const savedUser = await userRepository.save(user);
+
+      return this.generateAuthResponse(savedUser);
     });
-
-    const savedUser = await this.userRepository.save(user);
-
-    return this.generateAuthResponse(savedUser);
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponse> {
-    const { usernameOrEmail, password } = loginDto;
+    return useEntityManager(async (m) => {
+      const { usernameOrEmail, password } = loginDto;
 
-    const user = await this.userRepository.findOne({
-      where: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+      const userRepository = m.getRepository(UserEntity);
+      const user = await userRepository.findOne({
+        where: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('用户名或密码错误');
+      }
+
+      if (user.status !== UserStatus.ACTIVE) {
+        throw new UnauthorizedException('账户已被禁用');
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('用户名或密码错误');
+      }
+
+      return this.generateAuthResponse(user);
     });
-
-    if (!user) {
-      throw new UnauthorizedException('用户名或密码错误');
-    }
-
-    if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('账户已被禁用');
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('用户名或密码错误');
-    }
-
-    return this.generateAuthResponse(user);
   }
 
   async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<AuthResponse> {
@@ -103,8 +106,10 @@ export class AuthService {
         throw new UnauthorizedException('无效的 Refresh Token');
       }
 
-      const user = await this.userRepository.findOne({
-        where: { id: payload.userId },
+      const user = await useEntityManager(async (m) => {
+        return m.getRepository(UserEntity).findOne({
+          where: { id: payload.userId },
+        });
       });
 
       if (!user) {
@@ -141,15 +146,18 @@ export class AuthService {
   }
 
   async getProfile(userId: string): Promise<User> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
+    return useEntityManager(async (m) => {
+      const userRepository = m.getRepository(UserEntity);
+      const user = await userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('用户不存在');
+      }
+
+      return this.sanitizeUser(user);
     });
-
-    if (!user) {
-      throw new UnauthorizedException('用户不存在');
-    }
-
-    return this.sanitizeUser(user);
   }
 
   private async generateAuthResponse(user: UserEntity): Promise<AuthResponse> {
