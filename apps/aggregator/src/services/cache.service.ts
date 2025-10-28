@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisClient, RedisPipeline, redisConfigFactory } from '@pro/redis';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { ConfigurationService } from '@pro/configuration';
 import { ErrorHandlerService } from '@pro/error-handling';
 import { createHash } from 'crypto';

@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { LoggerModule, createLoggerConfig } from '@pro/logger';
+import { LoggerModule, createLoggerConfig } from '@pro/logger-nestjs';
 import { ConfigurationModule } from '@pro/configuration';
 import { ErrorHandlingModule } from '@pro/error-handling';
 import { HourlyStatsEntity, DailyStatsEntity } from '@pro/entities';

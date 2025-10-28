@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { DailyAggregatorService } from './services/daily-aggregator.service';
 import { WindowAggregatorService } from './services/window-aggregator.service';
 

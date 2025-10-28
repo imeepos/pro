@@ -4,7 +4,7 @@ import * as request from 'supertest';
 import { CrawlerModule } from '../../src/crawler.module';
 import { WeiboCrawlerService } from '../../src/services/weibo-crawler.service';
 import { NetworkService } from '../../src/services/network.service';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { setTimeout } from 'timers/promises';
 
 describe('NetworkFailureRecoveryTest', () => {

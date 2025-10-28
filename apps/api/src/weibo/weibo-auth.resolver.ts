@@ -12,7 +12,7 @@ import {
 import { EMPTY, Observable, concat, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { GraphqlContext } from '../common/utils/context.utils';
 
 @ObjectType()

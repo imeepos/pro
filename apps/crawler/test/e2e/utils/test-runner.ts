@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { TestStateManager, TestUtils } from '../setup';
 import { TestReportGenerator, TestResult } from './test-report-generator';
 

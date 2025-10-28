@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { WeiboSearchTaskEntity, useEntityManager } from '@pro/entities';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 
 /**
  * 数据库诊断服务

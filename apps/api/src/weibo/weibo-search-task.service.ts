@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { LessThanOrEqual, Repository } from 'typeorm';
 
 import { WeiboSearchTaskEntity, WeiboSubTaskEntity } from '@pro/entities';

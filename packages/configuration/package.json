@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.13",
-    "@pro/logger": "workspace:*",
+    "@pro/logger-nestjs": "workspace:*",
     "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {

@@ -37,7 +37,7 @@
     "@nestjs/schedule": "^6.0.0",
     "@nestjs/typeorm": "^11.0.0",
     "@pro/entities": "workspace:*",
-    "@pro/logger": "workspace:*",
+    "@pro/logger-nestjs": "workspace:*",
     "@pro/mongodb": "workspace:*",
     "@pro/rabbitmq": "workspace:*",
     "@pro/redis": "workspace:*",

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { root } from '@pro/core';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { RedisClient } from '@pro/redis';
 import { WeiboAccountEntity, useEntityManager } from '@pro/entities';
 import { WeiboAccountStatus } from '@pro/types';

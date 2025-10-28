@@ -6,7 +6,7 @@ import { WeiboCrawlerService } from '../../src/services/weibo-crawler.service';
 import { DataProcessorService } from '../../src/services/data-processor.service';
 import { StorageService } from '../../src/services/storage.service';
 import { DataValidatorService } from '../../src/services/data-validator.service';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { setTimeout } from 'timers/promises';
 
 describe('DataExceptionHandlingTest', () => {

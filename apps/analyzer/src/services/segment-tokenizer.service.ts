@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import Segment, { SegmentOptions, SegmentToken } from 'segment';
 import { existsSync } from 'fs';
 import { join } from 'path';

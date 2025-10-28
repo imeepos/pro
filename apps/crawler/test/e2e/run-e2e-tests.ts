@@ -6,7 +6,7 @@
  */
 
 import { E2ETestRunner, TestExecutionConfig } from './utils/test-runner';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 
 interface CliOptions {
   parallel?: boolean;

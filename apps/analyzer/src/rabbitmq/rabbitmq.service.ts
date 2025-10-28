@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitMQClient, RabbitMQConfig } from '@pro/rabbitmq';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 
 export interface CleanedDataEvent {
   taskId: number;

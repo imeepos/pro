@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 import { HourlyAggregatorService } from '../services/hourly-aggregator.service';
 import { MessageIdempotencyService } from '../services/message-idempotency.service';

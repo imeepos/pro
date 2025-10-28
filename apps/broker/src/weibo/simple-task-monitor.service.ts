@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { LessThan } from 'typeorm';
 import { useEntityManager, WeiboSearchTaskEntity } from '@pro/entities';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 
 /**
  * 简化的任务监控器 - 只做最基本的监控

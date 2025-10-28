@@ -2,7 +2,7 @@ import { Controller, Get, Query, Param, HttpStatus, HttpCode } from '@nestjs/com
 import { MetricsService } from '../services/metrics.service';
 import { PrometheusAdapterService } from '../services/prometheus-adapter.service';
 import { HealthCheckService } from '../services/health-check.service';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { HealthCheckResult, ServiceInfo, MetricRegistry } from '../types/metrics.types';
 
 @Controller()

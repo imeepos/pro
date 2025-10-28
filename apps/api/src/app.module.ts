@@ -6,7 +6,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { MongooseModule } from '@nestjs/mongoose';
 import { join } from 'path';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
-import { LoggerModule, createLoggerConfig } from '@pro/logger';
+import { LoggerModule, createLoggerConfig } from '@pro/logger-nestjs';
 import { HealthResolver } from './health.resolver';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';

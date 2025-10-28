@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { LessThan } from 'typeorm';
 
 import { WeiboSearchTaskEntity, useEntityManager } from '@pro/entities';

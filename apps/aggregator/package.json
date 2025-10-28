@@ -36,7 +36,7 @@
     "@pro/configuration": "workspace:*",
     "@pro/entities": "workspace:*",
     "@pro/error-handling": "workspace:*",
-    "@pro/logger": "workspace:*",
+    "@pro/logger-nestjs": "workspace:*",
     "@pro/rabbitmq": "workspace:*",
     "@pro/redis": "workspace:*",
     "@pro/types": "workspace:*",

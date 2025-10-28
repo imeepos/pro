@@ -32,7 +32,7 @@
     "@nestjs/swagger": "^11.0.5",
     "@nestjs/typeorm": "^11.0.0",
     "@pro/entities": "workspace:*",
-    "@pro/logger": "workspace:*",
+    "@pro/logger-nestjs": "workspace:*",
     "@pro/rabbitmq": "workspace:*",
     "@pro/types": "workspace:*",
     "@pro/utils": "workspace:*",

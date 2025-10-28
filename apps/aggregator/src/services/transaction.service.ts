@@ -1,7 +1,7 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { ConfigurationService } from '@pro/configuration';
 import { ErrorHandlerService } from '@pro/error-handling';
 import { TransactionMetricsService, TransactionMetric } from './transaction-metrics.service';

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import {
   WeiboSearchCrawlerService,
   SubTaskMessage,

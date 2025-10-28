@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { ConfigService } from '@nestjs/config';
 import { MetricsService } from './metrics.service';
 import { CacheService } from './cache.service';

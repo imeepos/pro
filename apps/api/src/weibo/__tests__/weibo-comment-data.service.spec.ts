@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WeiboCommentEntity } from '@pro/entities';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { WeiboCommentDataService } from '../weibo-comment-data.service';
 
 describe('WeiboCommentDataService', () => {
