@@ -519,7 +519,8 @@ export class WorkflowService {
         sourceId: edge.from,
         targetId: edge.to,
         sourcePort: edge.fromProperty || null,
-        targetPort: edge.toProperty || null
+        targetPort: edge.toProperty || null,
+        condition: edge.condition || null
       }))
     };
   }
@@ -543,12 +544,14 @@ export class WorkflowService {
           from: edgeDef.sourceId,
           to: edgeDef.targetId,
           fromProperty: edgeDef.sourcePort,
-          toProperty: edgeDef.targetPort
+          toProperty: edgeDef.targetPort,
+          ...(edgeDef.condition && { condition: edgeDef.condition as any })
         });
       } else {
         workflow.addEdge({
           from: edgeDef.sourceId,
-          to: edgeDef.targetId
+          to: edgeDef.targetId,
+          ...(edgeDef.condition && { condition: edgeDef.condition as any })
         });
       }
     });
