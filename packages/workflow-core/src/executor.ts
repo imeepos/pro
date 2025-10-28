@@ -28,7 +28,11 @@ export class WorkflowExecutorVisitor {
         const { nodes: newlyExecutedNodes } = await this.executeCurrentBatch(executableNodes, ctx, ast.edges, ast.nodes);
         console.log('[WorkflowExecutorVisitor] Batch execution completed, newly executed:', newlyExecutedNodes.map(n => ({ id: n.id, state: n.state })));
         // 🔑 关键：合并所有节点的状态
-        const updatedNodes = this.mergeNodeStates(ast.nodes, newlyExecutedNodes);
+        let updatedNodes = this.mergeNodeStates(ast.nodes, newlyExecutedNodes);
+
+        // 🔄 循环边检测：检查是否有满足条件的循环边，重置目标节点为 pending
+        updatedNodes = this.checkAndResetLoopNodes(updatedNodes, ast.edges);
+
         // 5. 检查是否所有节点都已完成
         const allReachableCompleted = this.areAllReachableNodesCompleted(updatedNodes, ast.edges);
         const hasFailures = updatedNodes.some(node => node.state === 'fail');
@@ -90,6 +94,15 @@ export class WorkflowExecutorVisitor {
 
             const resultNode = await this.executeNode(node, ctx);
             const outputs = this.extractNodeOutputs(resultNode);
+
+            // 🔑 节点执行完成后，立即将所有下游节点重置为 pending
+            const outgoingEdges = edges.filter(e => e.from === node.id);
+            outgoingEdges.forEach(edge => {
+                const downstream = workflowNodes.find(n => n.id === edge.to);
+                if (downstream) {
+                    downstream.state = 'pending';
+                }
+            });
 
             return {
                 node: resultNode,
@@ -209,6 +222,38 @@ export class WorkflowExecutorVisitor {
             const executedNode = executedNodeMap.get(originalNode.id);
             // 如果节点被重新执行，使用新状态；否则保持原状态
             return executedNode || originalNode;
+        });
+    }
+
+    // 🔄 循环边检测：检查满足条件的循环边，重置目标节点为 pending
+    private checkAndResetLoopNodes(nodes: INode[], edges: IEdge[]): INode[] {
+        const nodesToReset = new Set<string>();
+
+        // 遍历所有有条件的边
+        edges.forEach(edge => {
+            if (!edge.condition) return;
+
+            const sourceNode = nodes.find(n => n.id === edge.from);
+            if (!sourceNode || sourceNode.state !== 'success') return;
+
+            // 检查条件是否满足
+            const actualValue = (sourceNode as any)[edge.condition.property];
+            if (actualValue === edge.condition.value) {
+                // 条件满足，标记目标节点需要重置
+                nodesToReset.add(edge.to);
+                console.log(`[WorkflowExecutorVisitor] Loop condition satisfied: ${edge.from} -> ${edge.to} (${edge.condition.property} === ${edge.condition.value})`);
+            }
+        });
+
+        // 重置标记的节点状态为 pending
+        // 当这些节点重新执行后，其输出改变会通过 assignInputsToNode 触发下游节点的 setter
+        // setter 会自动检测输入变化并将 success 节点重置为 pending，实现增量式失效传播
+        return nodes.map(node => {
+            if (nodesToReset.has(node.id) && node.state === 'success') {
+                console.log(`[WorkflowExecutorVisitor] Resetting node ${node.id} (${node.type}) to pending for loop execution`);
+                return { ...node, state: 'pending' as IAstStates };
+            }
+            return node;
         });
     }
 

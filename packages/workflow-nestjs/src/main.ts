@@ -1,45 +1,22 @@
 import "reflect-metadata"
 import "dotenv/config"
 
-console.log('[main] Starting imports...');
-
 import { HtmlParserAst, PlaywrightAst, useHandlers, WeiboAccountAst, WeiboSearchUrlBuilderAst, WorkflowGraphAst, MqPublisherAst } from "@pro/workflow-core";
-console.log('[main] Imported workflow-core');
-
 import { UserProfileVisitor } from "./visitors/user-profile.visitor";
-console.log('[main] Imported UserProfileVisitor');
-
 import { WeiboSearchUrlBuilderAstVisitor } from "./WeiboSearchUrlBuilderAstVisitor";
-console.log('[main] Imported WeiboSearchUrlBuilderAstVisitor');
-
 import { root } from "@pro/core";
-console.log('[main] Imported root from core');
-
 import { PlaywrightAstVisitor } from "./PlaywrightAstVisitor";
-console.log('[main] Imported PlaywrightAstVisitor');
-
 import { WorkflowService, WorkflowWithMetadata } from "./workflow.service";
-console.log('[main] Imported WorkflowService');
-
 import { WeiboAccountAstVisitor } from "./WeiboAccountAstVisitor";
-console.log('[main] Imported WeiboAccountAstVisitor');
-
 import { HtmlParserAstVisitor } from "./HtmlParserAstVisitor";
-console.log('[main] Imported HtmlParserAstVisitor');
-
 import { MqPublisherAstVisitor } from "./MqPublisherAstVisitor";
 import { QUEUE_NAMES } from "@pro/types";
 import { RabbitMQService } from "@pro/rabbitmq";
-console.log('[main] Imported MqPublisherAstVisitor');
-console.log('[main] All imports completed');
 
 /**
  * 运行 workflow 示例 - 使用单一版本架构 + 运行时状态追踪
  */
 export async function runWorkflow() {
-    console.log('[runWorkflow] Function started');
-
-    console.log('[runWorkflow] Registering handlers...');
     useHandlers([
         UserProfileVisitor,
         WeiboSearchUrlBuilderAstVisitor,
@@ -50,25 +27,15 @@ export async function runWorkflow() {
     ]);
     const mq = root.get(RabbitMQService)
     await mq.onModuleInit();
-    console.log('[runWorkflow] Handlers registered');
-
-    console.log('[runWorkflow] Getting WorkflowService from root container...');
     const workflowService = root.get(WorkflowService);
-    console.log('[runWorkflow] WorkflowService obtained');
-
     try {
         // 尝试从数据库获取已存在的 workflow
-        console.log('[runWorkflow] Calling getWorkflowBySlug...');
         let workflowMetadata = await workflowService.getWorkflowBySlug('weibo-1761572800189');
-        console.log('[runWorkflow] getWorkflowBySlug returned:', workflowMetadata ? 'found' : 'not found');
-
         if (!workflowMetadata) {
-            console.log('Workflow not found, creating new one...');
             workflowMetadata = await createWorkflow();
         }
 
         // 执行 workflow 并记录执行历史和运行时状态
-        console.log('Executing workflow...');
         const { execution, state, result } = await workflowService.executeWorkflow(
             workflowMetadata.id,
             'system',

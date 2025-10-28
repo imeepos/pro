@@ -14,9 +14,14 @@ export class HtmlParserAst extends Ast {
     @Input() html: string | undefined;
     @Input() url: string | undefined;
 
+    @Input() startDate: Date | undefined;
+
     @Output() result: any;
     @Output() hasNextPage: boolean | undefined;
     @Output() nextPageLink: string | undefined;
+    // 判断日期和开始日期
+    @Output() hasNextSearch: boolean | undefined;
+    @Output() nextEndDate: Date | undefined;
     type: `HtmlParserAst` = `HtmlParserAst`;
 }
 
