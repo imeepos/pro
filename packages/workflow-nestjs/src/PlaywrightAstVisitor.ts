@@ -1,6 +1,7 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
 import { PlaywrightAst, Handler } from '@pro/workflow-core';
 import { Injectable } from '@pro/core';
+
 export interface CookieData {
     name: string;
     value: string;
@@ -15,38 +16,38 @@ export interface CookieData {
 @Handler(PlaywrightAst)
 @Injectable()
 export class PlaywrightAstVisitor {
-    private browser: Browser | null = null;
-    private context: BrowserContext | null = null;
+    private static sharedBrowser: Browser | null = null;
+    private static sharedContext: BrowserContext | null = null;
+    private static isInitializing = false;
+
     private page: Page | null = null;
+
     async visit(node: PlaywrightAst): Promise<PlaywrightAst> {
         try {
-            // 1. 初始化浏览器（支持复用）
-            await this.initializeBrowser(node);
-            // 2. 设置Cookies
+            await this.ensureBrowserReady(node);
             await this.setCookies(node);
+
             if (!this.page) throw new Error(`创建页面失败`)
-            if (!node.url) {
-                throw new Error(`页面链接不能为空`)
-            }
-            // 3. 访问页面
+            if (!node.url) throw new Error(`页面链接不能为空`)
+
             await this.page.goto(node.url, {
                 waitUntil: 'domcontentloaded',
                 timeout: 30000
             });
+
             node.html = await this.page.content();
             node.state = 'success'
             return node;
         } finally {
-            await this.close()
-            console.log(`浏览器已关闭`)
+            await this.closePage()
         }
     }
 
     private async setCookies(node: PlaywrightAst): Promise<void> {
-        if (!node.cookies || !this.context) return;
+        const context = PlaywrightAstVisitor.sharedContext;
+        if (!node.cookies || !context) return;
         try {
-            // 1. 如果需要清除现有cookies
-            await this.context.clearCookies();
+            await context.clearCookies();
             // 2. 解析cookies数据
             let cookies: CookieData[] = [];
 
@@ -58,7 +59,6 @@ export class PlaywrightAstVisitor {
                 cookies = node.cookies;
             }
 
-            // 3. 设置cookies
             if (cookies.length > 0) {
                 const playwrightCookies = cookies.map(cookie => ({
                     name: cookie.name,
@@ -71,11 +71,11 @@ export class PlaywrightAstVisitor {
                     sameSite: cookie.sameSite || 'Lax'
                 }));
 
-                await this.context.addCookies(playwrightCookies);
+                await context.addCookies(playwrightCookies);
             }
 
         } catch (error) {
-            console.error('❌ 设置cookies失败:', (error as Error).message);
+            console.error('设置cookies失败:', (error as Error).message);
         }
     }
     private parseCookieString(cookieString: string): CookieData[] {
@@ -104,35 +104,107 @@ export class PlaywrightAstVisitor {
             return '';
         }
     }
-    async close(): Promise<void> {
+    private async closePage(): Promise<void> {
         if (this.page) {
             await this.page.close();
             this.page = null;
         }
-        if (this.context) {
-            await this.context.close();
-            this.context = null;
+    }
+
+    private async ensureBrowserReady(node: PlaywrightAst): Promise<void> {
+        if (await this.isBrowserHealthy()) {
+            await this.createPage();
+            return;
         }
-        if (this.browser) {
-            await this.browser.close();
-            this.browser = null;
+
+        while (PlaywrightAstVisitor.isInitializing) {
+            await this.sleep(100);
+        }
+
+        if (await this.isBrowserHealthy()) {
+            await this.createPage();
+            return;
+        }
+
+        await this.initializeBrowser(node);
+    }
+
+    private async isBrowserHealthy(): Promise<boolean> {
+        try {
+            const browser = PlaywrightAstVisitor.sharedBrowser;
+            const context = PlaywrightAstVisitor.sharedContext;
+
+            if (!browser || !context) return false;
+
+            return browser.isConnected();
+        } catch {
+            return false;
         }
     }
+
     private async initializeBrowser(node: PlaywrightAst): Promise<void> {
-        // 创建新实例
-        this.browser = await chromium.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        PlaywrightAstVisitor.isInitializing = true;
 
-        const userAgent = typeof node.ua === 'string' ? node.ua : ``;
+        try {
+            await this.cleanupSharedBrowser();
 
-        this.context = await this.browser.newContext({
-            viewport: { width: 1920, height: 1080 },
-            userAgent: userAgent,
-        });
+            PlaywrightAstVisitor.sharedBrowser = await chromium.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
 
-        this.page = await this.context.newPage();
+            const userAgent = typeof node.ua === 'string' ? node.ua : '';
+
+            PlaywrightAstVisitor.sharedContext = await PlaywrightAstVisitor.sharedBrowser.newContext({
+                viewport: { width: 1920, height: 1080 },
+                userAgent,
+            });
+
+            await this.createPage();
+        } finally {
+            PlaywrightAstVisitor.isInitializing = false;
+        }
+    }
+
+    private async createPage(): Promise<void> {
+        const context = PlaywrightAstVisitor.sharedContext;
+        if (!context) throw new Error('Browser context not initialized');
+
+        this.page = await context.newPage();
         this.page.setDefaultTimeout(30000);
+    }
+
+    private async cleanupSharedBrowser(): Promise<void> {
+        try {
+            if (PlaywrightAstVisitor.sharedContext) {
+                await PlaywrightAstVisitor.sharedContext.close();
+                PlaywrightAstVisitor.sharedContext = null;
+            }
+            if (PlaywrightAstVisitor.sharedBrowser) {
+                await PlaywrightAstVisitor.sharedBrowser.close();
+                PlaywrightAstVisitor.sharedBrowser = null;
+            }
+        } catch (error) {
+            console.error('清理浏览器失败:', (error as Error).message);
+        }
+    }
+
+    private sleep(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    static async cleanup(): Promise<void> {
+        try {
+            if (PlaywrightAstVisitor.sharedContext) {
+                await PlaywrightAstVisitor.sharedContext.close();
+                PlaywrightAstVisitor.sharedContext = null;
+            }
+            if (PlaywrightAstVisitor.sharedBrowser) {
+                await PlaywrightAstVisitor.sharedBrowser.close();
+                PlaywrightAstVisitor.sharedBrowser = null;
+            }
+        } catch (error) {
+            console.error('全局浏览器清理失败:', (error as Error).message);
+        }
     }
 }
