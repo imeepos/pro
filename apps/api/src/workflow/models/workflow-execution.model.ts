@@ -29,9 +29,6 @@ export class WorkflowExecutionModel {
   @Field(() => ID)
   workflowId!: string;
 
-  @Field(() => Int)
-  revision!: number;
-
   @Field(() => String)
   status!: WorkflowExecutionStatus;
 

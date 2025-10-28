@@ -29,8 +29,6 @@ import { WeiboCommentDataService } from './weibo-comment-data.service';
 import { WeiboPostDataService } from './weibo-post-data.service';
 import { WeiboInteractionDataService } from './weibo-interaction-data.service';
 import { WeiboDataResolver } from './weibo-data.resolver';
-import { RedisClient } from '@pro/redis';
-import { redisConfigFactory } from '../config';
 import { ConfigService } from '@nestjs/config';
 
 /**
@@ -71,13 +69,6 @@ import { ConfigService } from '@nestjs/config';
     WeiboDataResolver,
     WeiboTaskStatusConsumer,
     WeiboTaskStatusResolver,
-    {
-      provide: RedisClient,
-      useFactory: (configService: ConfigService) => {
-        return new RedisClient(redisConfigFactory(configService));
-      },
-      inject: [ConfigService],
-    },
   ],
   exports: [
     TypeOrmModule,

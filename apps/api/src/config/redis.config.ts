@@ -1,4 +1,4 @@
-import { RedisOptions } from 'ioredis';
+import { RedisOptions, Redis } from 'ioredis';
 import { ConfigService } from '@nestjs/config';
 
 export const redisConfigFactory = (configService: ConfigService): RedisOptions | string => {
@@ -14,6 +14,10 @@ export const redisConfigFactory = (configService: ConfigService): RedisOptions |
     password: configService.get<string>('REDIS_PASSWORD'),
     retryStrategy: (times: number) => Math.min(times * 50, 2000),
   };
+};
+
+export const createRedisClient = (config: RedisOptions | string) => {
+  return new Redis(config);
 };
 
 export const createRedisConfig = () => ({

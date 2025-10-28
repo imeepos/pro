@@ -3,8 +3,7 @@ import { RabbitMQService } from "@pro/rabbitmq";
 import {
     QUEUE_NAMES,
     WeiboDetailCrawlEvent,
-    UserProfileCrawlEvent,
-    TaskPriority
+    UserProfileCrawlEvent
 } from "@pro/types";
 
 interface WeiboListMessage {
@@ -41,17 +40,11 @@ async function main() {
             if (post.mid) mids.push(post.mid)
         }
 
-        const now = new Date().toISOString()
-
         // 批量发送帖子详情爬取任务
         let detailSuccessCount = 0
         for (const mid of mids) {
             const event: WeiboDetailCrawlEvent = {
                 statusId: mid,
-                priority: TaskPriority.NORMAL,
-                discoveredAt: now,
-                createdAt: now,
-                retryCount: 0
             }
 
             try {
@@ -66,14 +59,7 @@ async function main() {
         let userSuccessCount = 0
         for (const uid of uniqueUids) {
             const event: UserProfileCrawlEvent = {
-                userId: uid,
-                priority: TaskPriority.NORMAL,
-                sourceContext: {
-                    source: 'post-author'
-                },
-                discoveredAt: now,
-                createdAt: now,
-                retryCount: 0
+                userId: uid
             }
 
             try {

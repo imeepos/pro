@@ -91,9 +91,6 @@ export class WorkflowModel {
   @Field(() => String, { nullable: true })
   description?: string | null;
 
-  @Field(() => Int)
-  revision!: number;
-
   @Field(() => [String])
   tags!: string[];
 

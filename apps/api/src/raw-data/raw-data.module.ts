@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { RawDataSource, RawDataSourceSchema, RawDataSourceService } from '@pro/mongodb';
+import { RawDataSource, RawDataSourceService } from '@pro/mongodb';
 import { RawDataService } from './raw-data.service';
 import { RawDataResolver } from './raw-data.resolver';
 
@@ -17,7 +17,7 @@ import { RawDataResolver } from './raw-data.resolver';
   imports: [
     // MongoDB模型注册
     MongooseModule.forFeature([
-      { name: RawDataSource.name, schema: RawDataSourceSchema }
+      { name: RawDataSource.name, schema: RawDataSource }
     ]),
   ],
   providers: [

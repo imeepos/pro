@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from '@pro/types';
 import { RedisClient } from '@pro/redis';
-import { redisConfigFactory } from '../../config';
 import { ConfigService } from '@nestjs/config';
 import { verifyViewerToken, fingerprintToken } from '../utils/viewer-token.verifier';
+import { root } from '@pro/core';
 
 export const TOKEN_BLACKLIST_PREFIX = 'blacklist:';
 
@@ -14,15 +14,15 @@ export const TOKEN_BLACKLIST_PREFIX = 'blacklist:';
  */
 @Injectable()
 export class GraphqlWsAuthService {
-  private redisClient: RedisClient;
   private readonly logger = new Logger(GraphqlWsAuthService.name);
   private readonly blacklistPrefix = TOKEN_BLACKLIST_PREFIX;
+  private readonly redisClient: RedisClient;
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
   ) {
-    this.redisClient = new RedisClient(redisConfigFactory(config));
+    this.redisClient = root.get(RedisClient);
   }
 
   /**

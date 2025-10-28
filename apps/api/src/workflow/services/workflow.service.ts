@@ -5,6 +5,8 @@ import { WorkflowEntity, WorkflowExecutionEntity, useEntityManager } from '@pro/
 import { SaveWorkflowInput } from '../dto/save-workflow.input';
 import { WorkflowFilterInput } from '../dto/workflow-filter.input';
 import { TriggerWorkflowInput } from '../dto/trigger-workflow.input';
+import { WorkflowModel, WorkflowExecutionModel, WorkflowExecutionConnectionModel } from '../models';
+import { PageInfoModel } from '../../common/models/pagination.model';
 
 interface WorkflowExecutionConnection {
   edges: Array<{ cursor: string; node: WorkflowExecutionEntity }>;
@@ -20,7 +22,42 @@ interface WorkflowExecutionConnection {
 @Injectable()
 export class WorkflowService {
 
-  async listWorkflows(filter?: WorkflowFilterInput): Promise<WorkflowEntity[]> {
+  private mapEntityToModel(entity: WorkflowEntity): WorkflowModel {
+    return {
+      id: entity.id,
+      name: entity.name,
+      slug: entity.slug,
+      description: entity.description,
+      tags: entity.tags,
+      definition: {
+        version: 1,
+        nodes: [],
+        edges: []
+      },
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      createdBy: entity.createdBy,
+      updatedBy: entity.updatedBy,
+    };
+  }
+
+  private mapExecutionEntityToModel(entity: WorkflowExecutionEntity): WorkflowExecutionModel {
+    return {
+      id: entity.id,
+      workflowId: entity.workflowId,
+      status: entity.status as any,
+      startedAt: entity.startedAt,
+      finishedAt: entity.finishedAt,
+      triggeredBy: entity.triggeredBy,
+      context: entity.context,
+      metrics: entity.metrics,
+      logsPointer: entity.logsPointer,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    };
+  }
+
+  async listWorkflows(filter?: WorkflowFilterInput): Promise<WorkflowModel[]> {
     return useEntityManager(async (m) => {
       const query = m.getRepository(WorkflowEntity).createQueryBuilder('workflow');
 
@@ -37,20 +74,22 @@ export class WorkflowService {
 
       query.orderBy('workflow.updatedAt', 'DESC');
 
-      return query.getMany();
+      const entities = await query.getMany();
+      return entities.map(entity => this.mapEntityToModel(entity));
     });
   }
 
-  async getWorkflowById(id: string): Promise<WorkflowEntity | null> {
+  async getWorkflowById(id: string): Promise<WorkflowModel | null> {
     return useEntityManager(async (m) => {
-      return m.getRepository(WorkflowEntity).findOne({ where: { id } });
+      const entity = await m.getRepository(WorkflowEntity).findOne({ where: { id } });
+      return entity ? this.mapEntityToModel(entity) : null;
     });
   }
 
   async saveWorkflow(
     input: SaveWorkflowInput,
     actorId?: string | null,
-  ): Promise<WorkflowEntity> {
+  ): Promise<WorkflowModel> {
     return useEntityManager(async (m) => {
       const tags = input.tags?.filter(Boolean) ?? [];
       const definition = input.definition as any;
@@ -69,7 +108,7 @@ export class WorkflowService {
         existing.definition = definition;
         existing.updatedBy = actorId ?? existing.updatedBy ?? null;
 
-        return workflowRepo.save(existing);
+        return this.mapEntityToModel(await workflowRepo.save(existing));
       }
 
       const entity = workflowRepo.create({
@@ -82,7 +121,7 @@ export class WorkflowService {
         updatedBy: actorId ?? null,
       });
 
-      return workflowRepo.save(entity);
+      return this.mapEntityToModel(await workflowRepo.save(entity));
     });
   }
 
@@ -98,7 +137,7 @@ export class WorkflowService {
     name: string,
     slug: string,
     actorId?: string | null,
-  ): Promise<WorkflowEntity> {
+  ): Promise<WorkflowModel> {
     return useEntityManager(async (m) => {
       const workflowRepo = m.getRepository(WorkflowEntity);
       const original = await workflowRepo.findOne({ where: { id } });
@@ -116,14 +155,14 @@ export class WorkflowService {
         updatedBy: actorId ?? original.updatedBy ?? null,
       });
 
-      return workflowRepo.save(entity);
+      return this.mapEntityToModel(await workflowRepo.save(entity));
     });
   }
 
   async triggerWorkflow(
     input: TriggerWorkflowInput,
     actorId?: string | null,
-  ): Promise<WorkflowExecutionEntity> {
+  ): Promise<WorkflowExecutionModel> {
     return useEntityManager(async (m) => {
       const workflowRepo = m.getRepository(WorkflowEntity);
       const executionRepo = m.getRepository(WorkflowExecutionEntity);
@@ -142,7 +181,7 @@ export class WorkflowService {
         logsPointer: null,
       });
 
-      return executionRepo.save(execution);
+      return this.mapExecutionEntityToModel(await executionRepo.save(execution));
     });
   }
 
@@ -150,7 +189,7 @@ export class WorkflowService {
     workflowId: string,
     limit = 20,
     cursor?: string | null,
-  ): Promise<WorkflowExecutionConnection> {
+  ): Promise<WorkflowExecutionConnectionModel> {
     return useEntityManager(async (m) => {
       const executionRepo = m.getRepository(WorkflowExecutionEntity);
       const where: Record<string, any> = { workflowId };
@@ -174,7 +213,7 @@ export class WorkflowService {
 
       const edges = items.map((node) => ({
         cursor: node.createdAt.toISOString(),
-        node,
+        node: this.mapExecutionEntityToModel(node),
       }));
 
       return {
@@ -188,12 +227,5 @@ export class WorkflowService {
         totalCount,
       };
     });
-  }
-
-  private hasDefinitionChanged(
-    previous: any,
-    next: any,
-  ): boolean {
-    return JSON.stringify(previous) !== JSON.stringify(next);
   }
 }

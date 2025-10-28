@@ -3,12 +3,12 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from '@pro/types';
 import { RedisClient } from '@pro/redis';
-import { redisConfigFactory } from '../../config';
 import { ConfigService } from '@nestjs/config';
+import { root } from '@pro/core';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  private redisClient: RedisClient;
+  private readonly redisClient: RedisClient;
   private readonly TOKEN_BLACKLIST_PREFIX = 'blacklist:';
 
   constructor(@Inject() private readonly config: ConfigService) {
@@ -22,7 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: config.get('JWT_SECRET', 'your-jwt-secret-change-in-production'),
       passReqToCallback: true,
     });
-    this.redisClient = new RedisClient(redisConfigFactory(config));
+    this.redisClient = root.get(RedisClient);
   }
 
   async validate(req: any, payload: JwtPayload): Promise<JwtPayload> {

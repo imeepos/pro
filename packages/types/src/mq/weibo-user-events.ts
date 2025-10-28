@@ -14,7 +14,7 @@ export interface UserProfileCrawlEvent {
   userId: string;
 
   /** 调度优先级, 影响消费顺序 */
-  priority: TaskPriority;
+  priority?: TaskPriority;
 
   /** 发现来源上下文, 帮助还原任务链路 */
   sourceContext?: {
@@ -35,11 +35,11 @@ export interface UserProfileCrawlEvent {
   };
 
   /** 首次发现时间 - ISO 8601 */
-  discoveredAt: string;
+  discoveredAt?: string;
 
   /** 当前重试次数, 首次为0 */
   retryCount?: number;
 
   /** 消息发布时间 - ISO 8601 */
-  createdAt: string;
+  createdAt?: string;
 }

@@ -10,21 +10,21 @@ import { UserEntity, useEntityManager } from '@pro/entities';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
 import { AuthResponse, JwtPayload, User, UserStatus } from '@pro/types';
 import { RedisClient } from '@pro/redis';
-import { redisConfigFactory, getRefreshTokenExpiresIn } from '../config';
+import { getRefreshTokenExpiresIn } from '../config';
 import { ConfigService } from '@nestjs/config';
-import { Redis } from 'ioredis';
+import { root } from '@pro/core';
 
 @Injectable()
 export class AuthService {
-  private redisClient: RedisClient;
   private readonly TOKEN_BLACKLIST_PREFIX = 'blacklist:';
   private readonly REFRESH_TOKEN_PREFIX = 'refresh:';
+  private readonly redisClient: RedisClient;
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
-    this.redisClient = new RedisClient(new Redis(redisConfigFactory(configService)));
+    this.redisClient = root.get(RedisClient);
   }
 
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
