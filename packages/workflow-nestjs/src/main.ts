@@ -13,9 +13,14 @@ async function main() {
     const { run } = await runPostDetailWorkflow()
     postDetail.consumer$.pipe(
         switchMap(res => {
-            return from(run(res.message.mid))
-        })
-    ).subscribe()
+            console.log(res.message)
+            return from(run(res.message.mid).then(() => res.ack()).catch(() => res.nack()))
+        }),
+    ).subscribe({
+        error(_err: Error) {
+            process.exit()
+        },
+    })
 }
 
 main();

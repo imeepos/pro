@@ -6,7 +6,7 @@ export interface PostDetailCrawlQueue {
     postAt: Date;
 }
 export function createPostDetailCrawlQueue() {
-    return useQueue<PostDetailCrawlQueue>(`post_detail_crawl`)
+    return useQueue<PostDetailCrawlQueue>(`post_detail_crawl`, { manualAck: true })
 }
 
 export interface WeiboKeywordSearchQueue {
@@ -16,5 +16,10 @@ export interface WeiboKeywordSearchQueue {
 }
 
 export function createWeiboKeywordSearchQueue() {
-    return useQueue<WeiboKeywordSearchQueue>(`weibo_keyword_search`)
+    return useQueue<WeiboKeywordSearchQueue>(`weibo_keyword_search`, { manualAck: true })
+}
+
+
+export async function delay() {
+    return new Promise((resolve) => setTimeout(resolve, 1000 * 5 * Math.random()))
 }

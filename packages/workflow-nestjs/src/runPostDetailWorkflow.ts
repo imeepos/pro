@@ -5,17 +5,18 @@ import {
   FetchPostDetailVisitor,
   FetchCommentsVisitor,
   FetchLikesVisitor,
+  SaveUserAndPostVisitor,
+  SaveCommentsAndLikesVisitor,
   SavePostDetailVisitor,
 } from "./workflows/post-detail.visitor";
 import {
   FetchPostDetailAst,
   FetchCommentsAst,
   FetchLikesAst,
+  SaveUserAndPostAst,
+  SaveCommentsAndLikesAst,
   SavePostDetailAst,
-  UserCheckAst,
-  UserFetchAst,
 } from "./workflows/post-detail.ast";
-import { UserCheckVisitor, UserFetchVisitor } from "./workflows/user.visitor";
 import { WeiboAccountAstVisitor } from "./WeiboAccountAstVisitor";
 
 export interface PostDetailWorkflowConfig {
@@ -26,11 +27,11 @@ export interface PostDetailWorkflowConfig {
 export async function runPostDetailWorkflow() {
   useHandlers([
     WeiboAccountAstVisitor,
-    UserCheckVisitor,
-    UserFetchVisitor,
     FetchPostDetailVisitor,
+    SaveUserAndPostVisitor,
     FetchCommentsVisitor,
     FetchLikesVisitor,
+    SaveCommentsAndLikesVisitor,
     SavePostDetailVisitor,
   ]);
 
@@ -48,7 +49,7 @@ export async function runPostDetailWorkflow() {
     const { state } = await workflowService.executeWorkflow(
       workflowMetadata.id,
       'system',
-      { postId, metadata, authorWeiboId: '1534871194', ...config } // 暂时使用硬编码的authorWeiboId，实际应该从帖子详情中提取
+      { postId, metadata, ...config }
     );
 
     return state;
@@ -61,83 +62,83 @@ export async function createPostDetailWorkflow(
   _config: PostDetailWorkflowConfig = {}
 ): Promise<WorkflowWithMetadata> {
   const account = new WeiboAccountAst();
-  const userCheck = new UserCheckAst();
-  const userFetch = new UserFetchAst();
   const fetchDetail = new FetchPostDetailAst();
+  const saveUserAndPost = new SaveUserAndPostAst();
   const fetchComments = new FetchCommentsAst();
   const fetchLikes = new FetchLikesAst();
+  const saveCommentsAndLikes = new SaveCommentsAndLikesAst();
   const saveDetail = new SavePostDetailAst();
 
   const workflow = new WorkflowGraphAst()
     .addNode(account)
-    .addNode(userCheck)
-    .addNode(userFetch)
     .addNode(fetchDetail)
+    .addNode(saveUserAndPost)
     .addNode(fetchComments)
     .addNode(fetchLikes)
+    .addNode(saveCommentsAndLikes)
     .addNode(saveDetail)
-    // 用户处理流程的边连接
+
+    // Step 1: account -> fetchDetail (提供认证信息)
     .addEdge({
       from: account.id,
-      to: userCheck.id,
+      to: fetchDetail.id,
       fromProperty: 'cookies',
       toProperty: 'cookies',
     })
     .addEdge({
       from: account.id,
-      to: userCheck.id,
+      to: fetchDetail.id,
+      fromProperty: 'headers',
+      toProperty: 'headers',
+    })
+
+    // Step 2: fetchDetail -> saveUserAndPost (保存用户和帖子)
+    .addEdge({
+      from: fetchDetail.id,
+      to: saveUserAndPost.id,
+      fromProperty: 'detail',
+      toProperty: 'detail',
+    })
+
+    // Step 3: saveUserAndPost -> fetchComments (使用数据库ID爬取评论)
+    .addEdge({
+      from: account.id,
+      to: fetchComments.id,
+      fromProperty: 'cookies',
+      toProperty: 'cookies',
+    })
+    .addEdge({
+      from: account.id,
+      to: fetchComments.id,
       fromProperty: 'headers',
       toProperty: 'headers',
     })
     .addEdge({
-      from: userCheck.id,
-      to: userFetch.id,
-      fromProperty: 'needFetch',
-      toProperty: 'needFetch',
+      from: fetchDetail.id,
+      to: fetchComments.id,
+      fromProperty: 'postId',
+      toProperty: 'postId',
     })
     .addEdge({
-      from: userCheck.id,
-      to: userFetch.id,
+      from: fetchDetail.id,
+      to: fetchComments.id,
+      fromProperty: 'detail',
+      toProperty: 'detail',
+    })
+    .addEdge({
+      from: fetchDetail.id,
+      to: fetchComments.id,
       fromProperty: 'authorWeiboId',
       toProperty: 'authorWeiboId',
     })
     .addEdge({
-      from: userCheck.id,
-      to: fetchDetail.id,
-      fromProperty: 'authorId',
-      toProperty: 'authorId',
-    })
-    .addEdge({
-      from: userFetch.id,
-      to: fetchDetail.id,
-      fromProperty: 'authorId',
-      toProperty: 'authorId',
-    })
-    // 帖子详情处理的边连接
-    .addEdge({
-      from: account.id,
-      to: fetchDetail.id,
-      fromProperty: 'cookies',
-      toProperty: 'cookies',
-    })
-    .addEdge({
-      from: account.id,
-      to: fetchDetail.id,
-      fromProperty: 'headers',
-      toProperty: 'headers',
-    })
-    .addEdge({
-      from: account.id,
+      from: saveUserAndPost.id,
       to: fetchComments.id,
-      fromProperty: 'cookies',
-      toProperty: 'cookies',
+      fromProperty: 'savedAuthorId',
+      toProperty: 'uid',
     })
-    .addEdge({
-      from: account.id,
-      to: fetchComments.id,
-      fromProperty: 'headers',
-      toProperty: 'headers',
-    })
+
+    // Step 4: saveUserAndPost -> fetchLikes (使用数据库ID爬取点赞)
     .addEdge({
       from: account.id,
       to: fetchLikes.id,
@@ -152,15 +153,43 @@ export async function createPostDetailWorkflow(
     })
     .addEdge({
       from: fetchDetail.id,
-      to: fetchComments.id,
-      fromProperty: 'authorId',
-      toProperty: 'uid',
+      to: fetchLikes.id,
+      fromProperty: 'postId',
+      toProperty: 'postId',
     })
     .addEdge({
       from: fetchDetail.id,
       to: fetchLikes.id,
       fromProperty: 'detail',
       toProperty: 'detail',
+    })
+
+    // Step 5: fetchComments/fetchLikes -> saveCommentsAndLikes (保存评论和点赞)
+    .addEdge({
+      from: fetchComments.id,
+      to: saveCommentsAndLikes.id,
+      fromProperty: 'comments',
+      toProperty: 'comments',
+    })
+    .addEdge({
+      from: fetchLikes.id,
+      to: saveCommentsAndLikes.id,
+      fromProperty: 'likes',
+      toProperty: 'likes',
+    })
+    .addEdge({
+      from: fetchDetail.id,
+      to: saveCommentsAndLikes.id,
+      fromProperty: 'postId',
+      toProperty: 'postId',
+    })
+
+    // Step 6: saveCommentsAndLikes -> saveDetail (发送完成事件)
+    .addEdge({
+      from: fetchDetail.id,
+      to: saveDetail.id,
+      fromProperty: 'postId',
+      toProperty: 'postId',
     })
     .addEdge({
       from: fetchDetail.id,
@@ -179,32 +208,6 @@ export async function createPostDetailWorkflow(
       to: saveDetail.id,
       fromProperty: 'likes',
       toProperty: 'likes',
-    })
-    // 将postId从fetchDetail传递到fetchComments和fetchLikes
-    .addEdge({
-      from: fetchDetail.id,
-      to: fetchComments.id,
-      fromProperty: 'postId',
-      toProperty: 'postId',
-    })
-    .addEdge({
-      from: fetchDetail.id,
-      to: fetchLikes.id,
-      fromProperty: 'postId',
-      toProperty: 'postId',
-    })
-    // 将postId和authorId传递到saveDetail
-    .addEdge({
-      from: fetchDetail.id,
-      to: saveDetail.id,
-      fromProperty: 'postId',
-      toProperty: 'postId',
-    })
-    .addEdge({
-      from: fetchDetail.id,
-      to: saveDetail.id,
-      fromProperty: 'authorId',
-      toProperty: 'authorId',
     });
 
   const workflowService = root.get(WorkflowService);

@@ -40,7 +40,7 @@ export async function runWeiBoKeywordSearchWorkflow() {
     mq.consumer$.pipe(
         switchMap(msg => {
             const message = msg.message
-            return from(run(message.keyword, message.start, message.end))
+            return from(run(message.keyword, message.start, message.end).then(() => msg.ack()).catch(() => msg.nack()))
         })
     ).subscribe({})
 }

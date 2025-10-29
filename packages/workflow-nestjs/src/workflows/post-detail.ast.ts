@@ -24,11 +24,12 @@ export class UserFetchAst extends Ast {
 @Node()
 export class FetchPostDetailAst extends Ast {
   @Input() @Output() postId!: string
-  @Input() @Output() authorId!: string
   @Input() cookies?: string
   @Input() headers?: Record<string, string>
 
   @Output() detail?: any
+  @Output() authorWeiboId!: string
+  @Output() authorId?: string
 
   type = 'FetchPostDetailAst' as const
 }
@@ -37,6 +38,8 @@ export class FetchPostDetailAst extends Ast {
 export class FetchCommentsAst extends Ast {
   @Input() postId!: string
   @Input() uid!: string
+  @Input() authorWeiboId!: string
+  @Input() detail?: any
   @Input() cookies?: string
   @Input() headers?: Record<string, string>
   @Input() maxPages?: number
@@ -59,6 +62,29 @@ export class FetchLikesAst extends Ast {
   @Output() totalLikes?: number
 
   type = 'FetchLikesAst' as const
+}
+
+@Node()
+export class SaveUserAndPostAst extends Ast {
+  @Input() detail!: any
+  @Input() authorId?: string
+
+  @Output() savedAuthorId!: string
+  @Output() savedPostId!: string
+
+  type = 'SaveUserAndPostAst' as const
+}
+
+@Node()
+export class SaveCommentsAndLikesAst extends Ast {
+  @Input() comments?: any[]
+  @Input() likes?: any[]
+  @Input() postId!: string
+
+  @Output() savedCommentCount!: number
+  @Output() savedLikeCount!: number
+
+  type = 'SaveCommentsAndLikesAst' as const
 }
 
 @Node()

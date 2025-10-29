@@ -9,12 +9,13 @@ import type { WeiboStatusLikeShowResponse } from './types/like-show.js'
 import type { WeiboBuildCommentsResponse } from './types/comment-build.js'
 import { resolveWeiboRequestOptions, type WeiboRequestOptions } from './weibo.options.js'
 import { WeiboRequestError } from './weibo.error.js'
+import { Inject } from '@nestjs/common'
 
 @Injectable()
 export class WeiboStatusService {
   private readonly axios: AxiosInstance
 
-  constructor(private readonly rawDataSourceService: RawDataSourceService) {
+  constructor(@Inject(RawDataSourceService) private readonly rawDataSourceService: RawDataSourceService) {
     this.axios = axios.create()
   }
 

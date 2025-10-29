@@ -32,6 +32,141 @@ const deduplicateBy = <T, K>(items: readonly T[], keySelector: (item: T) => K): 
 })
 export class WeiboPersistenceServiceAdapter {
 
+  /**
+   * 在同一事务中保存用户和帖子，确保外键关联正确
+   */
+  async saveUsersAndPosts(
+    users: NormalizedWeiboUser[],
+    posts: NormalizedWeiboPost[]
+  ): Promise<{
+    userMap: Map<string, WeiboUserEntity>
+    postMap: Map<string, WeiboPostEntity>
+  }> {
+    return await useEntityManager(async (manager) => {
+      const userRepository = manager.getRepository(WeiboUserEntity);
+      const postRepository = manager.getRepository(WeiboPostEntity);
+
+      // 1. 保存用户
+      const uniqueUsers = deduplicateBy(users, (user) => user.weiboId);
+      if (uniqueUsers.length === 0) {
+        return { userMap: new Map(), postMap: new Map() };
+      }
+
+      await userRepository.upsert(
+        uniqueUsers.map((user) => ({
+          weiboId: user.weiboId,
+          idstr: user.idstr,
+          screenName: user.screenName,
+          domain: user.domain,
+          weihao: user.weihao,
+          verified: user.verified,
+          verifiedType: user.verifiedType,
+          verifiedReason: user.verifiedReason,
+          verifiedTypeExt: user.verifiedTypeExt,
+          profileImageUrl: user.profileImageUrl,
+          avatarLarge: user.avatarLarge,
+          avatarHd: user.avatarHd,
+          followersCount: user.followersCount,
+          friendsCount: user.friendsCount,
+          statusesCount: user.statusesCount,
+          mbrank: user.mbrank,
+          mbtype: user.mbtype,
+          vPlus: user.vPlus,
+          svip: user.svip,
+          vvip: user.vvip,
+          userAbility: user.userAbility,
+          planetVideo: user.planetVideo,
+          gender: user.gender,
+          location: user.location,
+          description: user.description,
+          followMe: user.followMe,
+          following: user.following,
+          onlineStatus: user.onlineStatus,
+          rawPayload: user.rawPayload,
+        })) as any,
+        ['weiboId'],
+      );
+
+      // 2. 在同一事务中查询用户（此时 ID 已生成）
+      const storedUsers = await userRepository.find({
+        where: { weiboId: In(uniqueUsers.map((u) => u.weiboId)) },
+      });
+
+      const userMap = new Map(storedUsers.map((user) => [user.weiboId, user]));
+      console.log(`[saveUsersAndPosts] Saved ${userMap.size} users with IDs`)
+
+      // 3. 保存帖子（使用刚查询到的带ID的用户实体）
+      if (posts.length === 0) {
+        return { userMap, postMap: new Map() };
+      }
+
+      const filteredPosts = posts.filter((post) => userMap.has(post.authorWeiboId));
+      if (filteredPosts.length === 0) {
+        console.warn(`[saveUsersAndPosts] No valid posts to save`)
+        return { userMap, postMap: new Map() };
+      }
+
+      await postRepository.upsert(
+        filteredPosts.map((post) => {
+          const author = userMap.get(post.authorWeiboId);
+          if (!author?.id) {
+            throw new Error(`Author ${post.authorWeiboId} not found or has no ID`);
+          }
+          return {
+            weiboId: post.weiboId,
+            mid: post.mid,
+            mblogId: post.mblogId,
+            authorId: author.id,
+            authorWeiboId: post.authorWeiboId,
+            authorNickname: post.authorNickname,
+            authorAvatar: post.authorAvatar,
+            authorVerifiedInfo: post.authorVerifiedInfo,
+            text: post.text,
+            textRaw: post.textRaw,
+            textLength: post.textLength,
+            isLongText: post.isLongText,
+            contentAuth: post.contentAuth,
+            createdAt: post.createdAt,
+            publishedAt: post.publishedAt,
+            repostsCount: post.repostsCount,
+            commentsCount: post.commentsCount,
+            attitudesCount: post.attitudesCount,
+            source: post.source,
+            regionName: post.regionName,
+            picNum: post.picNum,
+            isPaid: post.isPaid,
+            mblogVipType: post.mblogVipType,
+            canEdit: post.canEdit,
+            favorited: post.favorited,
+            mblogtype: post.mblogtype,
+            isRepost: post.isRepost,
+            shareRepostType: post.shareRepostType,
+            visibleType: post.visibleType,
+            visibleListId: post.visibleListId,
+            locationJson: post.locationJson,
+            pageInfoJson: post.pageInfoJson,
+            actionLogJson: post.actionLogJson,
+            analysisExtra: post.analysisExtra,
+            rawPayload: post.rawPayload,
+          };
+        }) as any,
+        ['weiboId'],
+      );
+
+      const storedPosts = await postRepository.find({
+        where: { weiboId: In(filteredPosts.map((post) => post.weiboId)) },
+      });
+      const postMap = new Map(storedPosts.map((post) => [post.weiboId, post]));
+
+      // 4. 保存关联数据（hashtags, media）
+      await this.saveHashtags(filteredPosts, postMap, manager);
+      await this.saveMedia(filteredPosts, postMap, manager);
+
+      console.log(`[saveUsersAndPosts] Saved ${postMap.size} posts successfully`)
+      return { userMap, postMap };
+    });
+  }
+
   async saveUsers(users: NormalizedWeiboUser[]): Promise<Map<string, WeiboUserEntity>> {
     return await useEntityManager(async (manager) => {
       const userRepository = manager.getRepository(WeiboUserEntity);
@@ -81,6 +216,13 @@ export class WeiboPersistenceServiceAdapter {
         where: { weiboId: In(unique.map((u) => u.weiboId)) },
       });
 
+      console.log(`[saveUsers] Upserted ${unique.length} users, found ${stored.length} users with IDs`)
+      stored.forEach(user => {
+        if (!user.id) {
+          console.error(`[saveUsers] User ${user.weiboId} has no ID!`)
+        }
+      })
+
       return new Map(stored.map((user) => [user.weiboId, user]));
     });
   }
@@ -94,8 +236,11 @@ export class WeiboPersistenceServiceAdapter {
 
       const filtered = posts.filter((post) => authors.has(post.authorWeiboId));
       if (filtered.length === 0) {
+        console.warn(`[savePosts] No posts to save - authors map keys: [${Array.from(authors.keys()).join(', ')}]`)
         return new Map();
       }
+
+      console.log(`[savePosts] Saving ${filtered.length} posts with authors:`, Array.from(authors.entries()).map(([weiboId, user]) => ({ weiboId, userId: user.id })))
 
       await postRepository.upsert(
         filtered.map((post) => {
@@ -103,6 +248,11 @@ export class WeiboPersistenceServiceAdapter {
           if (!author) {
             throw new Error(`Author not found for post ${post.weiboId} with authorWeiboId ${post.authorWeiboId}`);
           }
+          if (!author.id) {
+            console.error(`[savePosts] Author entity for ${post.authorWeiboId} has no ID!`, author)
+            throw new Error(`Author ${post.authorWeiboId} has no database ID`)
+          }
+          console.log(`[savePosts] Mapping post ${post.weiboId} to author ${post.authorWeiboId} with ID ${author.id}`)
           return {
             weiboId: post.weiboId,
             mid: post.mid,

@@ -16,6 +16,8 @@ import {
   FetchPostDetailAst,
   FetchCommentsAst,
   FetchLikesAst,
+  SaveUserAndPostAst,
+  SaveCommentsAndLikesAst,
   SavePostDetailAst,
 } from './post-detail.ast'
 
@@ -23,8 +25,7 @@ import {
 @Injectable()
 export class FetchPostDetailVisitor {
   constructor(
-    @Inject(WeiboStatusService) private readonly weiboStatusService: WeiboStatusService,
-    @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService
+    @Inject(WeiboStatusService) private readonly weiboStatusService: WeiboStatusService
   ) { }
 
   async visit(node: FetchPostDetailAst): Promise<FetchPostDetailAst> {
@@ -50,44 +51,20 @@ export class FetchPostDetailVisitor {
 
       if (detail) {
         console.log(`[FetchPostDetailVisitor] Detail fetched successfully`)
-        console.log(`[FetchPostDetailVisitor] Detail ID types:`, {
-          id: typeof detail.id,
-          idValue: detail.id,
-          idstr: typeof detail.idstr,
-          idstrValue: detail.idstr,
-          mid: typeof detail.mid,
-          midValue: detail.mid,
-          mblogid: typeof detail.mblogid,
-          mblogidValue: detail.mblogid
-        })
 
-        // 🔥 立即清洗帖子数据并入库
-        const normalizedPost = normalizeStatus(detail)
-        if (normalizedPost) {
-          // 提取帖子作者和转发帖子的作者
-          const users = []
-          const postAuthor = normalizeUser(detail.user)
-          if (postAuthor) users.push(postAuthor)
-
-          // 如果是转发，提取原帖作者
-          const detailRecord = detail as any
-          if (detailRecord.retweeted_status?.user) {
-            const retweetAuthor = normalizeUser(detailRecord.retweeted_status.user)
-            if (retweetAuthor) users.push(retweetAuthor)
-          }
-
-          if (users.length > 0) {
-            const userMap = await this.persistence.saveUsers(users)
-            const postMap = await this.persistence.savePosts([normalizedPost], userMap)
-            console.log(`[FetchPostDetailVisitor] Post saved to database immediately, post count: ${postMap.size}`)
-          }
+        // 提取 authorWeiboId 并输出（用于后续节点）
+        if (detail.user?.idstr || detail.user?.id) {
+          node.authorWeiboId = String(detail.user.idstr || detail.user.id)
+          console.log(`[FetchPostDetailVisitor] Extracted authorWeiboId: ${node.authorWeiboId}`)
+        } else {
+          throw new Error('Failed to extract authorWeiboId from post detail')
         }
+
+        // 数据已获取，保存工作交给下游节点处理
+        console.log(`[FetchPostDetailVisitor] PostId ${node.postId} data ready for downstream processing`)
       } else {
         console.warn(`[FetchPostDetailVisitor] Detail is null or undefined`)
       }
-
-      console.log(`[FetchPostDetailVisitor] PostId available for next nodes: ${node.postId}`)
-      console.log(`[FetchPostDetailVisitor] AuthorId from workflow: ${node.authorId}`)
 
       node.state = 'success'
     } catch (error) {
@@ -334,6 +311,156 @@ export class FetchLikesVisitor {
       const errorMessage = error instanceof Error ? error.message : String(error)
       console.error(`[FetchLikesVisitor] Failed to fetch likes for post ${node.postId}:`, errorMessage)
       console.error(`[FetchLikesVisitor] Error details:`, error)
+    }
+
+    return node
+  }
+}
+
+@Handler(SaveUserAndPostAst)
+@Injectable()
+export class SaveUserAndPostVisitor {
+  constructor(
+    @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService
+  ) {}
+
+  async visit(node: SaveUserAndPostAst): Promise<SaveUserAndPostAst> {
+    try {
+      node.state = 'running'
+
+      console.log(`[SaveUserAndPostVisitor] Starting to save user and post`)
+
+      if (!node.detail) {
+        throw new Error('Post detail is required')
+      }
+
+      // 提取并清洗帖子数据
+      const normalizedPost = normalizeStatus(node.detail)
+      if (!normalizedPost) {
+        throw new Error('Failed to normalize post data')
+      }
+
+      // 提取帖子作者和转发帖子的作者
+      const users = []
+      const postAuthor = normalizeUser(node.detail.user)
+      if (postAuthor) users.push(postAuthor)
+
+      // 如果是转发，提取原帖作者
+      const detailRecord = node.detail as any
+      if (detailRecord.retweeted_status?.user) {
+        const retweetAuthor = normalizeUser(detailRecord.retweeted_status.user)
+        if (retweetAuthor) users.push(retweetAuthor)
+      }
+
+      if (users.length === 0) {
+        throw new Error('No valid users to save')
+      }
+
+      // 在同一事务中保存用户和帖子
+      const { userMap, postMap } = await this.persistence.saveUsersAndPosts(users, [normalizedPost])
+
+      const savedAuthor = userMap.get(normalizedPost.authorWeiboId)
+      const savedPost = postMap.get(normalizedPost.weiboId)
+
+      if (!savedAuthor?.id) {
+        throw new Error(`Failed to save author ${normalizedPost.authorWeiboId}`)
+      }
+
+      if (!savedPost?.id) {
+        throw new Error(`Failed to save post ${normalizedPost.weiboId}`)
+      }
+
+      node.savedAuthorId = savedAuthor.id
+      node.savedPostId = savedPost.id
+
+      console.log(`[SaveUserAndPostVisitor] Successfully saved - authorId: ${node.savedAuthorId}, postId: ${node.savedPostId}`)
+
+      node.state = 'success'
+    } catch (error) {
+      node.state = 'fail'
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(`[SaveUserAndPostVisitor] Failed to save user and post:`, errorMessage)
+      console.error(`[SaveUserAndPostVisitor] Error details:`, error)
+    }
+
+    return node
+  }
+}
+
+@Handler(SaveCommentsAndLikesAst)
+@Injectable()
+export class SaveCommentsAndLikesVisitor {
+  constructor(
+    @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService
+  ) {}
+
+  async visit(node: SaveCommentsAndLikesAst): Promise<SaveCommentsAndLikesAst> {
+    try {
+      node.state = 'running'
+
+      console.log(`[SaveCommentsAndLikesVisitor] Starting to save comments and likes for post ${node.postId}`)
+
+      let savedComments = 0
+      let savedLikes = 0
+
+      // 保存评论
+      if (node.comments && node.comments.length > 0) {
+        const normalizedComments = normalizeComments(node.comments, node.postId)
+        const users: any[] = []
+
+        // 收集评论用户
+        const collectUsers = (comments: any[]): void => {
+          for (const comment of comments) {
+            const author = normalizeUser(comment.user)
+            if (author) users.push(author)
+            if (comment.reply_comment) {
+              const replyAuthor = normalizeUser(comment.reply_comment.user)
+              if (replyAuthor) users.push(replyAuthor)
+            }
+            if (Array.isArray(comment.comments)) {
+              collectUsers(comment.comments)
+            }
+          }
+        }
+        collectUsers(node.comments)
+
+        if (users.length > 0) {
+          const userMap = await this.persistence.saveUsers(users)
+          const post = await this.persistence.ensurePostByWeiboId(node.postId)
+          if (post && normalizedComments.length > 0) {
+            await this.persistence.saveComments(normalizedComments, userMap, post)
+            savedComments = normalizedComments.length
+            console.log(`[SaveCommentsAndLikesVisitor] Saved ${savedComments} comments`)
+          }
+        }
+      }
+
+      // 保存点赞用户
+      if (node.likes && node.likes.length > 0) {
+        const users = node.likes
+          .map((attitude: any) => normalizeUser(attitude.user))
+          .filter((user): user is NonNullable<typeof user> => user !== null)
+
+        if (users.length > 0) {
+          await this.persistence.saveUsers(users)
+          savedLikes = users.length
+          console.log(`[SaveCommentsAndLikesVisitor] Saved ${savedLikes} like users`)
+        }
+      }
+
+      node.savedCommentCount = savedComments
+      node.savedLikeCount = savedLikes
+
+      console.log(`[SaveCommentsAndLikesVisitor] Successfully saved - comments: ${savedComments}, likes: ${savedLikes}`)
+
+      node.state = 'success'
+    } catch (error) {
+      node.state = 'fail'
+      node.savedCommentCount = 0
+      node.savedLikeCount = 0
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(`[SaveCommentsAndLikesVisitor] Failed to save comments and likes:`, errorMessage)
+      console.error(`[SaveCommentsAndLikesVisitor] Error details:`, error)
     }
 
     return node
