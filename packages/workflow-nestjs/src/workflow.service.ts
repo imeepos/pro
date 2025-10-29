@@ -5,6 +5,44 @@ import { WorkflowEntity, WorkflowExecutionEntity, WorkflowStateEntity } from '@p
 import { executeAst, fromJson, NodeJsonPayload, toJson, WorkflowGraphAst, NoRetryError } from '@pro/workflow-core';
 import { WorkflowExecutionMetrics } from '@pro/types';
 import { v4 as uuidv4 } from 'uuid';
+import { delay } from './utils';
+
+/**
+ * 截断长字符串，保留开头和结尾部分
+ * @param str 要截断的字符串
+ * @param maxLength 最大长度，超过则截断
+ * @param prefix 开头保留长度
+ * @param suffix 结尾保留长度
+ * @returns 截断后的字符串
+ */
+function truncateString(str: string | null | undefined, maxLength = 100, prefix = 30, suffix = 30): string {
+  if (!str) return '[null/undefined]';
+  if (str.length <= maxLength) return str;
+
+  return `${str.substring(0, prefix)}...[省略${str.length - maxLength}字符]...${str.substring(str.length - suffix)}`;
+}
+
+/**
+ * 获取节点的关键信息用于日志显示
+ */
+function getNodeInfo(node: any): string {
+  if (!node) return '[null node]';
+
+  const info: Record<string, any> = {
+    type: node.type || 'unknown',
+    state: node.state || 'unknown',
+    constructor: node.constructor?.name || 'unknown'
+  };
+
+  // 添加特定节点的关键信息
+  if (node.postId) info.postId = truncateString(node.postId);
+  if (node.authorWeiboId) info.authorWeiboId = truncateString(node.authorWeiboId);
+  if (node.authorId) info.authorId = node.authorId;
+  if (node.totalComments !== undefined) info.totalComments = node.totalComments;
+  if (node.totalLikes !== undefined) info.totalLikes = node.totalLikes;
+
+  return JSON.stringify(info, null, 0);
+}
 
 /**
  * 包含数据库元数据的 workflow 对象
@@ -272,10 +310,53 @@ export class WorkflowService {
 
     try {
       // 执行工作流，仅通过 Redis 维护实时状态
+      let iterationCount = 0;
+      let lastStateSnapshot = '';
+      let unchangedCount = 0;
+      const MAX_ITERATIONS = 1000;
+      const MAX_UNCHANGED_ITERATIONS = 3;
+
       while (currentWorkflow.state === 'pending' || currentWorkflow.state === 'running') {
+        iterationCount++;
+
+        if (iterationCount > MAX_ITERATIONS) {
+          throw new Error(`Workflow execution exceeded maximum iterations (${MAX_ITERATIONS}), possible infinite loop`);
+        }
+
         currentWorkflow = await executeAst(currentWorkflow, context);
 
-        const { progress } = this.calculateMetrics(currentWorkflow);
+        const { progress, metrics } = this.calculateMetrics(currentWorkflow);
+
+        // 添加详细的AST状态日志
+        const runningNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'running') || [];
+        const failedNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'fail') || [];
+        const pendingNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'pending') || [];
+
+        console.log(`[${currentWorkflow.type}] ${metrics.succeededNodes}:${metrics.failedNodes}/${metrics.totalNodes} (${progress}%)`);
+
+        if (runningNodes.length > 0) {
+          console.log(`[Running Nodes] ${runningNodes.map((n: any) => getNodeInfo(n)).join(', ')}`);
+        }
+
+        if (pendingNodes.length > 0) {
+          console.log(`[Pending Nodes] ${pendingNodes.map((n: any) => getNodeInfo(n)).join(', ')}`);
+        }
+
+        if (failedNodes.length > 0) {
+          console.log(`[Failed Nodes] ${failedNodes.map((n: any) => getNodeInfo(n)).join(', ')}`);
+        }
+
+        // 死锁检测：检查状态是否发生变化
+        const currentStateSnapshot = JSON.stringify(currentWorkflow.nodes.map((n: any) => ({ id: n.id, state: n.state })));
+        if (currentStateSnapshot === lastStateSnapshot) {
+          unchangedCount++;
+          if (unchangedCount >= MAX_UNCHANGED_ITERATIONS) {
+            throw new Error(`Workflow execution stuck: state unchanged for ${MAX_UNCHANGED_ITERATIONS} iterations, possible deadlock`);
+          }
+        } else {
+          unchangedCount = 0;
+          lastStateSnapshot = currentStateSnapshot;
+        }
 
         // 更新 Redis 缓存以支持实时监控（轻量级）
         await this.redis.set(`workflow:execution:state:${savedExecution.id}`, JSON.stringify({
@@ -284,6 +365,7 @@ export class WorkflowService {
           progress,
           startedAt: savedState.createdAt
         }), 3600);
+        await delay();
       }
 
       const result = currentWorkflow;
@@ -401,10 +483,34 @@ export class WorkflowService {
 
     try {
       // 执行工作流，仅通过 Redis 维护实时状态
+      let iterationCount = 0;
+      let lastStateSnapshot = '';
+      let unchangedCount = 0;
+      const MAX_ITERATIONS = 1000;
+      const MAX_UNCHANGED_ITERATIONS = 3;
+
       while (currentWorkflow.state === 'pending' || currentWorkflow.state === 'running') {
+        iterationCount++;
+
+        if (iterationCount > MAX_ITERATIONS) {
+          throw new Error(`Workflow execution exceeded maximum iterations (${MAX_ITERATIONS}), possible infinite loop`);
+        }
+
         currentWorkflow = await executeAst(currentWorkflow, context);
 
         const { progress } = this.calculateMetrics(currentWorkflow);
+
+        // 死锁检测：检查状态是否发生变化
+        const currentStateSnapshot = JSON.stringify(currentWorkflow.nodes.map((n: any) => ({ id: n.id, state: n.state })));
+        if (currentStateSnapshot === lastStateSnapshot) {
+          unchangedCount++;
+          if (unchangedCount >= MAX_UNCHANGED_ITERATIONS) {
+            throw new Error(`Workflow execution stuck: state unchanged for ${MAX_UNCHANGED_ITERATIONS} iterations, possible deadlock`);
+          }
+        } else {
+          unchangedCount = 0;
+          lastStateSnapshot = currentStateSnapshot;
+        }
 
         // 更新 Redis 缓存以支持实时监控（轻量级）
         await this.redis.set(`workflow:execution:state:${execution.id}`, JSON.stringify({

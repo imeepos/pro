@@ -61,17 +61,19 @@ export function createPostDetailWorkflow(
       fromProperty: 'detail',
       toProperty: 'detail',
     })
-    .addEdge({
+    .addConditionalEdge({
       from: fetchComments.id,
       to: saveDetail.id,
       fromProperty: 'comments',
       toProperty: 'comments',
+      condition: { property: 'state', value: 'success' }
     })
-    .addEdge({
+    .addConditionalEdge({
       from: fetchLikes.id,
       to: saveDetail.id,
       fromProperty: 'likes',
       toProperty: 'likes',
+      condition: { property: 'state', value: 'success' }
     })
 }
 

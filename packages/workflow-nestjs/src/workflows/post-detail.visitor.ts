@@ -91,6 +91,8 @@ export class FetchCommentsVisitor {
     try {
       node.state = 'running'
 
+      console.log(`[FetchCommentsVisitor] Processing postId: ${node.postId}, uid: ${node.uid}`)
+
       const maxPages = node.maxPages || 5
       const allComments: any[] = []
       let currentMaxId: number | undefined
@@ -123,6 +125,12 @@ export class FetchCommentsVisitor {
       node.comments = allComments
       node.totalComments = allComments.length
 
+      if (allComments.length === 0) {
+        console.log(`[FetchCommentsVisitor] No comments found for postId: ${node.postId}`)
+      } else {
+        console.log(`[FetchCommentsVisitor] Fetched ${allComments.length} comments`)
+      }
+
       // 清洗入库
       if (allComments.length > 0) {
         const normalizedComments = normalizeComments(allComments, node.postId)
@@ -149,6 +157,7 @@ export class FetchCommentsVisitor {
           const post = await this.persistence.ensurePostByWeiboId(node.postId)
           if (post && normalizedComments.length > 0) {
             await this.persistence.saveComments(normalizedComments, userMap, post)
+            console.log(`[FetchCommentsVisitor] Saved ${normalizedComments.length} comments to database`)
           }
         }
       }
@@ -158,6 +167,9 @@ export class FetchCommentsVisitor {
       node.state = 'fail'
       node.comments = []
       node.totalComments = 0
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(`[FetchCommentsVisitor] Failed to fetch comments for postId: ${node.postId}:`, errorMessage)
+      console.error(`[FetchCommentsVisitor] Error details:`, error)
     }
 
     return node
@@ -205,16 +217,32 @@ export class FetchLikesVisitor {
       }
 
       console.log(`[FetchLikesVisitor] Final ID for likes API: ${actualId}`)
+      console.log(`[FetchLikesVisitor] Starting API call with options:`, JSON.stringify(requestOptions, null, 2))
+
+      const startTime = Date.now()
+      console.log(`[FetchLikesVisitor] API call started at: ${new Date().toISOString()}`)
 
       const response = await this.weiboStatusService.fetchStatusLikes(
         actualId,
         requestOptions
       )
 
+      const endTime = Date.now()
+      const duration = endTime - startTime
+      console.log(`[FetchLikesVisitor] API call completed at: ${new Date().toISOString()}, duration: ${duration}ms`)
+
+      console.log(`[FetchLikesVisitor] API response structure:`, {
+        hasData: !!response.data,
+        dataLength: response.data?.length || 0,
+        totalNumber: response.total_number,
+        responseKeys: Object.keys(response)
+      })
+
       const likeAttitudes = response.data || []
       node.likes = likeAttitudes.slice(0, maxUsers)
       node.totalLikes = response.total_number || likeAttitudes.length
 
+      console.log(`[FetchLikesVisitor] Processed ${node.likes.length} likes out of ${node.totalLikes} total`)
       node.state = 'success'
     } catch (error) {
       node.state = 'fail'
@@ -240,6 +268,14 @@ export class SavePostDetailVisitor {
     try {
       node.state = 'running'
 
+      console.log(`[SavePostDetailVisitor] Starting to save post detail for postId: ${node.postId}`)
+      console.log(`[SavePostDetailVisitor] Node data summary:`, {
+        hasDetail: !!node.detail,
+        commentCount: node.comments?.length || 0,
+        likeCount: node.likes?.length || 0,
+        metadataKeys: node.metadata ? Object.keys(node.metadata) : []
+      })
+
       node.success = true
 
       const postDetailCompletedEvent: PostDetailCompletedEvent = {
@@ -255,15 +291,25 @@ export class SavePostDetailVisitor {
         createdAt: new Date().toISOString(),
       }
 
+      console.log(`[SavePostDetailVisitor] Publishing event to queue: ${QUEUE_NAMES.POST_DETAIL_COMPLETED}`)
+      console.log(`[SavePostDetailVisitor] Event data:`, JSON.stringify(postDetailCompletedEvent, null, 2))
+
+      const startTime = Date.now()
       await this.rabbitMQService.publish(
         QUEUE_NAMES.POST_DETAIL_COMPLETED,
         postDetailCompletedEvent
       )
+      const duration = Date.now() - startTime
+      console.log(`[SavePostDetailVisitor] Event published successfully, duration: ${duration}ms`)
 
       node.state = 'success'
+      console.log(`[SavePostDetailVisitor] Post detail saved successfully for postId: ${node.postId}`)
     } catch (error) {
       node.state = 'fail'
       node.success = false
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(`[SavePostDetailVisitor] Failed to save post detail for postId: ${node.postId}:`, errorMessage)
+      console.error(`[SavePostDetailVisitor] Error details:`, error)
     }
 
     return node
