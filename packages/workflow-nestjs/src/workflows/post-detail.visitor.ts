@@ -46,6 +46,23 @@ export class FetchPostDetailVisitor {
       )
 
       node.detail = detail
+
+      // 调试日志：验证 detail 数据结构
+      if (detail) {
+        console.log(`[FetchPostDetailVisitor] Detail fetched successfully`)
+        console.log(`[FetchPostDetailVisitor] Detail ID types:`, {
+          id: typeof detail.id,
+          idValue: detail.id,
+          idstr: typeof detail.idstr,
+          idstrValue: detail.idstr,
+          mid: typeof detail.mid,
+          midValue: detail.mid,
+          mblogid: typeof detail.mblogid,
+          mblogidValue: detail.mblogid
+        })
+      } else {
+        console.warn(`[FetchPostDetailVisitor] Detail is null or undefined`)
+      }
       // authorId现在从workflow边连接获取，不需要从详情中提取
       console.log(`[FetchPostDetailVisitor] PostId available for next nodes: ${node.postId}`)
       console.log(`[FetchPostDetailVisitor] AuthorId from workflow: ${node.authorId}`)

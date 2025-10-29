@@ -153,16 +153,35 @@ export class WorkflowExecutorVisitor {
     }
     // 提取节点输出数据
     private extractNodeOutputs(node: INode): any {
-        // 根据节点类型和装饰器提取输出
-        const ast = fromJson(node);
-        const ctor = resolveConstructor(ast)
-        const outputs = root.get(OUTPUT)
-        const outputData: any = {};
-        outputs.filter(it => it.target === ctor).map(it => {
-            if ((node as any)[it.propertyKey] !== undefined) {
-                outputData[it.propertyKey] = (node as any)[it.propertyKey];
+        // 首先尝试使用装饰器元数据提取输出
+        try {
+            const ast = fromJson(node);
+            const ctor = resolveConstructor(ast)
+            const outputs = root.get(OUTPUT)
+            const outputData: any = {};
+
+            if (outputs && outputs.length > 0) {
+                outputs.filter(it => it.target === ctor).map(it => {
+                    if ((node as any)[it.propertyKey] !== undefined) {
+                        outputData[it.propertyKey] = (node as any)[it.propertyKey];
+                    }
+                });
+                return outputData;
             }
-        });
+        } catch (error) {
+            // 装饰器元数据不可用时的回退方案
+        }
+
+        // 回退方案：直接提取所有非系统属性
+        const outputData: any = {};
+        const systemProperties = ['id', 'state', 'type'];
+
+        for (const [key, value] of Object.entries(node as any)) {
+            if (!systemProperties.includes(key) && value !== undefined) {
+                outputData[key] = value;
+            }
+        }
+
         return outputData;
     }
     // 根据边关系将前驱节点输出映射到当前节点输入
