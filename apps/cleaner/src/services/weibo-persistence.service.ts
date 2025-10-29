@@ -107,43 +107,49 @@ export class WeiboPersistenceService {
     }
 
     await this.postRepository.upsert(
-      filtered.map((post) => ({
-        weiboId: post.weiboId,
-        mid: post.mid,
-        mblogId: post.mblogId,
-        authorId: authors.get(post.authorWeiboId)!.id,
-        authorWeiboId: post.authorWeiboId,
-        authorNickname: post.authorNickname,
-        authorAvatar: post.authorAvatar,
-        authorVerifiedInfo: post.authorVerifiedInfo,
-        text: post.text,
-        textRaw: post.textRaw,
-        textLength: post.textLength,
-        isLongText: post.isLongText,
-        contentAuth: post.contentAuth,
-        createdAt: post.createdAt,
-        publishedAt: post.publishedAt,
-        repostsCount: post.repostsCount,
-        commentsCount: post.commentsCount,
-        attitudesCount: post.attitudesCount,
-        source: post.source,
-        regionName: post.regionName,
-        picNum: post.picNum,
-        isPaid: post.isPaid,
-        mblogVipType: post.mblogVipType,
-        canEdit: post.canEdit,
-        favorited: post.favorited,
-        mblogtype: post.mblogtype,
-        isRepost: post.isRepost,
-        shareRepostType: post.shareRepostType,
-        visibleType: post.visibleType,
-        visibleListId: post.visibleListId,
-        locationJson: post.locationJson,
-        pageInfoJson: post.pageInfoJson,
-        actionLogJson: post.actionLogJson,
-        analysisExtra: post.analysisExtra,
-        rawPayload: post.rawPayload,
-      })),
+      filtered.map((post) => {
+        const author = authors.get(post.authorWeiboId);
+        if (!author) {
+          throw new Error(`Author not found for post ${post.weiboId} with authorWeiboId ${post.authorWeiboId}`);
+        }
+        return {
+          weiboId: post.weiboId,
+          mid: post.mid,
+          mblogId: post.mblogId,
+          authorId: author.id,
+          authorWeiboId: post.authorWeiboId,
+          authorNickname: post.authorNickname,
+          authorAvatar: post.authorAvatar,
+          authorVerifiedInfo: post.authorVerifiedInfo,
+          text: post.text,
+          textRaw: post.textRaw,
+          textLength: post.textLength,
+          isLongText: post.isLongText,
+          contentAuth: post.contentAuth,
+          createdAt: post.createdAt,
+          publishedAt: post.publishedAt,
+          repostsCount: post.repostsCount,
+          commentsCount: post.commentsCount,
+          attitudesCount: post.attitudesCount,
+          source: post.source,
+          regionName: post.regionName,
+          picNum: post.picNum,
+          isPaid: post.isPaid,
+          mblogVipType: post.mblogVipType,
+          canEdit: post.canEdit,
+          favorited: post.favorited,
+          mblogtype: post.mblogtype,
+          isRepost: post.isRepost,
+          shareRepostType: post.shareRepostType,
+          visibleType: post.visibleType,
+          visibleListId: post.visibleListId,
+          locationJson: post.locationJson,
+          pageInfoJson: post.pageInfoJson,
+          actionLogJson: post.actionLogJson,
+          analysisExtra: post.analysisExtra,
+          rawPayload: post.rawPayload,
+        };
+      }),
       ['weiboId'],
     );
 
@@ -290,34 +296,40 @@ export class WeiboPersistenceService {
     }
 
     await this.commentRepository.upsert(
-      filtered.map((comment) => ({
-        commentId: comment.commentId,
-        idstr: comment.idstr,
-        mid: comment.mid,
-        rootId: comment.rootId,
-        rootMid: comment.rootMid,
-        postId: post.id,
-        authorId: authors.get(comment.authorWeiboId)!.id,
-        authorWeiboId: comment.authorWeiboId,
-        authorNickname: comment.authorNickname,
-        text: comment.text,
-        textRaw: comment.textRaw,
-        source: comment.source,
-        floorNumber: comment.floorNumber,
-        createdAt: comment.createdAt,
-        likeCounts: comment.likeCounts,
-        liked: comment.liked,
-        totalNumber: comment.totalNumber,
-        disableReply: comment.disableReply,
-        restrictOperate: comment.restrictOperate,
-        allowFollow: comment.allowFollow,
-        replyCommentId: comment.replyCommentId,
-        replyOriginalText: comment.replyOriginalText,
-        isMblogAuthor: comment.isMblogAuthor,
-        commentBadge: comment.commentBadge,
-        path: comment.path,
-        rawPayload: comment.rawPayload,
-      })),
+      filtered.map((comment) => {
+        const author = authors.get(comment.authorWeiboId);
+        if (!author) {
+          throw new Error(`Author not found for comment ${comment.commentId} with authorWeiboId ${comment.authorWeiboId}`);
+        }
+        return {
+          commentId: comment.commentId,
+          idstr: comment.idstr,
+          mid: comment.mid,
+          rootId: comment.rootId,
+          rootMid: comment.rootMid,
+          postId: post.id,
+          authorId: author.id,
+          authorWeiboId: comment.authorWeiboId,
+          authorNickname: comment.authorNickname,
+          text: comment.text,
+          textRaw: comment.textRaw,
+          source: comment.source,
+          floorNumber: comment.floorNumber,
+          createdAt: comment.createdAt,
+          likeCounts: comment.likeCounts,
+          liked: comment.liked,
+          totalNumber: comment.totalNumber,
+          disableReply: comment.disableReply,
+          restrictOperate: comment.restrictOperate,
+          allowFollow: comment.allowFollow,
+          replyCommentId: comment.replyCommentId,
+          replyOriginalText: comment.replyOriginalText,
+          isMblogAuthor: comment.isMblogAuthor,
+          commentBadge: comment.commentBadge,
+          path: comment.path,
+          rawPayload: comment.rawPayload,
+        };
+      }),
       ['commentId'],
     );
 
@@ -344,5 +356,14 @@ export class WeiboPersistenceService {
       rawPayload: stats.rawPayload,
     });
     return this.userStatsRepository.save(snapshot);
+  }
+
+  async findUserByWeiboId(weiboId: string): Promise<WeiboUserEntity | null> {
+    return this.userRepository.findOne({ where: { weiboId } });
+  }
+
+  async userExists(weiboId: string): Promise<boolean> {
+    const user = await this.findUserByWeiboId(weiboId);
+    return user !== null;
   }
 }
