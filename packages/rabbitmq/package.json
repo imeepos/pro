@@ -30,12 +30,11 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@pro/types": "workspace:*",
     "@pro/core": "workspace:*",
+    "@pro/types": "workspace:*",
     "@pro/workflow-core": "workspace:*",
-    "amqplib": "^0.10.9"
-  },
-  "peerDependencies": {
+    "amqplib": "^0.10.9",
+    "rxjs": "7.8.1"
   },
   "devDependencies": {
     "@pro/eslint-config": "workspace:*",

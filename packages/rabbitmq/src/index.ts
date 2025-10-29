@@ -26,3 +26,16 @@ export type {
   ConnectionEvent,
   DlqConnectionStatus,
 } from './types.js';
+
+
+// Configuration & Tokens
+export * from './tokens.js'
+
+// RxJS Queue Manager - 双 Observable 架构
+export { useQueue } from './hooks.js'
+export type {
+  QueueManager,
+  QueueProducer,
+  MessageEnvelope,
+  RxConsumerOptions,
+} from './rx-types.js'

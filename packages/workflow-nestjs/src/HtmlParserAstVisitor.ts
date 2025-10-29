@@ -1,4 +1,4 @@
-import { Handler, HtmlParserAst, Visitor } from '@pro/workflow-core';
+import { Handler, HtmlParserAst, Visitor, NoRetryError } from '@pro/workflow-core';
 import { Inject, Injectable } from '@pro/core';
 import { WeiboHtmlParser } from './parsers/weibo-html.parser';
 
@@ -17,7 +17,6 @@ export class HtmlParserAstVisitor {
 
     try {
       const result = this.parser.parseSearchResultHtml(ast.html);
-      console.log({result, html: ast.html})
       // 提取循环所需属性到顶层，便于条件边检查
       ast.hasNextPage = result.hasNextPage;
       ast.nextPageLink = result.nextPageLink;
@@ -48,9 +47,9 @@ export class HtmlParserAstVisitor {
     } catch (error) {
       ast.state = 'fail';
 
-      // 如果是登录失效错误，使用特殊错误标记
+      // 如果是登录失效错误，抛出 NoRetryError 避免死循环
       if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
-        throw new Error('LOGIN_EXPIRED: 账号登录已失效，需要重新登录');
+        throw new NoRetryError('账号登录已失效，需要重新登录', error);
       }
 
       throw error;

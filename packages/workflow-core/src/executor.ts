@@ -3,6 +3,7 @@ import { Ast, Visitor, WorkflowGraphAst } from "./ast";
 import { HANDLER, Handler, HANDLER_METHOD, OUTPUT, resolveConstructor } from "./decorator";
 import { fromJson } from "./generate";
 import { IAstStates, IEdge, INode } from "./types";
+import { NoRetryError } from "./errors";
 
 export type NodeHandler = (ast: Ast, ctx: Visitor) => Promise<any>;
 export type DispatchTable = Map<string, NodeHandler>;
@@ -273,31 +274,41 @@ export class WorkflowExecutorVisitor {
 }
 
 export class ExecutorVisitor implements Visitor {
-    visit(ast: Ast, ctx: Visitor): Promise<any> {
+    async visit(ast: Ast, ctx: Visitor): Promise<any> {
         const type = resolveConstructor(ast)
-        // 找到 methods
-        const methods = root.get(HANDLER_METHOD, []);
-        if (methods && methods.length > 0) {
-            // 要最后一个 其他的自动忽略 后面的覆盖前面的
-            const method = methods.find(it => it.ast === type);
-            if (method) {
-                const instance = root.get(method.target)
-                if (method.property && typeof (instance as any)[method.property] === 'function') {
-                    return (instance as any)[method.property](ast, ctx);
+
+        try {
+            // 找到 methods
+            const methods = root.get(HANDLER_METHOD, []);
+            if (methods && methods.length > 0) {
+                // 要最后一个 其他的自动忽略 后面的覆盖前面的
+                const method = methods.find(it => it.ast === type);
+                if (method) {
+                    const instance = root.get(method.target)
+                    if (method.property && typeof (instance as any)[method.property] === 'function') {
+                        return await (instance as any)[method.property](ast, ctx);
+                    }
                 }
             }
-        }
-        // 找到 class
-        const nodes = root.get(HANDLER, [])
-        const handler = nodes.find(it => it.ast === type);
-        if (handler) {
-            const instance = root.get(handler.target)
-            if (typeof (instance as any).visit === 'function') {
-                return instance.visit(ast, ctx);
+            // 找到 class
+            const nodes = root.get(HANDLER, [])
+            const handler = nodes.find(it => it.ast === type);
+            if (handler) {
+                const instance = root.get(handler.target)
+                if (typeof (instance as any).visit === 'function') {
+                    return await instance.visit(ast, ctx);
+                }
+                throw new Error(`Handler ${handler.target.name} has no visit method or @Handler decorated method`)
             }
-            throw new Error(`Handler ${handler.target.name} has no visit method or @Handler decorated method`)
+            throw new Error(`not found handler for ${ast.type}`)
+        } catch (error) {
+            // 捕获 NoRetryError 并直接重新抛出，不做任何处理
+            if (error instanceof NoRetryError) {
+                throw error;
+            }
+            // 其他错误也向上抛出
+            throw error;
         }
-        throw new Error(`not found handler for ${ast.type}`)
     }
 }
 

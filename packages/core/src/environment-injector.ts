@@ -541,6 +541,7 @@ export class EnvironmentInjector extends Injector {
    * - 零运行时开销：基于编译时元数据
    */
   async init(): Promise<void> {
+    // 初始化搜集器
     const initializedInstances = new Set<any>();
 
     // 第一步：初始化已有实例
