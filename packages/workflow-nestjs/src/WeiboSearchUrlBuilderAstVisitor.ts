@@ -1,4 +1,4 @@
-import { Handler, Visitor, WeiboSearchUrlBuilderAst } from "@pro/workflow-core";
+import { Handler, WeiboSearchUrlBuilderAst } from "@pro/workflow-core";
 
 const formatDate = (date: Date) => {
     const time = new Date(date)
@@ -12,7 +12,7 @@ const formatDate = (date: Date) => {
 
 @Handler(WeiboSearchUrlBuilderAst)
 export class WeiboSearchUrlBuilderAstVisitor {
-    async visit(ast: WeiboSearchUrlBuilderAst, _ctx: Visitor) {
+    async visit(ast: WeiboSearchUrlBuilderAst, _ctx: any) {
         const { keyword, start, end, page = 1 } = ast;
         if (!keyword || !start || !end) {
             ast.state = 'fail';

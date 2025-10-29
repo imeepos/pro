@@ -224,7 +224,7 @@ export class WorkflowService {
     try {
       // 执行工作流，仅通过 Redis 维护实时状态
       while (currentWorkflow.state === 'pending' || currentWorkflow.state === 'running') {
-        currentWorkflow = await executeAst(currentWorkflow);
+        currentWorkflow = await executeAst(currentWorkflow, context);
 
         const { progress } = this.calculateMetrics(currentWorkflow);
 
@@ -315,7 +315,7 @@ export class WorkflowService {
   /**
    * 恢复并继续执行工作流
    */
-  async resumeWorkflow(executionId: string): Promise<{ execution: WorkflowExecutionEntity; state: WorkflowStateEntity; result: any }> {
+  async resumeWorkflow(executionId: string, context: any): Promise<{ execution: WorkflowExecutionEntity; state: WorkflowStateEntity; result: any }> {
     // 初始化阶段：获取并更新执行记录和状态
     const { execution, state, workflow } = await useTranslation(async (manager) => {
       const execution = await manager.findOne(WorkflowExecutionEntity, { where: { id: executionId } });
@@ -353,7 +353,7 @@ export class WorkflowService {
     try {
       // 执行工作流，仅通过 Redis 维护实时状态
       while (currentWorkflow.state === 'pending' || currentWorkflow.state === 'running') {
-        currentWorkflow = await executeAst(currentWorkflow);
+        currentWorkflow = await executeAst(currentWorkflow, context);
 
         const { progress } = this.calculateMetrics(currentWorkflow);
 

@@ -1,6 +1,6 @@
 import { root } from "@pro/core";
 import { Ast, Visitor, WorkflowGraphAst } from "./ast";
-import { HANDLER, Handler, HANDLER_METHOD, OUTPUT, resolveConstructor } from "./decorator";
+import { HANDLER, Handler, HANDLER_METHOD, INPUT, OUTPUT, resolveConstructor } from "./decorator";
 import { fromJson } from "./generate";
 import { IAstStates, IEdge, INode } from "./types";
 import { NoRetryError } from "./errors";
@@ -13,12 +13,18 @@ export class WorkflowExecutorVisitor {
     /**
      * 单次执行WorkflowGraph
      */
-    async visit(ast: WorkflowGraphAst, ctx: Visitor): Promise<INode> {
+    async visit(ast: WorkflowGraphAst, ctx: any): Promise<INode> {
         const { state } = ast;
         // 1. 状态验证：只有pending状态才能执行
         if (state === 'success' || state === 'fail') {
             return ast; // 不是pending状态，直接返回
         }
+
+        // 2. 输入节点初始化（仅在首次执行时）
+        if (state === 'pending' && ctx) {
+            this.initializeInputNodes(ast.nodes, ast.edges, ctx);
+        }
+
         ast.state = 'running'
         // 3. 找到当前可以执行的节点（无依赖或依赖已完成）
         const executableNodes = this.findExecutableNodes(ast.nodes, ast.edges);
@@ -87,7 +93,7 @@ export class WorkflowExecutorVisitor {
         });
     }
     // 执行当前批次的节点
-    private async executeCurrentBatch(nodes: INode[], ctx: Visitor, edges: IEdge[], workflowNodes: INode[]) {
+    private async executeCurrentBatch(nodes: INode[], ctx: any, edges: IEdge[], workflowNodes: INode[]) {
         // 首先收集所有已完成节点的输出数据
         const allOutputs = new Map<string, any>();
         const completedNodes = workflowNodes.filter(n => n.state === 'success');
@@ -103,7 +109,7 @@ export class WorkflowExecutorVisitor {
             // 🎯 关键：在执行节点前，根据边关系进行输入赋值
             this.assignInputsToNode(node, allOutputs, edges, workflowNodes);
 
-            const resultNode = await this.executeNode(node, ctx);
+            const resultNode = await executeAst(node, ctx);
             const outputs = this.extractNodeOutputs(resultNode);
 
             // 🔑 节点执行完成后，将满足条件的下游节点重置为 pending
@@ -152,7 +158,7 @@ export class WorkflowExecutorVisitor {
         const ctor = resolveConstructor(ast)
         const outputs = root.get(OUTPUT)
         const outputData: any = {};
-        outputs.filter(it=>it.target === ctor).map(it => {
+        outputs.filter(it => it.target === ctor).map(it => {
             if ((node as any)[it.propertyKey] !== undefined) {
                 outputData[it.propertyKey] = (node as any)[it.propertyKey];
             }
@@ -265,18 +271,77 @@ export class WorkflowExecutorVisitor {
         });
     }
 
-    // 每次执行都会更新状态
-    private async executeNode(node: INode, ctx: Visitor) {
-        const ast = fromJson(node);
-        const result = await ctx.visit(ast, ctx);
-        return result;
+    /**
+     * 从 context 中解析值
+     * 匹配规则：
+     * 1. 优先精确匹配：context['nodeId.propertyKey']
+     * 2. 其次模糊匹配：context['propertyKey']
+     */
+    private resolveContextValue(nodeId: string, propertyKey: string, context: Record<string, any>): any {
+        // 精确匹配：nodeId.propertyKey
+        const exactKey = `${nodeId}.${propertyKey}`;
+        if (exactKey in context) {
+            return context[exactKey];
+        }
+
+        // 模糊匹配：propertyKey
+        if (propertyKey in context) {
+            return context[propertyKey];
+        }
+
+        return undefined;
+    }
+
+    /**
+     * 判断节点的某个属性是否是"输入属性"
+     * 输入属性定义：没有无条件边指向该属性
+     */
+    private isInputProperty(node: INode, propertyKey: string, edges: IEdge[]): boolean {
+        // 找到所有指向该节点的边
+        const incomingEdges = edges.filter(edge => edge.to === node.id);
+
+        // 找到指向该属性的边（如果没有指定 toProperty，视为影响所有属性）
+        const relevantEdges = incomingEdges.filter(edge =>
+            !edge.toProperty || edge.toProperty === propertyKey
+        );
+
+        // 检查是否有无条件边
+        const hasUnconditionalEdge = relevantEdges.some(edge => !edge.condition);
+
+        return !hasUnconditionalEdge; // 没有无条件边 = 输入属性
+    }
+
+    /**
+     * 初始化输入节点：将 context 中的值赋给输入属性
+     */
+    private initializeInputNodes(nodes: INode[], edges: IEdge[], context: Record<string, any>): void {
+        // 遍历所有节点
+        for (const node of nodes) {
+            // 获取该节点类型的所有 @Input 属性
+            const ast = fromJson(node);
+            const ctor = resolveConstructor(ast);
+            const inputs = root.get(INPUT, []).filter(it => it.target === ctor);
+
+            // 遍历每个 @Input 属性
+            for (const input of inputs) {
+                const propertyKey = String(input.propertyKey);
+
+                // 检查该属性是否是"输入属性"（未被无条件边连线）
+                if (this.isInputProperty(node, propertyKey, edges)) {
+                    // 尝试从 context 赋值
+                    const value = this.resolveContextValue(node.id, propertyKey, context);
+                    if (value !== undefined) {
+                        (node as any)[propertyKey] = value;
+                    }
+                }
+            }
+        }
     }
 }
 
 export class ExecutorVisitor implements Visitor {
-    async visit(ast: Ast, ctx: Visitor): Promise<any> {
+    async visit(ast: Ast, ctx: any): Promise<any> {
         const type = resolveConstructor(ast)
-
         try {
             // 找到 methods
             const methods = root.get(HANDLER_METHOD, []);
@@ -311,17 +376,17 @@ export class ExecutorVisitor implements Visitor {
         }
     }
 }
-
+const executor = new ExecutorVisitor()
 // 访问模式的执行引擎 - 连接状态与访问者的桥梁
-export function executeAst<S extends INode>(state: S, visitor: Visitor = new ExecutorVisitor()) {
+export function executeAst<S extends INode>(state: S, context: any, visitor: Visitor = executor) {
     const ast = fromJson(state);
-    return visitor.visit(ast, visitor);
+    return visitor.visit(ast, context);
 }
 
-export async function execute<S extends INode>(state: S, visitor: Visitor = new ExecutorVisitor()) {
+export async function execute<S extends INode>(state: S, context: any, visitor: Visitor = executor) {
     let currentState = state;
     while (currentState.state === 'pending' || currentState.state === 'running') {
-        currentState = await executeAst(currentState, visitor);
+        currentState = await executeAst(currentState, context, visitor);
     }
     return currentState; // success 或 fail
 }

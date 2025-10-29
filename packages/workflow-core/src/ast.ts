@@ -2,7 +2,7 @@ import { Input, Node } from "./decorator";
 import { IAstStates, IEdge, INode } from "./types";
 import { generateId } from "./utils";
 export interface Visitor {
-    visit(ast: Ast, ctx: Visitor): Promise<any>;
+    visit(ast: Ast, ctx: any): Promise<any>;
 }
 // 抽象语法树的核心表达 - 状态与数据的统一
 export abstract class Ast implements INode {

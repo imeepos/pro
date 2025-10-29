@@ -26,6 +26,7 @@ import { Injectable, OnDestroy, OnInit } from '@pro/core';
  * - 清晰的职责划分
  */
 @Injectable({
+  providedIn: 'root',
   useFactory: () => {
     return new RabbitMQService({ url: process.env.RABBITMQ_URL } as RabbitMQConfig)
   },
@@ -33,7 +34,7 @@ import { Injectable, OnDestroy, OnInit } from '@pro/core';
 })
 @OnInit()
 export class RabbitMQService implements OnDestroy {
-  private connectionPool: ConnectionPool;
+  public readonly connectionPool: ConnectionPool;
   private publisher: RabbitMQPublisher;
   private consumer: RabbitMQConsumer;
   private isInitialized = false;

@@ -1,7 +1,6 @@
 import { root } from "@pro/core";
 import { getMqQueueConfig } from "./tokens.js";
 import { RabbitMQService } from "./rabbitmq.service.js";
-import { ConnectionPool } from "./connection-pool.js";
 import { RxQueueProducer } from "./rx-producer.js";
 import { createRxConsumer } from "./rx-consumer.js";
 import type { QueueManager, RxConsumerOptions } from "./rx-types.js";
@@ -57,7 +56,7 @@ export function useQueue<T = any>(
 ): QueueManager<T> {
     const config = getMqQueueConfig(name);
     const mqService = root.get(RabbitMQService);
-    const connectionPool = root.get(ConnectionPool);
+    const connectionPool = mqService.connectionPool;
 
     // 创建生产者
     const producer = new RxQueueProducer<T>(mqService, config.queue as any);

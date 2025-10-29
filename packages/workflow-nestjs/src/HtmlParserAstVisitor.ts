@@ -1,6 +1,7 @@
 import { Handler, HtmlParserAst, Visitor, NoRetryError } from '@pro/workflow-core';
 import { Inject, Injectable } from '@pro/core';
 import { WeiboHtmlParser } from './parsers/weibo-html.parser';
+import { useQueue } from '@pro/rabbitmq';
 
 @Handler(HtmlParserAst)
 @Injectable()
@@ -41,7 +42,11 @@ export class HtmlParserAstVisitor {
           ast.nextEndDate = lastPostTime;
         }
       }
-
+      const postDetail = useQueue(`post_detail_crawl`)
+      await postDetail.producer.nextBatch(result.posts)
+      // users
+      const userInfo = useQueue(`user_info_crawl`)
+      await userInfo.producer.nextBatch(result.posts.map(it => { udi: it.uid }))
       ast.result = result;
       ast.state = 'success';
     } catch (error) {

@@ -7,12 +7,11 @@ export class ExecutorService {
     /**
        * 执行单个工作流
        */
-    async executeWorkflow<T extends INode>(workflow: T):
+    async executeWorkflow<T extends INode>(workflow: T, context: any = {}):
         Promise<T> {
         try {
             // 使用 @pro/workflow 的执行引擎
-            const result = await execute(workflow);
-            return result;
+            return await execute(workflow, context);
         } catch (error) {
             throw error;
         }
