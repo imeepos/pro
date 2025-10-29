@@ -12,4 +12,5 @@ export * from './workflows/main-search.workflow';
 export * from './workflows/user-profile.workflow';
 export * from './types/user-profile.types';
 export * from './constants/rate-limit.constants';
-export * from './runWeiBoKeywordSearchWorkflow';
+export { runWeiBoKeywordSearchWorkflow, creatWeiBoKeywordSearcheWorkflow } from './runWeiBoKeywordSearchWorkflow';
+export { runPostDetailWorkflow, createPostDetailWorkflow as createPostDetailWorkflowPersisted } from './runPostDetailWorkflow';

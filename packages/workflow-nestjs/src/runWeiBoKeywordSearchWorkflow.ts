@@ -1,7 +1,4 @@
-import "reflect-metadata"
-import "dotenv/config"
-
-import { HtmlParserAst, PlaywrightAst, useHandlers, WeiboAccountAst, WeiboSearchUrlBuilderAst, WorkflowGraphAst, MqPublisherAst } from "@pro/workflow-core";
+import { HtmlParserAst, PlaywrightAst, useHandlers, WeiboAccountAst, WeiboSearchUrlBuilderAst, WorkflowGraphAst } from "@pro/workflow-core";
 import { UserProfileVisitor } from "./visitors/user-profile.visitor";
 import { WeiboSearchUrlBuilderAstVisitor } from "./WeiboSearchUrlBuilderAstVisitor";
 import { root } from "@pro/core";
@@ -10,12 +7,12 @@ import { WorkflowService, WorkflowWithMetadata } from "./workflow.service";
 import { WeiboAccountAstVisitor } from "./WeiboAccountAstVisitor";
 import { HtmlParserAstVisitor } from "./HtmlParserAstVisitor";
 import { MqPublisherAstVisitor } from "./MqPublisherAstVisitor";
-import { QUEUE_NAMES } from "@pro/types";
-
+import { from, switchMap } from "rxjs";
+import { createWeiboKeywordSearchQueue } from "./utils";
 /**
  * 运行 workflow 示例 - 使用单一版本架构 + 运行时状态追踪
  */
-export async function runWeiBoKeywordSearchWorkflow(keyword: string, startDate: Date) {
+export async function runWeiBoKeywordSearchWorkflow() {
     useHandlers([
         UserProfileVisitor,
         WeiboSearchUrlBuilderAstVisitor,
@@ -24,9 +21,9 @@ export async function runWeiBoKeywordSearchWorkflow(keyword: string, startDate: 
         HtmlParserAstVisitor,
         MqPublisherAstVisitor
     ]);
-    
+    const mq = createWeiboKeywordSearchQueue()
     const workflowService = root.get(WorkflowService);
-    try {
+    const run = async (keyword: string, startDate: Date, endDate: Date) => {
         // 尝试从数据库获取已存在的 workflow
         let workflowMetadata = await workflowService.getWorkflowBySlug('weibo-keyworkd-search');
         if (!workflowMetadata) {
@@ -36,12 +33,16 @@ export async function runWeiBoKeywordSearchWorkflow(keyword: string, startDate: 
         const { state } = await workflowService.executeWorkflow(
             workflowMetadata.id,
             'system',
-            { keyword: keyword, startDate: startDate }
+            { keyword: keyword, start: startDate, end: endDate }
         )
         return state
-    } catch (error) {
-        throw error;
     }
+    mq.consumer$.pipe(
+        switchMap(msg => {
+            const message = msg.message
+            return from(run(message.keyword, message.start, message.end))
+        })
+    ).subscribe({})
 }
 
 /**
@@ -58,27 +59,17 @@ export async function creatWeiBoKeywordSearcheWorkflow(): Promise<WorkflowWithMe
     const playwright = new PlaywrightAst();
     const account = new WeiboAccountAst();
     const htmlParserAst = new HtmlParserAst()
-    const mqPublisher = new MqPublisherAst()
-    mqPublisher.queue = QUEUE_NAMES.WEIBO_LIST_CRAWL;
-
     // 构建 workflow 图
     const workflow = new WorkflowGraphAst()
         .addNode(urlBuilder)
         .addNode(playwright)
         .addNode(account)
         .addNode(htmlParserAst)
-        .addNode(mqPublisher)
         .addEdge({
             from: urlBuilder.id,
             to: htmlParserAst.id,
             fromProperty: `start`,
             toProperty: `startDate`
-        })
-        .addEdge({
-            from: htmlParserAst.id,
-            to: mqPublisher.id,
-            fromProperty: 'result',
-            toProperty: 'event'
         })
         // 分支1: 有下一页 → 继续爬取下一页（直接使用 nextPageLink，不触发 urlBuilder）
         .addEdge({

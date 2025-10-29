@@ -1,4 +1,4 @@
-import { createWorkflowGraphAst, INode } from '@pro/workflow-core'
+import { WorkflowGraphAst } from '@pro/workflow-core'
 import {
   FetchPostDetailAst,
   FetchCommentsAst,
@@ -16,108 +16,69 @@ export interface PostDetailWorkflowConfig {
 export function createPostDetailWorkflow(
   input: PostDetailWorkflowInput,
   config: PostDetailWorkflowConfig = {}
-) {
+): WorkflowGraphAst {
   const { postId, metadata } = input
   const { maxCommentPages = 5, maxLikeUsers = 100 } = config
 
-  const fetchDetail = Object.assign(new FetchPostDetailAst(), {
-    id: 'fetch-detail',
-    postId,
-  })
+  const fetchDetail = new FetchPostDetailAst()
+  fetchDetail.postId = postId
 
-  const fetchComments = Object.assign(new FetchCommentsAst(), {
-    id: 'fetch-comments',
-    postId,
-    uid: '',
-    maxPages: maxCommentPages,
-  })
+  const fetchComments = new FetchCommentsAst()
+  fetchComments.postId = postId
+  fetchComments.maxPages = maxCommentPages
 
-  const fetchLikes = Object.assign(new FetchLikesAst(), {
-    id: 'fetch-likes',
-    postId,
-    maxUsers: maxLikeUsers,
-  })
+  const fetchLikes = new FetchLikesAst()
+  fetchLikes.postId = postId
+  fetchLikes.maxUsers = maxLikeUsers
 
-  const saveDetail = Object.assign(new SavePostDetailAst(), {
-    id: 'save-detail',
-    postId,
-    metadata,
-  })
+  const saveDetail = new SavePostDetailAst()
+  saveDetail.postId = postId
+  if (metadata) {
+    saveDetail.metadata = metadata
+  }
 
-  const workflow = createWorkflowGraphAst({
-    name: 'PostDetailWorkflow',
-    nodes: [
-      {
-        id: fetchDetail.id,
-        state: fetchDetail.state,
-        type: fetchDetail.type,
-        postId,
-      } as INode,
-      {
-        id: fetchComments.id,
-        state: fetchComments.state,
-        type: fetchComments.type,
-        postId,
-        uid: '',
-        maxPages: maxCommentPages,
-      } as INode,
-      {
-        id: fetchLikes.id,
-        state: fetchLikes.state,
-        type: fetchLikes.type,
-        postId,
-        maxUsers: maxLikeUsers,
-      } as INode,
-      {
-        id: saveDetail.id,
-        state: saveDetail.state,
-        type: saveDetail.type,
-        postId,
-        metadata,
-      } as INode,
-    ],
-    edges: [
-      {
-        from: 'fetch-detail',
-        to: 'fetch-comments',
-        fromProperty: 'authorId',
-        toProperty: 'uid',
-      },
-      {
-        from: 'fetch-detail',
-        to: 'save-detail',
-        fromProperty: 'detail',
-        toProperty: 'detail',
-      },
-      {
-        from: 'fetch-comments',
-        to: 'save-detail',
-        fromProperty: 'comments',
-        toProperty: 'comments',
-      },
-      {
-        from: 'fetch-likes',
-        to: 'save-detail',
-        fromProperty: 'likes',
-        toProperty: 'likes',
-      },
-    ],
-  })
-
-  return workflow
+  return new WorkflowGraphAst()
+    .addNode(fetchDetail)
+    .addNode(fetchComments)
+    .addNode(fetchLikes)
+    .addNode(saveDetail)
+    .addEdge({
+      from: fetchDetail.id,
+      to: fetchComments.id,
+      fromProperty: 'authorId',
+      toProperty: 'uid',
+    })
+    .addEdge({
+      from: fetchDetail.id,
+      to: saveDetail.id,
+      fromProperty: 'detail',
+      toProperty: 'detail',
+    })
+    .addEdge({
+      from: fetchComments.id,
+      to: saveDetail.id,
+      fromProperty: 'comments',
+      toProperty: 'comments',
+    })
+    .addEdge({
+      from: fetchLikes.id,
+      to: saveDetail.id,
+      fromProperty: 'likes',
+      toProperty: 'likes',
+    })
 }
 
 export async function executePostDetailWorkflow(
   input: PostDetailWorkflowInput,
   config: PostDetailWorkflowConfig = {}
 ): Promise<PostDetailWorkflowOutput> {
-  const { execute } = await import('@pro/workflow-core')
+  const { executeAst } = await import('@pro/workflow-core')
 
   const workflow = createPostDetailWorkflow(input, config)
-  const result = await execute(workflow)
+  const result = await executeAst(workflow, {})
 
-  const saveNode = result.nodes.find((n: any) => n.id === 'save-detail') as any
-  const detailNode = result.nodes.find((n: any) => n.id === 'fetch-detail') as any
+  const saveNode = result.nodes.find((n: any) => n.type === 'SavePostDetailAst') as any
+  const detailNode = result.nodes.find((n: any) => n.type === 'FetchPostDetailAst') as any
 
   return {
     success: saveNode?.success || false,
