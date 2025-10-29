@@ -9,7 +9,7 @@
         "dev": "tsc --watch",
         "typecheck": "tsc --noEmit",
         "clean": "rm -rf dist",
-        "test": "jest",
+        "test": "tsx src/test.ts",
         "lint": "eslint src --ext .ts",
         "lint:fix": "eslint src --ext .ts --fix",
         "main": "tsx src/main.ts"
@@ -39,6 +39,7 @@
         "@pro/redis": "workspace:*",
         "@pro/types": "workspace:*",
         "@pro/weibo": "workspace:*",
+        "@pro/weibo-persistence": "workspace:*",
         "@pro/workflow-core": "workspace:*",
         "cheerio": "^1.1.2",
         "ioredis": "^5.3.2",

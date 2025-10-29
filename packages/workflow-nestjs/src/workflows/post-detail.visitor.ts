@@ -1,16 +1,17 @@
 import { Injectable } from '@pro/core'
 import { Handler } from '@pro/workflow-core'
 import { WeiboStatusService } from '@pro/weibo'
-import { RawDataSourceService } from '@pro/mongodb'
 import {
-  SourceType,
-  SourcePlatform,
   QUEUE_NAMES,
-  RawDataReadyEvent,
   PostDetailCompletedEvent,
 } from '@pro/types'
 import { RabbitMQService } from '@pro/rabbitmq'
-import { createHash } from 'crypto'
+import {
+  normalizeStatus,
+  normalizeUser,
+  normalizeComments,
+  WeiboPersistenceService,
+} from '@pro/weibo-persistence'
 import {
   FetchPostDetailAst,
   FetchCommentsAst,
@@ -21,7 +22,10 @@ import {
 @Handler(FetchPostDetailAst)
 @Injectable()
 export class FetchPostDetailVisitor {
-  constructor(private readonly weiboStatusService: WeiboStatusService) { }
+  constructor(
+    private readonly weiboStatusService: WeiboStatusService,
+    private readonly persistence: WeiboPersistenceService
+  ) { }
 
   async visit(node: FetchPostDetailAst): Promise<FetchPostDetailAst> {
     try {
@@ -39,6 +43,29 @@ export class FetchPostDetailVisitor {
       node.detail = detail
       node.authorId = detail.user?.idstr
 
+      // 清洗入库
+      const normalizedStatus = normalizeStatus(detail)
+      const normalizedUser = normalizeUser(detail.user)
+
+      const users = normalizedUser ? [normalizedUser] : []
+      const posts = normalizedStatus ? [normalizedStatus] : []
+
+      // 处理转发微博
+      const retweeted = (detail as any).retweeted_status
+      if (retweeted) {
+        const retweetedStatus = normalizeStatus(retweeted)
+        const retweetedUser = normalizeUser(retweeted.user)
+        if (retweetedStatus) posts.push(retweetedStatus)
+        if (retweetedUser) users.push(retweetedUser)
+      }
+
+      if (users.length > 0) {
+        const userMap = await this.persistence.saveUsers(users)
+        if (posts.length > 0) {
+          await this.persistence.savePosts(posts, userMap)
+        }
+      }
+
       node.state = 'success'
     } catch (error) {
       node.state = 'fail'
@@ -50,7 +77,10 @@ export class FetchPostDetailVisitor {
 
 @Injectable()
 export class FetchCommentsVisitor {
-  constructor(private readonly weiboStatusService: WeiboStatusService) { }
+  constructor(
+    private readonly weiboStatusService: WeiboStatusService,
+    private readonly persistence: WeiboPersistenceService
+  ) { }
   @Handler(FetchCommentsAst)
   async visit(node: FetchCommentsAst): Promise<FetchCommentsAst> {
     try {
@@ -87,6 +117,36 @@ export class FetchCommentsVisitor {
 
       node.comments = allComments
       node.totalComments = allComments.length
+
+      // 清洗入库
+      if (allComments.length > 0) {
+        const normalizedComments = normalizeComments(allComments, node.postId)
+        const users: any[] = []
+
+        // 收集评论用户
+        const collectUsers = (comments: any[]): void => {
+          for (const comment of comments) {
+            const author = normalizeUser(comment.user)
+            if (author) users.push(author)
+            if (comment.reply_comment) {
+              const replyAuthor = normalizeUser(comment.reply_comment.user)
+              if (replyAuthor) users.push(replyAuthor)
+            }
+            if (Array.isArray(comment.comments)) {
+              collectUsers(comment.comments)
+            }
+          }
+        }
+        collectUsers(allComments)
+
+        if (users.length > 0) {
+          const userMap = await this.persistence.saveUsers(users)
+          const post = await this.persistence.ensurePostByWeiboId(node.postId)
+          if (post && normalizedComments.length > 0) {
+            await this.persistence.saveComments(normalizedComments, userMap, post)
+          }
+        }
+      }
 
       node.state = 'success'
     } catch (error) {
@@ -138,7 +198,6 @@ export class FetchLikesVisitor {
 @Injectable()
 export class SavePostDetailVisitor {
   constructor(
-    private readonly rawDataSourceService: RawDataSourceService,
     private readonly rabbitMQService: RabbitMQService
   ) { }
 
@@ -146,53 +205,12 @@ export class SavePostDetailVisitor {
     try {
       node.state = 'running'
 
-      const rawContent = JSON.stringify({
-        detail: node.detail,
-        comments: node.comments,
-        likes: node.likes,
-      })
-
-      const sourceUrl = `https://weibo.com/detail/${node.postId}`
-      const contentHash = createHash('md5').update(rawContent).digest('hex')
-
-      const doc = await this.rawDataSourceService.create({
-        sourceType: SourceType.WEIBO_DETAIL,
-        sourceUrl,
-        rawContent,
-        metadata: {
-          postId: node.postId,
-          commentCount: node.comments?.length || 0,
-          likeCount: node.likes?.length || 0,
-          ...node.metadata,
-        },
-      })
-
-      node.rawDataId = String(doc._id)
       node.success = true
-
-      const rawDataReadyEvent: RawDataReadyEvent = {
-        rawDataId: node.rawDataId,
-        sourceType: SourceType.WEIBO_DETAIL,
-        sourcePlatform: SourcePlatform.WEIBO,
-        sourceUrl,
-        contentHash,
-        metadata: {
-          taskId: node.metadata?.taskId,
-          keyword: node.metadata?.keyword,
-          fileSize: Buffer.byteLength(rawContent, 'utf-8'),
-        },
-        createdAt: new Date().toISOString(),
-      }
-
-      await this.rabbitMQService.publish(
-        QUEUE_NAMES.RAW_DATA_READY,
-        rawDataReadyEvent
-      )
 
       const postDetailCompletedEvent: PostDetailCompletedEvent = {
         postId: node.postId,
         authorId: node.detail?.user?.idstr,
-        rawDataId: node.rawDataId,
+        rawDataId: '',
         metadata: {
           keyword: node.metadata?.keyword,
           taskId: node.metadata?.taskId,

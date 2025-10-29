@@ -7,6 +7,7 @@ import {
   PostDetailWorkflowInput,
   PostDetailWorkflowOutput,
 } from './post-detail.ast'
+import { executeAst } from '@pro/workflow-core';
 
 export interface PostDetailWorkflowConfig {
   maxCommentPages?: number
@@ -72,7 +73,6 @@ export async function executePostDetailWorkflow(
   input: PostDetailWorkflowInput,
   config: PostDetailWorkflowConfig = {}
 ): Promise<PostDetailWorkflowOutput> {
-  const { executeAst } = await import('@pro/workflow-core')
 
   const workflow = createPostDetailWorkflow(input, config)
   const result = await executeAst(workflow, {})
