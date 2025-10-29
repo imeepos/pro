@@ -9,6 +9,7 @@ import { RabbitMQService } from '@pro/rabbitmq'
 import {
   normalizeComments,
   normalizeUser,
+  normalizeStatus,
 } from '@pro/weibo-persistence'
 import { WeiboPersistenceServiceAdapter as WeiboPersistenceService } from '../services/weibo-persistence.adapter'
 import {
@@ -22,14 +23,14 @@ import {
 @Injectable()
 export class FetchPostDetailVisitor {
   constructor(
-    @Inject(WeiboStatusService) private readonly weiboStatusService: WeiboStatusService
+    @Inject(WeiboStatusService) private readonly weiboStatusService: WeiboStatusService,
+    @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService
   ) { }
 
   async visit(node: FetchPostDetailAst): Promise<FetchPostDetailAst> {
     try {
       node.state = 'running'
 
-      // 验证postId
       if (!node.postId) {
         throw new Error('postId is required but not provided')
       }
@@ -47,7 +48,6 @@ export class FetchPostDetailVisitor {
 
       node.detail = detail
 
-      // 调试日志：验证 detail 数据结构
       if (detail) {
         console.log(`[FetchPostDetailVisitor] Detail fetched successfully`)
         console.log(`[FetchPostDetailVisitor] Detail ID types:`, {
@@ -60,14 +60,35 @@ export class FetchPostDetailVisitor {
           mblogid: typeof detail.mblogid,
           mblogidValue: detail.mblogid
         })
+
+        // 🔥 立即清洗帖子数据并入库
+        const normalizedPost = normalizeStatus(detail)
+        if (normalizedPost) {
+          // 提取帖子作者和转发帖子的作者
+          const users = []
+          const postAuthor = normalizeUser(detail.user)
+          if (postAuthor) users.push(postAuthor)
+
+          // 如果是转发，提取原帖作者
+          const detailRecord = detail as any
+          if (detailRecord.retweeted_status?.user) {
+            const retweetAuthor = normalizeUser(detailRecord.retweeted_status.user)
+            if (retweetAuthor) users.push(retweetAuthor)
+          }
+
+          if (users.length > 0) {
+            const userMap = await this.persistence.saveUsers(users)
+            const postMap = await this.persistence.savePosts([normalizedPost], userMap)
+            console.log(`[FetchPostDetailVisitor] Post saved to database immediately, post count: ${postMap.size}`)
+          }
+        }
       } else {
         console.warn(`[FetchPostDetailVisitor] Detail is null or undefined`)
       }
-      // authorId现在从workflow边连接获取，不需要从详情中提取
+
       console.log(`[FetchPostDetailVisitor] PostId available for next nodes: ${node.postId}`)
       console.log(`[FetchPostDetailVisitor] AuthorId from workflow: ${node.authorId}`)
 
-      // 现在用户处理已经分离到专门的节点，这里只处理帖子详情
       node.state = 'success'
     } catch (error) {
       node.state = 'fail'
@@ -228,13 +249,15 @@ export class FetchCommentsVisitor {
 @Injectable()
 export class FetchLikesVisitor {
 
-  constructor(@Inject(WeiboStatusService) private readonly weiboStatusService: WeiboStatusService) { }
+  constructor(
+    @Inject(WeiboStatusService) private readonly weiboStatusService: WeiboStatusService,
+    @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService
+  ) { }
   @Handler(FetchLikesAst)
   async visit(node: FetchLikesAst): Promise<FetchLikesAst> {
     try {
       node.state = 'running'
 
-      // 验证postId
       if (!node.postId) {
         throw new Error('postId is required but not provided')
       }
@@ -249,9 +272,7 @@ export class FetchLikesVisitor {
 
       let actualId = node.postId
 
-      // 检查是否有帖子详情数据可用，从中提取正确的数值型ID
       if (node.detail) {
-        // 微博点赞API需要数值型id，而不是字符串型的mid或mblogid
         if (node.detail.id && typeof node.detail.id === 'number') {
           actualId = String(node.detail.id)
           console.log(`[FetchLikesVisitor] Using numeric ID from detail: ${actualId}`)
@@ -292,6 +313,19 @@ export class FetchLikesVisitor {
       node.totalLikes = response.total_number || likeAttitudes.length
 
       console.log(`[FetchLikesVisitor] Processed ${node.likes.length} likes out of ${node.totalLikes} total`)
+
+      // 🔥 立即清洗点赞用户数据并入库
+      if (likeAttitudes.length > 0) {
+        const users = likeAttitudes
+          .map((attitude: any) => normalizeUser(attitude.user))
+          .filter((user): user is NonNullable<typeof user> => user !== null)
+
+        if (users.length > 0) {
+          await this.persistence.saveUsers(users)
+          console.log(`[FetchLikesVisitor] Saved ${users.length} like users to database immediately`)
+        }
+      }
+
       node.state = 'success'
     } catch (error) {
       node.state = 'fail'
