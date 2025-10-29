@@ -91,7 +91,40 @@ export class FetchCommentsVisitor {
     try {
       node.state = 'running'
 
-      console.log(`[FetchCommentsVisitor] Processing postId: ${node.postId}, uid: ${node.uid}`)
+      console.log(`[FetchCommentsVisitor] Processing postId: ${node.postId}, uid: ${node.uid}, authorWeiboId: ${node.authorWeiboId}`)
+
+      // 1. ID转换：获取数值型帖子ID
+      let actualPostId = node.postId
+
+      // 检查是否有帖子详情数据可用，从中提取正确的数值型ID
+      if (node.detail) {
+        if (node.detail.id && typeof node.detail.id === 'number') {
+          actualPostId = String(node.detail.id)
+          console.log(`[FetchCommentsVisitor] Using numeric ID from detail: ${actualPostId}`)
+        } else if (node.detail.idstr && /^\d+$/.test(node.detail.idstr)) {
+          actualPostId = node.detail.idstr
+          console.log(`[FetchCommentsVisitor] Using numeric idstr from detail: ${actualPostId}`)
+        } else {
+          console.warn(`[FetchCommentsVisitor] No valid numeric ID found in detail`)
+          console.log(`[FetchCommentsVisitor] Detail ID types:`, {
+            id: typeof node.detail.id,
+            idValue: node.detail.id,
+            idstr: typeof node.detail.idstr,
+            idstrValue: node.detail.idstr,
+            mid: typeof node.detail.mid,
+            midValue: node.detail.mid,
+            mblogid: typeof node.detail.mblogid,
+            mblogidValue: node.detail.mblogid
+          })
+        }
+      } else {
+        console.log(`[FetchCommentsVisitor] No detail available, using original postId: ${actualPostId}`)
+      }
+
+      // 2. UID修复：使用发帖人的微博ID，而不是数据库ID
+      const actualUid = node.authorWeiboId || node.uid
+      console.log(`[FetchCommentsVisitor] Using authorWeiboId as uid: ${actualUid}`)
+      console.log(`[FetchCommentsVisitor] Final API params - postId: ${actualPostId}, uid: ${actualUid}`)
 
       const maxPages = node.maxPages || 5
       const allComments: any[] = []
@@ -99,14 +132,28 @@ export class FetchCommentsVisitor {
 
       for (let page = 0; page < maxPages; page++) {
         const requestOptions: any = {
-          uid: node.uid,
+          id: actualPostId,  // 🔑 使用正确的数值型帖子ID
+          uid: actualUid,    // 🔑 使用正确的发帖人微博ID
           count: 20,
-          ...(currentMaxId ? { maxId: currentMaxId } : {}),
+          fetch_level: 0,
+          flow: 1,
+          is_reload: 1,
+          is_mix: 0,
+          is_show_bulletin: 2,
+          locale: 'zh-CN',
+          ...(currentMaxId ? { max_id: currentMaxId } : {}),
           ...(node.headers ? { headers: node.headers } : {}),
         }
 
+        console.log(`[FetchCommentsVisitor] Fetching page ${page + 1}/${maxPages} with params:`, {
+          id: actualPostId,
+          uid: actualUid,
+          count: 20,
+          ...(currentMaxId ? { max_id: currentMaxId } : {})
+        })
+
         const response = await this.weiboStatusService.fetchStatusComments(
-          node.postId,
+          actualPostId,
           requestOptions
         )
 
@@ -133,7 +180,8 @@ export class FetchCommentsVisitor {
 
       // 清洗入库
       if (allComments.length > 0) {
-        const normalizedComments = normalizeComments(allComments, node.postId)
+        // 🔑 使用转换后的数值型ID作为帖子ID，而不是原始postId
+        const normalizedComments = normalizeComments(allComments, actualPostId)
         const users: any[] = []
 
         // 收集评论用户
@@ -154,7 +202,8 @@ export class FetchCommentsVisitor {
 
         if (users.length > 0) {
           const userMap = await this.persistence.saveUsers(users)
-          const post = await this.persistence.ensurePostByWeiboId(node.postId)
+          // 🔑 使用转换后的数值型ID查询数据库，而不是原始postId
+          const post = await this.persistence.ensurePostByWeiboId(actualPostId)
           if (post && normalizedComments.length > 0) {
             await this.persistence.saveComments(normalizedComments, userMap, post)
             console.log(`[FetchCommentsVisitor] Saved ${normalizedComments.length} comments to database`)
@@ -261,7 +310,7 @@ export class FetchLikesVisitor {
 @Injectable()
 export class SavePostDetailVisitor {
   constructor(
-    private readonly rabbitMQService: RabbitMQService
+    @Inject(RabbitMQService) private readonly rabbitMQService: RabbitMQService
   ) { }
 
   async visit(node: SavePostDetailAst): Promise<SavePostDetailAst> {
