@@ -1,13 +1,34 @@
 import { Input, Output, Ast, Node } from '@pro/workflow-core'
 
 @Node()
+export class UserCheckAst extends Ast {
+  @Input() @Output() authorWeiboId!: string
+
+  @Output() authorId?: string
+  @Output() needFetch!: boolean
+
+  type = 'UserCheckAst' as const
+}
+
+@Node()
+export class UserFetchAst extends Ast {
+  @Input() authorWeiboId!: string
+  @Input() cookies?: string
+  @Input() headers?: Record<string, string>
+
+  @Output() authorId!: string
+
+  type = 'UserFetchAst' as const
+}
+
+@Node()
 export class FetchPostDetailAst extends Ast {
-  @Input() postId!: string
+  @Input() @Output() postId!: string
+  @Input() authorId!: string
   @Input() cookies?: string
   @Input() headers?: Record<string, string>
 
   @Output() detail?: any
-  @Output() authorId?: string
 
   type = 'FetchPostDetailAst' as const
 }
@@ -29,6 +50,7 @@ export class FetchCommentsAst extends Ast {
 @Node()
 export class FetchLikesAst extends Ast {
   @Input() postId!: string
+  @Input() detail?: any
   @Input() cookies?: string
   @Input() headers?: Record<string, string>
   @Input() maxUsers?: number

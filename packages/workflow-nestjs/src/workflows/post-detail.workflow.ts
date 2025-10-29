@@ -51,6 +51,12 @@ export function createPostDetailWorkflow(
     })
     .addEdge({
       from: fetchDetail.id,
+      to: fetchLikes.id,
+      fromProperty: 'detail',
+      toProperty: 'detail',
+    })
+    .addEdge({
+      from: fetchDetail.id,
       to: saveDetail.id,
       fromProperty: 'detail',
       toProperty: 'detail',

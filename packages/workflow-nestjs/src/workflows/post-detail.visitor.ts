@@ -1,4 +1,4 @@
-import { Injectable } from '@pro/core'
+import { Inject, Injectable } from '@pro/core'
 import { Handler } from '@pro/workflow-core'
 import { WeiboStatusService } from '@pro/weibo'
 import {
@@ -7,11 +7,10 @@ import {
 } from '@pro/types'
 import { RabbitMQService } from '@pro/rabbitmq'
 import {
-  normalizeStatus,
-  normalizeUser,
   normalizeComments,
-  WeiboPersistenceService,
+  normalizeUser,
 } from '@pro/weibo-persistence'
+import { WeiboPersistenceServiceAdapter as WeiboPersistenceService } from '../services/weibo-persistence.adapter'
 import {
   FetchPostDetailAst,
   FetchCommentsAst,
@@ -23,13 +22,19 @@ import {
 @Injectable()
 export class FetchPostDetailVisitor {
   constructor(
-    private readonly weiboStatusService: WeiboStatusService,
-    private readonly persistence: WeiboPersistenceService
+    @Inject(WeiboStatusService) private readonly weiboStatusService: WeiboStatusService
   ) { }
 
   async visit(node: FetchPostDetailAst): Promise<FetchPostDetailAst> {
     try {
       node.state = 'running'
+
+      // 验证postId
+      if (!node.postId) {
+        throw new Error('postId is required but not provided')
+      }
+
+      console.log(`[FetchPostDetailVisitor] Processing postId: ${node.postId}`)
 
       const requestOptions = node.headers
         ? { headers: node.headers, getLongText: true }
@@ -41,34 +46,17 @@ export class FetchPostDetailVisitor {
       )
 
       node.detail = detail
-      node.authorId = detail.user?.idstr
+      // authorId现在从workflow边连接获取，不需要从详情中提取
+      console.log(`[FetchPostDetailVisitor] PostId available for next nodes: ${node.postId}`)
+      console.log(`[FetchPostDetailVisitor] AuthorId from workflow: ${node.authorId}`)
 
-      // 清洗入库
-      const normalizedStatus = normalizeStatus(detail)
-      const normalizedUser = normalizeUser(detail.user)
-
-      const users = normalizedUser ? [normalizedUser] : []
-      const posts = normalizedStatus ? [normalizedStatus] : []
-
-      // 处理转发微博
-      const retweeted = (detail as any).retweeted_status
-      if (retweeted) {
-        const retweetedStatus = normalizeStatus(retweeted)
-        const retweetedUser = normalizeUser(retweeted.user)
-        if (retweetedStatus) posts.push(retweetedStatus)
-        if (retweetedUser) users.push(retweetedUser)
-      }
-
-      if (users.length > 0) {
-        const userMap = await this.persistence.saveUsers(users)
-        if (posts.length > 0) {
-          await this.persistence.savePosts(posts, userMap)
-        }
-      }
-
+      // 现在用户处理已经分离到专门的节点，这里只处理帖子详情
       node.state = 'success'
     } catch (error) {
       node.state = 'fail'
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(`[FetchPostDetailVisitor] Failed to fetch post ${node.postId}:`, errorMessage)
+      console.error(`[FetchPostDetailVisitor] Error details:`, error)
     }
 
     return node
@@ -78,8 +66,8 @@ export class FetchPostDetailVisitor {
 @Injectable()
 export class FetchCommentsVisitor {
   constructor(
-    private readonly weiboStatusService: WeiboStatusService,
-    private readonly persistence: WeiboPersistenceService
+    @Inject(WeiboStatusService) private readonly weiboStatusService: WeiboStatusService,
+    @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService
   ) { }
   @Handler(FetchCommentsAst)
   async visit(node: FetchCommentsAst): Promise<FetchCommentsAst> {
@@ -162,11 +150,18 @@ export class FetchCommentsVisitor {
 @Injectable()
 export class FetchLikesVisitor {
 
-  constructor(private readonly weiboStatusService: WeiboStatusService) { }
+  constructor(@Inject(WeiboStatusService) private readonly weiboStatusService: WeiboStatusService) { }
   @Handler(FetchLikesAst)
   async visit(node: FetchLikesAst): Promise<FetchLikesAst> {
     try {
       node.state = 'running'
+
+      // 验证postId
+      if (!node.postId) {
+        throw new Error('postId is required but not provided')
+      }
+
+      console.log(`[FetchLikesVisitor] Processing postId: ${node.postId}`)
 
       const maxUsers = node.maxUsers || 100
       const requestOptions: any = {
@@ -174,8 +169,28 @@ export class FetchLikesVisitor {
         ...(node.headers ? { headers: node.headers } : {}),
       }
 
+      let actualId = node.postId
+
+      // 检查是否有帖子详情数据可用，从中提取正确的数值型ID
+      if (node.detail) {
+        // 微博点赞API需要数值型id，而不是字符串型的mid或mblogid
+        if (node.detail.id && typeof node.detail.id === 'number') {
+          actualId = String(node.detail.id)
+          console.log(`[FetchLikesVisitor] Using numeric ID from detail: ${actualId}`)
+        } else if (node.detail.idstr && /^\d+$/.test(node.detail.idstr)) {
+          actualId = node.detail.idstr
+          console.log(`[FetchLikesVisitor] Using numeric idstr from detail: ${actualId}`)
+        } else {
+          console.warn(`[FetchLikesVisitor] No valid numeric ID found in detail, falling back to original postId`)
+        }
+      } else {
+        console.log(`[FetchLikesVisitor] No detail available, using original postId: ${actualId}`)
+      }
+
+      console.log(`[FetchLikesVisitor] Final ID for likes API: ${actualId}`)
+
       const response = await this.weiboStatusService.fetchStatusLikes(
-        node.postId,
+        actualId,
         requestOptions
       )
 
@@ -188,6 +203,9 @@ export class FetchLikesVisitor {
       node.state = 'fail'
       node.likes = []
       node.totalLikes = 0
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(`[FetchLikesVisitor] Failed to fetch likes for post ${node.postId}:`, errorMessage)
+      console.error(`[FetchLikesVisitor] Error details:`, error)
     }
 
     return node
