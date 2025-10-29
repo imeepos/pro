@@ -1,4 +1,4 @@
-import { WorkflowGraphAst, useHandlers } from "@pro/workflow-core";
+import { WorkflowGraphAst, useHandlers, WeiboAccountAst } from "@pro/workflow-core";
 import { root } from "@pro/core";
 import { WorkflowService, WorkflowWithMetadata } from "./workflow.service";
 import {
@@ -13,6 +13,7 @@ import {
   FetchLikesAst,
   SavePostDetailAst,
 } from "./workflows/post-detail.ast";
+import { WeiboAccountAstVisitor } from "./WeiboAccountAstVisitor";
 
 export interface PostDetailWorkflowConfig {
   maxCommentPages?: number;
@@ -21,6 +22,7 @@ export interface PostDetailWorkflowConfig {
 
 export async function runPostDetailWorkflow() {
   useHandlers([
+    WeiboAccountAstVisitor,
     FetchPostDetailVisitor,
     FetchCommentsVisitor,
     FetchLikesVisitor,
@@ -55,16 +57,54 @@ export async function runPostDetailWorkflow() {
 export async function createPostDetailWorkflow(
   _config: PostDetailWorkflowConfig = {}
 ): Promise<WorkflowWithMetadata> {
+  const account = new WeiboAccountAst();
   const fetchDetail = new FetchPostDetailAst();
   const fetchComments = new FetchCommentsAst();
   const fetchLikes = new FetchLikesAst();
   const saveDetail = new SavePostDetailAst();
 
   const workflow = new WorkflowGraphAst()
+    .addNode(account)
     .addNode(fetchDetail)
     .addNode(fetchComments)
     .addNode(fetchLikes)
     .addNode(saveDetail)
+    .addEdge({
+      from: account.id,
+      to: fetchDetail.id,
+      fromProperty: 'cookies',
+      toProperty: 'cookies',
+    })
+    .addEdge({
+      from: account.id,
+      to: fetchDetail.id,
+      fromProperty: 'headers',
+      toProperty: 'headers',
+    })
+    .addEdge({
+      from: account.id,
+      to: fetchComments.id,
+      fromProperty: 'cookies',
+      toProperty: 'cookies',
+    })
+    .addEdge({
+      from: account.id,
+      to: fetchComments.id,
+      fromProperty: 'headers',
+      toProperty: 'headers',
+    })
+    .addEdge({
+      from: account.id,
+      to: fetchLikes.id,
+      fromProperty: 'cookies',
+      toProperty: 'cookies',
+    })
+    .addEdge({
+      from: account.id,
+      to: fetchLikes.id,
+      fromProperty: 'headers',
+      toProperty: 'headers',
+    })
     .addEdge({
       from: fetchDetail.id,
       to: fetchComments.id,
