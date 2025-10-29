@@ -25,7 +25,7 @@ export async function runWeiBoKeywordSearchWorkflow() {
     const workflowService = root.get(WorkflowService);
     const run = async (keyword: string, startDate: Date, endDate: Date) => {
         // 尝试从数据库获取已存在的 workflow
-        let workflowMetadata = await workflowService.getWorkflowBySlug('weibo-keyworkd-search');
+        let workflowMetadata = await workflowService.getWorkflowBySlug('weibo-keyworkd-search-v2');
         if (!workflowMetadata) {
             workflowMetadata = await creatWeiBoKeywordSearcheWorkflow();
         }
@@ -122,10 +122,10 @@ export async function creatWeiBoKeywordSearcheWorkflow(): Promise<WorkflowWithMe
     const workflowService = root.get(WorkflowService);
 
     try {
-        const savedWorkflow = await workflowService.createWorkflow(
+        const savedWorkflow = await workflowService.upsertWorkflow(
             '微博关键字搜索',
             workflow,
-            "weibo-keyworkd-search",
+            "weibo-keyworkd-search-v2",
             {
                 description: '搜索微博上关于国庆节的内容',
                 tags: ['weibo', 'search', 'national-day'],

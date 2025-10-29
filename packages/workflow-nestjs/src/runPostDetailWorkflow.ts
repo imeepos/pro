@@ -132,7 +132,7 @@ export async function createPostDetailWorkflow(
 
   const workflowService = root.get(WorkflowService);
 
-  const savedWorkflow = await workflowService.createWorkflow(
+  const savedWorkflow = await workflowService.upsertWorkflow(
     '微博帖子详情抓取',
     workflow,
     'post-detail',

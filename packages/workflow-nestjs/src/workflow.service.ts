@@ -89,6 +89,55 @@ export class WorkflowService {
   }
 
   /**
+   * 创建或更新 workflow（幂等操作）
+   */
+  async upsertWorkflow(
+    name: string,
+    definition: WorkflowGraphAst,
+    slug: string,
+    options: {
+      description?: string;
+      tags?: string[];
+      createdBy?: string;
+    } = {}
+  ): Promise<WorkflowEntity> {
+    return await useTranslation(async (manager) => {
+      const existing = await manager.findOne(WorkflowEntity, { where: { slug } });
+
+      if (existing) {
+        existing.definition = this.convertToWorkflowDefinition(definition);
+        existing.name = name;
+        if (options.description !== undefined) existing.description = options.description;
+        if (options.tags !== undefined) existing.tags = options.tags;
+        if (options.createdBy !== undefined) existing.updatedBy = options.createdBy;
+
+        const savedWorkflow = await manager.save(existing);
+
+        await this.redis.set(`workflow:${savedWorkflow.id}`, JSON.stringify(savedWorkflow.definition));
+        await this.redis.set(`workflow:slug:${savedWorkflow.slug}`, JSON.stringify(savedWorkflow.definition));
+
+        return savedWorkflow;
+      }
+
+      const workflowEntity = new WorkflowEntity();
+      workflowEntity.id = uuidv4();
+      workflowEntity.name = name;
+      workflowEntity.slug = slug;
+      workflowEntity.description = options.description || null;
+      workflowEntity.tags = options.tags || [];
+      workflowEntity.definition = this.convertToWorkflowDefinition(definition);
+      workflowEntity.createdBy = options.createdBy || null;
+
+      const savedWorkflow = await manager.save(workflowEntity);
+
+      await this.redis.set(`workflow:${savedWorkflow.id}`, JSON.stringify(savedWorkflow.definition));
+      await this.redis.set(`workflow:slug:${savedWorkflow.slug}`, JSON.stringify(savedWorkflow.definition));
+
+      return savedWorkflow;
+    });
+  }
+
+  /**
    * 更新 workflow 定义（单一版本模式）
    */
   async updateWorkflow(
