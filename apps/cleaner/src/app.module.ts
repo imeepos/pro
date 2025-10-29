@@ -13,10 +13,7 @@ import {
   WeiboInteractionEntity,
   WeiboPostMentionEntity,
 } from '@pro/entities';
-import {
-  RawDataSource,
-  RawDataSourceSchema,
-} from '@pro/mongodb';
+import { RawDataSource } from '@pro/mongodb';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RabbitMQService } from './rabbitmq/rabbitmq.service';
@@ -42,7 +39,7 @@ import { WeiboPersistenceService } from './services/weibo-persistence.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const config = createDatabaseConfig(configService);
+        const config = createDatabaseConfig();
         return {
           ...config,
           entities: [
@@ -95,12 +92,7 @@ import { WeiboPersistenceService } from './services/weibo-persistence.service';
         };
       },
     }),
-    MongooseModule.forFeature([
-      {
-        name: RawDataSource.name,
-        schema: RawDataSourceSchema,
-      },
-    ]),
+    MongooseModule.forFeature([{ name: RawDataSource.name, schema: RawDataSource }]),
   ],
   controllers: [AppController],
   providers: [
