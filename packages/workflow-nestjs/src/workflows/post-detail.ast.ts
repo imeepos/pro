@@ -24,7 +24,7 @@ export class UserFetchAst extends Ast {
 @Node()
 export class FetchPostDetailAst extends Ast {
   @Input() @Output() postId!: string
-  @Input() authorId!: string
+  @Input() @Output() authorId!: string
   @Input() cookies?: string
   @Input() headers?: Record<string, string>
 
