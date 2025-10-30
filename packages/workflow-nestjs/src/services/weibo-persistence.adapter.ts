@@ -472,8 +472,12 @@ export class WeiboPersistenceServiceAdapter {
         return new Map();
       }
 
+      const uniqueComments = Array.from(
+        new Map(filtered.map((comment) => [comment.commentId, comment])).values(),
+      );
+
       await commentRepository.upsert(
-        filtered.map((comment) => ({
+        uniqueComments.map((comment) => ({
           commentId: comment.commentId,
           idstr: comment.idstr,
           mid: comment.mid,
@@ -508,7 +512,7 @@ export class WeiboPersistenceServiceAdapter {
       );
 
       const stored = await commentRepository.find({
-        where: { commentId: In(filtered.map((comment) => comment.commentId)) },
+        where: { commentId: In(uniqueComments.map((comment) => comment.commentId)) },
       });
 
       return new Map(stored.map((comment: any) => [comment.commentId, comment]));
