@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@pro/core'
-import { Handler } from '@pro/workflow-core'
+import { Handler, NoRetryError } from '@pro/workflow-core'
 import { WeiboStatusService } from '@pro/weibo'
 import {
   QUEUE_NAMES,
@@ -10,8 +10,10 @@ import {
   normalizeComments,
   normalizeUser,
   normalizeStatus,
+  NormalizedWeiboLike,
 } from '@pro/weibo-persistence'
 import { WeiboPersistenceServiceAdapter as WeiboPersistenceService } from '../services/weibo-persistence.adapter'
+import { WeiboLikePersistenceService } from '../services/weibo-like-persistence.service'
 import {
   FetchPostDetailAst,
   FetchCommentsAst,
@@ -33,7 +35,7 @@ export class FetchPostDetailVisitor {
       node.state = 'running'
 
       if (!node.postId) {
-        throw new Error('postId is required but not provided')
+        throw new NoRetryError('FetchPostDetailAst: postId 参数为空')
       }
 
       console.log(`[FetchPostDetailVisitor] Processing postId: ${node.postId}`)
@@ -57,7 +59,7 @@ export class FetchPostDetailVisitor {
           node.authorWeiboId = String(detail.user.idstr || detail.user.id)
           console.log(`[FetchPostDetailVisitor] Extracted authorWeiboId: ${node.authorWeiboId}`)
         } else {
-          throw new Error('Failed to extract authorWeiboId from post detail')
+          throw new NoRetryError('帖子数据中缺少作者ID信息')
         }
 
         // 数据已获取，保存工作交给下游节点处理
@@ -236,7 +238,7 @@ export class FetchLikesVisitor {
       node.state = 'running'
 
       if (!node.postId) {
-        throw new Error('postId is required but not provided')
+        throw new NoRetryError('FetchLikesAst: postId 参数为空')
       }
 
       console.log(`[FetchLikesVisitor] Processing postId: ${node.postId}`)
@@ -331,13 +333,13 @@ export class SaveUserAndPostVisitor {
       console.log(`[SaveUserAndPostVisitor] Starting to save user and post`)
 
       if (!node.detail) {
-        throw new Error('Post detail is required')
+        throw new NoRetryError('SaveUserAndPostAst: detail 数据为空')
       }
 
       // 提取并清洗帖子数据
       const normalizedPost = normalizeStatus(node.detail)
       if (!normalizedPost) {
-        throw new Error('Failed to normalize post data')
+        throw new NoRetryError('帖子数据格式无效，无法标准化')
       }
 
       // 提取帖子作者和转发帖子的作者
@@ -353,7 +355,7 @@ export class SaveUserAndPostVisitor {
       }
 
       if (users.length === 0) {
-        throw new Error('No valid users to save')
+        throw new NoRetryError('帖子数据中缺少有效的用户信息')
       }
 
       // 在同一事务中保存用户和帖子
@@ -363,11 +365,11 @@ export class SaveUserAndPostVisitor {
       const savedPost = postMap.get(normalizedPost.weiboId)
 
       if (!savedAuthor?.id) {
-        throw new Error(`Failed to save author ${normalizedPost.authorWeiboId}`)
+        throw new NoRetryError(`保存作者失败: ${normalizedPost.authorWeiboId}`)
       }
 
       if (!savedPost?.id) {
-        throw new Error(`Failed to save post ${normalizedPost.weiboId}`)
+        throw new NoRetryError(`保存帖子失败: ${normalizedPost.weiboId}`)
       }
 
       node.savedAuthorId = savedAuthor.id
@@ -391,7 +393,8 @@ export class SaveUserAndPostVisitor {
 @Injectable()
 export class SaveCommentsAndLikesVisitor {
   constructor(
-    @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService
+    @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService,
+    @Inject(WeiboLikePersistenceService) private readonly likePersistence: WeiboLikePersistenceService
   ) {}
 
   async visit(node: SaveCommentsAndLikesAst): Promise<SaveCommentsAndLikesAst> {
@@ -426,7 +429,7 @@ export class SaveCommentsAndLikesVisitor {
 
         if (users.length > 0) {
           const userMap = await this.persistence.saveUsers(users)
-          const post = await this.persistence.ensurePostByWeiboId(node.postId)
+          const post = await this.persistence.ensurePostByMid(node.postId)
           if (post && normalizedComments.length > 0) {
             await this.persistence.saveComments(normalizedComments, userMap, post)
             savedComments = normalizedComments.length
@@ -435,16 +438,33 @@ export class SaveCommentsAndLikesVisitor {
         }
       }
 
-      // 保存点赞用户
+      // 保存点赞用户和点赞记录
       if (node.likes && node.likes.length > 0) {
         const users = node.likes
           .map((attitude: any) => normalizeUser(attitude.user))
           .filter((user): user is NonNullable<typeof user> => user !== null)
 
         if (users.length > 0) {
-          await this.persistence.saveUsers(users)
-          savedLikes = users.length
-          console.log(`[SaveCommentsAndLikesVisitor] Saved ${savedLikes} like users`)
+          const userMap = await this.persistence.saveUsers(users)
+          const post = await this.persistence.ensurePostByMid(node.postId)
+
+          if (post) {
+            const likes: NormalizedWeiboLike[] = node.likes
+              .filter((attitude: any) => attitude.user?.id && userMap.has(String(attitude.user.id)))
+              .map((attitude: any) => ({
+                userWeiboId: String(attitude.user.id),
+                targetWeiboId: post.weiboId,
+                createdAt: attitude.created_at ? new Date(attitude.created_at) : new Date(),
+              }))
+
+            if (likes.length > 0) {
+              await this.likePersistence.saveLikes(likes, userMap, post)
+              savedLikes = likes.length
+              console.log(`[SaveCommentsAndLikesVisitor] Saved ${savedLikes} likes to database`)
+            }
+          } else {
+            console.warn(`[SaveCommentsAndLikesVisitor] Post not found for postId: ${node.postId}`)
+          }
         }
       }
 

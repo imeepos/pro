@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@pro/core";
-import { Handler, Visitor, WeiboAccountAst } from "@pro/workflow-core";
+import { Handler, Visitor, WeiboAccountAst, NoRetryError } from "@pro/workflow-core";
 import { WeiboAccountService } from "./services/weibo-account.service";
 
 @Injectable()
@@ -12,7 +12,7 @@ export class WeiboAccountAstVisitor {
 
         if (!selection) {
             ast.state = 'fail';
-            return ast;
+            throw new NoRetryError('无可用微博账号：所有账号均不可用或健康度过低');
         }
 
         ast.cookies = request.headers?.Cookie || '';

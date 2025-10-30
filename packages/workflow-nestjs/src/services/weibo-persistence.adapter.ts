@@ -116,7 +116,7 @@ export class WeiboPersistenceServiceAdapter {
             weiboId: post.weiboId,
             mid: post.mid,
             mblogId: post.mblogId,
-            authorId: author.id,
+            author: { id: author.id },
             authorWeiboId: post.authorWeiboId,
             authorNickname: post.authorNickname,
             authorAvatar: post.authorAvatar,
@@ -150,7 +150,10 @@ export class WeiboPersistenceServiceAdapter {
             rawPayload: post.rawPayload,
           };
         }) as any,
-        ['weiboId'],
+        {
+          conflictPaths: ['weiboId'],
+          skipUpdateIfNoValuesChanged: true,
+        },
       );
 
       const storedPosts = await postRepository.find({
@@ -257,7 +260,7 @@ export class WeiboPersistenceServiceAdapter {
             weiboId: post.weiboId,
             mid: post.mid,
             mblogId: post.mblogId,
-            authorId: author.id,
+            author: { id: author.id },
             authorWeiboId: post.authorWeiboId,
             authorNickname: post.authorNickname,
             authorAvatar: post.authorAvatar,
@@ -291,7 +294,10 @@ export class WeiboPersistenceServiceAdapter {
             rawPayload: post.rawPayload,
           };
         }) as any,
-        ['weiboId'],
+        {
+          conflictPaths: ['weiboId'],
+          skipUpdateIfNoValuesChanged: true,
+        },
       );
 
       const storedPosts = await postRepository.find({
@@ -406,35 +412,47 @@ export class WeiboPersistenceServiceAdapter {
       return;
     }
 
-    await mediaRepository.upsert(
-      records.map((media) => ({
-        postId: media.postId,
-        mediaId: media.mediaId,
-        mediaType: media.mediaType,
-        fileUrl: media.fileUrl,
-        originalUrl: media.originalUrl,
-        width: media.width,
-        height: media.height,
-        fileSize: media.fileSize,
-        format: media.format,
-        thumbnail: media.thumbnail,
-        bmiddle: media.bmiddle,
-        large: media.large,
-        original: media.original,
-        duration: media.duration,
-        streamUrl: media.streamUrl,
-        streamUrlHd: media.streamUrlHd,
-        mediaInfoJson: media.mediaInfoJson,
-        rawPayload: media.rawPayload,
-      })) as any,
-      ['postId', 'mediaId'],
-    );
+    // Note: Using column names directly for composite unique constraint
+    await mediaRepository
+      .createQueryBuilder()
+      .insert()
+      .values(
+        records.map((media) => ({
+          post: { id: media.postId } as any,
+          mediaId: media.mediaId,
+          mediaType: media.mediaType,
+          fileUrl: media.fileUrl,
+          originalUrl: media.originalUrl,
+          width: media.width,
+          height: media.height,
+          fileSize: media.fileSize,
+          format: media.format,
+          thumbnail: media.thumbnail,
+          bmiddle: media.bmiddle,
+          large: media.large,
+          original: media.original,
+          duration: media.duration,
+          streamUrl: media.streamUrl,
+          streamUrlHd: media.streamUrlHd,
+          mediaInfoJson: media.mediaInfoJson,
+          rawPayload: media.rawPayload,
+        }))
+      )
+      .orIgnore()
+      .execute();
   }
 
   async ensurePostByWeiboId(weiboId: string): Promise<WeiboPostEntity | null> {
     return await useEntityManager(async (manager) => {
       const postRepository = manager.getRepository(WeiboPostEntity);
       return postRepository.findOne({ where: { weiboId } });
+    });
+  }
+
+  async ensurePostByMid(mid: string): Promise<WeiboPostEntity | null> {
+    return await useEntityManager(async (manager) => {
+      const postRepository = manager.getRepository(WeiboPostEntity);
+      return postRepository.findOne({ where: { mid } });
     });
   }
 
@@ -458,8 +476,8 @@ export class WeiboPersistenceServiceAdapter {
           mid: comment.mid,
           rootId: comment.rootId,
           rootMid: comment.rootMid,
-          postId: post.id,
-          authorId: authors.get(comment.authorWeiboId)!.id,
+          post: { id: post.id },
+          author: { id: authors.get(comment.authorWeiboId)!.id },
           authorWeiboId: comment.authorWeiboId,
           authorNickname: comment.authorNickname,
           text: comment.text,
@@ -480,7 +498,10 @@ export class WeiboPersistenceServiceAdapter {
           path: comment.path,
           rawPayload: comment.rawPayload,
         })) as any,
-        ['commentId'],
+        {
+          conflictPaths: ['commentId'],
+          skipUpdateIfNoValuesChanged: true,
+        },
       );
 
       const stored = await commentRepository.find({
@@ -499,7 +520,7 @@ export class WeiboPersistenceServiceAdapter {
       const userStatsRepository = manager.getRepository(WeiboUserStatsEntity);
 
       const snapshot = userStatsRepository.create({
-        userId: user.id,
+        user: { id: user.id } as WeiboUserEntity,
         snapshotTime: stats.snapshotTime,
         followers: stats.followers,
         following: stats.following,

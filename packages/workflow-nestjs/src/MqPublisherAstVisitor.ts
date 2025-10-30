@@ -1,4 +1,4 @@
-import { Handler, MqPublisherAst, Visitor } from '@pro/workflow-core';
+import { Handler, MqPublisherAst, Visitor, NoRetryError } from '@pro/workflow-core';
 import { Inject, Injectable } from '@pro/core';
 import { RabbitMQService } from '@pro/rabbitmq';
 import { QueueName } from '@pro/types';
@@ -13,12 +13,12 @@ export class MqPublisherAstVisitor {
 
     if (!ast.queue) {
       ast.state = 'fail';
-      return ast;
+      throw new NoRetryError('MqPublisherAst 缺少必要参数: queue');
     }
 
     if (!ast.event) {
       ast.state = 'fail';
-      return ast;
+      throw new NoRetryError('MqPublisherAst 缺少必要参数: event');
     }
 
     try {

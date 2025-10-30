@@ -18,6 +18,9 @@ import { WeiboPostHashtagEntity } from './weibo-post-hashtag.entity.js';
 import { WeiboPostMentionEntity } from './weibo-post-mention.entity.js';
 import { WeiboCommentEntity } from './weibo-comment.entity.js';
 import { WeiboInteractionEntity } from './weibo-interaction.entity.js';
+import { WeiboLikeEntity } from './weibo-like.entity.js';
+import { WeiboRepostEntity } from './weibo-repost.entity.js';
+import { WeiboFavoriteEntity } from './weibo-favorite.entity.js';
 
 @Entity('weibo_posts')
 @Index(['weiboId'], { unique: true })
@@ -216,6 +219,18 @@ export class WeiboPostEntity {
 
   @OneToMany(() => WeiboInteractionEntity, (interaction) => interaction.post)
   interactions!: WeiboInteractionEntity[];
+
+  @OneToMany(() => WeiboLikeEntity, (like) => like.post)
+  likes!: WeiboLikeEntity[];
+
+  @OneToMany(() => WeiboRepostEntity, (repost) => repost.post)
+  reposts!: WeiboRepostEntity[];
+
+  @OneToMany(() => WeiboFavoriteEntity, (favorite) => favorite.post)
+  favorites!: WeiboFavoriteEntity[];
+
+  @OneToMany(() => WeiboRepostEntity, (repost) => repost.originalPost)
+  repostedBy!: WeiboRepostEntity[];
 
   get content(): string {
     return this.text;

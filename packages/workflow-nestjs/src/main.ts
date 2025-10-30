@@ -14,7 +14,10 @@ async function main() {
     postDetail.consumer$.pipe(
         switchMap(res => {
             console.log(res.message)
-            return from(run(res.message.mid).then(() => res.ack()).catch(() => res.nack()))
+            return from(run(res.message.mid).then(() => res.ack()).catch((e) => {
+                console.error(e)
+                process.exit()
+            }))
         }),
     ).subscribe({
         error(_err: Error) {

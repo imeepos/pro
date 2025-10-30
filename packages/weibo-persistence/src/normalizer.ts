@@ -161,6 +161,32 @@ export interface NormalizedWeiboComment {
   rawPayload: Record<string, unknown>;
 }
 
+export interface NormalizedWeiboRepost {
+  userWeiboId: string;
+  postWeiboId: string;
+  originalPostWeiboId: string;
+  repostText?: string;
+  repostPicIds?: string[];
+  targetWeiboId: string;
+  createdAt: Date;
+  rawPayload: Record<string, unknown>;
+}
+
+export interface NormalizedWeiboLike {
+  userWeiboId: string;
+  targetWeiboId: string;
+  createdAt: Date;
+}
+
+export interface NormalizedWeiboFavorite {
+  userWeiboId: string;
+  targetWeiboId: string;
+  folderName?: string;
+  notes?: string;
+  createdAt: Date;
+  metadataJson?: Record<string, unknown>;
+}
+
 const toBoolean = (value: unknown): boolean => {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;

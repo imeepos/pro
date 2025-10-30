@@ -1,5 +1,5 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
-import { PlaywrightAst, Handler } from '@pro/workflow-core';
+import { PlaywrightAst, Handler, NoRetryError } from '@pro/workflow-core';
 import { Injectable } from '@pro/core';
 
 export interface CookieData {
@@ -28,7 +28,7 @@ export class PlaywrightAstVisitor {
             await this.setCookies(node);
 
             if (!this.page) throw new Error(`创建页面失败`)
-            if (!node.url) throw new Error(`页面链接不能为空`)
+            if (!node.url) throw new NoRetryError(`页面链接不能为空`)
 
             await this.page.goto(node.url, {
                 waitUntil: 'domcontentloaded',

@@ -11,6 +11,9 @@ import { WeiboCommentEntity } from './weibo-comment.entity.js';
 import { WeiboInteractionEntity } from './weibo-interaction.entity.js';
 import { WeiboUserStatsEntity } from './weibo-user-stats.entity.js';
 import { WeiboPostMentionEntity } from './weibo-post-mention.entity.js';
+import { WeiboLikeEntity } from './weibo-like.entity.js';
+import { WeiboRepostEntity } from './weibo-repost.entity.js';
+import { WeiboFavoriteEntity } from './weibo-favorite.entity.js';
 import { Entity } from './decorator.js';
 
 @Entity('weibo_users')
@@ -156,6 +159,15 @@ export class WeiboUserEntity {
 
   @OneToMany(() => WeiboPostMentionEntity, (mention) => mention.mentionedUser)
   mentions!: WeiboPostMentionEntity[];
+
+  @OneToMany(() => WeiboLikeEntity, (like) => like.user)
+  likes!: WeiboLikeEntity[];
+
+  @OneToMany(() => WeiboRepostEntity, (repost) => repost.user)
+  reposts!: WeiboRepostEntity[];
+
+  @OneToMany(() => WeiboFavoriteEntity, (favorite) => favorite.user)
+  favorites!: WeiboFavoriteEntity[];
 
   get weiboUid(): string {
     return this.weiboId;

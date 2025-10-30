@@ -331,6 +331,7 @@ export class WorkflowService {
         const runningNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'running') || [];
         const failedNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'fail') || [];
         const pendingNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'pending') || [];
+        const completedNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'success') || [];
 
         console.log(`[${currentWorkflow.type}] ${metrics.succeededNodes}:${metrics.failedNodes}/${metrics.totalNodes} (${progress}%)`);
 
@@ -351,7 +352,18 @@ export class WorkflowService {
         if (currentStateSnapshot === lastStateSnapshot) {
           unchangedCount++;
           if (unchangedCount >= MAX_UNCHANGED_ITERATIONS) {
-            throw new Error(`Workflow execution stuck: state unchanged for ${MAX_UNCHANGED_ITERATIONS} iterations, possible deadlock`);
+            const diagnosticInfo = {
+              pending: pendingNodes.map((n: any) => getNodeInfo(n)),
+              failed: failedNodes.map((n: any) => getNodeInfo(n)),
+              completed: completedNodes.length,
+              total: currentWorkflow.nodes.length
+            };
+            throw new NoRetryError(
+              `工作流执行死锁：状态连续${MAX_UNCHANGED_ITERATIONS}次迭代未变化。` +
+              `诊断信息 - 待处理节点: ${diagnosticInfo.pending.join(', ')}; ` +
+              `失败节点: ${diagnosticInfo.failed.join(', ')}; ` +
+              `已完成: ${diagnosticInfo.completed}/${diagnosticInfo.total}`
+            );
           }
         } else {
           unchangedCount = 0;
@@ -499,13 +511,27 @@ export class WorkflowService {
         currentWorkflow = await executeAst(currentWorkflow, context);
 
         const { progress } = this.calculateMetrics(currentWorkflow);
+        const pendingNodes = currentWorkflow.nodes.filter((n: any) => n.state === 'pending');
+        const failedNodes = currentWorkflow.nodes.filter((n: any) => n.state === 'fail');
+        const completedNodes = currentWorkflow.nodes.filter((n: any) => n.state === 'success');
 
         // 死锁检测：检查状态是否发生变化
         const currentStateSnapshot = JSON.stringify(currentWorkflow.nodes.map((n: any) => ({ id: n.id, state: n.state })));
         if (currentStateSnapshot === lastStateSnapshot) {
           unchangedCount++;
           if (unchangedCount >= MAX_UNCHANGED_ITERATIONS) {
-            throw new Error(`Workflow execution stuck: state unchanged for ${MAX_UNCHANGED_ITERATIONS} iterations, possible deadlock`);
+            const diagnosticInfo = {
+              pending: pendingNodes.map((n: any) => `${n.type}(${n.state})`),
+              failed: failedNodes.map((n: any) => `${n.type}(${n.state})`),
+              completed: completedNodes.length,
+              total: currentWorkflow.nodes.length
+            };
+            throw new NoRetryError(
+              `工作流执行死锁：状态连续${MAX_UNCHANGED_ITERATIONS}次迭代未变化。` +
+              `诊断信息 - 待处理节点: ${diagnosticInfo.pending.join(', ')}; ` +
+              `失败节点: ${diagnosticInfo.failed.join(', ')}; ` +
+              `已完成: ${diagnosticInfo.completed}/${diagnosticInfo.total}`
+            );
           }
         } else {
           unchangedCount = 0;

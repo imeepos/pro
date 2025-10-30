@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@pro/core'
-import { Handler } from '@pro/workflow-core'
+import { Handler, NoRetryError } from '@pro/workflow-core'
 import { WeiboProfileService } from '@pro/weibo'
 import { WeiboPersistenceServiceAdapter as WeiboPersistenceService } from '../services/weibo-persistence.adapter'
 import { normalizeUser } from '@pro/weibo-persistence'
@@ -69,13 +69,13 @@ export class UserFetchVisitor {
       )
 
       if (!profileResponse.data?.user) {
-        throw new Error(`Failed to fetch user profile for ${node.authorWeiboId}`)
+        throw new NoRetryError(`用户 ${node.authorWeiboId} 不存在或已被删除`)
       }
 
       // 清洗用户数据
       const normalizedUser = normalizeUser(profileResponse.data.user)
       if (!normalizedUser) {
-        throw new Error(`Failed to normalize user data for ${node.authorWeiboId}`)
+        throw new NoRetryError(`用户数据格式无效: ${node.authorWeiboId}`)
       }
 
       console.log(`[UserFetchVisitor] User profile fetched and normalized successfully`)
@@ -88,7 +88,7 @@ export class UserFetchVisitor {
         node.authorId = savedUser.id
         console.log(`[UserFetchVisitor] User saved to database with ID: ${savedUser.id}`)
       } else {
-        throw new Error(`Failed to save user ${node.authorWeiboId} to database`)
+        throw new NoRetryError(`保存用户失败: ${node.authorWeiboId}`)
       }
 
       node.state = 'success'
