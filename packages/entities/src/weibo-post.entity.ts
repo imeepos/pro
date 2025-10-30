@@ -3,24 +3,17 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Index,
-  JoinColumn,
-  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  RelationId,
   UpdateDateColumn,
 } from 'typeorm';
 import { Entity } from './decorator.js';
 import { WeiboVisibleType, WeiboMediaType } from './enums/weibo.enums.js';
-import { WeiboUserEntity } from './weibo-user.entity.js';
 import { WeiboMediaEntity } from './weibo-media.entity.js';
 import { WeiboPostHashtagEntity } from './weibo-post-hashtag.entity.js';
 import { WeiboPostMentionEntity } from './weibo-post-mention.entity.js';
-import { WeiboCommentEntity } from './weibo-comment.entity.js';
 import { WeiboInteractionEntity } from './weibo-interaction.entity.js';
 import { WeiboLikeEntity } from './weibo-like.entity.js';
-import { WeiboRepostEntity } from './weibo-repost.entity.js';
-import { WeiboFavoriteEntity } from './weibo-favorite.entity.js';
 
 @Entity('weibo_posts')
 @Index(['weiboId'], { unique: true })
@@ -47,16 +40,6 @@ export class WeiboPostEntity {
 
   @Column({ type: 'varchar', length: 64, name: 'mblogid' })
   mblogId!: string;
-
-  @ManyToOne(() => WeiboUserEntity, (user) => user.posts, {
-    eager: false,
-    nullable: false,
-  })
-  @JoinColumn({ name: 'author_id' })
-  author!: WeiboUserEntity;
-
-  @RelationId((post: WeiboPostEntity) => post.author)
-  authorId!: string;
 
   @Column({
     type: 'numeric',
@@ -223,23 +206,11 @@ export class WeiboPostEntity {
   @OneToMany(() => WeiboPostMentionEntity, (mention) => mention.post)
   mentions!: WeiboPostMentionEntity[];
 
-  @OneToMany(() => WeiboCommentEntity, (comment) => comment.post)
-  comments!: WeiboCommentEntity[];
-
   @OneToMany(() => WeiboInteractionEntity, (interaction) => interaction.post)
   interactions!: WeiboInteractionEntity[];
 
   @OneToMany(() => WeiboLikeEntity, (like) => like.post)
   likes!: WeiboLikeEntity[];
-
-  @OneToMany(() => WeiboRepostEntity, (repost) => repost.post)
-  reposts!: WeiboRepostEntity[];
-
-  @OneToMany(() => WeiboFavoriteEntity, (favorite) => favorite.post)
-  favorites!: WeiboFavoriteEntity[];
-
-  @OneToMany(() => WeiboRepostEntity, (repost) => repost.originalPost)
-  repostedBy!: WeiboRepostEntity[];
 
   get content(): string {
     return this.text;

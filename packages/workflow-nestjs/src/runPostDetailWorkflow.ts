@@ -91,7 +91,6 @@ export async function createPostDetailWorkflow(
       fromProperty: 'headers',
       toProperty: 'headers',
     })
-
     // Step 2: fetchDetail -> saveUserAndPost (保存用户和帖子)
     .addEdge({
       from: fetchDetail.id,

@@ -8,6 +8,7 @@ export interface Visitor {
 export abstract class Ast implements INode {
     id: string = generateId();
     state: IAstStates = 'pending';
+    error: Error | undefined;
     type!: string;
 }
 

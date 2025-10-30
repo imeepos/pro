@@ -13,7 +13,6 @@ import {
   WeiboInteractionType,
   WeiboTargetType,
 } from './enums/weibo.enums.js';
-import { WeiboUserEntity } from './weibo-user.entity.js';
 import { WeiboPostEntity } from './weibo-post.entity.js';
 import { WeiboCommentEntity } from './weibo-comment.entity.js';
 
@@ -33,15 +32,6 @@ export class WeiboInteractionEntity {
     enumName: 'weibo_interaction_type_enum',
   })
   interactionType!: WeiboInteractionType;
-
-  @ManyToOne(() => WeiboUserEntity, (user) => user.interactions, {
-    nullable: true,
-  })
-  @JoinColumn({ name: 'user_id' })
-  user!: WeiboUserEntity | null;
-
-  @RelationId((interaction: WeiboInteractionEntity) => interaction.user)
-  userId!: string | null;
 
   @Column({
     type: 'numeric',

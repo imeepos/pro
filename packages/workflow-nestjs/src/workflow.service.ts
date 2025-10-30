@@ -325,27 +325,12 @@ export class WorkflowService {
 
         currentWorkflow = await executeAst(currentWorkflow, context);
 
-        const { progress, metrics } = this.calculateMetrics(currentWorkflow);
+        const { progress } = this.calculateMetrics(currentWorkflow);
 
         // 添加详细的AST状态日志
-        const runningNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'running') || [];
         const failedNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'fail') || [];
         const pendingNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'pending') || [];
         const completedNodes = currentWorkflow.nodes?.filter((n: any) => n.state === 'success') || [];
-
-        console.log(`[${currentWorkflow.type}] ${metrics.succeededNodes}:${metrics.failedNodes}/${metrics.totalNodes} (${progress}%)`);
-
-        if (runningNodes.length > 0) {
-          console.log(`[Running Nodes] ${runningNodes.map((n: any) => getNodeInfo(n)).join(', ')}`);
-        }
-
-        if (pendingNodes.length > 0) {
-          console.log(`[Pending Nodes] ${pendingNodes.map((n: any) => getNodeInfo(n)).join(', ')}`);
-        }
-
-        if (failedNodes.length > 0) {
-          console.log(`[Failed Nodes] ${failedNodes.map((n: any) => getNodeInfo(n)).join(', ')}`);
-        }
 
         // 死锁检测：检查状态是否发生变化
         const currentStateSnapshot = JSON.stringify(currentWorkflow.nodes.map((n: any) => ({ id: n.id, state: n.state })));

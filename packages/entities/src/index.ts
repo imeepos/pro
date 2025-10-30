@@ -11,7 +11,6 @@ export * from './weibo-post-hashtag.entity.js';
 export * from './weibo-post-mention.entity.js';
 export * from './weibo-interaction.entity.js';
 export * from './weibo-user-stats.entity.js';
-export * from './weibo-favorite.entity.js';
 export * from './weibo-repost.entity.js';
 export * from './weibo-like.entity.js';
 export * from './enums/weibo.enums.js';

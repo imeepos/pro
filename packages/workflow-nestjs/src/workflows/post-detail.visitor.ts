@@ -41,8 +41,6 @@ export class FetchPostDetailVisitor {
         throw new NoRetryError('FetchPostDetailAst: postId 参数为空')
       }
 
-      console.log(`[FetchPostDetailVisitor] Processing postId: ${node.postId}`)
-
       const requestOptions = node.headers
         ? { headers: node.headers, getLongText: true }
         : { getLongText: true }
@@ -55,28 +53,19 @@ export class FetchPostDetailVisitor {
       node.detail = detail
 
       if (detail) {
-        console.log(`[FetchPostDetailVisitor] Detail fetched successfully`)
-
         // 提取 authorWeiboId 并输出（用于后续节点）
         if (detail.user?.idstr || detail.user?.id) {
           node.authorWeiboId = String(detail.user.idstr || detail.user.id)
-          console.log(`[FetchPostDetailVisitor] Extracted authorWeiboId: ${node.authorWeiboId}`)
         } else {
           throw new NoRetryError('帖子数据中缺少作者ID信息')
         }
-
-        // 数据已获取，保存工作交给下游节点处理
-        console.log(`[FetchPostDetailVisitor] PostId ${node.postId} data ready for downstream processing`)
-      } else {
-        console.warn(`[FetchPostDetailVisitor] Detail is null or undefined`)
       }
 
       node.state = 'success'
     } catch (error) {
       node.state = 'fail'
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`[FetchPostDetailVisitor] Failed to fetch post ${node.postId}:`, errorMessage)
-      console.error(`[FetchPostDetailVisitor] Error details:`, error)
+      console.error(`✗ 获取帖子详情失败 | postId: ${node.postId} | ${errorMessage}`)
     }
 
     return node
@@ -99,37 +88,17 @@ export class FetchCommentsVisitor {
     try {
       node.state = 'running'
 
-      console.log(`[FetchCommentsVisitor] Processing postId: ${node.postId}, uid: ${node.uid}, authorWeiboId: ${node.authorWeiboId}`)
-
       let actualPostId = node.postId
 
       if (node.detail) {
         if (node.detail.id && typeof node.detail.id === 'number') {
           actualPostId = String(node.detail.id)
-          console.log(`[FetchCommentsVisitor] Using numeric ID from detail: ${actualPostId}`)
         } else if (node.detail.idstr && /^\d+$/.test(node.detail.idstr)) {
           actualPostId = node.detail.idstr
-          console.log(`[FetchCommentsVisitor] Using numeric idstr from detail: ${actualPostId}`)
-        } else {
-          console.warn(`[FetchCommentsVisitor] No valid numeric ID found in detail`)
-          console.log(`[FetchCommentsVisitor] Detail ID types:`, {
-            id: typeof node.detail.id,
-            idValue: node.detail.id,
-            idstr: typeof node.detail.idstr,
-            idstrValue: node.detail.idstr,
-            mid: typeof node.detail.mid,
-            midValue: node.detail.mid,
-            mblogid: typeof node.detail.mblogid,
-            mblogidValue: node.detail.mblogid
-          })
         }
-      } else {
-        console.log(`[FetchCommentsVisitor] No detail available, using original postId: ${actualPostId}`)
       }
 
       const actualUid = node.authorWeiboId || node.uid
-      console.log(`[FetchCommentsVisitor] Using authorWeiboId as uid: ${actualUid}`)
-      console.log(`[FetchCommentsVisitor] Final API params - postId: ${actualPostId}, uid: ${actualUid}`)
 
       const maxPages = node.maxPages || 5
       const allComments: any[] = []
@@ -151,13 +120,6 @@ export class FetchCommentsVisitor {
           ...(node.headers ? { headers: node.headers } : {}),
         }
 
-        console.log(`[FetchCommentsVisitor] Fetching page ${page + 1}/${maxPages} with params:`, {
-          id: actualPostId,
-          uid: actualUid,
-          count: 20,
-          ...(currentMaxId ? { max_id: currentMaxId } : {})
-        })
-
         const response = await this.fetchCommentsWithRetry(actualPostId, requestOptions)
 
         if (response.data && response.data.length > 0) {
@@ -174,12 +136,6 @@ export class FetchCommentsVisitor {
 
       node.comments = allComments
       node.totalComments = allComments.length
-
-      if (allComments.length === 0) {
-        console.log(`[FetchCommentsVisitor] No comments found for postId: ${node.postId}`)
-      } else {
-        console.log(`[FetchCommentsVisitor] Fetched ${allComments.length} comments`)
-      }
 
       if (allComments.length > 0) {
         const normalizedComments = normalizeComments(allComments, actualPostId)
@@ -205,7 +161,6 @@ export class FetchCommentsVisitor {
           const post = await this.persistence.ensurePostByWeiboId(actualPostId)
           if (post && normalizedComments.length > 0) {
             await this.persistence.saveComments(normalizedComments, userMap, post)
-            console.log(`[FetchCommentsVisitor] Saved ${normalizedComments.length} comments to database`)
           }
         }
       }
@@ -216,8 +171,7 @@ export class FetchCommentsVisitor {
       node.comments = []
       node.totalComments = 0
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`[FetchCommentsVisitor] Failed to fetch comments for postId: ${node.postId}:`, errorMessage)
-      console.error(`[FetchCommentsVisitor] Error details:`, error)
+      console.error(`✗ 获取评论失败 | postId: ${node.postId} | ${errorMessage}`)
     }
 
     return node
@@ -238,11 +192,6 @@ export class FetchCommentsVisitor {
 
         if (error?.isRetryable && attempt < maxRetries - 1) {
           const backoffMs = Math.min(1000 * Math.pow(2, attempt), 10000)
-          console.warn(
-            `[FetchCommentsVisitor] Retryable error (${error.status}), ` +
-            `attempt ${attempt + 1}/${maxRetries}, ` +
-            `retrying in ${backoffMs}ms...`
-          )
           await this.sleep(backoffMs)
           continue
         }
@@ -271,8 +220,6 @@ export class FetchLikesVisitor {
         throw new NoRetryError('FetchLikesAst: postId 参数为空')
       }
 
-      console.log(`[FetchLikesVisitor] Processing postId: ${node.postId}`)
-
       const maxUsers = node.maxUsers || 100
       const requestOptions: any = {
         count: Math.min(maxUsers, 100),
@@ -284,44 +231,19 @@ export class FetchLikesVisitor {
       if (node.detail) {
         if (node.detail.id && typeof node.detail.id === 'number') {
           actualId = String(node.detail.id)
-          console.log(`[FetchLikesVisitor] Using numeric ID from detail: ${actualId}`)
         } else if (node.detail.idstr && /^\d+$/.test(node.detail.idstr)) {
           actualId = node.detail.idstr
-          console.log(`[FetchLikesVisitor] Using numeric idstr from detail: ${actualId}`)
-        } else {
-          console.warn(`[FetchLikesVisitor] No valid numeric ID found in detail, falling back to original postId`)
         }
-      } else {
-        console.log(`[FetchLikesVisitor] No detail available, using original postId: ${actualId}`)
       }
-
-      console.log(`[FetchLikesVisitor] Final ID for likes API: ${actualId}`)
-      console.log(`[FetchLikesVisitor] Starting API call with options:`, JSON.stringify(requestOptions, null, 2))
-
-      const startTime = Date.now()
-      console.log(`[FetchLikesVisitor] API call started at: ${new Date().toISOString()}`)
 
       const response = await this.weiboStatusService.fetchStatusLikes(
         actualId,
         requestOptions
       )
 
-      const endTime = Date.now()
-      const duration = endTime - startTime
-      console.log(`[FetchLikesVisitor] API call completed at: ${new Date().toISOString()}, duration: ${duration}ms`)
-
-      console.log(`[FetchLikesVisitor] API response structure:`, {
-        hasData: !!response.data,
-        dataLength: response.data?.length || 0,
-        totalNumber: response.total_number,
-        responseKeys: Object.keys(response)
-      })
-
       const likeAttitudes = response.data || []
       node.likes = likeAttitudes.slice(0, maxUsers)
       node.totalLikes = response.total_number || likeAttitudes.length
-
-      console.log(`[FetchLikesVisitor] Processed ${node.likes.length} likes out of ${node.totalLikes} total`)
 
       // 🔥 立即清洗点赞用户数据并入库
       if (likeAttitudes.length > 0) {
@@ -331,8 +253,10 @@ export class FetchLikesVisitor {
 
         if (users.length > 0) {
           await this.persistence.saveUsers(users)
-          console.log(`[FetchLikesVisitor] Saved ${users.length} like users to database immediately`)
+          console.log(`✓ 点赞 | postId: ${node.postId} | 获取: ${node.totalLikes} | 保存用户: ${users.length}`)
         }
+      } else {
+        console.log(`✓ 点赞 | postId: ${node.postId} | 获取: 0 | 无点赞数据`)
       }
 
       node.state = 'success'
@@ -341,8 +265,7 @@ export class FetchLikesVisitor {
       node.likes = []
       node.totalLikes = 0
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`[FetchLikesVisitor] Failed to fetch likes for post ${node.postId}:`, errorMessage)
-      console.error(`[FetchLikesVisitor] Error details:`, error)
+      console.error(`✗ 点赞失败 | postId: ${node.postId} | ${errorMessage}`)
     }
 
     return node
@@ -360,8 +283,6 @@ export class SaveUserAndPostVisitor {
   async visit(node: SaveUserAndPostAst): Promise<SaveUserAndPostAst> {
     try {
       node.state = 'running'
-
-      console.log(`[SaveUserAndPostVisitor] Starting to save user and post`)
 
       if (!node.detail) {
         throw new NoRetryError('SaveUserAndPostAst: detail 数据为空')
@@ -411,13 +332,11 @@ export class SaveUserAndPostVisitor {
       node.savedAuthorId = savedAuthor.id
       node.savedPostId = savedPost.id
 
-      console.log(`[SaveUserAndPostVisitor] Successfully saved - authorId: ${node.savedAuthorId}, postId: ${node.savedPostId}`)
-
       // 保存转发关系
       const repostData = normalizeRepost(node.detail)
       if (repostData) {
         await this.repostPersistence.saveReposts([repostData], userMap, postMap)
-        console.log(`[SaveUserAndPostVisitor] Saved repost relationship`)
+        console.log(`✓ 转发 | postId: ${normalizedPost.weiboId} | 原帖: ${repostData.originalPostWeiboId}`)
       }
 
       // 提取并保存提及关系
@@ -428,11 +347,6 @@ export class SaveUserAndPostVisitor {
 
         if (validMentions.length > 0) {
           await this.persistence.saveMentions(validMentions, postMap, userMap)
-          console.log(`[SaveUserAndPostVisitor] Saved ${validMentions.length} mention relationships`)
-        }
-
-        if (validMentions.length < mentions.length) {
-          console.log(`[SaveUserAndPostVisitor] Skipped ${mentions.length - validMentions.length} mentions (users not in database)`)
         }
       }
 
@@ -440,8 +354,7 @@ export class SaveUserAndPostVisitor {
     } catch (error) {
       node.state = 'fail'
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`[SaveUserAndPostVisitor] Failed to save user and post:`, errorMessage)
-      console.error(`[SaveUserAndPostVisitor] Error details:`, error)
+      console.error(`✗ 转发失败 | ${errorMessage}`)
     }
 
     return node
@@ -459,8 +372,6 @@ export class SaveCommentsAndLikesVisitor {
   async visit(node: SaveCommentsAndLikesAst): Promise<SaveCommentsAndLikesAst> {
     try {
       node.state = 'running'
-
-      console.log(`[SaveCommentsAndLikesVisitor] Starting to save comments and likes for post ${node.postId}`)
 
       let savedComments = 0
       let savedLikes = 0
@@ -492,7 +403,6 @@ export class SaveCommentsAndLikesVisitor {
           if (post && normalizedComments.length > 0) {
             await this.persistence.saveComments(normalizedComments, userMap, post)
             savedComments = normalizedComments.length
-            console.log(`[SaveCommentsAndLikesVisitor] Saved ${savedComments} comments`)
           }
         }
       }
@@ -519,10 +429,8 @@ export class SaveCommentsAndLikesVisitor {
             if (likes.length > 0) {
               await this.likePersistence.saveLikes(likes, userMap, post)
               savedLikes = likes.length
-              console.log(`[SaveCommentsAndLikesVisitor] Saved ${savedLikes} likes to database`)
+              console.log(`✓ 点赞记录 | postId: ${node.postId} | 保存: ${savedLikes}`)
             }
-          } else {
-            console.warn(`[SaveCommentsAndLikesVisitor] Post not found for postId: ${node.postId}`)
           }
         }
       }
@@ -530,16 +438,13 @@ export class SaveCommentsAndLikesVisitor {
       node.savedCommentCount = savedComments
       node.savedLikeCount = savedLikes
 
-      console.log(`[SaveCommentsAndLikesVisitor] Successfully saved - comments: ${savedComments}, likes: ${savedLikes}`)
-
       node.state = 'success'
     } catch (error) {
       node.state = 'fail'
       node.savedCommentCount = 0
       node.savedLikeCount = 0
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`[SaveCommentsAndLikesVisitor] Failed to save comments and likes:`, errorMessage)
-      console.error(`[SaveCommentsAndLikesVisitor] Error details:`, error)
+      console.error(`✗ 点赞记录失败 | postId: ${node.postId} | ${errorMessage}`)
     }
 
     return node
@@ -557,14 +462,6 @@ export class SavePostDetailVisitor {
     try {
       node.state = 'running'
 
-      console.log(`[SavePostDetailVisitor] Starting to save post detail for postId: ${node.postId}`)
-      console.log(`[SavePostDetailVisitor] Node data summary:`, {
-        hasDetail: !!node.detail,
-        commentCount: node.comments?.length || 0,
-        likeCount: node.likes?.length || 0,
-        metadataKeys: node.metadata ? Object.keys(node.metadata) : []
-      })
-
       node.success = true
 
       const postDetailCompletedEvent: PostDetailCompletedEvent = {
@@ -580,25 +477,17 @@ export class SavePostDetailVisitor {
         createdAt: new Date().toISOString(),
       }
 
-      console.log(`[SavePostDetailVisitor] Publishing event to queue: ${QUEUE_NAMES.POST_DETAIL_COMPLETED}`)
-      console.log(`[SavePostDetailVisitor] Event data:`, JSON.stringify(postDetailCompletedEvent, null, 2))
-
-      const startTime = Date.now()
       await this.rabbitMQService.publish(
         QUEUE_NAMES.POST_DETAIL_COMPLETED,
         postDetailCompletedEvent
       )
-      const duration = Date.now() - startTime
-      console.log(`[SavePostDetailVisitor] Event published successfully, duration: ${duration}ms`)
 
       node.state = 'success'
-      console.log(`[SavePostDetailVisitor] Post detail saved successfully for postId: ${node.postId}`)
     } catch (error) {
       node.state = 'fail'
       node.success = false
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`[SavePostDetailVisitor] Failed to save post detail for postId: ${node.postId}:`, errorMessage)
-      console.error(`[SavePostDetailVisitor] Error details:`, error)
+      console.error(`✗ 发布完成事件失败 | postId: ${node.postId} | ${errorMessage}`)
     }
 
     return node

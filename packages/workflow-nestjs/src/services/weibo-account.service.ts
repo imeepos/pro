@@ -65,7 +65,7 @@ export class WeiboAccountService {
         }
     }
 
-    private async selectBestAccount(): Promise<WeiboAccountSelection | null> {
+    async selectBestAccount(): Promise<WeiboAccountSelection | null> {
         for (let attempt = 0; attempt < this.maxAttempts; attempt++) {
             const picked = await this.redis.zpopmax(this.healthKey);
             if (!picked) {

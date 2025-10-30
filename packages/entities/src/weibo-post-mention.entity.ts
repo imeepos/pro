@@ -4,7 +4,6 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 import { WeiboPostEntity } from './weibo-post.entity.js';
-import { WeiboUserEntity } from './weibo-user.entity.js';
 import { Entity } from './decorator.js';
 
 @Entity('weibo_posts_mentions')
@@ -20,10 +19,4 @@ export class WeiboPostMentionEntity {
   })
   @JoinColumn({ name: 'post_id' })
   post!: WeiboPostEntity;
-
-  @ManyToOne(() => WeiboUserEntity, (user) => user.mentions, {
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'mentioned_id' })
-  mentionedUser!: WeiboUserEntity;
 }

@@ -23,7 +23,6 @@ export class UserCheckVisitor {
       const existingUser = await this.persistence.findUserByWeiboId(node.authorWeiboId)
 
       if (existingUser) {
-        node.authorId = existingUser.id
         node.needFetch = false
         console.log(`[UserCheckVisitor] User found in database with ID: ${existingUser.id}`)
       } else {

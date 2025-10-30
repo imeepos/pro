@@ -93,7 +93,6 @@ export class WeiboPersistenceServiceAdapter {
       });
 
       const userMap = new Map(storedUsers.map((user) => [user.weiboId, user]));
-      console.log(`[saveUsersAndPosts] Saved ${userMap.size} users with IDs`)
 
       // 3. 保存帖子（使用刚查询到的带ID的用户实体）
       if (posts.length === 0) {
@@ -102,7 +101,6 @@ export class WeiboPersistenceServiceAdapter {
 
       const filteredPosts = posts.filter((post) => userMap.has(post.authorWeiboId));
       if (filteredPosts.length === 0) {
-        console.warn(`[saveUsersAndPosts] No valid posts to save`)
         return { userMap, postMap: new Map() };
       }
 
@@ -165,7 +163,6 @@ export class WeiboPersistenceServiceAdapter {
       await this.saveHashtags(filteredPosts, postMap, manager);
       await this.saveMedia(filteredPosts, postMap, manager);
 
-      console.log(`[saveUsersAndPosts] Saved ${postMap.size} posts successfully`)
       return { userMap, postMap };
     });
   }
@@ -219,13 +216,6 @@ export class WeiboPersistenceServiceAdapter {
         where: { weiboId: In(unique.map((u) => u.weiboId)) },
       });
 
-      console.log(`[saveUsers] Upserted ${unique.length} users, found ${stored.length} users with IDs`)
-      stored.forEach(user => {
-        if (!user.id) {
-          console.error(`[saveUsers] User ${user.weiboId} has no ID!`)
-        }
-      })
-
       return new Map(stored.map((user) => [user.weiboId, user]));
     });
   }
@@ -239,11 +229,8 @@ export class WeiboPersistenceServiceAdapter {
 
       const filtered = posts.filter((post) => authors.has(post.authorWeiboId));
       if (filtered.length === 0) {
-        console.warn(`[savePosts] No posts to save - authors map keys: [${Array.from(authors.keys()).join(', ')}]`)
         return new Map();
       }
-
-      console.log(`[savePosts] Saving ${filtered.length} posts with authors:`, Array.from(authors.entries()).map(([weiboId, user]) => ({ weiboId, userId: user.id })))
 
       await postRepository.upsert(
         filtered.map((post) => {
@@ -252,10 +239,8 @@ export class WeiboPersistenceServiceAdapter {
             throw new Error(`Author not found for post ${post.weiboId} with authorWeiboId ${post.authorWeiboId}`);
           }
           if (!author.id) {
-            console.error(`[savePosts] Author entity for ${post.authorWeiboId} has no ID!`, author)
             throw new Error(`Author ${post.authorWeiboId} has no database ID`)
           }
-          console.log(`[savePosts] Mapping post ${post.weiboId} to author ${post.authorWeiboId} with ID ${author.id}`)
           return {
             weiboId: post.weiboId,
             mid: post.mid,
@@ -597,7 +582,6 @@ export class WeiboPersistenceServiceAdapter {
         .orIgnore()
         .execute();
 
-      console.log(`[saveMentions] Saved ${records.length} mention relationships`);
     });
   }
 }
