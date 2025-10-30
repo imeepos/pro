@@ -89,6 +89,11 @@ export class FetchCommentsVisitor {
     @Inject(WeiboStatusService) private readonly weiboStatusService: WeiboStatusService,
     @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService
   ) { }
+
+  private async sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
   @Handler(FetchCommentsAst)
   async visit(node: FetchCommentsAst): Promise<FetchCommentsAst> {
     try {
@@ -96,10 +101,8 @@ export class FetchCommentsVisitor {
 
       console.log(`[FetchCommentsVisitor] Processing postId: ${node.postId}, uid: ${node.uid}, authorWeiboId: ${node.authorWeiboId}`)
 
-      // 1. ID转换：获取数值型帖子ID
       let actualPostId = node.postId
 
-      // 检查是否有帖子详情数据可用，从中提取正确的数值型ID
       if (node.detail) {
         if (node.detail.id && typeof node.detail.id === 'number') {
           actualPostId = String(node.detail.id)
@@ -124,7 +127,6 @@ export class FetchCommentsVisitor {
         console.log(`[FetchCommentsVisitor] No detail available, using original postId: ${actualPostId}`)
       }
 
-      // 2. UID修复：使用发帖人的微博ID，而不是数据库ID
       const actualUid = node.authorWeiboId || node.uid
       console.log(`[FetchCommentsVisitor] Using authorWeiboId as uid: ${actualUid}`)
       console.log(`[FetchCommentsVisitor] Final API params - postId: ${actualPostId}, uid: ${actualUid}`)
@@ -135,8 +137,8 @@ export class FetchCommentsVisitor {
 
       for (let page = 0; page < maxPages; page++) {
         const requestOptions: any = {
-          id: actualPostId,  // 🔑 使用正确的数值型帖子ID
-          uid: actualUid,    // 🔑 使用正确的发帖人微博ID
+          id: actualPostId,
+          uid: actualUid,
           count: 20,
           fetch_level: 0,
           flow: 1,
@@ -144,6 +146,7 @@ export class FetchCommentsVisitor {
           is_mix: 0,
           is_show_bulletin: 2,
           locale: 'zh-CN',
+          timeout: 30000,
           ...(currentMaxId ? { max_id: currentMaxId } : {}),
           ...(node.headers ? { headers: node.headers } : {}),
         }
@@ -155,10 +158,7 @@ export class FetchCommentsVisitor {
           ...(currentMaxId ? { max_id: currentMaxId } : {})
         })
 
-        const response = await this.weiboStatusService.fetchStatusComments(
-          actualPostId,
-          requestOptions
-        )
+        const response = await this.fetchCommentsWithRetry(actualPostId, requestOptions)
 
         if (response.data && response.data.length > 0) {
           allComments.push(...response.data)
@@ -181,13 +181,10 @@ export class FetchCommentsVisitor {
         console.log(`[FetchCommentsVisitor] Fetched ${allComments.length} comments`)
       }
 
-      // 清洗入库
       if (allComments.length > 0) {
-        // 🔑 使用转换后的数值型ID作为帖子ID，而不是原始postId
         const normalizedComments = normalizeComments(allComments, actualPostId)
         const users: any[] = []
 
-        // 收集评论用户
         const collectUsers = (comments: any[]): void => {
           for (const comment of comments) {
             const author = normalizeUser(comment.user)
@@ -205,7 +202,6 @@ export class FetchCommentsVisitor {
 
         if (users.length > 0) {
           const userMap = await this.persistence.saveUsers(users)
-          // 🔑 使用转换后的数值型ID查询数据库，而不是原始postId
           const post = await this.persistence.ensurePostByWeiboId(actualPostId)
           if (post && normalizedComments.length > 0) {
             await this.persistence.saveComments(normalizedComments, userMap, post)
@@ -225,6 +221,37 @@ export class FetchCommentsVisitor {
     }
 
     return node
+  }
+
+  private async fetchCommentsWithRetry(
+    postId: string,
+    options: any,
+    maxRetries = 3
+  ): Promise<any> {
+    let lastError: any
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await this.weiboStatusService.fetchStatusComments(postId, options)
+      } catch (error: any) {
+        lastError = error
+
+        if (error?.isRetryable && attempt < maxRetries - 1) {
+          const backoffMs = Math.min(1000 * Math.pow(2, attempt), 10000)
+          console.warn(
+            `[FetchCommentsVisitor] Retryable error (${error.status}), ` +
+            `attempt ${attempt + 1}/${maxRetries}, ` +
+            `retrying in ${backoffMs}ms...`
+          )
+          await this.sleep(backoffMs)
+          continue
+        }
+
+        throw error
+      }
+    }
+
+    throw lastError
   }
 }
 
