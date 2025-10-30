@@ -86,16 +86,19 @@ export class WeiboAccountService {
             })
 
             if (!account) {
+                await this.redis.zrem(this.healthKey, picked.member);
                 continue;
             }
 
             if (account.status !== WeiboAccountStatus.ACTIVE) {
+                await this.redis.zrem(this.healthKey, picked.member);
                 continue;
             }
 
             const cookieHeader = this.composeCookieHeader(account.cookies);
 
             if (!cookieHeader) {
+                await this.redis.zrem(this.healthKey, picked.member);
                 continue;
             }
 
