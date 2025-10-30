@@ -11,6 +11,7 @@ import { RabbitMQConfigService } from './rabbitmq/rabbitmq-config.service';
 import { AggregateSchedulerService } from './services/aggregate-scheduler.service';
 import { WeiboAccountHealthScheduler } from './weibo/account-health-scheduler.service';
 import { DlqConsumer } from './consumers/dlq.consumer';
+import { AccountInitService } from './services/account-init.service';
 
 /**
  * Broker 模块 - 任务调度的心脏
@@ -48,6 +49,7 @@ import { DlqConsumer } from './consumers/dlq.consumer';
   // 服务之群 - 业务逻辑的守护者
   providers: [
     RabbitMQConfigService,        // 消息桥梁的构建者
+    AccountInitService,           // 账号初始化的启动者
     SimpleIntervalScheduler,      // 简化的任务调度器
     AggregateSchedulerService,    // 数据聚合的指挥家
     SimpleTaskMonitor,            // 简化的健康守望者

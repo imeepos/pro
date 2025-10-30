@@ -4,6 +4,7 @@ export * from './services/distributed-lock.service';
 export * from './services/priority-queue.service';
 export * from './services/rate-limiter.service';
 export * from './services/weibo-account.service';
+export * from './services/weibo-account-init.service';
 export * from './services/weibo-favorite-persistence.service';
 export * from './workflow.service';
 export * from './parsers/weibo-html.parser';
