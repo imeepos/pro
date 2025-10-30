@@ -1,10 +1,11 @@
-import { Injectable, root } from '@pro/core';
+import { Injectable, OnInit, root } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 import { useEntityManager, WeiboAccountEntity } from '@pro/entities';
 import { WeiboAccountStatus } from '@pro/types';
 
 @Injectable()
-export class WeiboAccountInitService {
+@OnInit()
+export class WeiboAccountInitService implements OnInit {
   private readonly healthKey = 'weibo:account:health';
   private readonly initialHealthScore = 100;
   private readonly redis: RedisClient;
@@ -13,7 +14,7 @@ export class WeiboAccountInitService {
     this.redis = root.get(RedisClient);
   }
 
-  async syncAccountsToRedis(): Promise<void> {
+  async onInit(): Promise<void> {
     const activeAccounts = await useEntityManager(async m => {
       return m.find(WeiboAccountEntity, {
         where: { status: WeiboAccountStatus.ACTIVE },

@@ -81,6 +81,15 @@ export class WeiboPostEntity {
   @Column({ type: 'text', name: 'text_raw', nullable: true })
   textRaw!: string | null;
 
+  @Column({ type: 'text', name: 'title_text', nullable: true })
+  titleText!: string | null;
+
+  @Column({ type: 'text', name: 'title_icon_url', nullable: true })
+  titleIconUrl!: string | null;
+
+  @Column({ type: 'integer', name: 'title_base_color', nullable: true })
+  titleBaseColor!: number | null;
+
   @Column({ type: 'integer', name: 'text_length', default: 0 })
   textLength!: number;
 

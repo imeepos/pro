@@ -5,8 +5,12 @@ import { registerMqQueues } from "@pro/workflow-core";
 import { from, switchMap } from "rxjs";
 import { createPostDetailCrawlQueue } from "./utils";
 import { runPostDetailWorkflow } from "./runPostDetailWorkflow";
+import { WeiboAccountInitService } from "./services/weibo-account-init.service";
 
 async function main() {
+    root.set([
+        WeiboAccountInitService
+    ])
     registerMqQueues()
     await root.init()
     const postDetail = createPostDetailCrawlQueue()

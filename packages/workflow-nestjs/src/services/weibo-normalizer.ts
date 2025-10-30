@@ -106,6 +106,9 @@ export interface NormalizedWeiboPost {
     textRaw: string | null;
     textLength: number;
     isLongText: boolean;
+    titleText: string | null;
+    titleIconUrl: string | null;
+    titleBaseColor: number | null;
     contentAuth: string | null;
     createdAt: Date;
     publishedAt: Date | null;
@@ -486,6 +489,9 @@ export const normalizeStatus = (status: WeiboStatusDetail): NormalizedWeiboPost 
         textRaw: toNullableString(statusRecord.text_raw),
         textLength: toNumber(statusRecord.textLength, 0),
         isLongText: toBoolean(statusRecord.isLongText),
+        titleText: toNullableString(toRecord(statusRecord.title).text),
+        titleIconUrl: toNullableString(toRecord(statusRecord.title).icon_url),
+        titleBaseColor: toNullableNumber(toRecord(statusRecord.title).base_color),
         contentAuth: toNullableString(statusRecord.content_auth),
         createdAt: parseWeiboDate(status.created_at),
         publishedAt: parseWeiboDate(statusRecord.created_at ?? status.created_at),

@@ -7,14 +7,16 @@ import { Provider } from './provider';
  * 类
  */
 export interface Type<T> extends Function {
-  new (...args: any[]): T;
+  new(...args: any[]): T;
 }
-
+export function isType<T>(val: any): val is Type<T> {
+  return typeof val === 'function'
+}
 /**
  * abstract 类
  */
 // @ts-ignore - T is intentionally unused as a type parameter marker
-export interface AbstractType<T = any> extends Function {}
+export interface AbstractType<T = any> extends Function { }
 export type StringToken<T> = string & { __type?: T };
 export type SymbolToken<T> = symbol & { __type?: T };
 /**
@@ -35,7 +37,7 @@ export type InjectionTokenType<T> =
  * 支持层次化注入器结构和类型安全的依赖获取
  */
 export abstract class Injector {
-  constructor(public readonly parent?: Injector) {}
+  constructor(public readonly parent?: Injector) { }
 
   /**
    * 获取指定令牌的依赖实例
@@ -43,7 +45,7 @@ export abstract class Injector {
    * @returns 依赖实例
    */
   abstract get<T>(token: InjectionTokenType<T>, def?: T): T;
-  abstract set(providers: Provider[]): void;
+  abstract set(providers: (Provider | Type<any>)[]): void;
   abstract destroy(): Promise<void>;
   abstract init(): Promise<void>;
 }

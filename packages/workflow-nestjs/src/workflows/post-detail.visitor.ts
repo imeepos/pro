@@ -10,10 +10,13 @@ import {
   normalizeComments,
   normalizeUser,
   normalizeStatus,
+  normalizeRepost,
+  normalizeMentions,
   NormalizedWeiboLike,
 } from '@pro/weibo-persistence'
 import { WeiboPersistenceServiceAdapter as WeiboPersistenceService } from '../services/weibo-persistence.adapter'
 import { WeiboLikePersistenceService } from '../services/weibo-like-persistence.service'
+import { WeiboRepostPersistenceService } from '../services/weibo-repost-persistence.service'
 import {
   FetchPostDetailAst,
   FetchCommentsAst,
@@ -323,7 +326,8 @@ export class FetchLikesVisitor {
 @Injectable()
 export class SaveUserAndPostVisitor {
   constructor(
-    @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService
+    @Inject(WeiboPersistenceService) private readonly persistence: WeiboPersistenceService,
+    @Inject(WeiboRepostPersistenceService) private readonly repostPersistence: WeiboRepostPersistenceService
   ) {}
 
   async visit(node: SaveUserAndPostAst): Promise<SaveUserAndPostAst> {
@@ -344,22 +348,27 @@ export class SaveUserAndPostVisitor {
 
       // 提取帖子作者和转发帖子的作者
       const users = []
+      const posts = [normalizedPost]
       const postAuthor = normalizeUser(node.detail.user)
       if (postAuthor) users.push(postAuthor)
 
-      // 如果是转发，提取原帖作者
+      // 如果是转发，提取原帖和原帖作者
       const detailRecord = node.detail as any
-      if (detailRecord.retweeted_status?.user) {
+      let retweetedPost = null
+      if (detailRecord.retweeted_status) {
         const retweetAuthor = normalizeUser(detailRecord.retweeted_status.user)
         if (retweetAuthor) users.push(retweetAuthor)
+
+        retweetedPost = normalizeStatus(detailRecord.retweeted_status)
+        if (retweetedPost) posts.push(retweetedPost)
       }
 
       if (users.length === 0) {
         throw new NoRetryError('帖子数据中缺少有效的用户信息')
       }
 
-      // 在同一事务中保存用户和帖子
-      const { userMap, postMap } = await this.persistence.saveUsersAndPosts(users, [normalizedPost])
+      // 在同一事务中保存用户和帖子（包括转发的原帖）
+      const { userMap, postMap } = await this.persistence.saveUsersAndPosts(users, posts)
 
       const savedAuthor = userMap.get(normalizedPost.authorWeiboId)
       const savedPost = postMap.get(normalizedPost.weiboId)
@@ -376,6 +385,29 @@ export class SaveUserAndPostVisitor {
       node.savedPostId = savedPost.id
 
       console.log(`[SaveUserAndPostVisitor] Successfully saved - authorId: ${node.savedAuthorId}, postId: ${node.savedPostId}`)
+
+      // 保存转发关系
+      const repostData = normalizeRepost(node.detail)
+      if (repostData) {
+        await this.repostPersistence.saveReposts([repostData], userMap, postMap)
+        console.log(`[SaveUserAndPostVisitor] Saved repost relationship`)
+      }
+
+      // 提取并保存提及关系
+      const mentions = normalizeMentions(node.detail)
+      if (mentions.length > 0) {
+        // 仅保存已存在于 userMap 中的提及关系
+        const validMentions = mentions.filter(m => userMap.has(m.mentionedWeiboId))
+
+        if (validMentions.length > 0) {
+          await this.persistence.saveMentions(validMentions, postMap, userMap)
+          console.log(`[SaveUserAndPostVisitor] Saved ${validMentions.length} mention relationships`)
+        }
+
+        if (validMentions.length < mentions.length) {
+          console.log(`[SaveUserAndPostVisitor] Skipped ${mentions.length - validMentions.length} mentions (users not in database)`)
+        }
+      }
 
       node.state = 'success'
     } catch (error) {

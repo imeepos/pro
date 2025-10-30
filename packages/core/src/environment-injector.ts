@@ -1,4 +1,4 @@
-import { Injector, InjectionTokenType } from './injector';
+import { Injector, InjectionTokenType, Type, isType } from './injector';
 import { NullInjector } from './null-injector';
 import { Provider } from './provider';
 import { getInjectableMetadata, InjectorScope } from './injectable';
@@ -295,8 +295,14 @@ export class EnvironmentInjector extends Injector {
     });
   }
 
-  set(providers: Provider[]): void {
-    this.setupProviders(providers)
+  set(providers: (Provider | Type<any>)[]): void {
+    const list = providers.map(it => {
+      if (isType(it)) {
+        return { provide: it, useClass: it } as Provider
+      }
+      return it as Provider;
+    })
+    this.setupProviders(list)
   }
 
   /**

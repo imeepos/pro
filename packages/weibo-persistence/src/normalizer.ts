@@ -7,6 +7,7 @@ import type {
   WeiboTagStruct,
   WeiboTimelineResponse,
   WeiboTimelineStatus,
+  WeiboUrlStruct,
   WeiboUserProfile,
 } from '@pro/weibo';
 import { WeiboMediaType, WeiboVisibleType } from '@pro/entities';
@@ -106,6 +107,9 @@ export interface NormalizedWeiboPost {
   textRaw: string | null;
   textLength: number;
   isLongText: boolean;
+  titleText: string | null;
+  titleIconUrl: string | null;
+  titleBaseColor: number | null;
   contentAuth: string | null;
   createdAt: Date;
   publishedAt: Date | null;
@@ -512,6 +516,9 @@ export const normalizeStatus = (status: WeiboStatusDetail): NormalizedWeiboPost 
     textRaw: toNullableString(statusRecord.text_raw),
     textLength: toNumber(statusRecord.textLength, 0),
     isLongText: toBoolean(statusRecord.isLongText),
+    titleText: toNullableString(toRecord(statusRecord.title).text),
+    titleIconUrl: toNullableString(toRecord(statusRecord.title).icon_url),
+    titleBaseColor: toNullableNumber(toRecord(statusRecord.title).base_color),
     contentAuth: toNullableString(statusRecord.content_auth),
     createdAt: parseWeiboDate(status.created_at),
     publishedAt: parseWeiboDate(statusRecord.created_at ?? status.created_at),
@@ -686,4 +693,80 @@ export const normalizeProfileSnapshot = (
     versionTag: toNullableString(dataRecord.version),
     rawPayload: responseRecord,
   };
+};
+
+export const normalizeRepost = (status: WeiboStatusDetail): NormalizedWeiboRepost | null => {
+  const statusRecord = toRecord(status);
+  const retweetedStatus = toRecord(statusRecord.retweeted_status);
+
+  if (!toBoolean(statusRecord.is_repost) || Object.keys(retweetedStatus).length === 0) {
+    return null;
+  }
+
+  const userWeiboId = toNullableString(status.user?.id);
+  const postWeiboId = toNullableString(status.id);
+  const originalPostWeiboId = toNullableString(retweetedStatus.id);
+
+  if (!userWeiboId || !postWeiboId || !originalPostWeiboId) {
+    return null;
+  }
+
+  return {
+    userWeiboId,
+    postWeiboId,
+    originalPostWeiboId,
+    repostText: toNullableString(statusRecord.text) ?? undefined,
+    repostPicIds: Array.isArray(statusRecord.pic_ids)
+      ? (statusRecord.pic_ids as string[])
+      : undefined,
+    targetWeiboId: originalPostWeiboId,
+    createdAt: parseWeiboDate(status.created_at),
+    rawPayload: statusRecord,
+  };
+};
+
+export interface NormalizedWeiboMention {
+  postWeiboId: string;
+  mentionedWeiboId: string;
+}
+
+const extractMentionsFromUrlStruct = (urlStruct: readonly WeiboUrlStruct[] | undefined): string[] => {
+  if (!Array.isArray(urlStruct)) {
+    return [];
+  }
+
+  return urlStruct
+    .filter((item) => {
+      const urlType = toNullableNumber(item.url_type);
+      return urlType === 1;
+    })
+    .map((item) => {
+      const pageId = toNullableString(item.page_id);
+      if (pageId && /^\d+$/.test(pageId)) {
+        return pageId;
+      }
+      return null;
+    })
+    .filter((id): id is string => id !== null);
+};
+
+export const normalizeMentions = (status: WeiboStatusDetail): NormalizedWeiboMention[] => {
+  const postWeiboId = toNullableString(status?.id);
+  if (!postWeiboId) {
+    return [];
+  }
+
+  const statusRecord = toRecord(status);
+  const urlStruct = statusRecord.url_struct as readonly WeiboUrlStruct[] | undefined;
+
+  const mentionedIds = extractMentionsFromUrlStruct(urlStruct);
+
+  if (mentionedIds.length === 0) {
+    return [];
+  }
+
+  return mentionedIds.map((mentionedWeiboId) => ({
+    postWeiboId,
+    mentionedWeiboId,
+  }));
 };

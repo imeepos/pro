@@ -269,6 +269,9 @@ export class WeiboPersistenceServiceAdapter {
             textRaw: post.textRaw,
             textLength: post.textLength,
             isLongText: post.isLongText,
+            titleText: post.titleText,
+            titleIconUrl: post.titleIconUrl,
+            titleBaseColor: post.titleBaseColor,
             contentAuth: post.contentAuth,
             createdAt: post.createdAt,
             publishedAt: post.publishedAt,
@@ -544,6 +547,54 @@ export class WeiboPersistenceServiceAdapter {
   async userExists(weiboId: string): Promise<boolean> {
     const user = await this.findUserByWeiboId(weiboId);
     return user !== null;
+  }
+
+  async saveMentions(
+    mentions: Array<{ postWeiboId: string; mentionedWeiboId: string }>,
+    posts: Map<string, WeiboPostEntity>,
+    users: Map<string, WeiboUserEntity>,
+  ): Promise<void> {
+    if (mentions.length === 0) {
+      return;
+    }
+
+    return await useEntityManager(async (manager) => {
+      const { WeiboPostMentionEntity } = await import('@pro/entities');
+      const mentionRepository = manager.getRepository(WeiboPostMentionEntity);
+
+      const records = mentions
+        .map((mention) => {
+          const post = posts.get(mention.postWeiboId);
+          const user = users.get(mention.mentionedWeiboId);
+
+          if (!post?.id || !user?.id) {
+            return null;
+          }
+
+          return {
+            postId: post.id,
+            mentionedId: user.id,
+            post: { id: post.id },
+            mentionedUser: { id: user.id },
+          };
+        })
+        .filter((record): record is NonNullable<typeof record> => record !== null);
+
+      if (records.length === 0) {
+        return;
+      }
+
+      await mentionRepository
+        .createQueryBuilder()
+        .insert()
+        .values(
+          deduplicateBy(records, (item) => `${item.postId}-${item.mentionedId}`),
+        )
+        .orIgnore()
+        .execute();
+
+      console.log(`[saveMentions] Saved ${records.length} mention relationships`);
+    });
   }
 }
 
