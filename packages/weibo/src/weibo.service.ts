@@ -133,6 +133,9 @@ export class WeiboStatusService {
     ])
 
     try {
+      console.log(`[fetchStatusLikes] Requesting likes for statusId: ${statusId}`)
+      console.log(`[fetchStatusLikes] Full URL: ${context.baseUrl}/ajax/statuses/likeShow?${params.toString()}`)
+
       const response = await this.axios.get<WeiboStatusLikeShowResponse>('ajax/statuses/likeShow', {
         headers: context.headers,
         params,
@@ -142,6 +145,9 @@ export class WeiboStatusService {
 
       const payload = response.data
 
+      console.log(`[fetchStatusLikes] Response status: ${response.status}`)
+      console.log(`[fetchStatusLikes] Response payload:`, JSON.stringify(payload, null, 2))
+
       if (!payload) {
         throw new WeiboRequestError('Weibo response payload is empty', response.status)
       }
@@ -150,8 +156,14 @@ export class WeiboStatusService {
         throw new WeiboRequestError(`Weibo responded with status indicator ${payload.ok}`, response.status)
       }
 
+      if (payload.data && payload.data.length === 0 && payload.total_number === 0) {
+        console.warn(`[fetchStatusLikes] API returned empty data for statusId: ${statusId}`)
+        console.warn(`[fetchStatusLikes] This might indicate: 1) No likes exist, 2) API endpoint changed, 3) Missing required parameters`)
+      }
+
       return payload
     } catch (error) {
+      console.error(`[fetchStatusLikes] Error fetching likes for statusId: ${statusId}`, error)
       throw this.ensureWeiboError(error, statusId, 'likes')
     }
   }
