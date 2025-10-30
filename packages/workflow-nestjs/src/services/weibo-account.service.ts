@@ -102,13 +102,14 @@ export class WeiboAccountService {
                 continue;
             }
 
-            await this.redis.zadd(this.healthKey, picked.score, picked.member);
+            const newScore = Math.max(0, picked.score - 1);
+            await this.redis.zadd(this.healthKey, newScore, picked.member);
 
             return {
                 id: account.id,
                 weiboUid: account.weiboUid,
                 nickname: account.weiboNickname,
-                healthScore: picked.score,
+                healthScore: newScore,
                 cookieHeader,
             };
         }
