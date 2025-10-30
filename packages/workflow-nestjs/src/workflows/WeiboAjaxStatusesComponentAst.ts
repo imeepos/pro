@@ -61,15 +61,17 @@ export class WeiboAjaxStatusesComponentAstVisitor {
             await delay()
             if (ast.entities && ast.entities.length > 0) {
                 for (let child of ast.entities) {
-                    let childAst = new WeiboAjaxStatusesComponentAst()
-                    childAst.postId = `${child.id}`;
-                    childAst.is_show_bulletin = 2;
-                    childAst.is_mix = 1;
-                    childAst.fetch_level = 1;
-                    childAst.max_id = 0;
-                    childAst.count = 20;
-                    childAst.uid = ast.uid;
-                    await this.visitChildren(childAst, _ctx)
+                    if (child.more_info) {
+                        let childAst = new WeiboAjaxStatusesComponentAst()
+                        childAst.postId = `${child.id}`;
+                        childAst.is_show_bulletin = 2;
+                        childAst.is_mix = 1;
+                        childAst.fetch_level = 1;
+                        childAst.max_id = 0;
+                        childAst.count = 20;
+                        childAst.uid = ast.uid;
+                        await this.visitChildren(childAst, _ctx)
+                    }
                 }
             }
         }
@@ -137,7 +139,11 @@ export class WeiboAjaxStatusesComponentAstVisitor {
                     });
                     const users = Array.from(userMap.values());
                     if (users.length > 0) {
-                        await m.upsert(WeiboUserEntity, users as any, ['id']);
+                        const BATCH_SIZE = 5;
+                        for (let i = 0; i < users.length; i += BATCH_SIZE) {
+                            const batch = users.slice(i, i + BATCH_SIZE);
+                            await m.upsert(WeiboUserEntity, batch as any, ['id']);
+                        }
                     }
                     const entities = body.data.map(item => m.create(WeiboCommentEntity, item))
                     await m.upsert(WeiboCommentEntity, entities as any[], ['id'])
