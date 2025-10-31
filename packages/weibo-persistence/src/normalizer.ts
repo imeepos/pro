@@ -98,7 +98,7 @@ export interface NormalizedWeiboMedia {
 export interface NormalizedWeiboPost {
   weiboId: string;
   mid: string;
-  mblogId: string;
+  mblogid: string;
   authorWeiboId: string;
   authorNickname: string | null;
   authorAvatar: string | null;
@@ -507,7 +507,7 @@ export const normalizeStatus = (status: WeiboStatusDetail): NormalizedWeiboPost 
   return {
     weiboId,
     mid: toNullableString(status.mid) ?? weiboId,
-    mblogId: toNullableString(statusRecord.mblogid ?? status.mid) ?? weiboId,
+    mblogid: toNullableString(statusRecord.mblogid ?? status.mid) ?? weiboId,
     authorWeiboId: toNullableString(status.user?.id) ?? weiboId,
     authorNickname: toNullableString(status.user?.screen_name),
     authorAvatar: toNullableString(status.user?.profile_image_url),

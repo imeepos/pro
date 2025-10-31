@@ -53,7 +53,7 @@ export class WeiboInteractionEntity {
   })
   targetType!: WeiboTargetType;
 
-  @ManyToOne(() => WeiboPostEntity, (post) => post.interactions, {
+  @ManyToOne(() => WeiboPostEntity, {
     nullable: true,
     onDelete: 'CASCADE',
   })

@@ -100,7 +100,7 @@ export class WeiboPersistenceService {
         filtered.map((post) => ({
           weiboId: post.weiboId,
           mid: post.mid,
-          mblogId: post.mblogId,
+          mblogid: post.mblogid,
           author: { id: authors.get(post.authorWeiboId)!.id },
           authorWeiboId: post.authorWeiboId,
           authorNickname: post.authorNickname,

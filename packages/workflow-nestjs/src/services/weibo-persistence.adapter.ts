@@ -113,7 +113,7 @@ export class WeiboPersistenceServiceAdapter {
           return {
             weiboId: post.weiboId,
             mid: post.mid,
-            mblogId: post.mblogId,
+            mblogid: post.mblogid,
             author: { id: author.id },
             authorWeiboId: post.authorWeiboId,
             authorNickname: post.authorNickname,
@@ -244,7 +244,7 @@ export class WeiboPersistenceServiceAdapter {
           return {
             weiboId: post.weiboId,
             mid: post.mid,
-            mblogId: post.mblogId,
+            mblogid: post.mblogid,
             author: { id: author.id },
             authorWeiboId: post.authorWeiboId,
             authorNickname: post.authorNickname,

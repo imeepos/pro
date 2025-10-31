@@ -9,7 +9,7 @@
         "dev": "tsc --watch",
         "typecheck": "tsc --noEmit",
         "clean": "rm -rf dist",
-        "test": "tsx src/workflows/WeiboAjaxStatusesComponentAst.test.ts",
+        "test": "tsx src/workflows/WeiboAjaxStatusesShowAst.test.ts",
         "lint": "eslint src --ext .ts",
         "lint:fix": "eslint src --ext .ts --fix",
         "main": "tsx src/main.ts"

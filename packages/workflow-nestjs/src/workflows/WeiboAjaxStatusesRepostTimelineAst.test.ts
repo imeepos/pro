@@ -19,10 +19,10 @@ async function test() {
     const visitor = root.get(WeiboAjaxStatusesRepostTimelineAstVisitor);
 
     const ast = new WeiboAjaxStatusesRepostTimelineAst();
-    ast.postId = "5227379271401937";
+    ast.mid = "5227379271401937";
     ast.page = 1;
 
-    console.log(`帖子ID: ${ast.postId}`);
+    console.log(`帖子ID: ${ast.mid}`);
 
     await visitor.visit(ast, {});
 

@@ -37,7 +37,7 @@ export interface WeiboStatusLikeShowResponse {
 export class WeiboAjaxStatusesLikeShowAst extends Ast {
 
     @Input()
-    postId: string;
+    mid: string;
     @Input()
     page: number = 1;
     @Input()
@@ -49,6 +49,8 @@ export class WeiboAjaxStatusesLikeShowAst extends Ast {
     attitude_type: number = 0;
     @Input()
     attitude_enable: number = 1;
+
+    type: `WeiboAjaxStatusesLikeShowAst` = `WeiboAjaxStatusesLikeShowAst`
 }
 
 @Injectable()
@@ -81,7 +83,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor {
         }).find((it) => {
             return it.name === `XSRF-TOKEN`
         })
-        const url = `https://weibo.com/ajax/statuses/likeShow?id=${ast.postId}&attitude_type=${ast.attitude_type}&attitude_enable=${ast.attitude_enable}&page=${ast.page}&count=${ast.count}`
+        const url = `https://weibo.com/ajax/statuses/likeShow?id=${ast.mid}&attitude_type=${ast.attitude_type}&attitude_enable=${ast.attitude_enable}&page=${ast.page}&count=${ast.count}`
         console.log(`fetch url: ${url}`)
         const response = await fetch(url, {
             headers: {
@@ -117,7 +119,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor {
                     return userEntities;
                 })
             } catch (error) {
-                console.error(`[点赞保存失败] postId: ${ast.postId}`, error);
+                console.error(`[点赞保存失败] mid: ${ast.mid}`, error);
             }
             ast.state = body.data.length > 0 ? 'running' : 'success'
             return ast;

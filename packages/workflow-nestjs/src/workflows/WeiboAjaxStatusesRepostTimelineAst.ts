@@ -37,10 +37,13 @@ export interface WeiboAjaxStatusesRepostTimelineResponse {
 export class WeiboAjaxStatusesRepostTimelineAst extends Ast {
 
     @Input()
-    postId: string;
+    mid: string;
 
     @Input()
     page: number = 1;
+
+    type: `WeiboAjaxStatusesRepostTimelineAst` = `WeiboAjaxStatusesRepostTimelineAst`
+
 }
 
 @Injectable()
@@ -73,7 +76,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor {
         }).find((it) => {
             return it.name === `XSRF-TOKEN`
         })
-        const response = await fetch(`https://weibo.com/ajax/statuses/repostTimeline?id=${ast.postId}&page=${ast.page}&moduleID=feed&count=10`, {
+        const response = await fetch(`https://weibo.com/ajax/statuses/repostTimeline?id=${ast.mid}&page=${ast.page}&moduleID=feed&count=10`, {
             headers: {
                 'accept': 'application/json, text/plain, */*',
                 'accept-language': 'zh-CN,zh;q=0.9',
@@ -109,7 +112,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor {
                     return entities;
                 })
             } catch (error) {
-                console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] postId: ${ast.postId}`, error);
+                console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] mid: ${ast.mid}`, error);
             }
             ast.state = body.data.length > 0 ? 'running' : 'success'
             return ast;

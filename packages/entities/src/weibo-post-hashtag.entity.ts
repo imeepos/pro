@@ -15,7 +15,7 @@ export class WeiboPostHashtagEntity {
   @PrimaryColumn({ type: 'bigint', unsigned: true, name: 'hashtag_id' })
   hashtagId!: string;
 
-  @ManyToOne(() => WeiboPostEntity, (post) => post.hashtags, {
+  @ManyToOne(() => WeiboPostEntity, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'post_id' })

@@ -16,10 +16,10 @@ export interface WeiboAjaxStatusesComponentAstResponse {
 }
 
 @Node()
-export class WeiboAjaxStatusesComponentAst extends Ast {
+export class WeiboAjaxStatusesCommentAst extends Ast {
 
     @Input()
-    postId: string;
+    mid: string;
 
     @Input()
     uid: string;
@@ -45,15 +45,17 @@ export class WeiboAjaxStatusesComponentAst extends Ast {
 
     @Output()
     entities: WeiboCommentEntity[];
+
+    type: `WeiboAjaxStatusesCommentAst` = `WeiboAjaxStatusesCommentAst`
 }
 
 @Injectable()
-export class WeiboAjaxStatusesComponentAstVisitor {
+export class WeiboAjaxStatusesCommentAstVisitor {
     constructor(
         @Inject(WeiboAccountService) private account: WeiboAccountService,
     ) { }
-    @Handler(WeiboAjaxStatusesComponentAst)
-    async visit(ast: WeiboAjaxStatusesComponentAst, _ctx: any) {
+    @Handler(WeiboAjaxStatusesCommentAst)
+    async visit(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {
         ast.state = 'running';
         while (ast.state === 'running') {
             ast = await this.fetch(ast, _ctx)
@@ -62,8 +64,8 @@ export class WeiboAjaxStatusesComponentAstVisitor {
             if (ast.entities && ast.entities.length > 0) {
                 for (let child of ast.entities) {
                     if (child.more_info) {
-                        let childAst = new WeiboAjaxStatusesComponentAst()
-                        childAst.postId = `${child.id}`;
+                        let childAst = new WeiboAjaxStatusesCommentAst()
+                        childAst.mid = `${child.id}`;
                         childAst.is_show_bulletin = 2;
                         childAst.is_mix = 1;
                         childAst.fetch_level = 1;
@@ -78,7 +80,7 @@ export class WeiboAjaxStatusesComponentAstVisitor {
         return ast;
     }
 
-    async visitChildren(ast: WeiboAjaxStatusesComponentAst, _ctx: any) {
+    async visitChildren(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {
         ast.state = 'running';
         while (ast.state === 'running') {
             ast = await this.fetch(ast, _ctx)
@@ -88,7 +90,7 @@ export class WeiboAjaxStatusesComponentAstVisitor {
         return ast;
     }
 
-    async fetch(ast: WeiboAjaxStatusesComponentAst, _ctx: any) {
+    async fetch(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {
         const selection = await this.account.selectBestAccount();
         if (!selection) {
             ast.state = 'fail';
@@ -103,7 +105,7 @@ export class WeiboAjaxStatusesComponentAstVisitor {
         })
         // https://weibo.com/ajax/statuses/buildComments?is_reload=1&id=5227379271401937&is_show_bulletin=3&is_mix=0&count=10&uid=2744950651&fetch_level=0&locale=zh-CN
         // https://weibo.com/ajax/statuses/buildComments?is_reload=1&id=5227379397493201&is_show_bulletin=3&is_mix=0&count=20&uid=2744950651&fetch_level=0&locale=zh-CN
-        let url = `https://weibo.com/ajax/statuses/buildComments?is_reload=1&id=${ast.postId}&is_show_bulletin=${ast.is_show_bulletin}&is_mix=${ast.is_mix}&count=${ast.count}&uid=${ast.uid}&fetch_level=${ast.fetch_level}&locale=zh-CN`
+        let url = `https://weibo.com/ajax/statuses/buildComments?is_reload=1&id=${ast.mid}&is_show_bulletin=${ast.is_show_bulletin}&is_mix=${ast.is_mix}&count=${ast.count}&uid=${ast.uid}&fetch_level=${ast.fetch_level}&locale=zh-CN`
         if (ast.max_id) url += `&max_id=${ast.max_id}`
         console.log(`url is: ${url}`)
         const response = await fetch(url, {
@@ -155,7 +157,7 @@ export class WeiboAjaxStatusesComponentAstVisitor {
                 ast.state = body.max_id ? 'running' : 'success'
                 return ast;
             } catch (error) {
-                console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] postId: ${ast.postId}`, error);
+                console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] mid: ${ast.mid}`, error);
             }
             ast.state = body.data.length > 0 ? 'running' : 'success'
             return ast;
