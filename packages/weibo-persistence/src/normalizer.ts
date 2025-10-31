@@ -46,6 +46,7 @@ export interface NormalizedWeiboUser {
   followMe: boolean;
   following: boolean;
   onlineStatus: number | null;
+  detail: Record<string, unknown> | null;
   rawPayload: Record<string, unknown>;
 }
 
@@ -132,6 +133,7 @@ export interface NormalizedWeiboPost {
   pageInfoJson: Record<string, unknown> | null;
   actionLogJson: Record<string, unknown> | null;
   analysisExtra: Record<string, unknown> | null;
+  mark: string | null;
   rawPayload: Record<string, unknown>;
   hashtags: NormalizedWeiboHashtag[];
   media: NormalizedWeiboMedia[];
@@ -493,6 +495,7 @@ export const normalizeUser = (user: WeiboUserProfile | WeiboProfileUser | undefi
     followMe: toBoolean(userRecord.follow_me),
     following: toBoolean(userRecord.following),
     onlineStatus: toNullableNumber(userRecord.online_status),
+    detail: null,
     rawPayload: userRecord,
   };
 };
@@ -541,6 +544,7 @@ export const normalizeStatus = (status: WeiboStatusDetail): NormalizedWeiboPost 
     pageInfoJson: pageInfo,
     actionLogJson: parseActionLog(statusRecord.actionlog),
     analysisExtra: parseAnalysisExtra(statusRecord.analysis_extra),
+    mark: toNullableString(statusRecord.mark),
     rawPayload: status as unknown as Record<string, unknown>,
     hashtags: (statusRecord.tag_struct as WeiboTagStruct[] | undefined)
       ?.map((tag) => mapHashtag(tag))

@@ -75,8 +75,7 @@ export class UserProfileVisitor {
       node.profile = profile
       node.state = 'success'
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      node.error = message
+      node.error = error instanceof Error ? error : new Error(String(error))
       node.state = 'fail'
     }
 
@@ -118,8 +117,7 @@ export class UserProfileVisitor {
       node.posts = posts
       node.state = 'success'
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      node.error = message
+      node.error = error instanceof Error ? error : new Error(String(error))
       node.state = 'fail'
     }
 
@@ -250,8 +248,7 @@ export class UserProfileVisitor {
 
       node.state = 'success'
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      node.error = message
+      node.error = error instanceof Error ? error : new Error(String(error))
       node.state = 'fail'
     }
 

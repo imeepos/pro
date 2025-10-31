@@ -84,7 +84,7 @@ export class UserFetchVisitor {
       const savedUser = userMap.get(node.authorWeiboId)
 
       if (savedUser) {
-        node.authorId = savedUser.id
+        node.authorId = String(savedUser.id)
         console.log(`[UserFetchVisitor] User saved to database with ID: ${savedUser.id}`)
       } else {
         throw new NoRetryError(`保存用户失败: ${node.authorWeiboId}`)

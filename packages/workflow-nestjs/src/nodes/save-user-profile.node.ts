@@ -14,7 +14,4 @@ export class SaveUserProfileNode extends Ast {
 
   @Output()
   rawDataId?: string
-
-  @Output()
-  error?: string
 }

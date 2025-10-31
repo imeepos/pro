@@ -58,9 +58,9 @@ export class WeiboDetailCleanTask extends WeiboBaseCleanTask {
     const postMap = await helpers.weibo.savePosts(statuses, userMap);
 
     return {
-      postIds: [...postMap.values()].map((post) => post.id),
+      postIds: [...postMap.values()].map((post) => String(post.id)),
       commentIds: [],
-      userIds: [...userMap.values()].map((user) => user.id),
+      userIds: [...userMap.values()].map((user) => String(user.id)),
     };
   }
 

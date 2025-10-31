@@ -1,12 +1,13 @@
 import { Injectable } from '@pro/core';
 import {
-  WeiboFavoriteEntity,
+  // WeiboFavoriteEntity, // TODO: Entity 已删除，需要重新设计收藏功能
   WeiboPostEntity,
   WeiboUserEntity,
-  useEntityManager,
+  // useEntityManager,
 } from '@pro/entities';
 import { NormalizedWeiboFavorite } from '@pro/weibo-persistence';
 
+/* 暂时不需要
 const deduplicateBy = <T, K>(items: readonly T[], keySelector: (item: T) => K): T[] => {
   const map = new Map<K, T>();
   for (const item of items) {
@@ -14,6 +15,7 @@ const deduplicateBy = <T, K>(items: readonly T[], keySelector: (item: T) => K): 
   }
   return [...map.values()];
 };
+*/
 
 @Injectable({
   providedIn: 'root',
@@ -21,16 +23,21 @@ const deduplicateBy = <T, K>(items: readonly T[], keySelector: (item: T) => K): 
 export class WeiboFavoritePersistenceService {
 
   async saveFavorites(
-    favorites: NormalizedWeiboFavorite[],
-    users: Map<string, WeiboUserEntity>,
-    posts: Map<string, WeiboPostEntity>
+    _favorites: NormalizedWeiboFavorite[],
+    _users: Map<string, WeiboUserEntity>,
+    _posts: Map<string, WeiboPostEntity>
   ): Promise<void> {
+    // TODO: WeiboFavoriteEntity 已删除，需要重新设计收藏功能
+    console.warn('[saveFavorites] WeiboFavoriteEntity 不存在，跳过收藏保存');
+    return;
+
+    /* 原实现已注释
     if (favorites.length === 0) {
       return;
     }
 
     await useEntityManager(async (manager) => {
-      const favoriteRepository = manager.getRepository(WeiboFavoriteEntity);
+      // const favoriteRepository = manager.getRepository(WeiboFavoriteEntity);
 
       const unique = deduplicateBy(
         favorites,
@@ -75,11 +82,17 @@ export class WeiboFavoritePersistenceService {
 
       console.log(`[saveFavorites] Saved ${records.length} favorites`);
     });
+    */
   }
 
-  async removeFavorite(userWeiboId: string, postWeiboId: string): Promise<boolean> {
+  async removeFavorite(_userWeiboId: string, _postWeiboId: string): Promise<boolean> {
+    // TODO: WeiboFavoriteEntity 已删除，需要重新设计收藏功能
+    console.warn('[removeFavorite] WeiboFavoriteEntity 不存在，跳过收藏删除');
+    return false;
+
+    /* 原实现已注释
     return await useEntityManager(async (manager) => {
-      const favoriteRepository = manager.getRepository(WeiboFavoriteEntity);
+      // const favoriteRepository = manager.getRepository(WeiboFavoriteEntity);
 
       const result = await favoriteRepository.delete({
         userWeiboId,
@@ -93,5 +106,6 @@ export class WeiboFavoritePersistenceService {
 
       return removed;
     });
+    */
   }
 }

@@ -456,7 +456,7 @@ export class WeiboPostEntity {
   @Column({ type: 'boolean', name: 'favorited' })
   favorited!: boolean;
 
-  @Column({ type: 'varchar', length: 255, name: 'mark' })
+  @Column({ type: 'varchar', length: 255, name: 'mark', nullable: true })
   mark!: string;
 
   @Column({ type: 'varchar', length: 255, name: 'rid' })

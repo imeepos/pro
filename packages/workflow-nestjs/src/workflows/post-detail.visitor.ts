@@ -329,7 +329,7 @@ export class SaveUserAndPostVisitor {
         throw new NoRetryError(`保存帖子失败: ${normalizedPost.weiboId}`)
       }
 
-      node.savedAuthorId = savedAuthor.id
+      node.savedAuthorId = String(savedAuthor.id)
       node.savedPostId = savedPost.id
 
       // 保存转发关系
@@ -422,7 +422,7 @@ export class SaveCommentsAndLikesVisitor {
               .filter((attitude: any) => attitude.user?.id && userMap.has(String(attitude.user.id)))
               .map((attitude: any) => ({
                 userWeiboId: String(attitude.user.id),
-                targetWeiboId: post.weiboId,
+                targetWeiboId: post.id,
                 createdAt: attitude.created_at ? new Date(attitude.created_at) : new Date(),
               }))
 

@@ -101,9 +101,8 @@ export class UserProfileWorkflow {
         fetchProfileNode.state !== 'success' ||
         fetchPostsNode.state !== 'success'
       ) {
-        throw new Error(
-          fetchProfileNode.error || fetchPostsNode.error || '数据抓取失败'
-        )
+        const errorMessage = fetchProfileNode.error?.message || fetchPostsNode.error?.message || '数据抓取失败'
+        throw new Error(errorMessage)
       }
 
       analyzeBehaviorNode.posts = fetchPostsNode.posts || []
@@ -146,7 +145,8 @@ export class UserProfileWorkflow {
       await this.visitor.visitSaveUserProfile(saveNode)
 
       if (saveNode.state !== 'success') {
-        throw new Error(saveNode.error || '保存数据失败')
+        const errorMessage = saveNode.error?.message || '保存数据失败'
+        throw new Error(errorMessage)
       }
 
       await this.markAsProcessed(userId)

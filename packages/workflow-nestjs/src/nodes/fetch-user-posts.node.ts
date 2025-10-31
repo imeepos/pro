@@ -14,7 +14,4 @@ export class FetchUserPostsNode extends Ast {
 
   @Output()
   posts?: UserPostSummary[]
-
-  @Output()
-  error?: string
 }

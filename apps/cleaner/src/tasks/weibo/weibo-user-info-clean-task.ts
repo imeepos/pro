@@ -43,7 +43,7 @@ export class WeiboUserInfoCleanTask extends WeiboBaseCleanTask {
     return {
       postIds: [],
       commentIds: [],
-      userIds: [storedUser.id],
+      userIds: [String(storedUser.id)],
     };
   }
 

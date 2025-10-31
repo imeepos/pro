@@ -83,8 +83,8 @@ export class EmbeddedCleanerService {
 
                 if (userId && !users.has(userId)) {
                     users.set(userId, {
-                        weiboId: userId,
-                        screenName: userNickname,
+                        id: Number(userId),
+                        screen_name: userNickname,
                         verified: $(element).find('.icon-verify').length > 0,
                     });
                 }
@@ -106,13 +106,12 @@ export class EmbeddedCleanerService {
 
                 if (userId) {
                     posts.push({
-                        weiboId: mid,
-                        content,
-                        createdAt: publishTime,
-                        authorId: userId,
-                        repostsCount,
-                        commentsCount,
-                        attitudesCount: likesCount,
+                        id: mid,
+                        text: content,
+                        created_at: publishTime.toISOString(),
+                        reposts_count: repostsCount,
+                        comments_count: commentsCount,
+                        attitudes_count: likesCount,
                         source: '网页',
                     });
                 }
@@ -123,19 +122,19 @@ export class EmbeddedCleanerService {
         // 批量保存用户
         if (users.size > 0) {
             const userValues = Array.from(users.values())
-                .filter(u => u.weiboId && u.screenName)
+                .filter(u => u.id && u.screen_name)
                 .map(u => ({
-                    weiboId: u.weiboId!,
-                    screenName: u.screenName!,
+                    id: u.id!,
+                    screen_name: u.screen_name!,
                     verified: u.verified ?? false,
-                    followersCount: 0,
-                    friendsCount: 0,
-                    statusesCount: 0,
+                    followers_count: 0,
+                    friends_count: 0,
+                    statuses_count: 0,
                 }));
 
             if (userValues.length > 0) {
                 await useEntityManager(async m => {
-                    await m.upsert(WeiboUserEntity, userValues, ['weiboId'])
+                    await m.upsert(WeiboUserEntity, userValues, ['id'])
                 })
             }
         }
@@ -143,7 +142,7 @@ export class EmbeddedCleanerService {
         // 批量保存微博
         if (posts.length > 0) {
             await useEntityManager(async m => {
-                await m.upsert(WeiboPostEntity, posts as any[], ['weiboId'])
+                await m.upsert(WeiboPostEntity, posts as any[], ['id'])
             })
         }
 

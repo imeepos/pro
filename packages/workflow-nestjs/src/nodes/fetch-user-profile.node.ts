@@ -11,7 +11,4 @@ export class FetchUserProfileNode extends Ast {
 
   @Output()
   profile?: UserProfileData
-
-  @Output()
-  error?: string
 }
