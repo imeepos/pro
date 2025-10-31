@@ -11,7 +11,10 @@
         "clean": "rm -rf dist",
         "main": "tsx src/main.ts",
         "lint": "eslint src --ext .ts",
-        "lint:fix": "eslint src --ext .ts --fix"
+        "lint:fix": "eslint src --ext .ts --fix",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage"
     },
     "keywords": [
         "workflow",
@@ -32,7 +35,9 @@
         "build": "^0.1.4"
     },
     "devDependencies": {
-        "typescript": "^5.0.0"
+        "@vitest/coverage-v8": "^4.0.6",
+        "typescript": "^5.0.0",
+        "vitest": "^3.2.4"
     },
     "files": [
         "dist",
