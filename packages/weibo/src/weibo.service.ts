@@ -9,7 +9,7 @@ import type { WeiboStatusLikeShowResponse } from './types/like-show.js'
 import type { WeiboBuildCommentsResponse } from './types/comment-build.js'
 import { resolveWeiboRequestOptions, type WeiboRequestOptions } from './weibo.options.js'
 import { WeiboRequestError } from './weibo.error.js'
-import { Inject } from '@nestjs/common'
+import { Inject } from '@pro/core'
 
 @Injectable()
 export class WeiboStatusService {

@@ -10,5 +10,5 @@ export default defineConfig({
   splitting: false,
   target: 'es2022',
   outDir: 'dist',
-  external: ['@nestjs/common', '@nestjs/axios', 'axios', 'rxjs']
+  external: ['@pro/core', '@pro/mongodb', '@pro/types', 'axios']
 })

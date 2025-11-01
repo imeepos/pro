@@ -6,7 +6,7 @@ export interface OnDestroy {
   /**
    * 在实例销毁时调用的清理方法
    */
-  onDestroy(): Promise<void>;
+  onDestroy(): Promise<void> | void;
 }
 
 export function isOnDestroy(obj: any): obj is OnDestroy {

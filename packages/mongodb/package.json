@@ -40,7 +40,6 @@
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
-    "@nestjs/testing": "^11.0.0",
     "@pro/eslint-config": "workspace:*",
     "@pro/prettier-config": "workspace:*",
     "@types/jest": "^29.5.2",

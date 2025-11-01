@@ -36,7 +36,6 @@
     "@pro/prettier-config": "workspace:*"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.13",
     "@pro/core": "workspace:*",
     "@pro/mongodb": "workspace:*",
     "@pro/types": "workspace:*",

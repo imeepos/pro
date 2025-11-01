@@ -243,6 +243,6 @@ Monitors statistics, triggers cleanup tasks.
 
 ## Testing
 
-- Unit tests with `jest` and `@nestjs/testing`
+- Unit tests with `jest` and `@pro/core` testing utilities
 - Integration tests use `mongodb-memory-server`
 - Test files: `*.spec.ts` alongside source files
