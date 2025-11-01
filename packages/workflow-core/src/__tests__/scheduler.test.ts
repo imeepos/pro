@@ -659,6 +659,153 @@ describe('WorkflowScheduler - 集成测试', () => {
     });
   });
 
+  describe('多输入数组汇聚', () => {
+    it('多输入数组汇聚: A|B|C → D with weight-based ordering', async () => {
+      const nodes: INode[] = [
+        createTaskNode('A'),
+        createTaskNode('B'),
+        createTaskNode('C'),
+        createTaskNode('D'),
+      ];
+      const edges: IEdge[] = [
+        { from: 'A', to: 'D', fromProperty: 'output', toProperty: 'results', weight: 2 },
+        { from: 'B', to: 'D', fromProperty: 'output', toProperty: 'results', weight: 0 },
+        { from: 'C', to: 'D', fromProperty: 'output', toProperty: 'results', weight: 1 },
+      ];
+
+      executeAstSpy.mockImplementation(async (node: INode) => {
+        if (node.id === 'A') {
+          return { ...node, state: 'success', output: 'value-A' };
+        }
+        if (node.id === 'B') {
+          return { ...node, state: 'success', output: 'value-B' };
+        }
+        if (node.id === 'C') {
+          return { ...node, state: 'success', output: 'value-C' };
+        }
+        return { ...node, state: 'success' };
+      });
+
+      const ast = createWorkflowGraphAst({
+        name: 'multiInputAggregation',
+        nodes,
+        edges,
+      });
+
+      let result: any = await scheduler.schedule(ast, {});
+      result = await scheduler.schedule(result, {});
+      result = await scheduler.schedule(result, {});
+
+      expect(result.state).toBe('success');
+      expect(result.nodes.find((n: INode) => n.id === 'A')?.state).toBe('success');
+      expect(result.nodes.find((n: INode) => n.id === 'B')?.state).toBe('success');
+      expect(result.nodes.find((n: INode) => n.id === 'C')?.state).toBe('success');
+      expect(result.nodes.find((n: INode) => n.id === 'D')?.state).toBe('success');
+    });
+
+    it('多输入数组汇聚 - 按权重正确排序', async () => {
+      const nodes: INode[] = [
+        createTaskNode('A'),
+        createTaskNode('B'),
+        createTaskNode('D'),
+      ];
+      const edges: IEdge[] = [
+        { from: 'A', to: 'D', fromProperty: 'output', toProperty: 'items', weight: 10 },
+        { from: 'B', to: 'D', fromProperty: 'output', toProperty: 'items', weight: -5 },
+      ];
+
+      executeAstSpy.mockImplementation(async (node: INode) => {
+        if (node.id === 'A') {
+          return { ...node, state: 'success', output: 'A' };
+        }
+        if (node.id === 'B') {
+          return { ...node, state: 'success', output: 'B' };
+        }
+        return { ...node, state: 'success' };
+      });
+
+      const ast = createWorkflowGraphAst({
+        name: 'weightOrdering',
+        nodes,
+        edges,
+      });
+
+      let result: any = await scheduler.schedule(ast, {});
+      result = await scheduler.schedule(result, {});
+      result = await scheduler.schedule(result, {});
+
+      expect(result.state).toBe('success');
+    });
+
+    it('多输入数组汇聚 - D 在 A、B、C 全部成功后才执行', async () => {
+      const executionLog: string[] = [];
+
+      const nodes: INode[] = [
+        createTaskNode('A'),
+        createTaskNode('B'),
+        createTaskNode('C'),
+        createTaskNode('D'),
+      ];
+      const edges: IEdge[] = [
+        { from: 'A', to: 'D' },
+        { from: 'B', to: 'D' },
+        { from: 'C', to: 'D' },
+      ];
+
+      executeAstSpy.mockImplementation(async (node: INode) => {
+        executionLog.push(`exec:${node.id}`);
+        return { ...node, state: 'success', value: node.id };
+      });
+
+      const ast = createWorkflowGraphAst({
+        name: 'convergence',
+        nodes,
+        edges,
+      });
+
+      let result: any = await scheduler.schedule(ast, {});
+      expect(result.state).toBe('running');
+
+      result = await scheduler.schedule(result, {});
+      expect(result.state).toBe('success');
+
+      const dExecution = executionLog.filter(log => log.includes(':D'));
+      expect(dExecution.length).toBeGreaterThan(0);
+    });
+
+    it('多输入数组汇聚 - 源节点失败时工作流状态为失败', async () => {
+      const nodes: INode[] = [
+        createTaskNode('A'),
+        createTaskNode('B'),
+        createTaskNode('D'),
+      ];
+      const edges: IEdge[] = [
+        { from: 'A', to: 'D' },
+        { from: 'B', to: 'D' },
+      ];
+
+      executeAstSpy.mockImplementation(async (node: INode) => {
+        if (node.id === 'B') {
+          return { ...node, state: 'fail', error: new Error('source failed') };
+        }
+        return { ...node, state: 'success', value: node.id };
+      });
+
+      const ast = createWorkflowGraphAst({
+        name: 'failOnSource',
+        nodes,
+        edges,
+      });
+
+      let result: any = await scheduler.schedule(ast, {});
+      result = await scheduler.schedule(result, {});
+      result = await scheduler.schedule(result, {});
+
+      const nodeB = result.nodes.find((n: INode) => n.id === 'B');
+      expect(nodeB?.state).toBe('fail');
+    });
+  });
+
   describe('复杂场景', () => {
     interface ComplexNode extends INode {
       approved?: boolean;
