@@ -1,7 +1,7 @@
 import { root } from '@pro/core';
 import { INPUT, OUTPUT, resolveConstructor } from '../decorator';
 import { fromJson } from '../generate';
-import { IEdge, INode } from '../types';
+import { IEdge, INode, isControlEdge, isDataEdge } from '../types';
 
 export class DataFlowManager {
     extractNodeOutputs(node: INode): any {
@@ -39,8 +39,8 @@ export class DataFlowManager {
         const incomingEdges = edges.filter(edge => edge.to === targetNode.id);
 
         const sortedEdges = [...incomingEdges].sort((a, b) => {
-            const aPriority = a.condition ? 1 : 0;
-            const bPriority = b.condition ? 1 : 0;
+            const aPriority = (isControlEdge(a) && a.condition) ? 1 : 0;
+            const bPriority = (isControlEdge(b) && b.condition) ? 1 : 0;
             return aPriority - bPriority;
         });
 
@@ -50,7 +50,7 @@ export class DataFlowManager {
 
             const sourceNode = allNodes.find(n => n.id === edge.from);
 
-            if (edge.condition) {
+            if (isControlEdge(edge) && edge.condition) {
                 if (!sourceNode || sourceNode.state !== 'success') return;
                 const actualValue = (sourceNode as any)[edge.condition.property];
                 if (actualValue !== edge.condition.value) {
@@ -58,7 +58,7 @@ export class DataFlowManager {
                 }
             }
 
-            if (edge.fromProperty && edge.toProperty) {
+            if (isDataEdge(edge) && edge.fromProperty && edge.toProperty) {
                 const sourceValue = sourceOutputs[edge.fromProperty];
                 if (sourceValue !== undefined) {
                     (targetNode as any)[edge.toProperty] = sourceValue;
@@ -106,11 +106,14 @@ export class DataFlowManager {
     private isInputProperty(node: INode, propertyKey: string, edges: IEdge[]): boolean {
         const incomingEdges = edges.filter(edge => edge.to === node.id);
 
-        const relevantEdges = incomingEdges.filter(edge =>
-            !edge.toProperty || edge.toProperty === propertyKey
-        );
+        const relevantEdges = incomingEdges.filter(edge => {
+            if (isDataEdge(edge)) {
+                return !edge.toProperty || edge.toProperty === propertyKey;
+            }
+            return true;
+        });
 
-        const hasUnconditionalEdge = relevantEdges.some(edge => !edge.condition);
+        const hasUnconditionalEdge = relevantEdges.some(edge => !isControlEdge(edge) || !edge.condition);
 
         return !hasUnconditionalEdge;
     }

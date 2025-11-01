@@ -7,15 +7,32 @@ export interface INode extends Record<string, any> {
     id: string;
     type: string;
 }
-// 访问者的运行环境 - 简洁的上下文
-export interface IEdge {
+// 数据流边 - 纯粹的数据传递
+export interface IDataEdge {
     from: string;
     fromProperty?: string;
     to: string;
     toProperty?: string;
-    // 条件边：根据源节点的属性值决定是否激活此边
+}
+
+// 控制流边 - 纯粹的执行依赖
+export interface IControlEdge {
+    from: string;
+    to: string;
     condition?: {
-        property: string;  // 要检查的属性名
-        value: any;        // 期望的值（通常是 true/false）
+        property: string;
+        value: any;
     };
+}
+
+// 统一边类型
+export type IEdge = IDataEdge | IControlEdge;
+
+// 类型守卫函数
+export function isDataEdge(edge: IEdge): edge is IDataEdge {
+    return 'fromProperty' in edge || 'toProperty' in edge || !('condition' in edge);
+}
+
+export function isControlEdge(edge: IEdge): edge is IControlEdge {
+    return 'condition' in edge && edge.condition !== undefined;
 }

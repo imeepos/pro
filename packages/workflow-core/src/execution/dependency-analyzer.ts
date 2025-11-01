@@ -1,4 +1,4 @@
-import { INode, IEdge } from '../types';
+import { INode, IEdge, isControlEdge } from '../types';
 
 export class DependencyAnalyzer {
     findExecutableNodes(nodes: INode[], edges: IEdge[]): INode[] {
@@ -9,8 +9,8 @@ export class DependencyAnalyzer {
 
             if (incomingEdges.length === 0) return true;
 
-            const unconditionalEdges = incomingEdges.filter(e => !e.condition);
-            const conditionalEdges = incomingEdges.filter(e => e.condition);
+            const unconditionalEdges = incomingEdges.filter(e => !isControlEdge(e) || !e.condition);
+            const conditionalEdges = incomingEdges.filter(isControlEdge).filter(e => e.condition);
 
             const allUnconditionalReady = unconditionalEdges.every(edge => {
                 const sourceNode = nodes.find(n => n.id === edge.from);
@@ -56,12 +56,12 @@ export class DependencyAnalyzer {
             const outgoingEdges = edges.filter(edge => edge.from === currentId);
 
             for (const edge of outgoingEdges) {
-                if (edge.condition && currentNode?.state === 'success') {
+                if (isControlEdge(edge) && edge.condition && currentNode?.state === 'success') {
                     const actualValue = (currentNode as any)[edge.condition.property];
                     if (actualValue === edge.condition.value) {
                         queue.push(edge.to);
                     }
-                } else if (!edge.condition) {
+                } else if (!isControlEdge(edge) || !edge.condition) {
                     queue.push(edge.to);
                 }
             }

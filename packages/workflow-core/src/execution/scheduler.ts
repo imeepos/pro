@@ -1,5 +1,5 @@
 import { WorkflowGraphAst } from '../ast';
-import { INode, IEdge, IAstStates } from '../types';
+import { INode, IEdge, IAstStates, isControlEdge } from '../types';
 import { DependencyAnalyzer } from './dependency-analyzer';
 import { DataFlowManager } from './data-flow-manager';
 import { StateMerger } from './state-merger';
@@ -59,7 +59,7 @@ export class WorkflowScheduler {
             const outgoingEdges = edges.filter(e => e.from === node.id);
 
             outgoingEdges.forEach(edge => {
-                if (edge.condition) {
+                if (isControlEdge(edge) && edge.condition) {
                     const actualValue = (resultNode as any)[edge.condition.property];
                     if (actualValue !== edge.condition.value) {
                         return;

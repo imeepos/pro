@@ -3,7 +3,7 @@ import { Type } from '@pro/core';
 export { Node, Input, Output, Handler } from './decorator';
 export { Ast, WorkflowGraphAst, Visitor, createWorkflowGraphAst } from './ast'
 export { fromJson, toJson, NodeJsonPayload } from './generate'
-export { INode, IEdge, IAstStates } from './types'
+export { INode, IEdge, IDataEdge, IControlEdge, IAstStates, isDataEdge, isControlEdge } from './types'
 export { execute, executeAst, WorkflowExecutorVisitor } from './executor'
 export { VisitorExecutor } from './execution/visitor-executor'
 export { WorkflowScheduler } from './execution/scheduler'
