@@ -1,4 +1,4 @@
-import { Handler, HtmlParserAst, Visitor, NoRetryError } from '@pro/rabbitmq';
+import { Handler, HtmlParserAst, Visitor, NoRetryError } from '@pro/workflow-core';
 import { Inject, Injectable } from '@pro/core';
 import { WeiboHtmlParser } from './parsers/weibo-html.parser';
 import { useQueue } from '@pro/rabbitmq';

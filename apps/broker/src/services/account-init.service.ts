@@ -17,7 +17,7 @@ export class AccountInitService implements OnModuleInit {
   async onModuleInit() {
     try {
       this.logger.info('开始初始化微博账号健康度队列');
-      await this.weiboAccountInitService.syncAccountsToRedis();
+      await this.weiboAccountInitService.onInit();
       this.logger.info('微博账号健康度队列初始化完成');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

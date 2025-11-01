@@ -1,5 +1,5 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
-import { PlaywrightAst, Handler, NoRetryError } from '@pro/rabbitmq';
+import { PlaywrightAst, Handler, NoRetryError } from '@pro/workflow-core';
 import { Injectable } from '@pro/core';
 
 export interface CookieData {

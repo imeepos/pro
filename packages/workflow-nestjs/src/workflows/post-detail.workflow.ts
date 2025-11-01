@@ -1,4 +1,4 @@
-import { WorkflowGraphAst } from '@pro/rabbitmq'
+import { WorkflowGraphAst, executeAst } from '@pro/workflow-core'
 import {
   FetchPostDetailAst,
   FetchCommentsAst,
@@ -7,7 +7,6 @@ import {
   PostDetailWorkflowInput,
   PostDetailWorkflowOutput,
 } from './post-detail.ast'
-import { executeAst } from '@pro/rabbitmq';
 
 export interface PostDetailWorkflowConfig {
   maxCommentPages?: number

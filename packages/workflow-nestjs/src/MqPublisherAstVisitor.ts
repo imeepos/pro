@@ -1,4 +1,4 @@
-import { Handler, MqPublisherAst, Visitor, NoRetryError } from '@pro/rabbitmq';
+import { Handler, MqPublisherAst, Visitor, NoRetryError } from '@pro/workflow-core';
 import { Inject, Injectable } from '@pro/core';
 import { RabbitMQService } from '@pro/rabbitmq';
 import { QueueName } from '@pro/types';

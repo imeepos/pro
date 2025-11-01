@@ -21,7 +21,7 @@ import { UserBehaviorAnalyzerService } from '../services/user-behavior-analyzer.
 import { BotDetectorService } from '../services/bot-detector.service'
 import { SpamDetectorService } from '../services/spam-detector.service'
 import { RawDataSourceService } from '@pro/mongodb'
-import { Handler } from '@pro/rabbitmq'
+import { Handler } from '@pro/workflow-core'
 
 @Injectable()
 export class UserProfileVisitor {

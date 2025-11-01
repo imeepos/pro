@@ -1,5 +1,5 @@
 import { Injectable } from '@pro/core';
-import { execute, INode } from '@pro/rabbitmq';
+import { execute, INode } from '@pro/workflow-core';
 
 @Injectable()
 export class ExecutorService {

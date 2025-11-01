@@ -1,6 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { RedisClient, RedisPipeline, redisConfigFactory } from '@pro/redis';
+import { RedisClient, RedisPipeline } from '@pro/redis';
 import { Logger } from '@pro/logger-nestjs';
 import { ConfigurationService } from '@pro/configuration';
 import { ErrorHandlerService } from '@pro/error-handling';
@@ -29,7 +28,6 @@ interface LayerConfig {
 
 @Injectable()
 export class CacheService implements OnModuleInit, OnModuleDestroy {
-  private client: RedisClient;
   private metrics: CacheMetrics = {
     hits: 0,
     misses: 0,
@@ -40,13 +38,11 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
   private layers: Record<CacheLayer, LayerConfig>;
 
   constructor(
-    private readonly configService: ConfigService,
     private readonly configuration: ConfigurationService,
     private readonly errorHandler: ErrorHandlerService,
     private readonly logger: Logger,
+    private readonly client: RedisClient,
   ) {
-    const config = redisConfigFactory(this.configService);
-    this.client = new RedisClient(config);
     this.initializeLayers();
   }
 

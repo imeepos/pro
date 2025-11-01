@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@pro/core';
 import { RedisClient } from '@pro/redis';
 import { useEntityManager, useTranslation } from '@pro/entities';
 import { WorkflowEntity, WorkflowExecutionEntity, WorkflowStateEntity } from '@pro/entities';
-import { executeAst, fromJson, NodeJsonPayload, toJson, WorkflowGraphAst, NoRetryError } from '@pro/rabbitmq';
+import { executeAst, fromJson, NodeJsonPayload, toJson, WorkflowGraphAst, NoRetryError } from '@pro/workflow-core';
 import { WorkflowExecutionMetrics } from '@pro/types';
 import { v4 as uuidv4 } from 'uuid';
 import { delay } from './utils';

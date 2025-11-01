@@ -1,0 +1,44 @@
+{
+  "name": "@pro/graph-analytics",
+  "version": "0.1.0",
+  "description": "Weibo heterogeneous graph analytics engine",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup && tsc --project tsconfig.types.json",
+    "build:js": "tsup",
+    "build:types": "tsc --project tsconfig.types.json",
+    "clean": "rimraf dist",
+    "dev": "tsup --watch",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "graph",
+    "analytics",
+    "weibo"
+  ],
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@pro/entities": "workspace:*",
+    "@pro/types": "workspace:*",
+    "typeorm": "^0.3.20"
+  },
+  "devDependencies": {
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*",
+    "@types/node": "^20.3.1",
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.0"
+  }
+}
