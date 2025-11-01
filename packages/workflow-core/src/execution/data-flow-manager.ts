@@ -1,5 +1,5 @@
 import { root } from '@pro/core';
-import { INPUT, OUTPUT, resolveConstructor } from '../decorator';
+import { INPUT, OUTPUT, resolveConstructor, getInputMetadata, InputMetadata } from '../decorator';
 import { fromJson } from '../generate';
 import { IEdge, INode, isControlEdge, isDataEdge } from '../types';
 
@@ -50,6 +50,21 @@ export class DataFlowManager {
             return aPriority - bPriority;
         });
 
+        const inputMetadataMap = new Map<string | symbol, InputMetadata>();
+
+        try {
+            const ast = fromJson(targetNode);
+            const ctor = resolveConstructor(ast);
+            const allInputs = getInputMetadata(ctor);
+            if (Array.isArray(allInputs)) {
+                allInputs.forEach(meta => {
+                    inputMetadataMap.set(meta.propertyKey, meta);
+                });
+            }
+        } catch {
+            // 装饰器元数据不可用，继续不支持 isMulti
+        }
+
         sortedEdges.forEach(edge => {
             const sourceOutputs = allOutputs.get(edge.from);
             if (!sourceOutputs) return;
@@ -67,14 +82,33 @@ export class DataFlowManager {
             if (isDataEdge(edge) && edge.fromProperty && edge.toProperty) {
                 const sourceValue = this.resolveNestedProperty(sourceOutputs, edge.fromProperty);
                 if (sourceValue !== undefined) {
-                    (targetNode as any)[edge.toProperty] = sourceValue;
+                    this.assignValueToProperty(targetNode, edge.toProperty, sourceValue, inputMetadataMap);
                 }
             } else {
                 Object.entries(sourceOutputs).forEach(([key, value]) => {
-                    (targetNode as any)[key] = value;
+                    this.assignValueToProperty(targetNode, key, value, inputMetadataMap);
                 });
             }
         });
+    }
+
+    private assignValueToProperty(
+        targetNode: INode,
+        propertyKey: string | symbol,
+        value: any,
+        inputMetadataMap: Map<string | symbol, InputMetadata>
+    ): void {
+        const metadata = inputMetadataMap.get(propertyKey);
+        const isMulti = metadata?.isMulti ?? false;
+
+        if (isMulti) {
+            if (!Array.isArray((targetNode as any)[propertyKey])) {
+                (targetNode as any)[propertyKey] = [];
+            }
+            (targetNode as any)[propertyKey].push(value);
+        } else {
+            (targetNode as any)[propertyKey] = value;
+        }
     }
 
     initializeInputNodes(nodes: INode[], edges: IEdge[], context: Record<string, any>): void {
