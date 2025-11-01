@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import "dotenv/config";
 import { root } from "@pro/core";
-import { registerMqQueues } from "@pro/workflow-core";
+import { registerMqQueues } from "@pro/rabbitmq";
 import { from, switchMap } from "rxjs";
 import { createPostDetailCrawlQueue } from "./utils";
 import { runPostDetailWorkflow } from "./runPostDetailWorkflow";

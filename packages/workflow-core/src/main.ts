@@ -1,5 +1,5 @@
 import { execute, WorkflowGraphAst } from './index'
-import { registerMqQueues } from './tokens'
+import { registerMqQueues } from '@pro/rabbitmq'
 
 export async function main() {
     registerMqQueues();

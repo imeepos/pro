@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import "dotenv/config";
 import { root } from "@pro/core";
-import { registerMqQueues } from "@pro/workflow-core";
+import { registerMqQueues } from "@pro/rabbitmq";
 import { WeiboAjaxStatusesMymblogAst, WeiboAjaxStatusesMymblogAstVisitor } from "./WeiboAjaxStatusesMymblogAst";
 import { WeiboAccountService } from "../services/weibo-account.service";
 import { WeiboAccountInitService } from "../services/weibo-account-init.service";

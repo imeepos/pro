@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@pro/core'
-import { Handler, NoRetryError } from '@pro/workflow-core'
+import { Handler, NoRetryError } from '@pro/rabbitmq'
 import { WeiboStatusService } from '@pro/weibo'
 import {
   QUEUE_NAMES,

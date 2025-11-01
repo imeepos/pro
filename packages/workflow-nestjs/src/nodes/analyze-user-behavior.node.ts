@@ -1,5 +1,5 @@
-import { Node, Input, Output } from '@pro/workflow-core'
-import { Ast } from '@pro/workflow-core'
+import { Node, Input, Output } from '@pro/rabbitmq'
+import { Ast } from '@pro/rabbitmq'
 import type { UserPostSummary, UserBehaviorFeatures, UserProfileData } from '../types/user-profile.types'
 
 @Node()

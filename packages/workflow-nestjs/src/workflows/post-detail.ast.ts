@@ -1,4 +1,4 @@
-import { Input, Output, Ast, Node } from '@pro/workflow-core'
+import { Input, Output, Ast, Node } from '@pro/rabbitmq'
 
 @Node()
 export class UserCheckAst extends Ast {

@@ -24,8 +24,7 @@ import { createDatabaseConfig } from '@pro/entities';
       envFilePath: ['.env.local', '.env'],
     }),
     TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
+      useFactory: () => createDatabaseConfig(),
     }),
     TypeOrmModule.forFeature([AnalysisResultEntity]),
     LoggerModule.forRoot(

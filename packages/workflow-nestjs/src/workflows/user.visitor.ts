@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@pro/core'
-import { Handler, NoRetryError } from '@pro/workflow-core'
+import { Handler, NoRetryError } from '@pro/rabbitmq'
 import { WeiboProfileService } from '@pro/weibo'
 import { WeiboPersistenceServiceAdapter as WeiboPersistenceService } from '../services/weibo-persistence.adapter'
 import { normalizeUser } from '@pro/weibo-persistence'

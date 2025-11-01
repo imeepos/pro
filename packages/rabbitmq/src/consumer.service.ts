@@ -6,7 +6,7 @@ import type {
   MessageMetadata,
   RetryStrategy,
 } from './types.js';
-import { NoRetryError } from '@pro/workflow-core';
+import { NoRetryError } from '@pro/core';
 
 /**
  * 消息处理函数类型

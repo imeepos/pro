@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import "dotenv/config";
 import { root } from "@pro/core";
-import { registerMqQueues } from "@pro/workflow-core";
+import { registerMqQueues } from "@pro/rabbitmq";
 import { createWeiboKeywordSearchQueue } from "./utils";
 
 async function main() {

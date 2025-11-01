@@ -314,3 +314,5 @@ export function createFeatureInjector(
 
 
 export const root: Injector = createRootInjector([])
+
+export { NoRetryError } from './errors';
