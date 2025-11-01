@@ -216,6 +216,62 @@ describe('DependencyAnalyzer', () => {
             expect(executable).toHaveLength(1);
             expect(executable[0].id).toBe('node3');
         });
+
+        it('ensures multi-input convergence: all data sources must succeed', () => {
+            const nodes: INode[] = [
+                { id: 'A', state: 'success', type: 'task' },
+                { id: 'B', state: 'success', type: 'task' },
+                { id: 'C', state: 'pending', type: 'task' },
+                { id: 'D', state: 'pending', type: 'task' },
+            ];
+            const edges: IEdge[] = [
+                { from: 'A', to: 'D' },
+                { from: 'B', to: 'D' },
+                { from: 'C', to: 'D' },
+            ];
+
+            const executable = analyzer.findExecutableNodes(nodes, edges);
+
+            expect(executable).toHaveLength(1);
+            expect(executable[0].id).toBe('C');
+        });
+
+        it('executes convergence node only when all data sources succeed', () => {
+            const nodes: INode[] = [
+                { id: 'A', state: 'success', type: 'task' },
+                { id: 'B', state: 'success', type: 'task' },
+                { id: 'C', state: 'success', type: 'task' },
+                { id: 'D', state: 'pending', type: 'task' },
+            ];
+            const edges: IEdge[] = [
+                { from: 'A', to: 'D' },
+                { from: 'B', to: 'D' },
+                { from: 'C', to: 'D' },
+            ];
+
+            const executable = analyzer.findExecutableNodes(nodes, edges);
+
+            expect(executable).toHaveLength(1);
+            expect(executable[0].id).toBe('D');
+        });
+
+        it('blocks convergence when one data source fails', () => {
+            const nodes: INode[] = [
+                { id: 'A', state: 'success', type: 'task' },
+                { id: 'B', state: 'fail', type: 'task' },
+                { id: 'C', state: 'success', type: 'task' },
+                { id: 'D', state: 'pending', type: 'task' },
+            ];
+            const edges: IEdge[] = [
+                { from: 'A', to: 'D' },
+                { from: 'B', to: 'D' },
+                { from: 'C', to: 'D' },
+            ];
+
+            const executable = analyzer.findExecutableNodes(nodes, edges);
+
+            expect(executable.map(n => n.id)).not.toContain('D');
+        });
     });
 
     describe('findReachableNodes', () => {

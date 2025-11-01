@@ -12,6 +12,9 @@ export class DependencyAnalyzer {
             const unconditionalEdges = incomingEdges.filter(e => !isControlEdge(e) || !e.condition);
             const conditionalEdges = incomingEdges.filter(isControlEdge).filter(e => e.condition);
 
+            // Multi-input convergence guarantee: For nodes with multiple data sources (e.g., A|B|C → D),
+            // ALL unconditional sources must reach success state before execution is allowed.
+            // Uses .every() to ensure no source is skipped - even one source in pending/fail state blocks execution.
             const allUnconditionalReady = unconditionalEdges.every(edge => {
                 const sourceNode = nodes.find(n => n.id === edge.from);
                 return sourceNode?.state === 'success';
@@ -21,6 +24,8 @@ export class DependencyAnalyzer {
 
             if (conditionalEdges.length === 0) return true;
 
+            // For conditional edges: allow execution if all sources are still pending
+            // (source hasn't been reached yet), otherwise check if any satisfied condition exists
             const allConditionalSourcesPending = conditionalEdges.every(edge => {
                 const sourceNode = nodes.find(n => n.id === edge.from);
                 return !sourceNode || sourceNode.state === 'pending';
@@ -28,6 +33,7 @@ export class DependencyAnalyzer {
 
             if (allConditionalSourcesPending) return true;
 
+            // At least one conditional edge must be satisfied for execution
             return conditionalEdges.some(edge => {
                 const sourceNode = nodes.find(n => n.id === edge.from);
                 if (!sourceNode || sourceNode.state !== 'success') return false;
