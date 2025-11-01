@@ -1,4 +1,4 @@
-import { Input, Node } from "./decorator";
+import { Input, Node, Output } from "./decorator";
 import { IAstStates, IEdge, INode } from "./types";
 import { generateId } from "./utils";
 export interface Visitor {
@@ -50,4 +50,16 @@ export function createWorkflowGraphAst({ nodes, edges, id, state, name }: { name
 
 export function isWorkflowGraphAst(ast: any): ast is WorkflowGraphAst {
     return ast?.type === `WorkflowGraphAst`;
+}
+
+@Node()
+export class ArrayIteratorAst extends Ast {
+    @Input() array: any[] = [];
+    @Input() currentIndex: number = 0;
+
+    @Output() currentItem: any;
+    @Output() hasNext: boolean = false;
+    @Output() isDone: boolean = true;
+
+    type: `ArrayIteratorAst` = 'ArrayIteratorAst' as const;
 }

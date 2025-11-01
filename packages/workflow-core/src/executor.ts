@@ -1,4 +1,4 @@
-import { Ast, Visitor, WorkflowGraphAst } from "./ast";
+import { ArrayIteratorAst, Ast, Visitor, WorkflowGraphAst } from "./ast";
 import { Handler } from "./decorator";
 import { fromJson } from "./generate";
 import { INode } from "./types";
@@ -14,6 +14,37 @@ export class WorkflowExecutorVisitor {
 
     async visit(ast: WorkflowGraphAst, ctx: any): Promise<INode> {
         return this.scheduler.schedule(ast, ctx);
+    }
+}
+
+@Handler(ArrayIteratorAst)
+export class ArrayIteratorVisitor {
+    async visit(ast: ArrayIteratorAst, _ctx: any): Promise<ArrayIteratorAst> {
+        const { array, currentIndex } = ast;
+
+        if (!Array.isArray(array) || array.length === 0) {
+            ast.state = 'success';
+            ast.isDone = true;
+            ast.hasNext = false;
+            ast.currentItem = undefined;
+            return ast;
+        }
+
+        if (currentIndex >= array.length) {
+            ast.state = 'success';
+            ast.isDone = true;
+            ast.hasNext = false;
+            ast.currentItem = undefined;
+            return ast;
+        }
+
+        ast.currentItem = array[currentIndex];
+        ast.hasNext = currentIndex + 1 < array.length;
+        ast.isDone = currentIndex + 1 >= array.length;
+        ast.currentIndex = currentIndex + 1;
+        ast.state = 'success';
+
+        return ast;
     }
 }
 

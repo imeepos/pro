@@ -1,10 +1,10 @@
 import { Type } from '@pro/core';
 
 export { Node, Input, Output, Handler } from './decorator';
-export { Ast, WorkflowGraphAst, Visitor, createWorkflowGraphAst } from './ast'
+export { Ast, WorkflowGraphAst, ArrayIteratorAst, Visitor, createWorkflowGraphAst } from './ast'
 export { fromJson, toJson, NodeJsonPayload } from './generate'
 export { INode, IEdge, IDataEdge, IControlEdge, IAstStates, isDataEdge, isControlEdge } from './types'
-export { execute, executeAst, WorkflowExecutorVisitor } from './executor'
+export { execute, executeAst, WorkflowExecutorVisitor, ArrayIteratorVisitor } from './executor'
 export { VisitorExecutor } from './execution/visitor-executor'
 export { WorkflowScheduler } from './execution/scheduler'
 export { DependencyAnalyzer } from './execution/dependency-analyzer'
