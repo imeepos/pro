@@ -32,7 +32,6 @@ export class WeiboInteractionDataService {
 
       const qb = m.getRepository(WeiboInteractionEntity)
         .createQueryBuilder('interaction')
-        .leftJoinAndSelect('interaction.user', 'user')
         .leftJoinAndSelect('interaction.post', 'post')
         .leftJoinAndSelect('interaction.comment', 'comment');
 
@@ -94,7 +93,7 @@ export class WeiboInteractionDataService {
     return useEntityManager(async (m) => {
       const interaction = await m.getRepository(WeiboInteractionEntity).findOne({
         where: { id },
-        relations: ['user', 'post', 'comment'],
+        relations: ['post', 'comment'],
       });
 
       if (!interaction) {

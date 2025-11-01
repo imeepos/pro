@@ -47,7 +47,12 @@ export class DataFlowManager {
         const sortedEdges = [...incomingEdges].sort((a, b) => {
             const aPriority = (isControlEdge(a) && a.condition) ? 1 : 0;
             const bPriority = (isControlEdge(b) && b.condition) ? 1 : 0;
-            return aPriority - bPriority;
+            if (aPriority !== bPriority) {
+                return aPriority - bPriority;
+            }
+            const aWeight = isDataEdge(a) ? (a.weight ?? Infinity) : Infinity;
+            const bWeight = isDataEdge(b) ? (b.weight ?? Infinity) : Infinity;
+            return aWeight - bWeight;
         });
 
         const inputMetadataMap = new Map<string | symbol, InputMetadata>();

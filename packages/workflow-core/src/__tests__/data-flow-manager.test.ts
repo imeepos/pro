@@ -3,28 +3,34 @@ import { DataFlowManager } from '../execution/data-flow-manager';
 import { INode, IEdge } from '../types';
 import { createTestNode, createTestEdge } from './helpers';
 
-vi.mock('@pro/core', () => ({
-  root: {
-    get: vi.fn(),
-  },
-}));
+vi.mock('@pro/core', async () => {
+  const actual = await vi.importActual('@pro/core');
+  return {
+    ...actual,
+    root: {
+      get: vi.fn(),
+    },
+  };
+});
 
-vi.mock('../decorator', () => ({
-  INPUT: Symbol('INPUT'),
-  OUTPUT: Symbol('OUTPUT'),
-  resolveConstructor: vi.fn((target) => {
-    if (typeof target === 'function') return target;
-    if (target?.constructor) return target.constructor;
-    return class MockConstructor {};
-  }),
-}));
+vi.mock('../decorator', async () => {
+  const actual = await vi.importActual<typeof import('../decorator')>('../decorator');
+  return {
+    ...actual,
+    resolveConstructor: vi.fn((target) => {
+      if (typeof target === 'function') return target;
+      if (target?.constructor) return target.constructor;
+      return class MockConstructor {};
+    }),
+  };
+});
 
 vi.mock('../generate', () => ({
   fromJson: vi.fn((node) => node),
 }));
 
 import { root } from '@pro/core';
-import { resolveConstructor } from '../decorator';
+import { resolveConstructor, getInputMetadata, INPUT } from '../decorator';
 import { fromJson } from '../generate';
 
 describe('DataFlowManager', () => {
@@ -593,6 +599,168 @@ describe('DataFlowManager', () => {
         ]);
 
         expect((targetNode as any).value).toBe('third');
+      });
+    });
+
+    describe('边权重排序', () => {
+      it('多个边指向 isMulti 属性时按 weight 升序排序', () => {
+        class AggregatorNode {
+          results: any[];
+        }
+        mockFromJson.mockImplementation((node) => node);
+        mockResolveConstructor.mockImplementation(() => AggregatorNode);
+        mockRoot.get.mockImplementation((token) => {
+          if (token === INPUT) {
+            return [
+              { target: AggregatorNode, propertyKey: 'results', isMulti: true },
+            ];
+          }
+          return [];
+        });
+
+        const source1 = createTestNode('source1', 'success');
+        const source2 = createTestNode('source2', 'success');
+        const source3 = createTestNode('source3', 'success');
+        const targetNode = createTestNode('target', 'pending');
+        Object.setPrototypeOf(targetNode, AggregatorNode.prototype);
+
+        const edges = [
+          createTestEdge('source1', 'target', {
+            fromProperty: 'data',
+            toProperty: 'results',
+            weight: 2,
+          }),
+          createTestEdge('source2', 'target', {
+            fromProperty: 'data',
+            toProperty: 'results',
+            weight: 0,
+          }),
+          createTestEdge('source3', 'target', {
+            fromProperty: 'data',
+            toProperty: 'results',
+            weight: 1,
+          }),
+        ];
+        const allOutputs = new Map([
+          ['source1', { data: 'A' }],
+          ['source2', { data: 'B' }],
+          ['source3', { data: 'C' }],
+        ]);
+
+        manager.assignInputsToNode(targetNode, allOutputs, edges, [
+          source1,
+          source2,
+          source3,
+        ]);
+
+        expect((targetNode as any).results).toEqual(['B', 'C', 'A']);
+      });
+
+      it('缺失 weight 的边排在有 weight 边的后面', () => {
+        class AggregatorNode {
+          results: any[];
+        }
+        mockFromJson.mockImplementation((node) => node);
+        mockResolveConstructor.mockImplementation(() => AggregatorNode);
+        mockRoot.get.mockImplementation((token) => {
+          if (token === INPUT) {
+            return [
+              { target: AggregatorNode, propertyKey: 'results', isMulti: true },
+            ];
+          }
+          return [];
+        });
+
+        const source1 = createTestNode('source1', 'success');
+        const source2 = createTestNode('source2', 'success');
+        const source3 = createTestNode('source3', 'success');
+        const targetNode = createTestNode('target', 'pending');
+        Object.setPrototypeOf(targetNode, AggregatorNode.prototype);
+
+        const edges = [
+          createTestEdge('source1', 'target', {
+            fromProperty: 'data',
+            toProperty: 'results',
+            weight: 1,
+          }),
+          createTestEdge('source2', 'target', {
+            fromProperty: 'data',
+            toProperty: 'results',
+          }),
+          createTestEdge('source3', 'target', {
+            fromProperty: 'data',
+            toProperty: 'results',
+            weight: 0,
+          }),
+        ];
+        const allOutputs = new Map([
+          ['source1', { data: 'A' }],
+          ['source2', { data: 'B' }],
+          ['source3', { data: 'C' }],
+        ]);
+
+        manager.assignInputsToNode(targetNode, allOutputs, edges, [
+          source1,
+          source2,
+          source3,
+        ]);
+
+        expect((targetNode as any).results).toEqual(['C', 'A', 'B']);
+      });
+
+      it('无条件边优先于条件边，条件边内部按 weight 排序', () => {
+        class AggregatorNode {
+          results: any[];
+        }
+        mockFromJson.mockImplementation((node) => node);
+        mockResolveConstructor.mockImplementation(() => AggregatorNode);
+        mockRoot.get.mockImplementation((token) => {
+          if (token === INPUT) {
+            return [
+              { target: AggregatorNode, propertyKey: 'results', isMulti: true },
+            ];
+          }
+          return [];
+        });
+
+        const source1 = createTestNode('source1', 'success', { flag: true });
+        const source2 = createTestNode('source2', 'success', { flag: true });
+        const source3 = createTestNode('source3', 'success');
+        const targetNode = createTestNode('target', 'pending');
+        Object.setPrototypeOf(targetNode, AggregatorNode.prototype);
+
+        const edges = [
+          createTestEdge('source1', 'target', {
+            fromProperty: 'data',
+            toProperty: 'results',
+            condition: { property: 'flag', value: true },
+            weight: 1,
+          }),
+          createTestEdge('source2', 'target', {
+            fromProperty: 'data',
+            toProperty: 'results',
+            condition: { property: 'flag', value: true },
+            weight: 0,
+          }),
+          createTestEdge('source3', 'target', {
+            fromProperty: 'data',
+            toProperty: 'results',
+            weight: 2,
+          }),
+        ];
+        const allOutputs = new Map([
+          ['source1', { data: 'A' }],
+          ['source2', { data: 'B' }],
+          ['source3', { data: 'C' }],
+        ]);
+
+        manager.assignInputsToNode(targetNode, allOutputs, edges, [
+          source1,
+          source2,
+          source3,
+        ]);
+
+        expect((targetNode as any).results).toEqual(['C', 'B', 'A']);
       });
     });
 

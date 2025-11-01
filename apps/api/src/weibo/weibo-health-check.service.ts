@@ -1,7 +1,6 @@
 import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual } from 'typeorm';
-import { WeiboAccountEntity, WeiboAccountStatus } from '@pro/entities';
+import { MoreThanOrEqual } from 'typeorm';
+import { WeiboAccountEntity, WeiboAccountStatus, useEntityManager } from '@pro/entities';
 import {
   WeiboHealthCheckService as WeiboCoreHealthCheckService,
   type WeiboAccountHealthResult,
@@ -44,8 +43,6 @@ export class WeiboHealthCheckService {
   private readonly logger = new Logger(WeiboHealthCheckService.name);
 
   constructor(
-    @InjectRepository(WeiboAccountEntity)
-    private readonly weiboAccountRepo: Repository<WeiboAccountEntity>,
     @Inject(forwardRef(() => ScreensGateway))
     private readonly screensGateway: ScreensGateway,
     private readonly weiboHealthInspector: WeiboCoreHealthCheckService,
@@ -57,63 +54,67 @@ export class WeiboHealthCheckService {
   async checkAccount(accountId: number): Promise<CheckResult> {
     this.logger.log(`开始检查账号: ${accountId}`);
 
-    const account = await this.weiboAccountRepo.findOne({
-      where: { id: accountId },
-    });
+    return useEntityManager(async (m) => {
+      const repo = m.getRepository(WeiboAccountEntity);
 
-    if (!account) {
-      throw new Error(`账号不存在: ${accountId}`);
-    }
-
-    const oldStatus = account.status;
-
-    try {
-      const health = await this.weiboHealthInspector.checkAccountHealth(account.id, account.cookies, {
-        weiboUid: account.weiboUid,
+      const account = await repo.findOne({
+        where: { id: accountId },
       });
 
-      const transition = this.resolveStatusTransition(oldStatus, health);
-
-      account.status = transition.persistedStatus;
-      account.lastCheckAt = health.checkedAt;
-      await this.weiboAccountRepo.save(account);
-
-      if (transition.statusChanged) {
-        await this.notifyWeiboStatsUpdate();
+      if (!account) {
+        throw new Error(`账号不存在: ${accountId}`);
       }
 
-      this.logger.log(
-        `账号 ${accountId} 检查完成: ${oldStatus} -> ${transition.persistedStatus}` +
-          `${transition.statusChanged ? ' (状态已变更)' : ''}`,
-      );
+      const oldStatus = account.status;
 
-      return {
-        accountId: account.id,
-        weiboUid: account.weiboUid,
-        oldStatus,
-        newStatus: transition.persistedStatus,
-        statusChanged: transition.statusChanged,
-        message: transition.message,
-        checkedAt: health.checkedAt,
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      try {
+        const health = await this.weiboHealthInspector.checkAccountHealth(account.id, account.cookies, {
+          weiboUid: account.weiboUid,
+        });
 
-      this.logger.error(`检查账号 ${accountId} 时发生未预期错误`, error);
+        const transition = this.resolveStatusTransition(oldStatus, health);
 
-      account.lastCheckAt = new Date();
-      await this.weiboAccountRepo.save(account);
+        account.status = transition.persistedStatus;
+        account.lastCheckAt = health.checkedAt;
+        await repo.save(account);
 
-      return {
-        accountId: account.id,
-        weiboUid: account.weiboUid,
-        oldStatus,
-        newStatus: oldStatus,
-        statusChanged: false,
-        message: `检查失败: ${message}`,
-        checkedAt: account.lastCheckAt,
-      };
-    }
+        if (transition.statusChanged) {
+          await this.notifyWeiboStatsUpdate();
+        }
+
+        this.logger.log(
+          `账号 ${accountId} 检查完成: ${oldStatus} -> ${transition.persistedStatus}` +
+            `${transition.statusChanged ? ' (状态已变更)' : ''}`,
+        );
+
+        return {
+          accountId: account.id,
+          weiboUid: account.weiboUid,
+          oldStatus,
+          newStatus: transition.persistedStatus,
+          statusChanged: transition.statusChanged,
+          message: transition.message,
+          checkedAt: health.checkedAt,
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+
+        this.logger.error(`检查账号 ${accountId} 时发生未预期错误`, error);
+
+        account.lastCheckAt = new Date();
+        await repo.save(account);
+
+        return {
+          accountId: account.id,
+          weiboUid: account.weiboUid,
+          oldStatus,
+          newStatus: oldStatus,
+          statusChanged: false,
+          message: `检查失败: ${message}`,
+          checkedAt: account.lastCheckAt,
+        };
+      }
+    });
   }
 
   /**
@@ -122,8 +123,10 @@ export class WeiboHealthCheckService {
   async checkAllAccounts(): Promise<CheckSummary> {
     this.logger.log('开始批量检查所有活跃账号...');
 
-    const accounts = await this.weiboAccountRepo.find({
-      where: { status: WeiboAccountStatus.ACTIVE },
+    const accounts = await useEntityManager(async (m) => {
+      return m.getRepository(WeiboAccountEntity).find({
+        where: { status: WeiboAccountStatus.ACTIVE },
+      });
     });
 
     const total = accounts.length;
@@ -145,12 +148,15 @@ export class WeiboHealthCheckService {
     const checked = results.length;
     const statusChanged = results.filter((r) => r.statusChanged).length;
 
-    const statusCounts = await this.weiboAccountRepo
-      .createQueryBuilder('account')
-      .select('account.status', 'status')
-      .addSelect('COUNT(*)', 'count')
-      .groupBy('account.status')
-      .getRawMany();
+    const statusCounts = await useEntityManager(async (m) => {
+      return m
+        .getRepository(WeiboAccountEntity)
+        .createQueryBuilder('account')
+        .select('account.status', 'status')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy('account.status')
+        .getRawMany();
+    });
 
     const summary: CheckSummary = {
       total,
@@ -241,24 +247,29 @@ export class WeiboHealthCheckService {
    */
   private async notifyWeiboStatsUpdate() {
     try {
-      const total = await this.weiboAccountRepo.count();
+      const stats = await useEntityManager(async (m) => {
+        const repo = m.getRepository(WeiboAccountEntity);
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+        const total = await repo.count();
 
-      const todayNew = await this.weiboAccountRepo.count({
-        where: {
-          createdAt: MoreThanOrEqual(today),
-        },
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const todayNew = await repo.count({
+          where: {
+            createdAt: MoreThanOrEqual(today),
+          },
+        });
+
+        const online = await repo.count({
+          where: {
+            status: WeiboAccountStatus.ACTIVE,
+          },
+        });
+
+        return { total, todayNew, online };
       });
 
-      const online = await this.weiboAccountRepo.count({
-        where: {
-          status: WeiboAccountStatus.ACTIVE,
-        },
-      });
-
-      const stats = { total, todayNew, online };
       this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
     } catch (error) {
       this.logger.error('推送微博用户统计更新失败:', error);

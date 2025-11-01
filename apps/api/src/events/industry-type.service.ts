@@ -3,82 +3,99 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { IndustryTypeEntity } from '@pro/entities';
+import { IndustryTypeEntity, useEntityManager, useTranslation } from '@pro/entities';
 import { CreateIndustryTypeDto, UpdateIndustryTypeDto } from './dto/industry-type.dto';
 
 @Injectable()
 export class IndustryTypeService {
-  constructor(
-    @InjectRepository(IndustryTypeEntity)
-    private readonly industryTypeRepository: Repository<IndustryTypeEntity>,
-  ) {}
-
   async create(createDto: CreateIndustryTypeDto): Promise<IndustryTypeEntity> {
-    const existing = await this.industryTypeRepository.findOne({
-      where: { industryCode: createDto.industryCode },
+    return useTranslation(async (m) => {
+      const repo = m.getRepository(IndustryTypeEntity);
+
+      const existing = await repo.findOne({
+        where: { industryCode: createDto.industryCode },
+      });
+
+      if (existing) {
+        throw new ConflictException(`行业类型编码 ${createDto.industryCode} 已存在`);
+      }
+
+      const industryType = repo.create(createDto);
+      return repo.save(industryType);
     });
-
-    if (existing) {
-      throw new ConflictException(`行业类型编码 ${createDto.industryCode} 已存在`);
-    }
-
-    const industryType = this.industryTypeRepository.create(createDto);
-    return this.industryTypeRepository.save(industryType);
   }
 
   async findAll(): Promise<IndustryTypeEntity[]> {
-    return this.industryTypeRepository.find({
-      order: { sortOrder: 'ASC', createdAt: 'DESC' },
+    return useEntityManager(async (m) => {
+      return m.getRepository(IndustryTypeEntity).find({
+        order: { sortOrder: 'ASC', createdAt: 'DESC' },
+      });
     });
   }
 
   async findOne(id: string): Promise<IndustryTypeEntity> {
-    const industryType = await this.industryTypeRepository.findOne({
-      where: { id },
+    return useEntityManager(async (m) => {
+      const industryType = await m.getRepository(IndustryTypeEntity).findOne({
+        where: { id },
+      });
+
+      if (!industryType) {
+        throw new NotFoundException(`行业类型 ID ${id} 不存在`);
+      }
+
+      return industryType;
     });
-
-    if (!industryType) {
-      throw new NotFoundException(`行业类型 ID ${id} 不存在`);
-    }
-
-    return industryType;
   }
 
   async update(
     id: string,
     updateDto: UpdateIndustryTypeDto,
   ): Promise<IndustryTypeEntity> {
-    const industryType = await this.findOne(id);
+    return useTranslation(async (m) => {
+      const repo = m.getRepository(IndustryTypeEntity);
 
-    if (updateDto.industryCode && updateDto.industryCode !== industryType.industryCode) {
-      const existing = await this.industryTypeRepository.findOne({
-        where: { industryCode: updateDto.industryCode },
-      });
+      const industryType = await repo.findOne({ where: { id } });
 
-      if (existing) {
-        throw new ConflictException(`行业类型编码 ${updateDto.industryCode} 已存在`);
+      if (!industryType) {
+        throw new NotFoundException(`行业类型 ID ${id} 不存在`);
       }
-    }
 
-    Object.assign(industryType, updateDto);
-    return this.industryTypeRepository.save(industryType);
+      if (updateDto.industryCode && updateDto.industryCode !== industryType.industryCode) {
+        const existing = await repo.findOne({
+          where: { industryCode: updateDto.industryCode },
+        });
+
+        if (existing) {
+          throw new ConflictException(`行业类型编码 ${updateDto.industryCode} 已存在`);
+        }
+      }
+
+      Object.assign(industryType, updateDto);
+      return repo.save(industryType);
+    });
   }
 
   async remove(id: string): Promise<void> {
-    const industryType = await this.findOne(id);
+    return useTranslation(async (m) => {
+      const repo = m.getRepository(IndustryTypeEntity);
 
-    const eventCount = await this.industryTypeRepository
-      .createQueryBuilder('industryType')
-      .leftJoin('industryType.events', 'event')
-      .where('industryType.id = :id', { id })
-      .getCount();
+      const industryType = await repo.findOne({ where: { id } });
 
-    if (eventCount > 0) {
-      throw new ConflictException('该行业类型下存在关联事件,无法删除');
-    }
+      if (!industryType) {
+        throw new NotFoundException(`行业类型 ID ${id} 不存在`);
+      }
 
-    await this.industryTypeRepository.remove(industryType);
+      const eventCount = await repo
+        .createQueryBuilder('industryType')
+        .leftJoin('industryType.events', 'event')
+        .where('industryType.id = :id', { id })
+        .getCount();
+
+      if (eventCount > 0) {
+        throw new ConflictException('该行业类型下存在关联事件,无法删除');
+      }
+
+      await repo.remove(industryType);
+    });
   }
 }
