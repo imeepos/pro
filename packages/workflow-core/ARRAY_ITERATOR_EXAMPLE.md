@@ -25,7 +25,63 @@ class ArrayIteratorAst {
 
 ## 使用场景
 
-### 场景 1: 简单顺序处理
+### 场景 1: 对象数组的属性分发
+
+处理对象数组时,将不同属性分发到不同的下游节点:
+
+```typescript
+import {
+  ArrayIteratorAst,
+  createWorkflowGraphAst
+} from '@pro/workflow-core';
+
+// 场景: 用户数据数组,需要分别处理用户名和密码
+const userDataArray = [
+  { username: 'user1', password: 'pass1' },
+  { username: 'user2', password: 'pass2' }
+];
+
+const iterator = new ArrayIteratorAst();
+const userProcessor = new UserProcessorAst();
+const passProcessor = new PasswordProcessorAst();
+
+const workflow = createWorkflowGraphAst({
+  name: 'user-data-processing',
+  nodes: [iterator, userProcessor, passProcessor],
+  edges: [
+    // 从上游接收数组
+    {
+      from: 'dataSource.id',
+      to: iterator.id,
+      fromProperty: 'users',
+      toProperty: 'array'
+    },
+
+    // 嵌套属性分发: currentItem.username → userProcessor
+    {
+      from: iterator.id,
+      to: userProcessor.id,
+      fromProperty: 'currentItem.username',  // 支持点号分割!
+      toProperty: 'username'
+    },
+
+    // 嵌套属性分发: currentItem.password → passProcessor
+    {
+      from: iterator.id,
+      to: passProcessor.id,
+      fromProperty: 'currentItem.password',  // 支持多层嵌套!
+      toProperty: 'password'
+    }
+  ]
+});
+```
+
+**关键特性**:
+- `fromProperty` 支持**点号分割的嵌套属性路径**
+- 例如: `'currentItem.user.profile.name'` 会自动解析为 `currentItem?.user?.profile?.name`
+- 一个迭代器输出的对象可以同时分发到多个下游节点的不同属性
+
+### 场景 2: 简单顺序处理
 
 从 HtmlParserAst 输出的微博列表中,依次处理每条微博:
 
@@ -216,7 +272,17 @@ async visit(ast: ArrayIteratorAst): Promise<ArrayIteratorAst> {
 
 ### ✅ DO
 
-1. **使用条件边实现循环**
+1. **使用嵌套属性路径分发对象字段**
+   ```typescript
+   {
+     from: iterator.id,
+     fromProperty: 'currentItem.user.name',  // 多层嵌套
+     to: processor.id,
+     toProperty: 'name'
+   }
+   ```
+
+2. **使用条件边实现循环**
    ```typescript
    {
      from: processor.id,
@@ -225,7 +291,7 @@ async visit(ast: ArrayIteratorAst): Promise<ArrayIteratorAst> {
    }
    ```
 
-2. **明确结束条件**
+3. **明确结束条件**
    ```typescript
    {
      from: iterator.id,
@@ -234,7 +300,7 @@ async visit(ast: ArrayIteratorAst): Promise<ArrayIteratorAst> {
    }
    ```
 
-3. **从上游动态传入数组**
+4. **从上游动态传入数组**
    ```typescript
    {
      from: parser.id,

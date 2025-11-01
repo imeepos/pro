@@ -174,6 +174,83 @@ describe('DataFlowManager', () => {
       });
     });
 
+    describe('嵌套属性访问', () => {
+      it('支持点号分割的嵌套属性路径 (fromProperty: "obj.field")', () => {
+        const edges = [
+          createTestEdge('source', 'targetA', {
+            fromProperty: 'currentItem.username',
+            toProperty: 'username',
+          }),
+          createTestEdge('source', 'targetB', {
+            fromProperty: 'currentItem.password',
+            toProperty: 'password',
+          }),
+        ];
+
+        const allOutputs = new Map([
+          ['source', {
+            currentItem: { username: 'user1', password: 'pass1' }
+          }],
+        ]);
+
+        const targetA = createTestNode('targetA');
+        const targetB = createTestNode('targetB');
+        const allNodes = [createTestNode('source', 'success'), targetA, targetB];
+
+        manager.assignInputsToNode(targetA, allOutputs, edges, allNodes);
+        manager.assignInputsToNode(targetB, allOutputs, edges, allNodes);
+
+        expect((targetA as any).username).toBe('user1');
+        expect((targetB as any).password).toBe('pass1');
+      });
+
+      it('支持多层嵌套属性路径 (a.b.c)', () => {
+        const edges = [
+          createTestEdge('source', 'target', {
+            fromProperty: 'data.user.profile.name',
+            toProperty: 'name',
+          }),
+        ];
+
+        const allOutputs = new Map([
+          ['source', {
+            data: {
+              user: {
+                profile: { name: 'Alice' }
+              }
+            }
+          }],
+        ]);
+
+        const target = createTestNode('target');
+        const allNodes = [createTestNode('source', 'success'), target];
+
+        manager.assignInputsToNode(target, allOutputs, edges, allNodes);
+
+        expect((target as any).name).toBe('Alice');
+      });
+
+      it('嵌套属性不存在时返回 undefined', () => {
+        const edges = [
+          createTestEdge('source', 'target', {
+            fromProperty: 'obj.nonexistent.field',
+            toProperty: 'value',
+          }),
+        ];
+
+        const allOutputs = new Map([
+          ['source', { obj: { other: 'data' } }],
+        ]);
+
+        const target = createTestNode('target');
+        const allNodes = [createTestNode('source', 'success'), target];
+
+        manager.assignInputsToNode(target, allOutputs, edges, allNodes);
+
+        expect((target as any).value).toBeUndefined();
+      });
+    });
+
     describe('边界情况', () => {
       it('处理包含 null 值的输出', () => {
         class TestNode {}

@@ -305,6 +305,162 @@ describe('ArrayIteratorAst', () => {
     });
   });
 
+  describe('嵌套对象属性分发', () => {
+    it('迭代对象数组并分发不同属性到多个下游节点', async () => {
+      const testArray = [
+        { username: 'user1', password: 'pass1' },
+        { username: 'user2', password: 'pass2' }
+      ];
+
+      const nodes: INode[] = [
+        createIteratorNode('iterator', testArray),
+        createProcessorNode('userProcessor'),
+        createProcessorNode('passProcessor'),
+      ];
+
+      const edges: IEdge[] = [
+        {
+          from: 'iterator',
+          to: 'userProcessor',
+          fromProperty: 'currentItem.username',
+          toProperty: 'item'
+        },
+        {
+          from: 'iterator',
+          to: 'passProcessor',
+          fromProperty: 'currentItem.password',
+          toProperty: 'item'
+        },
+      ];
+
+      executeAstSpy.mockImplementation(async (node: INode) => {
+        if (node.type === 'ArrayIteratorAst') {
+          const iter = node as any;
+          const idx = iter.currentIndex;
+
+          if (idx >= testArray.length) {
+            return {
+              ...iter,
+              state: 'success',
+              isDone: true,
+              hasNext: false,
+              currentItem: undefined,
+            };
+          }
+
+          return {
+            ...iter,
+            state: 'success',
+            currentItem: testArray[idx],
+            hasNext: idx + 1 < testArray.length,
+            isDone: idx + 1 >= testArray.length,
+            currentIndex: idx + 1,
+          };
+        }
+
+        if (node.type === 'DataProcessorAst') {
+          const proc = node as any;
+          return {
+            ...proc,
+            state: 'success',
+            processedItem: `processed_${proc.item}`,
+          };
+        }
+
+        return { ...node, state: 'success' };
+      });
+
+      const ast = createWorkflowGraphAst({ name: 'nestedProps', nodes, edges });
+
+      let result = await scheduler.schedule(ast, {});
+
+      while (result.state === 'running') {
+        result = await scheduler.schedule(result, {});
+      }
+
+      expect(result.state).toBe('success');
+      const userProc = result.nodes.find(n => n.id === 'userProcessor') as any;
+      const passProc = result.nodes.find(n => n.id === 'passProcessor') as any;
+
+      expect(userProc.item).toBe('user1');
+      expect(userProc.processedItem).toBe('processed_user1');
+      expect(passProc.item).toBe('pass1');
+      expect(passProc.processedItem).toBe('processed_pass1');
+    });
+
+    it('支持多层嵌套对象属性访问', async () => {
+      const testArray = [
+        {
+          user: {
+            profile: {
+              name: 'Alice',
+              age: 30
+            }
+          }
+        }
+      ];
+
+      const nodes: INode[] = [
+        createIteratorNode('iterator', testArray),
+        createProcessorNode('nameProcessor'),
+        createProcessorNode('ageProcessor'),
+      ];
+
+      const edges: IEdge[] = [
+        {
+          from: 'iterator',
+          to: 'nameProcessor',
+          fromProperty: 'currentItem.user.profile.name',
+          toProperty: 'item'
+        },
+        {
+          from: 'iterator',
+          to: 'ageProcessor',
+          fromProperty: 'currentItem.user.profile.age',
+          toProperty: 'item'
+        },
+      ];
+
+      executeAstSpy.mockImplementation(async (node: INode) => {
+        if (node.type === 'ArrayIteratorAst') {
+          return {
+            ...node,
+            state: 'success',
+            currentItem: testArray[0],
+            hasNext: false,
+            isDone: true,
+            currentIndex: 1,
+          };
+        }
+
+        if (node.type === 'DataProcessorAst') {
+          return {
+            ...node,
+            state: 'success',
+            processedItem: node,
+          };
+        }
+
+        return { ...node, state: 'success' };
+      });
+
+      const ast = createWorkflowGraphAst({ name: 'deepNested', nodes, edges });
+
+      let result = await scheduler.schedule(ast, {});
+
+      while (result.state === 'running') {
+        result = await scheduler.schedule(result, {});
+      }
+
+      expect(result.state).toBe('success');
+      const nameProc = result.nodes.find(n => n.id === 'nameProcessor') as any;
+      const ageProc = result.nodes.find(n => n.id === 'ageProcessor') as any;
+
+      expect(nameProc.item).toBe('Alice');
+      expect(ageProc.item).toBe(30);
+    });
+  });
+
   describe('边界条件', () => {
     it('currentIndex 超出数组长度时标记为完成', async () => {
       const nodes: INode[] = [createIteratorNode('iterator', ['A', 'B'], 5)];

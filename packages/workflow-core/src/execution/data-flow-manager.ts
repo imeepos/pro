@@ -4,6 +4,12 @@ import { fromJson } from '../generate';
 import { IEdge, INode, isControlEdge, isDataEdge } from '../types';
 
 export class DataFlowManager {
+    private resolveNestedProperty(obj: any, path: string): any {
+        if (!path.includes('.')) {
+            return obj?.[path];
+        }
+        return path.split('.').reduce((current, key) => current?.[key], obj);
+    }
     extractNodeOutputs(node: INode): any {
         try {
             const ast = fromJson(node);
@@ -59,7 +65,7 @@ export class DataFlowManager {
             }
 
             if (isDataEdge(edge) && edge.fromProperty && edge.toProperty) {
-                const sourceValue = sourceOutputs[edge.fromProperty];
+                const sourceValue = this.resolveNestedProperty(sourceOutputs, edge.fromProperty);
                 if (sourceValue !== undefined) {
                     (targetNode as any)[edge.toProperty] = sourceValue;
                 }

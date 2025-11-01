@@ -10,7 +10,7 @@ export interface INode extends Record<string, any> {
 // 数据流边 - 纯粹的数据传递
 export interface IDataEdge {
     from: string;
-    fromProperty?: string;
+    fromProperty?: string;  // 支持嵌套属性路径,如 'currentItem.username' 或 'data.user.profile.name'
     to: string;
     toProperty?: string;
 }
