@@ -21,7 +21,8 @@
     "dev": "tsup --watch",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No tests yet\" && exit 0"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "graph",
@@ -38,7 +39,9 @@
     "@pro/eslint-config": "workspace:*",
     "@pro/prettier-config": "workspace:*",
     "@types/node": "^20.3.1",
+    "@vitest/coverage-v8": "^3.2.4",
     "tsup": "^8.5.0",
-    "typescript": "~5.8.0"
+    "typescript": "~5.8.0",
+    "vitest": "^3.2.4"
   }
 }
