@@ -1,11 +1,12 @@
-import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { MoreThanOrEqual } from 'typeorm';
 import { WeiboAccountEntity, WeiboAccountStatus, useEntityManager } from '@pro/entities';
 import {
   WeiboHealthCheckService as WeiboCoreHealthCheckService,
   type WeiboAccountHealthResult,
 } from '@pro/weibo';
-import { ScreensGateway } from '../screens/screens.gateway';
+import { PubSubService } from '../common/pubsub/pubsub.service';
+import { SUBSCRIPTION_EVENTS } from '../screens/constants/subscription-events';
 
 /**
  * 账号检查结果接口
@@ -43,8 +44,7 @@ export class WeiboHealthCheckService {
   private readonly logger = new Logger(WeiboHealthCheckService.name);
 
   constructor(
-    @Inject(forwardRef(() => ScreensGateway))
-    private readonly screensGateway: ScreensGateway,
+    private readonly pubSub: PubSubService,
     private readonly weiboHealthInspector: WeiboCoreHealthCheckService,
   ) {}
 
@@ -270,7 +270,7 @@ export class WeiboHealthCheckService {
         return { total, todayNew, online };
       });
 
-      this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
+      await this.pubSub.publish(SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE, stats);
     } catch (error) {
       this.logger.error('推送微博用户统计更新失败:', error);
     }

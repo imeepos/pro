@@ -2,8 +2,6 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
-  forwardRef,
-  Inject,
 } from '@nestjs/common';
 import { MoreThanOrEqual } from 'typeorm';
 import {
@@ -12,7 +10,8 @@ import {
   useEntityManager,
 } from '@pro/entities';
 import { LoggedInUsersStats } from '@pro/types';
-import { ScreensGateway } from '../screens/screens.gateway';
+import { PubSubService } from '../common/pubsub/pubsub.service';
+import { SUBSCRIPTION_EVENTS } from '../screens/constants/subscription-events';
 
 /**
  * 微博账号管理服务
@@ -21,8 +20,7 @@ import { ScreensGateway } from '../screens/screens.gateway';
 @Injectable()
 export class WeiboAccountService {
   constructor(
-    @Inject(forwardRef(() => ScreensGateway))
-    private readonly screensGateway: ScreensGateway,
+    private readonly pubSub: PubSubService,
   ) {}
 
   /**
@@ -130,7 +128,7 @@ export class WeiboAccountService {
   private async notifyWeiboStatsUpdate() {
     try {
       const stats = await this.getLoggedInUsersStats();
-      this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
+      await this.pubSub.publish(SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE, stats);
     } catch (error) {
       console.error('推送微博用户统计更新失败:', error);
     }

@@ -2,8 +2,6 @@ import {
   Injectable,
   OnModuleInit,
   OnModuleDestroy,
-  forwardRef,
-  Inject,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -12,7 +10,6 @@ import { MoreThanOrEqual } from 'typeorm';
 import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
 import { Subject, Observable, Subscription } from 'rxjs';
 import { WeiboAccountEntity, WeiboAccountStatus, useEntityManager } from '@pro/entities';
-import { ScreensGateway } from '../screens/screens.gateway';
 import { WeiboSessionStorage, SessionData } from './weibo-session-storage.service';
 import { PubSubService } from '../common/pubsub/pubsub.service';
 import { SUBSCRIPTION_EVENTS } from '../screens/constants/subscription-events';
@@ -90,8 +87,6 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly logger: PinoLogger,
-    @Inject(forwardRef(() => ScreensGateway))
-    private readonly screensGateway: ScreensGateway,
     private readonly pubSub: PubSubService,
     private readonly sessionStorage: WeiboSessionStorage,
   ) {
@@ -676,7 +671,7 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
         });
 
         const stats = { total, todayNew, online };
-        this.screensGateway.broadcastWeiboLoggedInUsersUpdate(stats);
+        await this.pubSub.publish(SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE, stats);
       });
     } catch (error) {
       this.logger.error('推送微博用户统计更新失败:', error);
@@ -798,70 +793,4 @@ export class WeiboAuthService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * 获取WebSocket连接统计
-   */
-  getWebSocketStats(): any {
-    try {
-      return this.screensGateway.getConnectionStats();
-    } catch (error) {
-      this.logger.error('获取WebSocket统计信息失败', error);
-      return {
-        totalConnections: 0,
-        connectionsByUser: [],
-        averageConnectionDuration: 0
-      };
-    }
-  }
-
-  /**
-   * 检查WebSocket连接健康状态
-   */
-  async checkWebSocketHealth(): Promise<void> {
-    try {
-      const stats = this.getWebSocketStats();
-      this.logger.info('WebSocket连接健康检查', stats);
-
-      if (stats.totalConnections === 0) {
-        this.logger.warn('没有活跃的WebSocket连接，可能影响登录体验');
-      }
-
-    } catch (error) {
-      this.logger.error('WebSocket健康检查失败', error);
-    }
-  }
-
-  /**
-   * 向特定用户发送WebSocket消息
-   */
-  sendToUser(userId: string, event: string, data: any): boolean {
-    try {
-      return this.screensGateway.sendToUser(userId, event, data);
-    } catch (error) {
-      this.logger.error(`发送WebSocket消息失败: userId=${userId}, event=${event}`, error);
-      return false;
-    }
-  }
-
-  /**
-   * 广播微博登录状态更新
-   */
-  broadcastLoginStatusUpdate(sessionId: string, status: {
-    isOnline: boolean;
-    totalAccounts: number;
-    activeAccounts: number;
-  }): void {
-    try {
-      const session = this.loginSessions.get(sessionId);
-      if (session) {
-        this.screensGateway.sendToUser(session.userId, 'weibo:status:update', {
-          sessionId,
-          ...status,
-          timestamp: new Date().toISOString()
-        });
-      }
-    } catch (error) {
-      this.logger.error(`广播登录状态更新失败: ${sessionId}`, error);
-    }
-  }
 }

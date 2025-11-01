@@ -6,14 +6,15 @@ import {
   OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { LoggedInUsersStats } from '@pro/types';
-import { WeiboAccountService } from '../weibo/weibo-account.service';
 import { PubSubService } from '../common/pubsub/pubsub.service';
 import { SUBSCRIPTION_EVENTS } from './constants/subscription-events';
 import { ConnectionGatekeeper, ConnectionRateLimitException } from '../auth/services/connection-gatekeeper.service';
 import { ConnectionMetricsService } from '../monitoring/connection-metrics.service';
+import { WeiboAccountEntity, WeiboAccountStatus, useEntityManager } from '@pro/entities';
+import { MoreThanOrEqual } from 'typeorm';
 
 /**
  * 大屏系统 WebSocket Gateway
@@ -58,8 +59,6 @@ export class ScreensGateway
     private readonly pubSub: PubSubService,
     private readonly connectionGatekeeper: ConnectionGatekeeper,
     private readonly connectionMetrics: ConnectionMetricsService,
-    @Inject(forwardRef(() => WeiboAccountService))
-    private readonly weiboAccountService: WeiboAccountService,
   ) {}
 
   async onModuleInit() {
@@ -67,6 +66,8 @@ export class ScreensGateway
     await this.broadcastInitialStats();
     // 启动连接健康检查
     this.startConnectionHealthCheck();
+    // 订阅微博统计更新事件
+    this.subscribeToPubSubEvents();
   }
 
   afterInit(server: Server) {
@@ -244,11 +245,47 @@ export class ScreensGateway
   }
 
   /**
+   * 订阅 PubSub 事件
+   */
+  private subscribeToPubSubEvents() {
+    this.pubSub.subscribe(
+      SUBSCRIPTION_EVENTS.WEIBO_LOGGED_IN_USERS_UPDATE,
+      (stats: LoggedInUsersStats) => {
+        this.server.emit('weibo:logged-in-users:update', stats);
+      }
+    ).catch(error => {
+      this.logger.error('订阅微博统计更新事件失败:', error);
+    });
+  }
+
+  /**
    * 启动时广播初始统计数据
    */
   private async broadcastInitialStats() {
     try {
-      const stats = await this.weiboAccountService.getLoggedInUsersStats();
+      const stats = await useEntityManager(async (m) => {
+        const repo = m.getRepository(WeiboAccountEntity);
+
+        const total = await repo.count();
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const todayNew = await repo.count({
+          where: {
+            createdAt: MoreThanOrEqual(today),
+          },
+        });
+
+        const online = await repo.count({
+          where: {
+            status: WeiboAccountStatus.ACTIVE,
+          },
+        });
+
+        return { total, todayNew, online };
+      });
+
       this.broadcastWeiboLoggedInUsersUpdate(stats);
       this.logger.log('广播初始微博用户统计数据', stats);
     } catch (error) {

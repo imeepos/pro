@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   WeiboAccountEntity,
@@ -15,8 +15,8 @@ import { WeiboHealthCheckScheduler } from './weibo-health-check.scheduler';
 import { WeiboSearchTaskService } from './weibo-search-task.service';
 import { WeiboAccountResolver } from './weibo-account.resolver';
 import { WeiboSearchTaskResolver } from './weibo-search-task.resolver';
-import { ScreensModule } from '../screens/screens.module';
 import { AuthModule } from '../auth/auth.module';
+import { ScreensModule } from '../screens/screens.module';
 import { WeiboAuthResolver } from './weibo-auth.resolver';
 import { WeiboRabbitMQConfigService } from './weibo-rabbitmq-config.service';
 import { WeiboTaskStatusConsumer } from './weibo-task-status.consumer';
@@ -44,7 +44,7 @@ import { ConfigService } from '@nestjs/config';
       WeiboPostEntity,
       WeiboInteractionEntity,
     ]),
-    forwardRef(() => ScreensModule),
+    ScreensModule,
     AuthModule
   ],
   controllers: [],

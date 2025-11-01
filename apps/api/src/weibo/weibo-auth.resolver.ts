@@ -14,6 +14,7 @@ import { catchError, map } from 'rxjs/operators';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PinoLogger } from '@pro/logger-nestjs';
 import { GraphqlContext } from '../common/utils/context.utils';
+import { ScreensGateway } from '../screens/screens.gateway';
 
 @ObjectType()
 class UserSessionStats {
@@ -80,6 +81,7 @@ class WebSocketStats {
 export class WeiboAuthResolver {
   constructor(
     private readonly weiboAuthService: WeiboAuthService,
+    private readonly screensGateway: ScreensGateway,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(WeiboAuthResolver.name);
@@ -191,7 +193,7 @@ export class WeiboAuthResolver {
   async getSessionStats(@CurrentUser('userId') userId: string): Promise<WeiboSessionStats> {
     try {
       const serviceStats = await this.weiboAuthService.getServiceStats();
-      const webSocketStats = this.weiboAuthService.getWebSocketStats();
+      const webSocketStats = this.screensGateway.getConnectionStats();
 
       // 构建会话统计
       const stats: WeiboSessionStats = {
@@ -219,7 +221,7 @@ export class WeiboAuthResolver {
   @Query(() => WebSocketStats, { name: 'webSocketStats' })
   async getWebSocketStats(@CurrentUser('userId') userId: string): Promise<WebSocketStats> {
     try {
-      const stats = this.weiboAuthService.getWebSocketStats();
+      const stats = this.screensGateway.getConnectionStats();
 
       const webSocketStats: WebSocketStats = {
         totalConnections: stats.totalConnections,
@@ -241,7 +243,14 @@ export class WeiboAuthResolver {
   @Query(() => String, { name: 'webSocketHealth' })
   async checkWebSocketHealth(@CurrentUser('userId') userId: string): Promise<string> {
     try {
-      await this.weiboAuthService.checkWebSocketHealth();
+      const stats = this.screensGateway.getConnectionStats();
+      this.logger.info('WebSocket连接健康检查', { userId, stats });
+
+      if (stats.totalConnections === 0) {
+        this.logger.warn('没有活跃的WebSocket连接，可能影响登录体验', { userId });
+        return 'WebSocket连接异常: 没有活跃连接';
+      }
+
       return 'WebSocket连接健康';
     } catch (error) {
       this.logger.error('WebSocket健康检查失败', { userId, error });
