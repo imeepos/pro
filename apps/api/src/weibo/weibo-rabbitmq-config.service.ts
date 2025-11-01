@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitMQClient, RabbitMQConfig } from '@pro/rabbitmq';
+import { root } from '@pro/core';
 import {
   TaskStatusConsumerConfig,
   WeiboTaskStatusMessage
@@ -14,9 +15,11 @@ import {
 export class WeiboRabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
   private readonly rabbitMQClient: RabbitMQClient;
   private readonly logger = new Logger(WeiboRabbitMQConfigService.name);
+  private readonly configService: ConfigService;
 
-  constructor(private readonly configService: ConfigService) {
-    // 初始化RabbitMQ客户端
+  constructor() {
+    this.configService = root.get(ConfigService);
+
     const rabbitMQConfig: RabbitMQConfig = {
       url: this.configService.get<string>('RABBITMQ_URL', 'amqp://localhost:5672'),
       queue: 'weibo_task_status_queue',

@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { RedisClient } from '@pro/redis';
+import { root } from '@pro/core';
 import { ConsumerStats } from './interfaces/weibo-task-status.interface';
 
 /**
@@ -9,11 +10,13 @@ import { ConsumerStats } from './interfaces/weibo-task-status.interface';
 @Injectable()
 export class WeiboStatsRedisService implements OnModuleInit {
   private readonly logger = new Logger(WeiboStatsRedisService.name);
+  private readonly redisClient: RedisClient;
   private readonly STATS_KEY = 'weibo:consumer:stats';
   private readonly MAX_PROCESSING_TIME_SAMPLES = 100;
   private readonly STATS_TTL = 30 * 24 * 60 * 60; // 30天过期
 
-  constructor(private readonly redisClient: RedisClient) {
+  constructor() {
+    this.redisClient = root.get(RedisClient);
     this.logger.log('Redis统计服务初始化');
   }
 
