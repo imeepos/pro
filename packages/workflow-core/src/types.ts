@@ -13,6 +13,7 @@ export interface IDataEdge {
     fromProperty?: string;  // 支持嵌套属性路径,如 'currentItem.username' 或 'data.user.profile.name'
     to: string;
     toProperty?: string;
+    weight?: number;  // 多输入汇聚时的排序权重,值越小优先级越高,未指定时按边定义顺序排列
 }
 
 // 控制流边 - 纯粹的执行依赖
