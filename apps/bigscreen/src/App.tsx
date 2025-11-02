@@ -10,6 +10,8 @@ import UserDetection from '@/pages/UserDetection';
 import { LayoutDemo } from '@/pages/LayoutDemo';
 import BleMeshTopology from '@/pages/BleMeshTopology';
 import NetworkTopology from '@/pages/NetworkTopology';
+import WorkflowEditor from '@/pages/WorkflowEditor';
+import WorkflowDemo from '@/pages/WorkflowDemo';
 import { useTheme } from '@/hooks/useTheme';
 import { cn, createLogger } from '@/utils';
 import { useWebSocket, useRealTimeData, useAutoRefresh } from '@/hooks';
@@ -233,6 +235,34 @@ const App: React.FC = () => {
                     transition={{ duration: 0.3 }}
                   >
                     <NetworkTopology />
+                  </motion.div>
+                }
+              />
+              <Route
+                path="/workflow-editor"
+                element={
+                  <motion.div
+                    key="workflow-editor"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.05 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <WorkflowEditor />
+                  </motion.div>
+                }
+              />
+              <Route
+                path="/workflow-demo"
+                element={
+                  <motion.div
+                    key="workflow-demo"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.05 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <WorkflowDemo />
                   </motion.div>
                 }
               />
