@@ -156,7 +156,10 @@ export class ConnectionPool {
     });
 
     this.channel.on('close', () => {
+      console.log('[ConnectionPool] Channel closed, triggering reconnection');
       this.channel = null;
+      // 当 channel 关闭时，触发重连以创建新的 channel
+      this.scheduleReconnect();
     });
   }
 
