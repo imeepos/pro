@@ -1,5 +1,6 @@
 import 'reflect-metadata';
-import { connectMongoDB } from '@pro/mongodb';
+import "dotenv/config";
+import { MongodbModule } from '@pro/mongodb';
 import { logger } from './core/logger';
 import { SimpleIntervalScheduler } from './weibo/simple-interval-scheduler.service';
 import { AggregateSchedulerService } from './services/aggregate-scheduler.service';
@@ -7,7 +8,9 @@ import { SimpleTaskMonitor } from './weibo/simple-task-monitor.service';
 import { WeiboAccountHealthScheduler } from './weibo/account-health-scheduler.service';
 import { DlqConsumer } from './consumers/dlq.consumer';
 import { AccountInitService } from './services/account-init.service';
-import { DiagnosticService } from './weibo/diagnostic.service';
+import { root } from '@pro/core';
+import { registerMqQueues } from '@pro/rabbitmq';
+import { WeiboAccountInitService } from '@pro/workflow-nestjs';
 
 /**
  * Broker 应用启动 - 优雅的诞生
@@ -36,14 +39,12 @@ async function bootstrap() {
 
   try {
     // 连接 MongoDB - 数据之源
-    logger.info('连接 MongoDB...');
-    await connectMongoDB();
-    logger.info('MongoDB 连接成功');
-
-    // 初始化账号健康度队列
-    logger.info('初始化微博账号健康度队列...');
-    const accountInitService = new AccountInitService();
-    await accountInitService.init();
+    console.log({
+      MongodbModule,
+      WeiboAccountInitService
+    })
+    registerMqQueues()
+    await root.init()
 
     // 创建所有服务实例
     logger.info('创建服务实例...');
