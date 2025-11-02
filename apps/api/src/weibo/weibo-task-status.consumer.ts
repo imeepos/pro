@@ -5,7 +5,7 @@ import { WeiboRabbitMQConfigService } from './weibo-rabbitmq-config.service';
 import { WeiboSearchTaskService } from './weibo-search-task.service';
 import { WeiboStatsRedisService } from './weibo-stats-redis.service';
 import { WeiboHourlyStatsService } from './weibo-hourly-stats.service';
-import type {
+import {
   WeiboTaskStatusMessage,
   MessageProcessResult,
   ConsumerStats,
@@ -59,32 +59,32 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
             if (!message) {
               this.logger.warn('无效的状态消息', { message: envelope.message });
               envelope.nack(false); // 不重新入队
-              await this.updateStats(startTime, 'failure');
+              await this.updateStats(startTime, MessageProcessResult.FAILED);
               return;
             }
 
             // 处理状态更新
             const result = await this.processStatusUpdate(message);
 
-            if (result === 'success') {
+            if (result === MessageProcessResult.SUCCESS) {
               envelope.ack();
-              await this.updateStats(startTime, 'success');
+              await this.updateStats(startTime, MessageProcessResult.SUCCESS);
               this.logger.log('任务状态更新成功', {
                 taskId: message.taskId,
                 status: message.status,
                 processingTime: Date.now() - startTime,
               });
-            } else if (result === 'retry') {
+            } else if (result === MessageProcessResult.RETRY) {
               envelope.nack(true); // 重新入队
-              await this.updateStats(startTime, 'retry');
+              await this.updateStats(startTime, MessageProcessResult.RETRY);
             } else {
               envelope.nack(false); // 不重新入队
-              await this.updateStats(startTime, 'failure');
+              await this.updateStats(startTime, MessageProcessResult.FAILED);
             }
           } catch (error) {
             this.logger.error('处理状态消息异常', { error });
             envelope.nack(true); // 异常时重试
-            await this.updateStats(startTime, 'failure');
+            await this.updateStats(startTime, MessageProcessResult.FAILED);
           }
         }),
         retry({ count: 3, delay: 5000 }),
@@ -115,14 +115,14 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
    */
   private async processStatusUpdate(
     statusMessage: WeiboTaskStatusMessage
-  ): Promise<'success' | 'retry' | 'failure'> {
+  ): Promise<MessageProcessResult> {
     try {
       const { taskId, status, errorMessage } = statusMessage;
 
       const normalizedStatus = this.mapStatus(status);
       if (!normalizedStatus) {
-        this.logger.warn('未知的状态值', { taskId, status });
-        return 'failure';
+        this.logger.warn(`未知的状态值: ${status}`, { taskId });
+        return MessageProcessResult.FAILED;
       }
 
       await this.taskService.updateTaskStatus(taskId, normalizedStatus, errorMessage);
@@ -138,13 +138,13 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
         });
       }
 
-      this.logger.debug('任务状态更新成功', {
+      this.logger.debug(`任务状态更新成功`, {
         taskId,
         status: normalizedStatus,
         progress: statusMessage.progress,
       });
 
-      return 'success';
+      return MessageProcessResult.SUCCESS;
     } catch (error) {
       this.logger.error('更新任务状态失败', {
         taskId: statusMessage.taskId,
@@ -152,7 +152,12 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
         error: error.message,
       });
 
-      return this.isRetryableError(error) ? 'retry' : 'failure';
+      // 判断是否可重试
+      if (this.isRetryableError(error)) {
+        return MessageProcessResult.RETRY;
+      }
+
+      return MessageProcessResult.FAILED;
     }
   }
 
@@ -168,28 +173,47 @@ export class WeiboTaskStatusConsumer implements OnModuleInit, OnModuleDestroy {
    * 判断错误是否可重试
    */
   private isRetryableError(error: any): boolean {
-    const retryablePatterns = [/connection/, /timeout/, /network/, /ECONNRESET/, /ETIMEDOUT/];
+    // 数据库连接错误、超时等可重试
+    const retryablePatterns = [
+      /connection/,
+      /timeout/,
+      /network/,
+      /ECONNRESET/,
+      /ETIMEDOUT/,
+    ];
+
     const errorMessage = error.message?.toLowerCase() || '';
     return retryablePatterns.some(pattern => pattern.test(errorMessage));
   }
 
+  
   /**
    * 更新统计信息（使用 Redis 持久化）
    */
-  private async updateStats(startTime: number, result: 'success' | 'retry' | 'failure'): Promise<void> {
+  private async updateStats(startTime: number, result: MessageProcessResult): Promise<void> {
     try {
       const processingTime = Date.now() - startTime;
+      const now = new Date();
 
-      await this.statsService.updateStats(result, processingTime);
+      // 将 MessageProcessResult 枚举值映射为字符串
+      const resultStr = result === MessageProcessResult.SUCCESS ? 'success' :
+                       result === MessageProcessResult.RETRY ? 'retry' : 'failure';
+
+      // 使用 Redis 批量更新统计信息
+      await this.statsService.updateStats(resultStr, processingTime);
 
       // 记录小时统计数据 - 异步执行，不阻塞主流程
-      this.recordHourlyStatsAsync(new Date(), result, processingTime).catch(error => {
+      this.recordHourlyStatsAsync(now, resultStr, processingTime).catch(error => {
         this.logger.warn('记录小时统计数据失败', { error });
       });
 
-      this.logger.debug('统计信息已更新到 Redis', { result, processingTime });
+      this.logger.debug(`统计信息已更新到 Redis`, {
+        result: resultStr,
+        processingTime,
+      });
     } catch (error) {
       this.logger.error('更新统计信息失败', { error });
+      // 统计更新失败不应该影响主要业务逻辑，只记录错误
     }
   }
 

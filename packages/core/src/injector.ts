@@ -37,7 +37,7 @@ export type InjectionTokenType<T> =
  * 支持层次化注入器结构和类型安全的依赖获取
  */
 export abstract class Injector {
-  constructor(public readonly parent?: Injector) { }
+  constructor(public parent?: Injector) { }
 
   /**
    * 获取指定令牌的依赖实例
@@ -48,4 +48,7 @@ export abstract class Injector {
   abstract set(providers: (Provider | Type<any>)[]): void;
   abstract destroy(): Promise<void>;
   abstract init(): Promise<void>;
+  setParent(p: Injector): void {
+    this.parent = p;
+  }
 }

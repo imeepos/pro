@@ -16,9 +16,11 @@ export class NullInjector extends Injector {
    * @throws Error 总是抛出未找到提供者的错误
    */
   get<T>(token: InjectionTokenType<T>, def?: T): T {
-    if(def) return def;
+    if (def) return def;
     const tokenName =
       typeof token === 'function' ? token.name : token.toString();
+    debugger;
+    console.log(`NullInjector: No Provider for `, { token, def })
     throw new Error(`NullInjector: No provider for ${tokenName}`);
   }
 

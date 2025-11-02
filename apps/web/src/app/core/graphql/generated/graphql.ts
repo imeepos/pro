@@ -1388,24 +1388,6 @@ export type PageInfo = {
   startCursor?: Maybe<Scalars['String']['output']>;
 };
 
-export type PaginatedRawData = {
-  __typename?: 'PaginatedRawData';
-  /** 是否有下一页 */
-  hasNext: Scalars['Boolean']['output'];
-  /** 是否有上一页 */
-  hasPrevious: Scalars['Boolean']['output'];
-  /** 数据列表 */
-  items: Array<RawDataItem>;
-  /** 当前页码 */
-  page: Scalars['Int']['output'];
-  /** 每页数量 */
-  pageSize: Scalars['Int']['output'];
-  /** 总数量 */
-  total: Scalars['Int']['output'];
-  /** 总页数 */
-  totalPages: Scalars['Int']['output'];
-};
-
 export type PaginationInput = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   page?: InputMaybe<Scalars['Int']['input']>;
@@ -1432,14 +1414,6 @@ export type PostStats = {
   totalPosts: Scalars['Int']['output'];
   totalReposts: Scalars['Int']['output'];
 };
-
-/** 原始数据处理状态 */
-export enum ProcessingStatus {
-  Completed = 'COMPLETED',
-  Failed = 'FAILED',
-  Pending = 'PENDING',
-  Processing = 'PROCESSING'
-}
 
 export type Query = {
   __typename?: 'Query';
@@ -1480,22 +1454,8 @@ export type Query = {
   mediaTypes: MediaTypeConnection;
   popularTags: Array<Tag>;
   publishedScreens: ScreenConnection;
-  /** 根据ID获取单个原始数据 */
-  rawDataById?: Maybe<RawDataItem>;
-  /** 根据数据源类型查询原始数据 */
-  rawDataBySourceType: PaginatedRawData;
-  /** 获取原始数据列表，支持分页和过滤 */
-  rawDataList: PaginatedRawData;
-  /** 获取原始数据的统计信息 */
-  rawDataStatistics: RawDataStatistics;
-  /** 获取原始数据的趋势分析数据 */
-  rawDataTrend: Array<TrendDataPoint>;
-  /** 获取最近的原始数据 */
-  recentRawData: Array<RawDataItem>;
   screen: Screen;
   screens: ScreenConnection;
-  /** 搜索原始数据 */
-  searchRawData: PaginatedRawData;
   tag: Tag;
   tags: TagConnection;
   user: User;
@@ -1640,34 +1600,6 @@ export type QueryPublishedScreensArgs = {
 };
 
 
-export type QueryRawDataByIdArgs = {
-  id: Scalars['String']['input'];
-};
-
-
-export type QueryRawDataBySourceTypeArgs = {
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
-  sourceType: SourceType;
-};
-
-
-export type QueryRawDataListArgs = {
-  filter?: InputMaybe<RawDataFilterInput>;
-};
-
-
-export type QueryRawDataTrendArgs = {
-  input?: InputMaybe<TrendDataInput>;
-};
-
-
-export type QueryRecentRawDataArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  sourceType?: InputMaybe<SourceType>;
-};
-
-
 export type QueryScreenArgs = {
   id: Scalars['ID']['input'];
 };
@@ -1676,13 +1608,6 @@ export type QueryScreenArgs = {
 export type QueryScreensArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   page?: InputMaybe<Scalars['Int']['input']>;
-};
-
-
-export type QuerySearchRawDataArgs = {
-  keyword: Scalars['String']['input'];
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1824,63 +1749,6 @@ export type QueryWorkflowExecutionsArgs = {
 
 export type QueryWorkflowsArgs = {
   filter?: InputMaybe<WorkflowFilterInput>;
-};
-
-export type RawDataFilterInput = {
-  /** 关键词搜索 */
-  keyword?: InputMaybe<Scalars['String']['input']>;
-  /** 页码 */
-  page?: InputMaybe<Scalars['Int']['input']>;
-  /** 每页数量 */
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
-  /** 数据源平台 */
-  sourcePlatform?: InputMaybe<SourcePlatform>;
-  /** 数据源类型 */
-  sourceType?: InputMaybe<SourceType>;
-  /** 处理状态 */
-  status?: InputMaybe<ProcessingStatus>;
-  /** 时间范围 */
-  timeRange?: InputMaybe<TimeRangeInput>;
-};
-
-export type RawDataItem = {
-  __typename?: 'RawDataItem';
-  /** 数据ID */
-  _id: Scalars['ID']['output'];
-  /** 内容哈希 */
-  contentHash: Scalars['String']['output'];
-  /** 内容摘要 */
-  contentPreview: Scalars['String']['output'];
-  /** 创建时间 */
-  createdAt: Scalars['String']['output'];
-  /** 错误信息 */
-  errorMessage?: Maybe<Scalars['String']['output']>;
-  /** 元数据 */
-  metadata: Scalars['String']['output'];
-  /** 处理时间 */
-  processedAt?: Maybe<Scalars['String']['output']>;
-  /** 数据源类型 */
-  sourceType: SourceType;
-  /** 源链接 */
-  sourceUrl: Scalars['String']['output'];
-  /** 处理状态 */
-  status: ProcessingStatus;
-};
-
-export type RawDataStatistics = {
-  __typename?: 'RawDataStatistics';
-  /** 已完成数据量 */
-  completed: Scalars['Int']['output'];
-  /** 失败数据量 */
-  failed: Scalars['Int']['output'];
-  /** 待处理数据量 */
-  pending: Scalars['Int']['output'];
-  /** 处理中数据量 */
-  processing: Scalars['Int']['output'];
-  /** 成功率 */
-  successRate: Scalars['Float']['output'];
-  /** 总数据量 */
-  total: Scalars['Int']['output'];
 };
 
 export type RefreshTokenDto = {
@@ -2068,26 +1936,6 @@ export enum SortOrder {
   Desc = 'DESC'
 }
 
-/** 数据源平台 */
-export enum SourcePlatform {
-  Custom = 'CUSTOM',
-  Jd = 'JD',
-  Weibo = 'WEIBO'
-}
-
-/** 数据源类型 */
-export enum SourceType {
-  Custom = 'CUSTOM',
-  Jd = 'JD',
-  WeiboApiJson = 'WEIBO_API_JSON',
-  WeiboComment = 'WEIBO_COMMENT',
-  WeiboComments = 'WEIBO_COMMENTS',
-  WeiboCreatorProfile = 'WEIBO_CREATOR_PROFILE',
-  WeiboHtml = 'WEIBO_HTML',
-  WeiboKeywordSearch = 'WEIBO_KEYWORD_SEARCH',
-  WeiboNoteDetail = 'WEIBO_NOTE_DETAIL'
-}
-
 export type StatsAggregationQueryDto = {
   endDate: Scalars['DateTime']['input'];
   interval: Scalars['String']['input'];
@@ -2147,35 +1995,8 @@ export type TaskResult = {
   taskId?: Maybe<Scalars['String']['output']>;
 };
 
-export type TimeRangeInput = {
-  /** 结束时间 */
-  endDate?: InputMaybe<Scalars['String']['input']>;
-  /** 开始时间 */
-  startDate?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type TrendDataInput = {
-  /** 聚合粒度 */
-  granularity?: InputMaybe<Scalars['String']['input']>;
-  /** 状态过滤 */
-  status?: InputMaybe<ProcessingStatus>;
-  /** 时间范围 */
-  timeRange?: InputMaybe<TimeRangeInput>;
-};
-
-export type TrendDataPoint = {
-  __typename?: 'TrendDataPoint';
-  /** 数据量 */
-  count: Scalars['Int']['output'];
-  /** 状态 */
-  status: ProcessingStatus;
-  /** 时间点 */
-  timestamp: Scalars['String']['output'];
-};
-
 export type TriggerWorkflowInput = {
   context?: InputMaybe<Scalars['JSON']['input']>;
-  revision?: InputMaybe<Scalars['Int']['input']>;
   workflowId: Scalars['ID']['input'];
 };
 
@@ -2613,7 +2434,6 @@ export type Workflow = {
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
-  revision: Scalars['Int']['output'];
   slug: Scalars['String']['output'];
   tags: Array<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
@@ -2672,7 +2492,6 @@ export type WorkflowExecution = {
   id: Scalars['ID']['output'];
   logsPointer?: Maybe<Scalars['String']['output']>;
   metrics?: Maybe<WorkflowExecutionMetrics>;
-  revision: Scalars['Int']['output'];
   startedAt: Scalars['DateTime']['output'];
   status: Scalars['String']['output'];
   triggeredBy: Scalars['String']['output'];

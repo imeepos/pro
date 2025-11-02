@@ -1,8 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
-import { RawDataSourceService, MongodbModule, RawDataSource } from '@pro/mongodb';
 import { RawDataService } from './raw-data.service';
 import { RawDataResolver } from './raw-data.resolver';
 import { EnhancedRawDataService } from './enhanced-raw-data.service';

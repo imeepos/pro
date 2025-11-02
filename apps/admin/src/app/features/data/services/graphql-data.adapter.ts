@@ -3,17 +3,18 @@ import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 import { GraphQLService } from '../shared/services/graphql.service';
-import {
-  RawDataListQuery,
-  RawDataStatisticsQuery,
-  RawDataByIdQuery,
-  SearchRawDataQuery,
-  RawDataBySourceTypeQuery,
-  RecentRawDataQuery,
-  RawDataFilterInput,
-  SourceType,
-  ProcessingStatus
-} from '../../../core/graphql/generated/graphql';
+// Note: RawData GraphQL types removed - these APIs no longer exist in the backend
+// import {
+//   RawDataListQuery,
+//   RawDataStatisticsQuery,
+//   RawDataByIdQuery,
+//   SearchRawDataQuery,
+//   RawDataBySourceTypeQuery,
+//   RecentRawDataQuery,
+//   RawDataFilterInput,
+//   SourceType,
+//   ProcessingStatus
+// } from '../../../core/graphql/generated/graphql';
 
 import {
   RawData,
@@ -24,6 +25,17 @@ import {
   SourceType as LegacySourceType,
   SourcePlatform as LegacySourcePlatform
 } from '@pro/types';
+
+// Temporary types until backend RawData APIs are restored
+type RawDataFilterInput = any;
+type SourceType = any;
+type ProcessingStatus = any;
+type RawDataListQuery = any;
+type RawDataStatisticsQuery = any;
+type RawDataByIdQuery = any;
+type SearchRawDataQuery = any;
+type RawDataBySourceTypeQuery = any;
+type RecentRawDataQuery = any;
 
 @Injectable({
   providedIn: 'root'
@@ -368,75 +380,27 @@ export class GraphQLDataAdapter {
     };
   }
 
-  private transformStatusToGraphQL(status: LegacyProcessingStatus): ProcessingStatus {
-    const statusMap: Record<LegacyProcessingStatus, ProcessingStatus> = {
-      [LegacyProcessingStatus.PENDING]: ProcessingStatus.Pending,
-      [LegacyProcessingStatus.PROCESSING]: ProcessingStatus.Processing,
-      [LegacyProcessingStatus.COMPLETED]: ProcessingStatus.Completed,
-      [LegacyProcessingStatus.FAILED]: ProcessingStatus.Failed
-    };
-    return statusMap[status] || ProcessingStatus.Pending;
+  private transformStatusToGraphQL(status: LegacyProcessingStatus): any {
+    return status;
   }
 
-  private transformStatusFromGraphQL(status: ProcessingStatus): LegacyProcessingStatus {
-    const statusMap: Record<ProcessingStatus, LegacyProcessingStatus> = {
-      [ProcessingStatus.Pending]: LegacyProcessingStatus.PENDING,
-      [ProcessingStatus.Processing]: LegacyProcessingStatus.PROCESSING,
-      [ProcessingStatus.Completed]: LegacyProcessingStatus.COMPLETED,
-      [ProcessingStatus.Failed]: LegacyProcessingStatus.FAILED
-    };
-    return statusMap[status] || LegacyProcessingStatus.PENDING;
+  private transformStatusFromGraphQL(status: any): LegacyProcessingStatus {
+    return status || LegacyProcessingStatus.PENDING;
   }
 
-  private transformSourceTypeToGraphQL(type: LegacySourceType): SourceType {
-    const typeMap: Record<LegacySourceType, SourceType> = {
-      [LegacySourceType.WEIBO_HTML]: SourceType.WeiboHtml,
-      [LegacySourceType.WEIBO_API_JSON]: SourceType.WeiboApiJson,
-      [LegacySourceType.WEIBO_COMMENT]: SourceType.WeiboComment,
-      [LegacySourceType.WEIBO_KEYWORD_SEARCH]: SourceType.WeiboKeywordSearch,
-      [LegacySourceType.WEIBO_NOTE_DETAIL]: SourceType.WeiboNoteDetail,
-      [LegacySourceType.WEIBO_CREATOR_PROFILE]: SourceType.WeiboCreatorProfile,
-      [LegacySourceType.WEIBO_COMMENTS]: SourceType.WeiboComments,
-      [LegacySourceType.WEIBO_USER_INFO]: SourceType.WeiboCreatorProfile,
-      [LegacySourceType.WEIBO_DETAIL]: SourceType.WeiboApiJson,
-      [LegacySourceType.JD]: SourceType.Jd,
-      [LegacySourceType.CUSTOM]: SourceType.Custom
-    };
-    return typeMap[type] || SourceType.Custom;
+  private transformSourceTypeToGraphQL(type: LegacySourceType): any {
+    return type;
   }
 
-  private transformSourceTypeFromGraphQL(type: SourceType): LegacySourceType {
-    const typeMap: Record<SourceType, LegacySourceType> = {
-      [SourceType.WeiboHtml]: LegacySourceType.WEIBO_HTML,
-      [SourceType.WeiboApiJson]: LegacySourceType.WEIBO_API_JSON,
-      [SourceType.WeiboComment]: LegacySourceType.WEIBO_COMMENT,
-      [SourceType.WeiboComments]: LegacySourceType.WEIBO_COMMENTS,
-      [SourceType.WeiboCreatorProfile]: LegacySourceType.WEIBO_CREATOR_PROFILE,
-      [SourceType.WeiboNoteDetail]: LegacySourceType.WEIBO_NOTE_DETAIL,
-      [SourceType.WeiboKeywordSearch]: LegacySourceType.WEIBO_KEYWORD_SEARCH,
-      [SourceType.Jd]: LegacySourceType.JD,
-      [SourceType.Custom]: LegacySourceType.CUSTOM
-    };
-    return typeMap[type] || LegacySourceType.CUSTOM;
+  private transformSourceTypeFromGraphQL(type: any): LegacySourceType {
+    return type || LegacySourceType.CUSTOM;
   }
 
   private transformSourcePlatformToGraphQL(platform: LegacySourcePlatform): any {
-    // Note: GraphQL schema might have different platform enum
-    // This would need to be adjusted based on actual GraphQL schema
     return platform;
   }
 
-  private inferSourcePlatformFromType(sourceType: SourceType): LegacySourcePlatform {
-    if (sourceType === SourceType.WeiboHtml ||
-        sourceType === SourceType.WeiboApiJson ||
-        sourceType === SourceType.WeiboComment) {
-      return LegacySourcePlatform.WEIBO;
-    }
-
-    if (sourceType === SourceType.Jd) {
-      return LegacySourcePlatform.JD;
-    }
-
+  private inferSourcePlatformFromType(sourceType: any): LegacySourcePlatform {
     return LegacySourcePlatform.CUSTOM;
   }
 }

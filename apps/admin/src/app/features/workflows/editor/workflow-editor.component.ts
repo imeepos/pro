@@ -49,9 +49,6 @@ export class WorkflowEditorComponent implements OnInit {
   });
   readonly isDirty = toSignal(this.query.isDirty$, { initialValue: false });
   readonly isSaving = toSignal(this.query.isSaving$, { initialValue: false });
-  readonly revision = toSignal(this.query.select('revision'), {
-    initialValue: null,
-  });
   readonly isLoading = toSignal(this.query.loading$, { initialValue: false });
   readonly loadError = toSignal(this.query.error$, { initialValue: null });
   readonly lastPersistedAt = toSignal(
@@ -63,17 +60,13 @@ export class WorkflowEditorComponent implements OnInit {
     if (this.isLoading()) {
       return '正在加载工作流…';
     }
-    const revision = this.revision();
     const lastPersistedAt = this.lastPersistedAt();
-    if (!revision) {
-      return '尚未保存版本';
-    }
     if (!lastPersistedAt) {
-      return `版本 ${revision} 已创建`;
+      return '尚未保存';
     }
 
     const date = new Date(lastPersistedAt);
-    return `版本 ${revision} 保存于 ${date.toLocaleString()}`;
+    return `保存于 ${date.toLocaleString()}`;
   });
 
   ngOnInit(): void {

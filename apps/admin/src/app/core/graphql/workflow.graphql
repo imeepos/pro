@@ -4,7 +4,6 @@ query Workflows($filter: WorkflowFilterInput) {
     name
     slug
     description
-    revision
     tags
     createdAt
     updatedAt
@@ -19,7 +18,6 @@ query Workflow($id: ID!) {
     name
     slug
     description
-    revision
     tags
     definition {
       version
@@ -58,7 +56,6 @@ mutation SaveWorkflow($input: SaveWorkflowInput!) {
     name
     slug
     description
-    revision
     tags
     definition {
       version
@@ -95,7 +92,6 @@ mutation TriggerWorkflow($input: TriggerWorkflowInput!) {
   triggerWorkflow(input: $input) {
     id
     workflowId
-    revision
     status
     startedAt
     finishedAt

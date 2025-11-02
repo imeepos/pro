@@ -19,11 +19,9 @@ import { ConfigModule } from './config/config.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { BugModule } from './bug/bug.module';
-import { RawDataModule } from './raw-data/raw-data.module';
 import { DatabaseModule } from './database/database.module';
 import { LoadersModule } from './loaders.module';
 import { DlqModule } from './dlq/dlq.module';
-import { RabbitMQService as BaseRabbitMQService } from '@pro/rabbitmq';
 import { RabbitMQModule } from './rabbitmq/rabbitmq.module';
 import { TasksModule } from './tasks/tasks.module';
 import { createDatabaseConfig } from '@pro/entities';
@@ -189,7 +187,6 @@ import { WorkflowModule } from './workflow/workflow.module';
     DashboardModule,
     NotificationsModule,
     BugModule,
-    RawDataModule,
     WorkflowModule,
     DlqModule,
     TasksModule,

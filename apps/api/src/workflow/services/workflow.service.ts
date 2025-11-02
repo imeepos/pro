@@ -1,23 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { LessThan } from 'typeorm';
-import { WorkflowExecutionStatus } from '@pro/types';
 import { WorkflowEntity, WorkflowExecutionEntity, useEntityManager } from '@pro/entities';
 import { SaveWorkflowInput } from '../dto/save-workflow.input';
 import { WorkflowFilterInput } from '../dto/workflow-filter.input';
 import { TriggerWorkflowInput } from '../dto/trigger-workflow.input';
 import { WorkflowModel, WorkflowExecutionModel, WorkflowExecutionConnectionModel } from '../models';
-import { PageInfoModel } from '../../common/models/pagination.model';
-
-interface WorkflowExecutionConnection {
-  edges: Array<{ cursor: string; node: WorkflowExecutionEntity }>;
-  pageInfo: {
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    startCursor: string | null;
-    endCursor: string | null;
-  };
-  totalCount: number;
-}
 
 @Injectable()
 export class WorkflowService {

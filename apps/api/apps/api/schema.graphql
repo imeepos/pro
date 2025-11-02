@@ -1007,29 +1007,6 @@ type PageInfo {
   startCursor: String
 }
 
-type PaginatedRawData {
-  """是否有下一页"""
-  hasNext: Boolean!
-
-  """是否有上一页"""
-  hasPrevious: Boolean!
-
-  """数据列表"""
-  items: [RawDataItem!]!
-
-  """当前页码"""
-  page: Int!
-
-  """每页数量"""
-  pageSize: Int!
-
-  """总数量"""
-  total: Int!
-
-  """总页数"""
-  totalPages: Int!
-}
-
 input PaginationInput {
   limit: Int = 20
   page: Int = 1
@@ -1054,14 +1031,6 @@ type PostStats {
   totalLikes: Int!
   totalPosts: Int!
   totalReposts: Int!
-}
-
-"""原始数据处理状态"""
-enum ProcessingStatus {
-  COMPLETED
-  FAILED
-  PENDING
-  PROCESSING
 }
 
 type Query {
@@ -1105,43 +1074,8 @@ type Query {
   mediaTypes(filter: MediaTypeFilterInput): MediaTypeConnection!
   popularTags(limit: Int): [Tag!]!
   publishedScreens(limit: Int, page: Int): ScreenConnection!
-
-  """根据ID获取单个原始数据"""
-  rawDataById(
-    """数据ID"""
-    id: String!
-  ): RawDataItem
-
-  """根据数据源类型查询原始数据"""
-  rawDataBySourceType(
-    page: Int = 1
-    pageSize: Int = 20
-
-    """数据源类型"""
-    sourceType: SourceType!
-  ): PaginatedRawData!
-
-  """获取原始数据列表，支持分页和过滤"""
-  rawDataList(filter: RawDataFilterInput): PaginatedRawData!
-
-  """获取原始数据的统计信息"""
-  rawDataStatistics: RawDataStatistics!
-
-  """获取原始数据的趋势分析数据"""
-  rawDataTrend(input: TrendDataInput): [TrendDataPoint!]!
-
-  """获取最近的原始数据"""
-  recentRawData(limit: Int = 10, sourceType: SourceType): [RawDataItem!]!
   screen(id: ID!): Screen!
   screens(limit: Int, page: Int): ScreenConnection!
-
-  """搜索原始数据"""
-  searchRawData(
-    """搜索关键词"""
-    keyword: String!
-    page: Int = 1
-    pageSize: Int = 20
-  ): PaginatedRawData!
   tag(id: ID!): Tag!
   tags(keyword: String, page: Int, pageSize: Int): TagConnection!
   user(id: String!): User!
@@ -1175,81 +1109,6 @@ type Query {
   workflow(id: ID!): Workflow
   workflowExecutions(cursor: String, limit: Int, workflowId: ID!): WorkflowExecutionConnection!
   workflows(filter: WorkflowFilterInput): [Workflow!]!
-}
-
-input RawDataFilterInput {
-  """关键词搜索"""
-  keyword: String
-
-  """页码"""
-  page: Int = 1
-
-  """每页数量"""
-  pageSize: Int = 20
-
-  """数据源平台"""
-  sourcePlatform: SourcePlatform
-
-  """数据源类型"""
-  sourceType: SourceType
-
-  """处理状态"""
-  status: ProcessingStatus
-
-  """时间范围"""
-  timeRange: TimeRangeInput
-}
-
-type RawDataItem {
-  """数据ID"""
-  _id: ID!
-
-  """内容哈希"""
-  contentHash: String!
-
-  """内容摘要"""
-  contentPreview: String!
-
-  """创建时间"""
-  createdAt: String!
-
-  """错误信息"""
-  errorMessage: String
-
-  """元数据"""
-  metadata: String!
-
-  """处理时间"""
-  processedAt: String
-
-  """数据源类型"""
-  sourceType: SourceType!
-
-  """源链接"""
-  sourceUrl: String!
-
-  """处理状态"""
-  status: ProcessingStatus!
-}
-
-type RawDataStatistics {
-  """已完成数据量"""
-  completed: Int!
-
-  """失败数据量"""
-  failed: Int!
-
-  """待处理数据量"""
-  pending: Int!
-
-  """处理中数据量"""
-  processing: Int!
-
-  """成功率"""
-  successRate: Float!
-
-  """总数据量"""
-  total: Int!
 }
 
 input RefreshTokenDto {
@@ -1433,26 +1292,6 @@ enum SortOrder {
   DESC
 }
 
-"""数据源平台"""
-enum SourcePlatform {
-  CUSTOM
-  JD
-  WEIBO
-}
-
-"""数据源类型"""
-enum SourceType {
-  CUSTOM
-  JD
-  WEIBO_API_JSON
-  WEIBO_COMMENT
-  WEIBO_COMMENTS
-  WEIBO_CREATOR_PROFILE
-  WEIBO_HTML
-  WEIBO_KEYWORD_SEARCH
-  WEIBO_NOTE_DETAIL
-}
-
 input StatsAggregationQueryDto {
   endDate: DateTime!
   interval: String!
@@ -1499,39 +1338,8 @@ type TaskResult {
   taskId: String
 }
 
-input TimeRangeInput {
-  """结束时间"""
-  endDate: String
-
-  """开始时间"""
-  startDate: String
-}
-
-input TrendDataInput {
-  """聚合粒度"""
-  granularity: String = "day"
-
-  """状态过滤"""
-  status: ProcessingStatus
-
-  """时间范围"""
-  timeRange: TimeRangeInput
-}
-
-type TrendDataPoint {
-  """数据量"""
-  count: Int!
-
-  """状态"""
-  status: ProcessingStatus!
-
-  """时间点"""
-  timestamp: String!
-}
-
 input TriggerWorkflowInput {
   context: JSON
-  revision: Int
   workflowId: ID!
 }
 
@@ -1938,7 +1746,6 @@ type Workflow {
   description: String
   id: ID!
   name: String!
-  revision: Int!
   slug: String!
   tags: [String!]!
   updatedAt: DateTime!
@@ -1993,7 +1800,6 @@ type WorkflowExecution {
   id: ID!
   logsPointer: String
   metrics: WorkflowExecutionMetrics
-  revision: Int!
   startedAt: DateTime!
   status: String!
   triggeredBy: String!

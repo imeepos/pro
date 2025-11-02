@@ -51,6 +51,7 @@ export class RabbitMQService implements OnDestroy {
     }
 
     await this.connectionPool.connect();
+    console.log(`[RabbitMQService] connectionPool connect`)
     this.isInitialized = true;
   }
 

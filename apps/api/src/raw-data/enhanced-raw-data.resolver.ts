@@ -19,6 +19,7 @@ import {
   EnhancedProcessingStatus
 } from './dto/enhanced-raw-data.dto';
 import { EnhancedRawDataService } from './enhanced-raw-data.service';
+import { root } from '@pro/core';
 
 /**
  * 增强的原始数据 GraphQL 解析器
@@ -28,8 +29,10 @@ import { EnhancedRawDataService } from './enhanced-raw-data.service';
 @UseGuards(JwtAuthGuard)
 export class EnhancedRawDataResolver {
   private readonly logger = new Logger(EnhancedRawDataResolver.name);
-
-  constructor(private readonly enhancedRawDataService: EnhancedRawDataService) {}
+  private readonly enhancedRawDataService: EnhancedRawDataService
+  constructor() {
+    this.enhancedRawDataService = root.get(EnhancedRawDataService)
+  }
 
   /**
    * 增强的原始数据列表查询

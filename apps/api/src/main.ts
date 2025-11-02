@@ -7,11 +7,16 @@ import { GraphqlExceptionFilter } from './common/filters/graphql-exception.filte
 import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { root } from '@pro/core';
-import { registerMqQueues } from '@pro/rabbitmq';
-
+import { RabbitMQService, registerMqQueues } from '@pro/rabbitmq';
+import { MongodbModule } from '@pro/mongodb';
+import {} from '@pro/core'
 async function bootstrap() {
-  await root.init();
 
+  console.log({
+    RabbitMQService,
+    MongodbModule
+  })
+  await root.init();
   // 注册消息队列配置
   registerMqQueues();
 

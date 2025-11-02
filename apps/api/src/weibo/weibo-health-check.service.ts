@@ -7,6 +7,7 @@ import {
 } from '@pro/weibo';
 import { PubSubService } from '../common/pubsub/pubsub.service';
 import { SUBSCRIPTION_EVENTS } from '../screens/constants/subscription-events';
+import { root } from '@pro/core';
 
 /**
  * 账号检查结果接口
@@ -42,11 +43,12 @@ export interface CheckSummary {
 @Injectable()
 export class WeiboHealthCheckService {
   private readonly logger = new Logger(WeiboHealthCheckService.name);
-
+  private readonly weiboHealthInspector: WeiboCoreHealthCheckService;
   constructor(
     private readonly pubSub: PubSubService,
-    private readonly weiboHealthInspector: WeiboCoreHealthCheckService,
-  ) {}
+  ) {
+    this.weiboHealthInspector = root.get(WeiboCoreHealthCheckService)
+  }
 
   /**
    * 检查单个微博账号的健康状态
@@ -84,7 +86,7 @@ export class WeiboHealthCheckService {
 
         this.logger.log(
           `账号 ${accountId} 检查完成: ${oldStatus} -> ${transition.persistedStatus}` +
-            `${transition.statusChanged ? ' (状态已变更)' : ''}`,
+          `${transition.statusChanged ? ' (状态已变更)' : ''}`,
         );
 
         return {
