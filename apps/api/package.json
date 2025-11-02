@@ -63,6 +63,8 @@
     "@pro/types": "workspace:*",
     "@pro/utils": "workspace:*",
     "@pro/weibo": "workspace:*",
+    "@pro/workflow-core": "workspace:*",
+    "@pro/workflow-nestjs": "workspace:*",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "cache-manager": "^7.2.4",

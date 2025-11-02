@@ -53,10 +53,15 @@ function createEdgeId(sourceId: string, targetId: string): string {
   return `${sourceId}->${targetId}`;
 }
 
-export function convertWorkflowToAdminFormat(workflow: WorkflowGraphAst): {
+export interface AdminWorkflowFormat {
+  name: string;
   nodes: WorkflowNodeDraft[];
   edges: WorkflowEdgeDraft[];
-} {
+}
+
+export function convertWorkflowToAdminFormat(
+  workflow: WorkflowGraphAst,
+): AdminWorkflowFormat {
   const nodes: WorkflowNodeDraft[] = workflow.nodes.map((node, index) => ({
     id: node.id,
     key: node.type,
@@ -86,5 +91,9 @@ export function convertWorkflowToAdminFormat(workflow: WorkflowGraphAst): {
     };
   });
 
-  return { nodes, edges };
+  return {
+    name: workflow.name || 'Untitled Workflow',
+    nodes,
+    edges,
+  };
 }

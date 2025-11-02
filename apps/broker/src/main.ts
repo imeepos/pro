@@ -7,7 +7,6 @@ import { AggregateSchedulerService } from './services/aggregate-scheduler.servic
 import { SimpleTaskMonitor } from './weibo/simple-task-monitor.service';
 import { WeiboAccountHealthScheduler } from './weibo/account-health-scheduler.service';
 import { DlqConsumer } from './consumers/dlq.consumer';
-import { AccountInitService } from './services/account-init.service';
 import { root } from '@pro/core';
 import { registerMqQueues } from '@pro/rabbitmq';
 import { WeiboAccountInitService } from '@pro/workflow-nestjs';

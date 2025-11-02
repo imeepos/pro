@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 import { PinoLogger } from '@pro/logger-nestjs';
 import { LessThan } from 'typeorm';
 

@@ -56,6 +56,42 @@ export const WORKFLOW_NODE_BLUEPRINTS: readonly WorkflowNodeBlueprint[] = [
     accentColor: '#ea580c',
   },
   {
+    kind: 'WEIBO_AJAX_STATUSES_SHOW',
+    title: '微博原文',
+    subtitle: '获取详情主体',
+    accentColor: '#9333ea',
+  },
+  {
+    kind: 'WEIBO_AJAX_STATUSES_REPOST_TIMELINE',
+    title: '转发时间线',
+    subtitle: '读取扩散链路',
+    accentColor: '#f59e0b',
+  },
+  {
+    kind: 'WEIBO_AJAX_STATUSES_MYMBLOG',
+    title: '用户微博流',
+    subtitle: '拉取时间轴',
+    accentColor: '#ec4899',
+  },
+  {
+    kind: 'WEIBO_AJAX_STATUSES_LIKE_SHOW',
+    title: '点赞用户录',
+    subtitle: '挖掘互动圈层',
+    accentColor: '#10b981',
+  },
+  {
+    kind: 'WEIBO_AJAX_STATUSES_COMMENT',
+    title: '评论互动',
+    subtitle: '捕获对话流',
+    accentColor: '#06b6d4',
+  },
+  {
+    kind: 'WEIBO_AJAX_PROFILE_INFO',
+    title: '身份档案',
+    subtitle: '解析用户元信息',
+    accentColor: '#8b5cf6',
+  },
+  {
     kind: 'MQ_PUBLISH',
     title: '事件广播',
     subtitle: '投递消息到队列',
