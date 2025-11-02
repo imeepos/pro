@@ -16,6 +16,8 @@ export interface MqQueueConfig {
         expires?: number; // x-expires (毫秒)
         maxLength?: number; // x-max-length
         maxPriority?: number; // x-max-priority
+        deadLetterExchange?: string; // x-dead-letter-exchange
+        deadLetterRoutingKey?: string; // x-dead-letter-routing-key
         [key: string]: any;
     };
 }
@@ -66,6 +68,7 @@ export function registerMqQueues() {
                 queueOptions: {
                     durable: true,
                     messageTtl: 1800000, // 30分钟 TTL
+                    deadLetterExchange: 'weibo_task_status_queue.dlx', // 死信交换机
                 },
             },
             multi: true,

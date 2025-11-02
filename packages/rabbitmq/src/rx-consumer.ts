@@ -97,13 +97,30 @@ export function createRxConsumer<T>(
                 channel = connectionPool.getChannel();
 
                 // 确保队列存在 - 使用配置的队列选项
-                const assertOptions = queueOptions || { durable: true };
-                // 转换自定义字段名为 RabbitMQ 参数名
-                if (assertOptions.messageTtl !== undefined) {
+                const assertOptions = queueOptions ? { ...queueOptions } : { durable: true };
+
+                // 转换自定义字段名为 RabbitMQ 标准参数名
+                if (assertOptions.messageTtl !== undefined ||
+                    assertOptions.deadLetterExchange !== undefined ||
+                    assertOptions.deadLetterRoutingKey !== undefined) {
                     assertOptions.arguments = assertOptions.arguments || {};
-                    assertOptions.arguments['x-message-ttl'] = assertOptions.messageTtl;
-                    delete assertOptions.messageTtl;
+
+                    if (assertOptions.messageTtl !== undefined) {
+                        assertOptions.arguments['x-message-ttl'] = assertOptions.messageTtl;
+                        delete assertOptions.messageTtl;
+                    }
+
+                    if (assertOptions.deadLetterExchange !== undefined) {
+                        assertOptions.arguments['x-dead-letter-exchange'] = assertOptions.deadLetterExchange;
+                        delete assertOptions.deadLetterExchange;
+                    }
+
+                    if (assertOptions.deadLetterRoutingKey !== undefined) {
+                        assertOptions.arguments['x-dead-letter-routing-key'] = assertOptions.deadLetterRoutingKey;
+                        delete assertOptions.deadLetterRoutingKey;
+                    }
                 }
+
                 await channel.assertQueue(queueName, assertOptions);
 
                 // 设置预取数量
