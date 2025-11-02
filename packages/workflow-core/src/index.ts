@@ -12,5 +12,6 @@ export { DataFlowManager } from './execution/data-flow-manager'
 export { StateMerger } from './execution/state-merger'
 export { PropertyAnalyzer } from './execution/property-analyzer'
 export { NoRetryError } from './errors'
+export { convertWorkflowToAdminFormat, WorkflowNodeDraft, WorkflowEdgeDraft } from './converters/to-admin-format'
 export function useHandlers(_handlers: Type<any>[] | Type<any>) { }
 export * from './weibo';
