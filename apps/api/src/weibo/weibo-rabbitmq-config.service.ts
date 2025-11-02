@@ -1,100 +1,44 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { RabbitMQClient, RabbitMQConfig } from '@pro/rabbitmq';
-import { root } from '@pro/core';
-import {
-  TaskStatusConsumerConfig,
-  WeiboTaskStatusMessage
-} from './interfaces/weibo-task-status.interface';
+import { Injectable, Logger } from '@nestjs/common';
+import { useQueue } from '@pro/rabbitmq';
+import type { WeiboTaskStatusMessage } from './interfaces/weibo-task-status.interface';
 
 /**
- * 微博任务状态队列配置服务
- * 负责管理微博任务状态更新的RabbitMQ连接和配置
+ * 微博任务状态消息验证服务
+ *
+ * 存在即合理：
+ * - 验证消息格式的完整性和有效性
+ * - 转换消息中的日期字段
+ * - 提供队列管理器访问接口
+ *
+ * 优雅即简约：
+ * - 无需手动管理连接生命周期（由 useQueue 处理）
+ * - 专注于消息验证逻辑，无冗余代码
  */
 @Injectable()
-export class WeiboRabbitMQConfigService implements OnModuleInit, OnModuleDestroy {
-  private readonly rabbitMQClient: RabbitMQClient;
+export class WeiboRabbitMQConfigService {
   private readonly logger = new Logger(WeiboRabbitMQConfigService.name);
-  private readonly configService: ConfigService;
-
-  constructor() {
-    this.configService = root.get(ConfigService);
-
-    const rabbitMQConfig: RabbitMQConfig = {
-      url: this.configService.get<string>('RABBITMQ_URL', 'amqp://localhost:5672'),
-      queue: 'weibo_task_status_queue',
-      maxRetries: 3,
-      enableDLQ: true,
-    };
-
-    this.rabbitMQClient = new RabbitMQClient(rabbitMQConfig);
-    this.logger.log('RabbitMQ配置服务初始化完成');
-  }
+  private readonly queueManager = useQueue<WeiboTaskStatusMessage>('weibo_task_status_queue');
 
   /**
-   * 模块初始化时建立RabbitMQ连接
+   * 获取队列管理器
    */
-  async onModuleInit(): Promise<void> {
-    try {
-      await this.rabbitMQClient.connect();
-      this.logger.log('RabbitMQ连接建立成功');
-    } catch (error) {
-      this.logger.error('RabbitMQ连接失败', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 模块销毁时关闭RabbitMQ连接
-   */
-  async onModuleDestroy(): Promise<void> {
-    try {
-      await this.rabbitMQClient.close();
-      this.logger.log('RabbitMQ连接已关闭');
-    } catch (error) {
-      this.logger.error('关闭RabbitMQ连接失败', error);
-    }
-  }
-
-  /**
-   * 获取消费者配置
-   */
-  getConsumerConfig(): TaskStatusConsumerConfig {
-    return {
-      queueName: 'weibo_task_status_queue',
-      consumerTag: `weibo-task-status-consumer-${Date.now()}`,
-      prefetchCount: 5, // 并发处理5条消息
-      retryConfig: {
-        maxRetries: 3,
-        retryDelayBase: 5000,
-      },
-    };
-  }
-
-  /**
-   * 获取RabbitMQ客户端实例
-   */
-  getRabbitMQClient(): RabbitMQClient {
-    return this.rabbitMQClient;
+  getQueueManager() {
+    return this.queueManager;
   }
 
   /**
    * 验证消息格式
    */
   validateStatusMessage(message: any): message is WeiboTaskStatusMessage {
-    if (!message || typeof message !== 'object') {
-      return false;
-    }
+    if (!message || typeof message !== 'object') return false;
 
     const requiredFields = ['taskId', 'status', 'updatedAt'];
-    const validStatuses = ['running', 'completed', 'failed', 'timeout'];
+    const validStatuses = new Set(['running', 'completed', 'failed', 'timeout']);
 
     // 检查必需字段
-    for (const field of requiredFields) {
-      if (!(field in message)) {
-        this.logger.warn(`消息缺少必需字段: ${field}`, { message });
-        return false;
-      }
+    if (!requiredFields.every(field => field in message)) {
+      this.logger.warn('消息缺少必需字段', { message });
+      return false;
     }
 
     // 验证任务ID
@@ -104,14 +48,13 @@ export class WeiboRabbitMQConfigService implements OnModuleInit, OnModuleDestroy
     }
 
     // 验证状态值
-    if (!validStatuses.includes(message.status)) {
+    if (!validStatuses.has(message.status)) {
       this.logger.warn('无效的任务状态', { status: message.status });
       return false;
     }
 
     // 验证更新时间
-    const updatedAt = new Date(message.updatedAt);
-    if (isNaN(updatedAt.getTime())) {
+    if (isNaN(new Date(message.updatedAt).getTime())) {
       this.logger.warn('无效的更新时间', { updatedAt: message.updatedAt });
       return false;
     }
@@ -124,23 +67,16 @@ export class WeiboRabbitMQConfigService implements OnModuleInit, OnModuleDestroy
    */
   parseStatusMessage(rawMessage: any): WeiboTaskStatusMessage | null {
     try {
-      // 处理消息中的日期字段
       const message = { ...rawMessage };
 
       // 转换日期字段
-      const dateFields = ['currentCrawlTime', 'latestCrawlTime', 'nextRunAt', 'updatedAt'];
-      for (const field of dateFields) {
-        if (message[field]) {
-          message[field] = new Date(message[field]);
-        }
-      }
+      ['currentCrawlTime', 'latestCrawlTime', 'nextRunAt', 'updatedAt'].forEach(field => {
+        if (message[field]) message[field] = new Date(message[field]);
+      });
 
-      // 验证消息格式
-      if (!this.validateStatusMessage(message)) {
-        return null;
-      }
+      if (!this.validateStatusMessage(message)) return null;
 
-      this.logger.debug(`解析状态消息成功`, {
+      this.logger.debug('解析状态消息成功', {
         taskId: message.taskId,
         status: message.status,
         progress: message.progress,

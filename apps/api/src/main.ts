@@ -7,8 +7,14 @@ import { GraphqlExceptionFilter } from './common/filters/graphql-exception.filte
 import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { root } from '@pro/core';
+import { registerMqQueues } from '@pro/rabbitmq';
 
 async function bootstrap() {
+  await root.init();
+
+  // 注册消息队列配置
+  registerMqQueues();
+
   const app = await NestFactory.create(AppModule);
 
   // 将 NestJS 提供的服务桥接到 @pro/core 的 root injector

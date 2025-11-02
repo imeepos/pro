@@ -46,5 +46,10 @@ export function registerMqQueues() {
             useValue: { queue: 'user_info_crawl', dlq: 'user_info_crawl_dlq' },
             multi: true,
         },
+        {
+            provide: MQ_QUEUE_CONFIG,
+            useValue: { queue: 'weibo_task_status_queue', dlq: 'weibo_task_status_queue_dlq' },
+            multi: true,
+        },
     ]);
 }
