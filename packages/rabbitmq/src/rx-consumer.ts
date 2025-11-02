@@ -11,18 +11,31 @@ import { ConnectionState } from './types.js';
  */
 async function waitForConnection(
     connectionPool: ConnectionPool,
-    timeout: number = 30000,
+    timeout: number = 120000,
 ): Promise<void> {
     const startTime = Date.now();
+    let lastLogTime = 0;
 
     while (!connectionPool.isConnected()) {
         const elapsed = Date.now() - startTime;
+
+        // 超时检查
         if (elapsed > timeout) {
+            const state = connectionPool.getState();
+            const hasChannel = !!connectionPool.getChannel();
+
             throw new Error(
-                `RabbitMQ 连接超时 (${timeout}ms), 当前状态: ${connectionPool.getState()}`
+                `RabbitMQ 连接超时 (${timeout}ms)。\n` +
+                `状态: ${state}, Channel: ${hasChannel ? '已创建' : '未创建'}。\n` +
+                `请检查：\n` +
+                `1) RabbitMQ 服务是否正常运行\n` +
+                `2) 网络连接是否正常\n` +
+                `3) RABBITMQ_URL 环境变量是否正确配置\n` +
+                `4) RabbitMQ 服务器负载是否过高`
             );
         }
 
+        // 状态检查
         const state = connectionPool.getState();
         if (state === ConnectionState.ERROR || state === ConnectionState.CLOSED) {
             throw new Error(
@@ -30,9 +43,20 @@ async function waitForConnection(
             );
         }
 
+        // 进度日志（每 5 秒输出一次）
+        if (elapsed - lastLogTime >= 5000) {
+            console.log(
+                `[RxConsumer] 等待 RabbitMQ 连接建立... ` +
+                `已等待 ${Math.floor(elapsed / 1000)}s, 当前状态: ${state}`
+            );
+            lastLogTime = elapsed;
+        }
+
         // 等待 100ms 后重试
         await new Promise(resolve => setTimeout(resolve, 100));
     }
+
+    console.log(`[RxConsumer] RabbitMQ 连接已建立`);
 }
 
 /**
