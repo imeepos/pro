@@ -52,6 +52,16 @@ export function registerMqQueues() {
         },
         {
             provide: MQ_QUEUE_CONFIG,
+            useValue: { queue: 'weibo_crawl_queue', dlq: 'weibo_crawl_queue_dlq' },
+            multi: true,
+        },
+        {
+            provide: MQ_QUEUE_CONFIG,
+            useValue: { queue: 'aggregate_task_queue', dlq: 'aggregate_task_queue_dlq' },
+            multi: true,
+        },
+        {
+            provide: MQ_QUEUE_CONFIG,
             useValue: { queue: 'post_detail_crawl', dlq: 'post_detail_crawl_dlq' },
             multi: true,
         },
