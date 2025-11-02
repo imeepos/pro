@@ -6,6 +6,18 @@ import { InjectionToken, root, NoRetryError } from "@pro/core";
 export interface MqQueueConfig {
     queue: string;
     dlq: string; // Dead Letter Queue
+    /**
+     * 队列选项（用于 assertQueue）
+     * @see https://www.rabbitmq.com/queues.html
+     */
+    queueOptions?: {
+        durable?: boolean;
+        messageTtl?: number; // x-message-ttl (毫秒)
+        expires?: number; // x-expires (毫秒)
+        maxLength?: number; // x-max-length
+        maxPriority?: number; // x-max-priority
+        [key: string]: any;
+    };
 }
 
 export const MQ_QUEUE_CONFIG = new InjectionToken<MqQueueConfig[]>(`MQ_QUEUE_CONFIG`)
@@ -48,7 +60,14 @@ export function registerMqQueues() {
         },
         {
             provide: MQ_QUEUE_CONFIG,
-            useValue: { queue: 'weibo_task_status_queue', dlq: 'weibo_task_status_queue_dlq' },
+            useValue: {
+                queue: 'weibo_task_status_queue',
+                dlq: 'weibo_task_status_queue_dlq',
+                queueOptions: {
+                    durable: true,
+                    messageTtl: 1800000, // 30分钟 TTL
+                },
+            },
             multi: true,
         },
     ]);

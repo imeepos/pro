@@ -61,8 +61,13 @@ export function useQueue<T = any>(
     // 创建生产者
     const producer = new RxQueueProducer<T>(mqService, config.queue as any);
 
-    // 创建消费者 Observable
-    const consumer$ = createRxConsumer<T>(connectionPool, config.queue as any, options);
+    // 创建消费者 Observable，传递队列选项
+    const consumer$ = createRxConsumer<T>(
+        connectionPool,
+        config.queue as any,
+        options,
+        config.queueOptions
+    );
 
     return {
         producer,

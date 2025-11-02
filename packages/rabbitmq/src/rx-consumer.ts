@@ -81,6 +81,7 @@ export function createRxConsumer<T>(
     connectionPool: ConnectionPool,
     queueName: QueueName,
     options?: RxConsumerOptions,
+    queueOptions?: any,
 ): Observable<MessageEnvelope<T>> {
     return new Observable(subscriber => {
         const manualAck = options?.manualAck ?? false;
@@ -95,8 +96,15 @@ export function createRxConsumer<T>(
 
                 channel = connectionPool.getChannel();
 
-                // 确保队列存在
-                await channel.assertQueue(queueName, { durable: true });
+                // 确保队列存在 - 使用配置的队列选项
+                const assertOptions = queueOptions || { durable: true };
+                // 转换自定义字段名为 RabbitMQ 参数名
+                if (assertOptions.messageTtl !== undefined) {
+                    assertOptions.arguments = assertOptions.arguments || {};
+                    assertOptions.arguments['x-message-ttl'] = assertOptions.messageTtl;
+                    delete assertOptions.messageTtl;
+                }
+                await channel.assertQueue(queueName, assertOptions);
 
                 // 设置预取数量
                 await channel.prefetch(options?.prefetchCount ?? 1);
