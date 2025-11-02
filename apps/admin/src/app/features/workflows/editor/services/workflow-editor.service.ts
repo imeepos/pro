@@ -1,5 +1,7 @@
 import { inject, Injectable } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { GraphqlGateway } from '../../../../core/graphql/graphql-gateway.service';
+import { HttpClientService } from '../../../../core/services/http-client.service';
 import {
   SaveWorkflowDocument,
   type SaveWorkflowMutation,
@@ -21,11 +23,18 @@ import { WorkflowDirectoryService } from '../../data/workflow-directory.service'
 
 type WorkflowModel = NonNullable<WorkflowQuery['workflow']>;
 
+interface WorkflowTemplate {
+  name: string;
+  nodes: WorkflowNodeDraft[];
+  edges: WorkflowEdgeDraft[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class WorkflowEditorService {
   private readonly gateway = inject(GraphqlGateway);
   private readonly store = inject(WorkflowStore);
   private readonly directory = inject(WorkflowDirectoryService);
+  private readonly http = inject(HttpClientService);
 
   private currentWorkflowId: string | 'new' | null = null;
 
@@ -68,6 +77,36 @@ export class WorkflowEditorService {
   async reload(): Promise<void> {
     const target = this.currentWorkflowId ?? 'new';
     await this.initialize(target === 'new' ? null : target);
+  }
+
+  async loadTemplate(templateName: 'weibo-detail'): Promise<void> {
+    this.store.update({
+      loading: true,
+      error: null,
+    });
+
+    try {
+      const template = await firstValueFrom(
+        this.http.get<WorkflowTemplate>(`/workflows/templates/${templateName}`)
+      );
+
+      this.store.update(state => ({
+        ...state,
+        name: template.name,
+        nodes: template.nodes,
+        edges: template.edges,
+        dirty: true,
+        loading: false,
+        error: null,
+      }));
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '加载模板失败';
+      this.store.update({
+        loading: false,
+        error: reason,
+      });
+      throw error;
+    }
   }
 
   updateMetadata(metadata: {

@@ -110,7 +110,7 @@ export class WorkflowEditorComponent implements OnInit {
   }
 
   handleImport(): void {
-    // 后续接入文件导入或粘贴定义
+    void this.editorService.loadTemplate('weibo-detail');
   }
 
   handleExport(): void {
