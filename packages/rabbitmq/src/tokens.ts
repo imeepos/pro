@@ -69,6 +69,7 @@ export function registerMqQueues() {
                     durable: true,
                     messageTtl: 1800000, // 30分钟 TTL
                     deadLetterExchange: 'weibo_task_status_queue.dlx', // 死信交换机
+                    deadLetterRoutingKey: 'weibo_task_status_queue', // 死信路由键
                 },
             },
             multi: true,
