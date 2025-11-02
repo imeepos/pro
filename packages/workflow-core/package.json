@@ -31,6 +31,7 @@
     "license": "MIT",
     "dependencies": {
         "@pro/core": "workspace:*",
+        "@pro/rabbitmq": "workspace:*",
         "build": "^0.1.4"
     },
     "devDependencies": {
