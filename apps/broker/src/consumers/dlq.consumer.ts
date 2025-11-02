@@ -1,21 +1,34 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { root } from '@pro/core';
 import { RabbitMQService } from '@pro/rabbitmq';
 import { FailedTaskEntity, useEntityManager } from '@pro/entities';
+import { createContextLogger } from '../core/logger';
 
-@Injectable()
-export class DlqConsumer implements OnModuleInit {
-  private readonly logger = new Logger(DlqConsumer.name);
+/**
+ * 死信队列消费者 - 失败消息的守护者
+ *
+ * 使命：
+ * - 监听死信队列中的失败消息
+ * - 记录失败详情到数据库
+ * - 为后续人工介入提供数据基础
+ */
+export class DlqConsumer {
+  private readonly logger = createContextLogger('DlqConsumer');
   private readonly rabbitMQ: RabbitMQService;
 
   constructor() {
     this.rabbitMQ = root.get(RabbitMQService);
   }
 
-  async onModuleInit() {
-    this.logger.log('DLQ Consumer 初始化');
+  /**
+   * 启动消费者 - 开始监听死信队列
+   */
+  start(): void {
+    this.logger.info('DLQ Consumer 初始化');
   }
 
+  /**
+   * 处理失败消息 - 记录与存档
+   */
   async handleFailedMessage(message: any): Promise<void> {
     try {
       const originalQueue =
@@ -37,13 +50,15 @@ export class DlqConsumer implements OnModuleInit {
         });
       });
 
-      this.logger.warn('已记录失败消息', {
+      this.logger.warn({
+        message: '已记录失败消息',
         originalQueue,
         failureCount,
         error: errorMessage,
       });
     } catch (error) {
-      this.logger.error('处理失败消息时出错', {
+      this.logger.error({
+        message: '处理失败消息时出错',
         error: error instanceof Error ? error.message : String(error),
       });
     }

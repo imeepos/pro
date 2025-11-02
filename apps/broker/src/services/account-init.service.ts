@@ -1,27 +1,29 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { PinoLogger } from '@pro/logger-nestjs';
 import { root } from '@pro/core';
 import { WeiboAccountInitService } from '@pro/workflow-nestjs';
+import { createContextLogger } from '../core/logger';
 
-@Injectable()
-export class AccountInitService implements OnModuleInit {
+/**
+ * 账号初始化服务 - 微博账号健康度队列的启动者
+ *
+ * 使命：初始化微博账号健康度队列，为系统运行奠定基础
+ */
+export class AccountInitService {
+  private readonly logger = createContextLogger('AccountInitService');
   private readonly weiboAccountInitService: WeiboAccountInitService;
 
-  constructor(
-    private readonly logger: PinoLogger,
-  ) {
+  constructor() {
     this.weiboAccountInitService = root.get(WeiboAccountInitService);
-    this.logger.setContext(AccountInitService.name);
   }
 
-  async onModuleInit() {
+  async init(): Promise<void> {
     try {
       this.logger.info('开始初始化微博账号健康度队列');
       await this.weiboAccountInitService.onInit();
       this.logger.info('微博账号健康度队列初始化完成');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error('微博账号健康度队列初始化失败', { error: message });
+      this.logger.error({ message: '微博账号健康度队列初始化失败', error: message });
+      throw error;
     }
   }
 }

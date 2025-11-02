@@ -1,17 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { PinoLogger } from '@pro/logger-nestjs';
 import { LessThanOrEqual, IsNull } from 'typeorm';
-
 import {
   WeiboSearchTaskEntity,
   WeiboSubTaskEntity,
   useEntityManager,
   useTranslation
 } from '@pro/entities';
-
-import { RabbitMQConfigService } from '../rabbitmq/rabbitmq-config.service';
-import { SubTaskMessage } from './interfaces/sub-task-message.interface';
+import { useQueue } from '@pro/rabbitmq';
+import { Scheduler } from '../core/scheduler';
+import { createContextLogger } from '../core/logger';
+import { SubTaskMessage, WEIBO_CRAWL_QUEUE } from './interfaces/sub-task-message.interface';
 
 const formatDateTime = (date: Date): string => {
   const utc = new Date(date.toISOString());
@@ -21,7 +18,7 @@ const formatDateTime = (date: Date): string => {
 
 const parseIntervalToMs = (interval: string): number => {
   const match = interval.match(/^(\d+)([smhd])$/);
-  if (!match) return 60 * 60 * 1000; // 默认1小时
+  if (!match) return 60 * 60 * 1000;
 
   const value = Number(match[1]);
   const unit = match[2];
@@ -37,19 +34,27 @@ const parseIntervalToMs = (interval: string): number => {
   return step ? value * step : 60 * 60 * 1000;
 };
 
-@Injectable()
-export class SimpleIntervalScheduler {
-  constructor(
-    private readonly logger: PinoLogger,
-    private readonly rabbitMQService: RabbitMQConfigService,
-  ) {
-    this.logger.setContext(SimpleIntervalScheduler.name);
+/**
+ * 简易间隔调度器 - 微博搜索任务的编排者
+ *
+ * 设计哲学：
+ * - 摒弃 NestJS，使用纯函数式 hooks
+ * - 每分钟扫描待执行任务，优雅派发
+ * - 使用 useQueue 直接发送消息
+ *
+ * 使命：为微博搜索任务赋予准时执行的保障
+ */
+export class SimpleIntervalScheduler extends Scheduler {
+  private readonly logger = createContextLogger('SimpleIntervalScheduler');
+  private readonly queue = useQueue<SubTaskMessage>(WEIBO_CRAWL_QUEUE);
+
+  constructor() {
+    super(60 * 1000, 'SimpleIntervalScheduler'); // 每分钟执行一次
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
-  async scheduleTasks(): Promise<void> {
+  protected async execute(): Promise<void> {
     const now = new Date();
-    const utcNow = new Date(now.toISOString()); // 统一使用UTC时间
+    const utcNow = new Date(now.toISOString());
 
     this.logger.info(`调度器运行 - 当前时间: ${formatDateTime(utcNow)}`);
 
@@ -130,7 +135,8 @@ export class SimpleIntervalScheduler {
         enableAccountRotation: true,
       };
 
-      await this.rabbitMQService.publishSubTask(message);
+      // 使用 useQueue 直接发送消息
+      this.queue.producer.next(message);
 
       const nextRunTime = new Date(now.getTime() + parseIntervalToMs(task.crawlInterval));
 

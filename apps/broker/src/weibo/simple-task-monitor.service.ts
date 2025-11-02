@@ -1,35 +1,28 @@
-import { Injectable } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import { LessThan } from 'typeorm';
 import { useEntityManager, WeiboSearchTaskEntity } from '@pro/entities';
-import { PinoLogger } from '@pro/logger-nestjs';
+import { CronScheduler } from '../core/cron-scheduler';
+import { createContextLogger } from '../core/logger';
 
 /**
- * 简化的任务监控器 - 只做最基本的监控
+ * 简化的任务监控器 - 最基本的监控
  *
  * 核心职责：
  * - 监控长时间运行的任务
  * - 基本的状态清理
  * - 大部分异常处理交给RabbitMQ的死信队列
  */
-@Injectable()
-export class SimpleTaskMonitor {
-  constructor(
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(SimpleTaskMonitor.name);
+export class SimpleTaskMonitor extends CronScheduler {
+  private readonly logger = createContextLogger('SimpleTaskMonitor');
+
+  constructor() {
+    super('*/30 * * * *', 'SimpleTaskMonitor'); // 每30分钟执行一次
   }
 
-  /**
-   * 每30分钟检查一次任务状态 - 简化的监控频率
-   */
-  @Cron('*/30 * * * *') // 每30分钟执行一次
-  async monitorTasks(): Promise<void> {
+  protected async execute(): Promise<void> {
     const monitorStart = Date.now();
     this.logger.debug('[简化监控器] 开始检查任务状态');
 
     try {
-      // 只检查长时间运行的任务，其他异常交给队列处理
       await this.checkLongRunningTasks();
       const duration = Date.now() - monitorStart;
       this.logger.debug(`[简化监控器] 检查完成，耗时 ${duration}ms`);
@@ -42,9 +35,6 @@ export class SimpleTaskMonitor {
     }
   }
 
-  /**
-   * 检查长时间运行的任务（超过2小时）
-   */
   private async checkLongRunningTasks(): Promise<void> {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
@@ -62,9 +52,6 @@ export class SimpleTaskMonitor {
 
       for (const task of longRunningTasks) {
         this.logger.warn(`[简化监控器] 任务 ${task.id} [${task.keyword}] 已运行超过2小时`);
-
-        // 记录警告，但不主动干预，让队列的TTL机制处理
-        // 这样可以避免复杂的重试逻辑
       }
     }
   }

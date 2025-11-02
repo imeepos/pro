@@ -1,7 +1,4 @@
-import { Injectable } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { root } from '@pro/core';
-import { PinoLogger } from '@pro/logger-nestjs';
 import { RedisClient } from '@pro/redis';
 import { WeiboAccountEntity, useEntityManager } from '@pro/entities';
 import { WeiboAccountStatus } from '@pro/types';
@@ -9,30 +6,67 @@ import {
   WeiboHealthCheckService as WeiboCoreHealthCheckService,
   type WeiboAccountHealthResult,
 } from '@pro/weibo';
+import { CronScheduler } from '../core/cron-scheduler';
+import { createContextLogger } from '../core/logger';
 
 /**
- * 微博账号健康度调度器
- * 负责在 Redis 中维护账号的健康度画像
+ * 微博账号健康度调度器 - 账号健康的守护者
+ *
+ * 使命：在 Redis 中维护账号的健康度画像
  */
-@Injectable()
 export class WeiboAccountHealthScheduler {
+  private readonly logger = createContextLogger('WeiboAccountHealthScheduler');
   private readonly healthKey = 'weibo:account:health';
   private readonly metricsKeyPrefix = 'weibo:account';
   private readonly redis: RedisClient;
+  private readonly weiboHealthInspector: WeiboCoreHealthCheckService;
+  private readonly recoveryScheduler: AccountHealthRecoveryScheduler;
+  private readonly validationScheduler: CookieValidationScheduler;
 
-  constructor(
-    private readonly logger: PinoLogger,
-    private readonly weiboHealthInspector: WeiboCoreHealthCheckService,
-  ) {
+  constructor() {
     this.redis = root.get(RedisClient);
-    this.logger.setContext(WeiboAccountHealthScheduler.name);
+    this.weiboHealthInspector = root.get(WeiboCoreHealthCheckService);
+
+    this.recoveryScheduler = new AccountHealthRecoveryScheduler(
+      this.redis,
+      this.healthKey,
+      this.logger
+    );
+
+    this.validationScheduler = new CookieValidationScheduler(
+      this.redis,
+      this.healthKey,
+      this.metricsKeyPrefix,
+      this.weiboHealthInspector,
+      this.logger
+    );
   }
 
-  /**
-   * 每分钟恢复账号健康度，最高不超过 100
-   */
-  @Cron(CronExpression.EVERY_MINUTE)
-  async recoverAccountHealth(): Promise<void> {
+  start(): void {
+    this.recoveryScheduler.start();
+    this.validationScheduler.start();
+  }
+
+  stop(): void {
+    this.recoveryScheduler.stop();
+    this.validationScheduler.stop();
+  }
+}
+
+/**
+ * 账号健康度恢复调度器
+ * 每分钟恢复账号健康度，最高不超过 100
+ */
+class AccountHealthRecoveryScheduler extends CronScheduler {
+  constructor(
+    private readonly redis: RedisClient,
+    private readonly healthKey: string,
+    private readonly logger: any
+  ) {
+    super('* * * * *', 'AccountHealthRecoveryScheduler');
+  }
+
+  protected async execute(): Promise<void> {
     const startedAt = Date.now();
     const accountIds = await this.redis.zrange(this.healthKey, 0, -1);
 
@@ -64,12 +98,24 @@ export class WeiboAccountHealthScheduler {
       durationMs: Date.now() - startedAt,
     });
   }
+}
 
-  /**
-   * 每十分钟验证 Cookie，依据结果调整健康度
-   */
-  @Cron('*/10 * * * *')
-  async validateAccountCookies(): Promise<void> {
+/**
+ * Cookie 验证调度器
+ * 每十分钟验证 Cookie，依据结果调整健康度
+ */
+class CookieValidationScheduler extends CronScheduler {
+  constructor(
+    private readonly redis: RedisClient,
+    private readonly healthKey: string,
+    private readonly metricsKeyPrefix: string,
+    private readonly weiboHealthInspector: WeiboCoreHealthCheckService,
+    private readonly logger: any
+  ) {
+    super('*/10 * * * *', 'CookieValidationScheduler');
+  }
+
+  protected async execute(): Promise<void> {
     const startedAt = Date.now();
 
     const accounts = await useEntityManager(async manager => {

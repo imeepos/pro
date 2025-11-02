@@ -1,21 +1,14 @@
-import { Injectable } from '@nestjs/common';
 import { WeiboSearchTaskEntity, useEntityManager } from '@pro/entities';
-import { PinoLogger } from '@pro/logger-nestjs';
+import { createContextLogger } from '../core/logger';
 
 /**
- * 数据库诊断服务
- * 用于调试状态枚举值问题
+ * 数据库诊断服务 - 系统健康的检查者
+ *
+ * 使命：诊断任务状态、检测异常、提供修复建议
  */
-@Injectable()
 export class DiagnosticService {
-  constructor(private readonly logger: PinoLogger) {
-    this.logger.setContext(DiagnosticService.name);
-  }
+  private readonly logger = createContextLogger('DiagnosticService');
 
-  /**
-   * 诊断数据库中的任务状态值
-   * 检查大小写、实际存储格式等
-   */
   async diagnoseTaskStatuses(): Promise<{
     distinctStatuses: string[];
     sampleTasks: Array<{
@@ -34,10 +27,8 @@ export class DiagnosticService {
     this.logger.info('开始数据库状态诊断');
 
     return await useEntityManager(async manager => {
-      // 由于主任务不再有 status 字段，我们使用空数组
       const distinctStatuses: string[] = [];
 
-      // 获取样本任务
       const sampleTasks = await manager
         .createQueryBuilder(WeiboSearchTaskEntity, 'task')
         .select([
@@ -71,21 +62,18 @@ export class DiagnosticService {
         };
       });
 
-      // 统计需要立即执行的任务数量（基于 nextRunAt 而非 status）
       const pendingTasksCount = await manager
         .createQueryBuilder(WeiboSearchTaskEntity, 'task')
         .where('task.enabled = true')
         .andWhere('(task.nextRunAt IS NULL OR task.nextRunAt <= NOW())')
         .getCount();
 
-      // 统计过期任务数量（nextRunAt 在5分钟前）
       const overdueTasksCount = await manager
         .createQueryBuilder(WeiboSearchTaskEntity, 'task')
         .where('task.enabled = true')
         .andWhere("task.nextRunAt < NOW() - INTERVAL '5 minutes'")
         .getCount();
 
-      // 生成建议
       let recommendation = '';
       if (pendingTasksCount > 0) {
         recommendation = `发现 ${pendingTasksCount} 个需要立即执行的任务，建议检查调度系统是否正常运行`;
@@ -101,15 +89,12 @@ export class DiagnosticService {
         recommendation,
       };
 
-      this.logger.info('数据库诊断完成', result);
+      this.logger.info({ message: '数据库诊断完成', ...result });
 
       return result;
     });
   }
 
-  /**
-   * 修复过期任务的 nextRunAt 时间
-   */
   async fixOverdueTasks(): Promise<{
     affectedCount: number;
     message: string;
