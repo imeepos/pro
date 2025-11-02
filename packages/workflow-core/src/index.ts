@@ -1,6 +1,6 @@
 import { Type } from '@pro/core';
 
-export { Node, Input, Output, Handler, getInputMetadata, InputOptions, InputMetadata } from './decorator';
+export { Node, Input, Output, Handler, getInputMetadata, InputOptions, InputMetadata, NODE, INPUT, OUTPUT } from './decorator';
 export { Ast, WorkflowGraphAst, ArrayIteratorAst, Visitor, createWorkflowGraphAst } from './ast'
 export { fromJson, toJson, NodeJsonPayload } from './generate'
 export { INode, IEdge, IDataEdge, IControlEdge, IAstStates, isDataEdge, isControlEdge } from './types'
