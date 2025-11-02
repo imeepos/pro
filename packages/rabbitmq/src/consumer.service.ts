@@ -6,6 +6,7 @@ import type {
   MessageMetadata,
   RetryStrategy,
 } from './types.js';
+import { NoRetryError } from '@pro/core';
 
 /**
  * 消息处理函数类型
@@ -16,6 +17,14 @@ export type MessageHandler<T> = (
 ) => Promise<void>;
 
 /**
+ * 订阅信息
+ */
+interface Subscription<T = any> {
+  handler: MessageHandler<T>;
+  options?: ConsumerOptions;
+}
+
+/**
  * RabbitMQ 消费者服务
  *
  * 错误处理如为人处世的哲学:
@@ -23,6 +32,7 @@ export type MessageHandler<T> = (
  * - 自动 ACK/NACK 管理
  * - 死信队列支持
  * - 详细的错误上下文
+ * - 连接恢复时自动重新订阅
  */
 export class RabbitMQConsumer {
   private defaultRetryStrategy: RetryStrategy = {
@@ -31,9 +41,23 @@ export class RabbitMQConsumer {
     maxBackoffMs: 30000,
   };
 
-  constructor(private readonly connectionPool: ConnectionPool) {}
+  private subscriptions = new Map<QueueName, Subscription>();
+
+  constructor(private readonly connectionPool: ConnectionPool) {
+    this.setupConnectionRecovery();
+  }
 
   async consume<T>(
+    queueName: QueueName,
+    handler: MessageHandler<T>,
+    options?: ConsumerOptions,
+  ): Promise<void> {
+    this.subscriptions.set(queueName, { handler, options });
+
+    await this.subscribeToQueue(queueName, handler, options);
+  }
+
+  private async subscribeToQueue<T>(
     queueName: QueueName,
     handler: MessageHandler<T>,
     options?: ConsumerOptions,
@@ -81,6 +105,12 @@ export class RabbitMQConsumer {
       await handler(content, metadata);
 
       if (!noAck) {
+        if (!this.connectionPool.isConnected()) {
+          console.warn(
+            `[RabbitMQ] Connection lost during message processing for queue ${queueName}, message will be redelivered after reconnection`,
+          );
+          return;
+        }
         channel.ack(msg);
       }
     } catch (error) {
@@ -96,8 +126,8 @@ export class RabbitMQConsumer {
 
   private async handleError(
     msg: amqp.ConsumeMessage,
-    _error: Error,
-    _queueName: QueueName,
+    error: Error,
+    queueName: QueueName,
     retryStrategy: RetryStrategy,
     noAck: boolean,
   ): Promise<void> {
@@ -105,7 +135,21 @@ export class RabbitMQConsumer {
       return;
     }
 
+    if (!this.connectionPool.isConnected()) {
+      console.warn(
+        `[RabbitMQ] Connection lost during error handling for queue ${queueName}, message will be redelivered after reconnection`,
+      );
+      return;
+    }
+
     const channel = this.connectionPool.getChannel();
+
+    // 如果是 NoRetryError，直接 nack 发送到死信队列，不重试
+    if (error instanceof NoRetryError) {
+      channel.nack(msg, false, false);
+      return;
+    }
+
     const retryCount = this.getRetryCount(msg);
 
     if (retryCount >= retryStrategy.maxRetries) {
@@ -153,19 +197,57 @@ export class RabbitMQConsumer {
   ): Promise<void> {
     const channel = this.connectionPool.getChannel();
 
-    const dlxExchange = options?.deadLetterExchange ?? `${queueName}.dlx`;
-    const dlqQueue = `${queueName}.dlq`;
+    // 构建队列参数
+    const queueArgs: Record<string, any> = {};
 
-    await channel.assertExchange(dlxExchange, 'direct', { durable: true });
-    await channel.assertQueue(dlqQueue, { durable: true });
-    await channel.bindQueue(dlqQueue, dlxExchange, queueName);
+    // 只在显式指定 DLX 时才配置死信队列
+    if (options?.deadLetterExchange) {
+      const dlxExchange = options.deadLetterExchange;
+      const dlqQueue = `${queueName}.dlq`;
+
+      await channel.assertExchange(dlxExchange, 'direct', { durable: true });
+      await channel.assertQueue(dlqQueue, { durable: true });
+      await channel.bindQueue(dlqQueue, dlxExchange, queueName);
+
+      queueArgs['x-dead-letter-exchange'] = dlxExchange;
+      queueArgs['x-dead-letter-routing-key'] = queueName;
+    }
+
+    if (options?.messageTTL) {
+      queueArgs['x-message-ttl'] = options.messageTTL;
+    }
 
     await channel.assertQueue(queueName, {
       durable: true,
-      arguments: {
-        'x-dead-letter-exchange': dlxExchange,
-        'x-dead-letter-routing-key': queueName,
-      },
+      arguments: Object.keys(queueArgs).length > 0 ? queueArgs : undefined,
+    });
+  }
+
+  private setupConnectionRecovery(): void {
+    this.connectionPool.on('connected', async () => {
+      if (this.subscriptions.size === 0) {
+        return;
+      }
+
+      console.log(
+        `[RabbitMQ] Connection recovered, resubscribing to ${this.subscriptions.size} queue(s)`,
+      );
+
+      for (const [queueName, subscription] of this.subscriptions.entries()) {
+        try {
+          await this.subscribeToQueue(
+            queueName,
+            subscription.handler,
+            subscription.options,
+          );
+          console.log(`[RabbitMQ] Queue ${queueName} resubscribed successfully`);
+        } catch (error) {
+          console.error(
+            `[RabbitMQ] Failed to resubscribe to queue ${queueName} after reconnection:`,
+            error,
+          );
+        }
+      }
     });
   }
 }

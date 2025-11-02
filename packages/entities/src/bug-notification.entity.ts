@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -10,6 +9,7 @@ import {
 import { BugEntity } from './bug.entity.js';
 import { UserEntity } from './user.entity.js';
 import { BugNotificationType } from '@pro/types';
+import { Entity } from './decorator.js';
 
 @Entity('bug_notifications')
 export class BugNotificationEntity {

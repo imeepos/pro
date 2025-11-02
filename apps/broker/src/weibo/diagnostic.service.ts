@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { WeiboSearchTaskEntity } from '@pro/entities';
-import { PinoLogger } from '@pro/logger';
+import { WeiboSearchTaskEntity, useEntityManager } from '@pro/entities';
+import { PinoLogger } from '@pro/logger-nestjs';
 
 /**
  * 数据库诊断服务
@@ -10,11 +8,7 @@ import { PinoLogger } from '@pro/logger';
  */
 @Injectable()
 export class DiagnosticService {
-  constructor(
-    @InjectRepository(WeiboSearchTaskEntity)
-    private readonly taskRepository: Repository<WeiboSearchTaskEntity>,
-    private readonly logger: PinoLogger,
-  ) {
+  constructor(private readonly logger: PinoLogger) {
     this.logger.setContext(DiagnosticService.name);
   }
 
@@ -39,76 +33,78 @@ export class DiagnosticService {
   }> {
     this.logger.info('开始数据库状态诊断');
 
-    // 由于主任务不再有 status 字段，我们使用空数组
-    const distinctStatuses: string[] = [];
+    return await useEntityManager(async manager => {
+      // 由于主任务不再有 status 字段，我们使用空数组
+      const distinctStatuses: string[] = [];
 
-    // 获取样本任务
-    const sampleTasks = await this.taskRepository
-      .createQueryBuilder('task')
-      .select([
-        'task.id',
-        'task.keyword',
-        'task.nextRunAt',
-        'task.updatedAt',
-        'task.enabled',
-        'task.latestCrawlTime',
-      ])
-      .orderBy('task.nextRunAt', 'ASC')
-      .limit(10)
-      .getMany();
+      // 获取样本任务
+      const sampleTasks = await manager
+        .createQueryBuilder(WeiboSearchTaskEntity, 'task')
+        .select([
+          'task.id',
+          'task.keyword',
+          'task.nextRunAt',
+          'task.updatedAt',
+          'task.enabled',
+          'task.latestCrawlTime',
+        ])
+        .orderBy('task.nextRunAt', 'ASC')
+        .limit(10)
+        .getMany();
 
-    const sampleTasksFormatted = sampleTasks.map(task => {
-      const phase = (() => {
-        if (!task.enabled) return 'disabled';
-        if (!task.latestCrawlTime) return 'awaiting-first-run';
-        if (task.nextRunAt && task.nextRunAt > new Date()) return 'scheduled';
-        return 'due-now';
-      })();
+      const sampleTasksFormatted = sampleTasks.map(task => {
+        const phase = (() => {
+          if (!task.enabled) return 'disabled';
+          if (!task.latestCrawlTime) return 'awaiting-first-run';
+          if (task.nextRunAt && task.nextRunAt > new Date()) return 'scheduled';
+          return 'due-now';
+        })();
 
-      return {
-        id: task.id,
-        keyword: task.keyword || '',
-        phase,
-        nextRunAt: task.nextRunAt?.toISOString() || 'null',
-        updatedAt: task.updatedAt.toISOString(),
-        enabled: task.enabled,
-        latestCrawlTime: task.latestCrawlTime?.toISOString() || 'null',
+        return {
+          id: task.id,
+          keyword: task.keyword || '',
+          phase,
+          nextRunAt: task.nextRunAt?.toISOString() || 'null',
+          updatedAt: task.updatedAt.toISOString(),
+          enabled: task.enabled,
+          latestCrawlTime: task.latestCrawlTime?.toISOString() || 'null',
+        };
+      });
+
+      // 统计需要立即执行的任务数量（基于 nextRunAt 而非 status）
+      const pendingTasksCount = await manager
+        .createQueryBuilder(WeiboSearchTaskEntity, 'task')
+        .where('task.enabled = true')
+        .andWhere('(task.nextRunAt IS NULL OR task.nextRunAt <= NOW())')
+        .getCount();
+
+      // 统计过期任务数量（nextRunAt 在5分钟前）
+      const overdueTasksCount = await manager
+        .createQueryBuilder(WeiboSearchTaskEntity, 'task')
+        .where('task.enabled = true')
+        .andWhere("task.nextRunAt < NOW() - INTERVAL '5 minutes'")
+        .getCount();
+
+      // 生成建议
+      let recommendation = '';
+      if (pendingTasksCount > 0) {
+        recommendation = `发现 ${pendingTasksCount} 个需要立即执行的任务，建议检查调度系统是否正常运行`;
+      } else {
+        recommendation = '当前没有需要立即执行的任务，调度系统状态正常';
+      }
+
+      const result = {
+        distinctStatuses,
+        sampleTasks: sampleTasksFormatted,
+        pendingTasksCount,
+        overdueTasksCount,
+        recommendation,
       };
+
+      this.logger.info('数据库诊断完成', result);
+
+      return result;
     });
-
-    // 统计需要立即执行的任务数量（基于 nextRunAt 而非 status）
-    const pendingTasksCount = await this.taskRepository
-      .createQueryBuilder('task')
-      .where('task.enabled = true')
-      .andWhere('(task.nextRunAt IS NULL OR task.nextRunAt <= NOW())')
-      .getCount();
-
-    // 统计过期任务数量（nextRunAt 在5分钟前）
-    const overdueTasksCount = await this.taskRepository
-      .createQueryBuilder('task')
-      .where('task.enabled = true')
-      .andWhere("task.nextRunAt < NOW() - INTERVAL '5 minutes'")
-      .getCount();
-
-    // 生成建议
-    let recommendation = '';
-    if (pendingTasksCount > 0) {
-      recommendation = `发现 ${pendingTasksCount} 个需要立即执行的任务，建议检查调度系统是否正常运行`;
-    } else {
-      recommendation = '当前没有需要立即执行的任务，调度系统状态正常';
-    }
-
-    const result = {
-      distinctStatuses,
-      sampleTasks: sampleTasksFormatted,
-      pendingTasksCount,
-      overdueTasksCount,
-      recommendation,
-    };
-
-    this.logger.info('数据库诊断完成', result);
-
-    return result;
   }
 
   /**
@@ -120,22 +116,24 @@ export class DiagnosticService {
   }> {
     this.logger.info('开始修复过期任务');
 
-    const result = await this.taskRepository
-      .createQueryBuilder()
-      .update(WeiboSearchTaskEntity)
-      .set({
-        nextRunAt: () => "NOW() + INTERVAL '30 seconds'",
-      })
-      .where('enabled = true')
-      .andWhere("nextRunAt < NOW() - INTERVAL '5 minutes'")
-      .execute();
+    return await useEntityManager(async manager => {
+      const result = await manager
+        .createQueryBuilder()
+        .update(WeiboSearchTaskEntity)
+        .set({
+          nextRunAt: () => "NOW() + INTERVAL '30 seconds'",
+        })
+        .where('enabled = true')
+        .andWhere("nextRunAt < NOW() - INTERVAL '5 minutes'")
+        .execute();
 
-    const message = `已重置 ${result.affected || 0} 个过期任务的 nextRunAt 时间`;
-    this.logger.info(message);
+      const message = `已重置 ${result.affected || 0} 个过期任务的 nextRunAt 时间`;
+      this.logger.info(message);
 
-    return {
-      affectedCount: result.affected || 0,
-      message,
-    };
+      return {
+        affectedCount: result.affected || 0,
+        message,
+      };
+    });
   }
 }

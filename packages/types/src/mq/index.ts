@@ -11,3 +11,5 @@ export * from './clean-events.js';
 export * from './analyze-events.js';
 export * from './aggregate-events.js';
 export * from './weibo-detail-events.js';
+export * from './weibo-user-events.js';
+export * from './workflow-events.js';

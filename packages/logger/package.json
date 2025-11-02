@@ -1,7 +1,7 @@
 {
   "name": "@pro/logger",
   "version": "1.0.0",
-  "description": "Unified logging configuration for Pro monorepo",
+  "description": "Framework-agnostic Pino logger for Pro monorepo",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -14,16 +14,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "nestjs-pino": "^4.4.1",
     "pino": "^9.13.1",
     "pino-http": "^10.5.0",
     "pino-pretty": "^13.1.2"
   },
-  "peerDependencies": {
-    "@nestjs/common": "^11.0.13"
-  },
   "devDependencies": {
-    "@nestjs/common": "^11.0.13",
     "@pro/eslint-config": "workspace:*",
     "@pro/prettier-config": "workspace:*",
     "tsup": "^8.5.0",

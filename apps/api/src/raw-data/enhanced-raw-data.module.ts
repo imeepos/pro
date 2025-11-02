@@ -1,8 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
-import { RawDataSourceService, MongodbModule, RawDataSource, RawDataSourceSchema } from '@pro/mongodb';
 import { RawDataService } from './raw-data.service';
 import { RawDataResolver } from './raw-data.resolver';
 import { EnhancedRawDataService } from './enhanced-raw-data.service';
@@ -41,7 +39,7 @@ import { AuthModule } from '../auth/auth.module';
     // 显式注册 RawDataSource 模型
     // TODO: Temporarily disabled due to Mongoose dependency injection issues
     // MongooseModule.forFeature([
-    //   { name: RawDataSource.name, schema: RawDataSourceSchema }
+    //   { name: RawDataSource.name, schema: RawDataSource }
     // ]),
 
     // 认证模块（前向引用避免循环依赖）

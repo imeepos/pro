@@ -1,9 +1,9 @@
 import {
-  Entity,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
+import { Entity } from './decorator.js';
 import { WeiboPostEntity } from './weibo-post.entity.js';
 import { WeiboHashtagEntity } from './weibo-hashtag.entity.js';
 
@@ -15,7 +15,7 @@ export class WeiboPostHashtagEntity {
   @PrimaryColumn({ type: 'bigint', unsigned: true, name: 'hashtag_id' })
   hashtagId!: string;
 
-  @ManyToOne(() => WeiboPostEntity, (post) => post.hashtags, {
+  @ManyToOne(() => WeiboPostEntity, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'post_id' })

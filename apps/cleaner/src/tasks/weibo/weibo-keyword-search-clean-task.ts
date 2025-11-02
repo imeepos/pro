@@ -8,7 +8,7 @@ import {
   normalizeUser,
 } from './weibo-normalizer';
 import { narrate } from '../../utils/logging';
-import { QUEUE_NAMES, WeiboDetailCrawlEvent, TaskPriority } from '@pro/types';
+import { QUEUE_NAMES, WeiboDetailCrawlEvent } from '@pro/types';
 import { RabbitMQService } from '../../rabbitmq/rabbitmq.service';
 import { CleanTaskMessage } from '../clean-task-message';
 
@@ -33,14 +33,9 @@ export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
   private async sendDetailCrawlTask(
     rabbitMQService: RabbitMQService,
     statusId: string,
-    sourceContext: WeiboDetailCrawlEvent['sourceContext'],
   ): Promise<void> {
     const event: WeiboDetailCrawlEvent = {
       statusId,
-      priority: TaskPriority.NORMAL,
-      sourceContext,
-      discoveredAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
     };
 
     const success = await rabbitMQService.getClient().publish(
@@ -88,14 +83,7 @@ export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
     const detailIds = this.extractWeiboDetailIds(rawData.sourceUrl);
     if (detailIds) {
       const statusId = `${detailIds.uid}_${detailIds.mid}`;
-      const sourceContext: WeiboDetailCrawlEvent['sourceContext'] = {
-        taskId: message.metadata?.taskId,
-        keyword: message.metadata?.keyword,
-        page: this.extractPageNumber(rawData.sourceUrl),
-        discoveredAtUrl: rawData.sourceUrl,
-      };
-
-      await this.sendDetailCrawlTask(rabbitMQService, statusId, sourceContext);
+      await this.sendDetailCrawlTask(rabbitMQService, statusId);
     }
 
     for (const status of statuses) {
@@ -140,9 +128,9 @@ export class WeiboKeywordSearchCleanTask extends WeiboBaseCleanTask {
     await this.handlePaginationLogic(context, minCreatedAt);
 
     return {
-      postIds: [...postMap.values()].map((post) => post.id),
+      postIds: [...postMap.values()].map((post) => String(post.id)),
       commentIds: [],
-      userIds: [...userMap.values()].map((user) => user.id),
+      userIds: [...userMap.values()].map((user) => String(user.id)),
     };
   }
 

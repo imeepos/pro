@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -8,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { EventEntity } from './event.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('event_type')
 export class EventTypeEntity {

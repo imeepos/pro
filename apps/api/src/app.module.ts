@@ -6,7 +6,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { MongooseModule } from '@nestjs/mongoose';
 import { join } from 'path';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
-import { LoggerModule, createLoggerConfig } from '@pro/logger';
+import { LoggerModule, createLoggerConfig } from '@pro/logger-nestjs';
 import { HealthResolver } from './health.resolver';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
@@ -19,14 +19,12 @@ import { ConfigModule } from './config/config.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { BugModule } from './bug/bug.module';
-import { RawDataModule } from './raw-data/raw-data.module';
 import { DatabaseModule } from './database/database.module';
 import { LoadersModule } from './loaders.module';
 import { DlqModule } from './dlq/dlq.module';
-import { RabbitMQModule as BaseRabbitMQModule } from '@pro/rabbitmq';
 import { RabbitMQModule } from './rabbitmq/rabbitmq.module';
 import { TasksModule } from './tasks/tasks.module';
-import { createDatabaseConfig } from './config';
+import { createDatabaseConfig } from '@pro/entities';
 import { AugmentedRequest, GraphqlContext } from './common/utils/context.utils';
 import { UserLoader } from './user/user.loader';
 import { GraphqlLoaders } from './common/dataloaders/types';
@@ -161,7 +159,7 @@ import { WorkflowModule } from './workflow/workflow.module';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createDatabaseConfig(configService) as TypeOrmModuleOptions,
+      useFactory: () => createDatabaseConfig() as TypeOrmModuleOptions,
     }),
     // MongoDB 全局模块配置 - 简化同步方式
     MongooseModule.forRootAsync({
@@ -174,16 +172,7 @@ import { WorkflowModule } from './workflow/workflow.module';
         bufferCommands: configService.get<boolean>('MONGODB_BUFFER_COMMANDS', false),
       }),
     }),
-    BaseRabbitMQModule.forRootAsync({
-      imports: [NestConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        url: configService.get<string>('RABBITMQ_URL') || 'amqp://localhost:5672',
-        maxRetries: 3,
-        enableDLQ: true,
-      }),
-    }),
-
+  
     ConfigModule,
     DatabaseModule,
     RabbitMQModule,
@@ -198,7 +187,6 @@ import { WorkflowModule } from './workflow/workflow.module';
     DashboardModule,
     NotificationsModule,
     BugModule,
-    RawDataModule,
     WorkflowModule,
     DlqModule,
     TasksModule,

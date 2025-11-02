@@ -1,11 +1,11 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+import { Entity } from './decorator.js';
 
 @Entity('daily_stats')
 @Index(['keyword', 'date'], { unique: true })
@@ -13,16 +13,16 @@ export class DailyStatsEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column(`varchar`)
   keyword: string;
 
   @Column('date')
   date: Date;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   totalPostCount: number;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   totalCommentCount: number;
 
   @Column('jsonb', { nullable: true })
@@ -32,7 +32,7 @@ export class DailyStatsEntity {
     negative: number;
   };
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   activeUserCount: number;
 
   @Column('jsonb', { nullable: true })

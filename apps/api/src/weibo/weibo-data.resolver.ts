@@ -1,6 +1,6 @@
 import { UseGuards, NotFoundException } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { WeiboPostDataService } from './weibo-post-data.service';
 import { WeiboCommentDataService } from './weibo-comment-data.service';

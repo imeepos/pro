@@ -3,13 +3,16 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from '@pro/types';
 import { RedisClient } from '@pro/redis';
-import { redisConfigFactory } from '../../config';
 import { ConfigService } from '@nestjs/config';
+import { root } from '@pro/core';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  private redisClient: RedisClient;
   private readonly TOKEN_BLACKLIST_PREFIX = 'blacklist:';
+
+  private get redis() {
+    return root.get(RedisClient);
+  }
 
   constructor(@Inject() private readonly config: ConfigService) {
     super({
@@ -22,7 +25,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: config.get('JWT_SECRET', 'your-jwt-secret-change-in-production'),
       passReqToCallback: true,
     });
-    this.redisClient = new RedisClient(redisConfigFactory(config));
   }
 
   async validate(req: any, payload: JwtPayload): Promise<JwtPayload> {
@@ -30,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ExtractJwt.fromAuthHeaderAsBearerToken()(req) || req.query?.token;
 
     if (token) {
-      const isBlacklisted = await this.redisClient.exists(
+      const isBlacklisted = await this.redis.exists(
         `${this.TOKEN_BLACKLIST_PREFIX}${token}`,
       );
 

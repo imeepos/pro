@@ -8,7 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Observable, from, throwError, of, lastValueFrom } from 'rxjs';
 import { switchMap, catchError } from 'rxjs/operators';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { TransactionService, TransactionContext } from '../services/transaction.service';
 import { TRANSACTIONAL_METADATA_KEY, TransactionalConfig } from '../decorators/transactional.decorator';
 

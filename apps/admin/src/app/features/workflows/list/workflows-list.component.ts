@@ -10,7 +10,6 @@ interface WorkflowCardView {
   id: string;
   name: string;
   description: string;
-  revision: number;
   tags: string[];
   updatedNarrative: string;
   updatedExact: string;
@@ -97,7 +96,6 @@ export class WorkflowsListComponent {
       id: workflow.id,
       name: workflow.name,
       description: workflow.description ?? '这条流程尚未留下简介。',
-      revision: workflow.revision,
       tags: workflow.tags,
       updatedNarrative: this.describeRelative(workflow.updatedAt),
       updatedExact: this.absoluteFormatter.format(workflow.updatedAt),

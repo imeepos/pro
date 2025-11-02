@@ -6,7 +6,7 @@ import { WeiboCrawlerService } from '../../src/services/weibo-crawler.service';
 import { ResourceManagerService } from '../../src/services/resource-manager.service';
 import { ConnectionPoolService } from '../../src/services/connection-pool.service';
 import { TaskQueueService } from '../../src/services/task-queue.service';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { setTimeout } from 'timers/promises';
 
 describe('SystemResourceLimitTest', () => {

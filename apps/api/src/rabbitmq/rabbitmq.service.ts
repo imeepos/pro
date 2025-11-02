@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRabbitMQ, RabbitMQService as BaseRabbitMQService } from '@pro/rabbitmq';
+import { RabbitMQService as BaseRabbitMQService } from '@pro/rabbitmq';
+import { root } from '@pro/core';
 import {
   QUEUE_NAMES,
   CleanTaskEvent,
@@ -16,14 +17,16 @@ import {
  * - 类型安全的事件发布
  *
  * 优雅即简约：
- * - 使用 @InjectRabbitMQ 装饰器注入基础服务
+ * - 使用 root.get 获取基础服务
  * - 薄包装层，仅封装业务逻辑
  */
 @Injectable()
 export class RabbitMQService {
-  constructor(
-    @InjectRabbitMQ() private readonly baseService: BaseRabbitMQService
-  ) {}
+  private readonly baseService: BaseRabbitMQService;
+
+  constructor() {
+    this.baseService = root.get(BaseRabbitMQService);
+  }
 
   async publishCleanTask(event: CleanTaskEvent): Promise<boolean> {
     return this.baseService.publish(QUEUE_NAMES.CLEAN_TASK, event, {

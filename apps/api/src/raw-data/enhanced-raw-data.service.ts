@@ -1,7 +1,6 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { Inject, Injectable } from '@pro/core';
 import { Model } from 'mongoose';
-import { RawDataSourceService, RawDataSource } from '@pro/mongodb';
+import { RawDataSource } from '@pro/mongodb';
 import {
   EnhancedRawDataFilter,
   EnhancedRawDataItem,
@@ -20,12 +19,11 @@ import {
   EnhancedProcessingStatus,
   DataQualityLevel,
   DataQualityMetrics,
-  ExportFormat,
   BatchOperationType,
   SourceRiskLevel,
-  SortDirection
 } from './dto/enhanced-raw-data.dto';
 import { RawDataDocument, MongoQueryBuilder, TimeFormatter } from './models/raw-data.model';
+import { BadRequestException, Logger } from '@nestjs/common';
 
 /**
  * 增强的原始数据服务
@@ -36,8 +34,7 @@ export class EnhancedRawDataService {
   private readonly logger = new Logger(EnhancedRawDataService.name);
 
   constructor(
-    private readonly rawDataSourceService: RawDataSourceService,
-    @InjectModel(RawDataSource.name)
+    @Inject(RawDataSource)
     private readonly rawDataModel: Model<RawDataDocument>,
   ) {}
 

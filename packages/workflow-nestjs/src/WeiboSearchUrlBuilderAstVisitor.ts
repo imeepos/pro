@@ -1,0 +1,29 @@
+import { Handler, WeiboSearchUrlBuilderAst, NoRetryError } from "@pro/workflow-core";
+
+const formatDate = (date: Date) => {
+    const time = new Date(date)
+    return [
+        time.getFullYear(),
+        String(time.getMonth() + 1).padStart(2, '0'),
+        String(time.getDate()).padStart(2, '0'),
+        String(time.getHours()).padStart(2, '0'),
+    ].join('-')
+};
+
+@Handler(WeiboSearchUrlBuilderAst)
+export class WeiboSearchUrlBuilderAstVisitor {
+    async visit(ast: WeiboSearchUrlBuilderAst, _ctx: any) {
+        const { keyword, start, end, page = 1 } = ast;
+        if (!keyword || !start || !end) {
+            ast.state = 'fail';
+            throw new NoRetryError('WeiboSearchUrlBuilderAst 缺少必要参数: keyword, start, end');
+        }
+        // https://s.weibo.com/weibo?q=%E5%9B%BD%E5%BA%86&typeall=1&suball=1&timescope=custom%3A2025-10-01-0%3A2025-10-23-15&Refer=g
+        const base = 'https://s.weibo.com/weibo';
+        const params = new URLSearchParams({ q: keyword, typeall: `1`, suball: `1`, page: String(page), Refer: `g` });
+        params.set('timescope', `custom:${formatDate(start)}:${formatDate(end)}`);
+        ast.url = `${base}?${params.toString()}`;
+        ast.state = 'success';
+        return ast;
+    }
+}

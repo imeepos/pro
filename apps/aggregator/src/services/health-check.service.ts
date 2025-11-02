@@ -1,6 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { Logger } from '@pro/logger';
-import { ConfigService } from '@nestjs/config';
+import { Logger } from '@pro/logger-nestjs';
 import { MetricsService } from './metrics.service';
 import { CacheService } from './cache.service';
 import { HealthStatus, HealthCheckResult, ServiceInfo } from '../types/metrics.types';
@@ -12,7 +11,6 @@ export class HealthCheckService implements OnModuleInit {
 
   constructor(
     private readonly logger: Logger,
-    private readonly configService: ConfigService,
     private readonly metricsService: MetricsService,
     private readonly cacheService: CacheService,
   ) {

@@ -17,6 +17,7 @@
     "build": "tsup && tsc --project tsconfig.types.json",
     "build:js": "tsup",
     "build:types": "tsc --project tsconfig.types.json",
+    "main": "tsx src/main.ts",
     "clean": "rimraf dist",
     "dev": "tsup --watch",
     "lint": "eslint src/**/*.ts",
@@ -33,7 +34,10 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
+    "@pro/core": "workspace:*",
     "@pro/types": "workspace:*",
+    "@pro/workflow-core": "workspace:*",
+    "build": "^0.1.4",
     "reflect-metadata": "0.2.2",
     "typeorm": "^0.3.20"
   },

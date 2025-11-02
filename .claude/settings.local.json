@@ -82,7 +82,9 @@
       "WebFetch(domain:github.com)",
       "Bash(pkill -f \"pnpm run build\")",
       "Bash(pnpm run:*)",
-      "WebFetch(domain:docs.temporal.io)"
+      "WebFetch(domain:docs.temporal.io)",
+      "Bash(timeout 10 pnpm run main:*)",
+      "Bash(git -C /home/ubuntu/worktrees/pro check-ignore:*)"
     ],
     "deny": [],
     "ask": []

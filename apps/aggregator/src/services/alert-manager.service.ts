@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { ConfigurationService } from '@pro/configuration';
 import {
   AlertEvent,

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { SentimentAnalysisResult } from '@pro/entities';
 import * as natural from 'natural';
 // import * as franc from 'franc-min';

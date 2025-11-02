@@ -91,10 +91,14 @@ export class RabbitMQPublisher {
   private async ensureQueue(queueName: QueueName): Promise<void> {
     const channel = this.connectionPool.getChannel();
 
+    // Publisher 被动声明：不主动设置参数，避免与 Consumer 冲突
+    // 如果队列已存在，使用现有配置；如果不存在，创建最简配置
     await channel.assertQueue(queueName, {
       durable: true,
+      passive: false, // 队列不存在时创建
     });
   }
+
 
   private buildMessageOptions(
     options?: PublishOptions,

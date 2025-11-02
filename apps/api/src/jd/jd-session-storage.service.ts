@@ -1,9 +1,9 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { RedisClient } from '@pro/redis';
-import { redisConfigFactory } from '../config';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
+import { root } from '@pro/core';
 
 export type JdSessionState = 'active' | 'expired' | 'completed';
 
@@ -31,10 +31,10 @@ export class JdSessionStorage implements OnModuleInit, OnModuleDestroy {
     private readonly config: ConfigService,
   ) {
     this.logger.setContext(JdSessionStorage.name);
+    this.redis = root.get(RedisClient);
   }
 
   async onModuleInit(): Promise<void> {
-    this.redis = new RedisClient(redisConfigFactory(this.config));
     this.logger.info('JD session storage ready');
     this.startCleanupTask();
   }

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { DailyStatsEntity, HourlyStatsEntity } from '@pro/entities';
 import { CacheService } from './cache.service';
 import { TransactionService, TransactionContext } from './transaction.service';

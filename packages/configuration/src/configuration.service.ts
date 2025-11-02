@@ -1,5 +1,5 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { Logger } from '@pro/logger';
+import { Injectable, OnInit, OnDestroy } from '@pro/core';
+import type { Logger } from '@pro/logger';
 import { createHash } from 'crypto';
 import {
   ConfigurationDomain,
@@ -18,7 +18,7 @@ interface ConfigurationSnapshot {
 }
 
 @Injectable()
-export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
+export class ConfigurationService implements OnInit, OnDestroy {
   private config: ConfigurationDomain;
   private readonly providers = new Map<string, ConfigurationProvider>();
   private readonly watchers = new Map<string, ConfigurationWatcher[]>();
@@ -30,14 +30,15 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
     this.setupDefaultProviders();
   }
 
-  async onModuleInit(): Promise<void> {
+  async onInit(): Promise<void> {
     await this.loadConfiguration();
-    this.logger.log('配置服务已初始化', 'ConfigurationService');
+    this.logger.info({ context: 'ConfigurationService' }, '配置服务已初始化');
   }
 
-  onModuleDestroy(): void {
+  onDestroy(): Promise<void> {
     this.watchers.clear();
-    this.logger.log('配置服务已清理', 'ConfigurationService');
+    this.logger.info({ context: 'ConfigurationService' }, '配置服务已清理');
+    return Promise.resolve();
   }
 
   private setupDefaultProviders(): void {
@@ -47,7 +48,7 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
 
   addProvider(provider: ConfigurationProvider): void {
     this.providers.set(provider.name, provider);
-    this.logger.debug(`配置提供者已注册: ${provider.name}`, 'ConfigurationService');
+    this.logger.debug({ provider: provider.name }, `配置提供者已注册: ${provider.name}`);
   }
 
   private async loadConfiguration(): Promise<void> {
@@ -59,11 +60,9 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
       try {
         const config = await provider.load();
         this.deepMerge(mergedConfig, config);
-        this.logger.debug(`配置已加载: ${provider.name}`, 'ConfigurationService');
+        this.logger.debug({ provider: provider.name }, `配置已加载: ${provider.name}`);
       } catch (error) {
-        this.logger.warn(`配置提供者加载失败: ${provider.name}`, {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        this.logger.warn({ provider: provider.name, error: error instanceof Error ? error.message : String(error) }, `配置提供者加载失败: ${provider.name}`);
       }
     }
 
@@ -76,18 +75,15 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
     const validation = this.validator.validate(this.config);
 
     if (!validation.isValid) {
-      this.logger.error('配置验证失败', {
-        errors: validation.errors,
-        warnings: validation.warnings,
-      });
+      this.logger.error({ errors: validation.errors, warnings: validation.warnings }, '配置验证失败');
       throw new Error(`配置验证失败: ${validation.errors.join(', ')}`);
     }
 
     if (validation.warnings.length > 0) {
-      this.logger.warn('配置验证警告', { warnings: validation.warnings });
+      this.logger.warn({ warnings: validation.warnings }, '配置验证警告');
     }
 
-    this.logger.log('配置验证通过', 'ConfigurationService');
+    this.logger.info('配置验证通过');
   }
 
   private createSnapshot(source: string): void {
@@ -104,7 +100,7 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
       this.snapshots.shift();
     }
 
-    this.logger.debug(`配置快照已创建: ${snapshot.version}`, 'ConfigurationService');
+    this.logger.debug({ version: snapshot.version }, `配置快照已创建: ${snapshot.version}`);
   }
 
   private generateVersion(): string {
@@ -130,18 +126,12 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
     const validation = this.validator.validateValue(path, value);
 
     if (!validation.isValid) {
-      this.logger.error(`配置更新验证失败: ${path}`, {
-        value,
-        errors: validation.errors,
-      });
+      this.logger.error({ path, value, errors: validation.errors }, `配置更新验证失败: ${path}`);
       return false;
     }
 
     if (validation.warnings.length > 0) {
-      this.logger.warn(`配置更新警告: ${path}`, {
-        value,
-        warnings: validation.warnings,
-      });
+      this.logger.warn({ path, value, warnings: validation.warnings }, `配置更新警告: ${path}`);
     }
 
     const oldValue = this.get(path);
@@ -150,10 +140,7 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
     await this.notifyWatchers(path, value, oldValue);
     this.createSnapshot('runtime-update');
 
-    this.logger.log(`配置已更新: ${path}`, {
-      oldValue,
-      newValue: value,
-    });
+    this.logger.info({ path, oldValue, newValue: value }, `配置已更新: ${path}`);
 
     return true;
   }
@@ -164,7 +151,7 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
     pathWatchers.push(watcher);
     this.watchers.set(path, pathWatchers);
 
-    this.logger.debug(`配置监听器已注册: ${path}`, 'ConfigurationService');
+    this.logger.debug({ path }, `配置监听器已注册: ${path}`);
 
     return () => {
       const watchers = this.watchers.get(path) || [];
@@ -174,7 +161,7 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
         if (watchers.length === 0) {
           this.watchers.delete(path);
         }
-        this.logger.debug(`配置监听器已移除: ${path}`, 'ConfigurationService');
+        this.logger.debug({ path }, `配置监听器已移除: ${path}`);
       }
     };
   }
@@ -186,17 +173,13 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
       try {
         await watcher.callback(newValue, oldValue);
       } catch (error) {
-        this.logger.error(`配置监听器执行失败: ${path}`, {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        this.logger.error({ path, error: error instanceof Error ? error.message : String(error) }, `配置监听器执行失败: ${path}`);
       }
     }
   }
 
   applyProfile(profile: EnvironmentProfile): void {
-    this.logger.log(`应用配置档案: ${profile.name}`, {
-      description: profile.description,
-    });
+    this.logger.info({ profile: profile.name, description: profile.description }, `应用配置档案: ${profile.name}`);
 
     this.deepMerge(this.config, profile.overrides);
     this.validateAndLog();
@@ -213,17 +196,14 @@ export class ConfigurationService implements OnModuleInit, OnModuleDestroy {
       : this.snapshots[this.snapshots.length - 2];
 
     if (!snapshot) {
-      this.logger.warn(`配置回滚失败，快照不存在: ${version || 'previous'}`, 'ConfigurationService');
+      this.logger.warn({ version: version || 'previous' }, `配置回滚失败，快照不存在: ${version || 'previous'}`);
       return false;
     }
 
     this.config = this.deepClone(snapshot.config);
     this.createSnapshot(`rollback-${snapshot.version}`);
 
-    this.logger.log(`配置已回滚: ${snapshot.version}`, {
-      timestamp: snapshot.timestamp,
-      source: snapshot.source,
-    });
+    this.logger.info({ version: snapshot.version, timestamp: snapshot.timestamp, source: snapshot.source }, `配置已回滚: ${snapshot.version}`);
 
     return true;
   }

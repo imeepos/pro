@@ -6,7 +6,6 @@ export interface WorkflowSummary {
   name: string;
   slug: string;
   description: string | null;
-  revision: number;
   tags: string[];
   createdAt: Date;
   updatedAt: Date;

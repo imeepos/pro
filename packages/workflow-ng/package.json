@@ -1,0 +1,62 @@
+{
+    "name": "@pro/workflow-ng",
+    "version": "1.0.0",
+    "description": "Angular工作流服务集成包 - 为Angular框架提供DAG工作流支持",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "ng-packagr -p ng-package.json",
+        "dev": "ng-packagr -p ng-package.json --watch",
+        "typecheck": "tsc --noEmit",
+        "clean": "rm -rf dist",
+        "test": "jest",
+        "lint": "eslint src --ext .ts",
+        "lint:fix": "eslint src --ext .ts --fix"
+    },
+    "keywords": [
+        "workflow",
+        "dag",
+        "angular",
+        "service",
+        "component",
+        "rxjs",
+        "typescript",
+        "async",
+        "parallel-execution"
+    ],
+    "author": "Pro Team",
+    "license": "MIT",
+    "dependencies": {
+        "@pro/workflow-core": "workspace:*"
+    },
+    "peerDependencies": {
+        "@angular/common": "^17.0.0",
+        "@angular/core": "^17.0.0",
+        "rxjs": "^7.8.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.0.0",
+        "ng-packagr": "^17.0.0"
+    },
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "publishConfig": {
+        "access": "restricted",
+        "registry": "https://npm.pkg.github.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/your-org/pro.git",
+        "directory": "packages/workflow-ng"
+    },
+    "homepage": "https://github.com/your-org/pro/tree/main/packages/workflow-ng#readme",
+    "bugs": {
+        "url": "https://github.com/your-org/pro/issues"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}

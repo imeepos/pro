@@ -12,7 +12,7 @@ import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
 import { Subject, Observable, Subscription } from 'rxjs';
 import { JdAccountEntity } from '@pro/entities';
 import { JdAccountService } from './jd-account.service';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { PubSubService } from '../common/pubsub/pubsub.service';
 import { SUBSCRIPTION_EVENTS } from '../screens/constants/subscription-events';
 import { ScreensGateway } from '../screens/screens.gateway';

@@ -1,5 +1,5 @@
 import { MetricsService } from '../services/metrics.service';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { MetricType, MetricCategory, MetricDimensions } from '../types/metrics.types';
 
 export interface MonitorOptions {

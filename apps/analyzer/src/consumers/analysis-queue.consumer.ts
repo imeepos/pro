@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { AnalysisResultEntity, ModelProvider } from '@pro/entities';
 import { RabbitMQService, CleanedDataEvent, AnalysisResultEvent } from '../rabbitmq/rabbitmq.service';
 import { SentimentAnalysisService } from '../services/sentiment-analysis.service';

@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -14,6 +13,7 @@ import { EventTypeEntity } from './event-type.entity.js';
 import { IndustryTypeEntity } from './industry-type.entity.js';
 import { EventAttachmentEntity } from './event-attachment.entity.js';
 import { EventTagEntity } from './event-tag.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('event')
 export class EventEntity {

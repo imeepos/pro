@@ -1,9 +1,9 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { RedisClient } from '@pro/redis';
-import { redisConfigFactory } from '../config';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
+import { root } from '@pro/core';
 
 /**
  * 会话数据接口
@@ -35,10 +35,10 @@ export class WeiboSessionStorage implements OnModuleInit, OnModuleDestroy {
     private readonly config: ConfigService,
   ) {
     this.logger.setContext(WeiboSessionStorage.name);
+    this.redis = root.get(RedisClient);
   }
 
   async onModuleInit() {
-    this.redis = new RedisClient(redisConfigFactory(this.config));
     this.logger.info('微博会话存储已初始化');
 
     // 启动定期清理任务

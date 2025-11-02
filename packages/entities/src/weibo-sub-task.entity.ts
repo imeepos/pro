@@ -1,14 +1,13 @@
 import {
   Column,
   CreateDateColumn,
-  Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-
+import { Entity } from './decorator.js';
 import { WeiboSearchTaskEntity } from './weibo-search-task.entity.js';
 
 export interface WeiboSubTaskMetadata {

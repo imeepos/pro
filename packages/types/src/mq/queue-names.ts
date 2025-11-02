@@ -9,8 +9,14 @@ export const QUEUE_NAMES = {
   /** Broker/API → Crawler: 触发爬虫任务 */
   CRAWL_TASK: 'weibo_crawl_queue',
 
+  // 微博详情列表采集
+  WEIBO_LIST_CRAWL: `weibo_list_crawl_queue`,
+
   /** SearchCrawler → DetailCrawler: 触发微博详情采集 */
   WEIBO_DETAIL_CRAWL: 'weibo_detail_crawl_queue',
+
+  /** Workflow → UserProfileCrawler: 触发用户画像采集 */
+  USER_PROFILE_CRAWL: 'weibo_user_profile_crawl_queue',
 
   /** Crawler → Cleaner: 原始数据已存储,触发清洗 */
   RAW_DATA_READY: 'raw_data_ready_queue',
@@ -29,6 +35,12 @@ export const QUEUE_NAMES = {
 
   /** System → Aggregator: 触发聚合任务 */
   AGGREGATE_TASK: 'aggregate_task_queue',
+
+  /** Workflow → Downstream: 帖子详情工作流完成 */
+  POST_DETAIL_COMPLETED: 'post_detail_completed_queue',
+
+  /** Workflow → Downstream: 用户画像工作流完成 */
+  USER_PROFILE_COMPLETED: 'user_profile_completed_queue',
 } as const;
 
 export type QueueName = typeof QUEUE_NAMES[keyof typeof QUEUE_NAMES];

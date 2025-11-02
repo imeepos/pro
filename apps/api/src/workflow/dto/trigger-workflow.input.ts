@@ -6,9 +6,6 @@ export class TriggerWorkflowInput {
   @Field(() => ID)
   workflowId!: string;
 
-  @Field(() => Int, { nullable: true })
-  revision?: number | null;
-
   @Field(() => GraphQLJSON, { nullable: true })
   context?: Record<string, unknown> | null;
 }

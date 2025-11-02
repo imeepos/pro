@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { RabbitMQConfigService } from '../rabbitmq/rabbitmq-config.service';
 import {
   AggregateTaskEvent,

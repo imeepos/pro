@@ -40,7 +40,7 @@
     "@pro/types": "workspace:*",
     "@pro/utils": "workspace:*",
     "@pro/weibo": "workspace:*",
-    "mongoose": "^8.1.0",
+    "mongoose": "8.19.1",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",

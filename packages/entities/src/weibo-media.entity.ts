@@ -1,28 +1,15 @@
 import {
   Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
   PrimaryGeneratedColumn,
-  RelationId,
 } from 'typeorm';
 import { WeiboMediaType } from './enums/weibo.enums.js';
-import { WeiboPostEntity } from './weibo-post.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('weibo_media')
 export class WeiboMediaEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint', unsigned: true })
   id!: string;
 
-  @ManyToOne(() => WeiboPostEntity, (post) => post.media, {
-    onDelete: 'CASCADE',
-    nullable: false,
-  })
-  @JoinColumn({ name: 'post_id' })
-  post!: WeiboPostEntity;
-
-  @RelationId((media: WeiboMediaEntity) => media.post)
-  postId!: string;
 
   @Column({ type: 'varchar', length: 128, name: 'media_id' })
   mediaId!: string;

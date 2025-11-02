@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MetricsService } from './metrics.service';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import {
   TimeSeries,
   MetricType,

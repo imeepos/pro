@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -8,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { Entity } from './decorator.js';
 import { UserEntity } from './user.entity.js';
 
 export type ScreenStatus = 'draft' | 'published';

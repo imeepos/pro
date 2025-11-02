@@ -1,0 +1,31 @@
+{
+  "name": "@pro/logger-nestjs",
+  "version": "1.0.0",
+  "description": "NestJS adapter for Pro logging infrastructure",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rimraf dist",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pro/logger": "workspace:*",
+    "nestjs-pino": "^4.4.1",
+    "pino-http": "^10.5.0"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.13"
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.0.13",
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*",
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.0"
+  }
+}

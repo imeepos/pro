@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { LoggerModule, createLoggerConfig } from '@pro/logger';
+import { LoggerModule, createLoggerConfig } from '@pro/logger-nestjs';
 import { AnalysisResultEntity } from '@pro/entities';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -24,8 +24,7 @@ import { createDatabaseConfig } from '@pro/entities';
       envFilePath: ['.env.local', '.env'],
     }),
     TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
+      useFactory: () => createDatabaseConfig(),
     }),
     TypeOrmModule.forFeature([AnalysisResultEntity]),
     LoggerModule.forRoot(

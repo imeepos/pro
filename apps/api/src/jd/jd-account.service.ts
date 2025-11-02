@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual } from 'typeorm';
-import { JdAccountEntity } from '@pro/entities';
+import { MoreThanOrEqual } from 'typeorm';
+import { JdAccountEntity, useEntityManager } from '@pro/entities';
 import { JdAccountStatus } from '@pro/types'
 export type JdAccountSummary = {
   id: number;
@@ -19,10 +18,6 @@ export type JdAccountSummary = {
  */
 @Injectable()
 export class JdAccountService {
-  constructor(
-    @InjectRepository(JdAccountEntity)
-    private readonly jdAccountRepo: Repository<JdAccountEntity>,
-  ) {}
 
   /**
    * 获取用户的所有京东账号
@@ -48,20 +43,22 @@ export class JdAccountService {
    * 按创建时间倒序返回京东账号概要列表
    */
   async listAccountSummaries(userId: string): Promise<JdAccountSummary[]> {
-    const accounts = await this.jdAccountRepo.find({
-      where: { userId },
-      order: { createdAt: 'DESC' },
-    });
+    return await useEntityManager(async (m) => {
+      const accounts = await m.getRepository(JdAccountEntity).find({
+        where: { userId },
+        order: { createdAt: 'DESC' },
+      });
 
-    return accounts.map((account) => ({
-      id: account.id,
-      jdUid: account.jdUid,
-      jdNickname: account.jdNickname ?? undefined,
-      jdAvatar: account.jdAvatar ?? undefined,
-      status: account.status,
-      lastCheckAt: account.lastCheckAt ?? undefined,
-      createdAt: account.createdAt,
-    }));
+      return accounts.map((account) => ({
+        id: account.id,
+        jdUid: account.jdUid,
+        jdNickname: account.jdNickname ?? undefined,
+        jdAvatar: account.jdAvatar ?? undefined,
+        status: account.status,
+        lastCheckAt: account.lastCheckAt ?? undefined,
+        createdAt: account.createdAt,
+      }));
+    });
   }
 
   /**
@@ -69,22 +66,24 @@ export class JdAccountService {
    * 包含权限验证：只能删除自己的账号
    */
   async deleteAccount(userId: string, accountId: number) {
-    const account = await this.jdAccountRepo.findOne({
-      where: { id: accountId },
+    return await useEntityManager(async (m) => {
+      const account = await m.getRepository(JdAccountEntity).findOne({
+        where: { id: accountId },
+      });
+
+      if (!account) {
+        throw new NotFoundException('账号不存在');
+      }
+
+      // 权限验证: 只能删除自己的账号
+      if (account.userId !== userId) {
+        throw new ForbiddenException('无权删除此账号');
+      }
+
+      await m.getRepository(JdAccountEntity).delete(accountId);
+
+      return { success: true };
     });
-
-    if (!account) {
-      throw new NotFoundException('账号不存在');
-    }
-
-    // 权限验证: 只能删除自己的账号
-    if (account.userId !== userId) {
-      throw new ForbiddenException('无权删除此账号');
-    }
-
-    await this.jdAccountRepo.delete(accountId);
-
-    return { success: true };
   }
 
   /**
@@ -95,33 +94,37 @@ export class JdAccountService {
     nickname?: string;
     avatar?: string;
   }) {
-    // 检查是否已存在相同的账号绑定
-    const existingAccount = await this.jdAccountRepo.findOne({
-      where: { userId, jdUid: userInfo.uid },
+    return await useEntityManager(async (m) => {
+      const repository = m.getRepository(JdAccountEntity);
+
+      // 检查是否已存在相同的账号绑定
+      const existingAccount = await repository.findOne({
+        where: { userId, jdUid: userInfo.uid },
+      });
+
+      if (existingAccount) {
+        // 更新现有账号的Cookie和信息
+        existingAccount.cookies = cookies;
+        existingAccount.jdNickname = userInfo.nickname || existingAccount.jdNickname;
+        existingAccount.jdAvatar = userInfo.avatar || existingAccount.jdAvatar;
+        existingAccount.status = JdAccountStatus.ACTIVE;
+        existingAccount.lastCheckAt = new Date();
+
+        return await repository.save(existingAccount);
+      }
+
+      // 创建新账号记录
+      const account = repository.create({
+        userId,
+        jdUid: userInfo.uid,
+        jdNickname: userInfo.nickname,
+        jdAvatar: userInfo.avatar,
+        cookies,
+        status: JdAccountStatus.ACTIVE,
+      });
+
+      return await repository.save(account);
     });
-
-    if (existingAccount) {
-      // 更新现有账号的Cookie和信息
-      existingAccount.cookies = cookies;
-      existingAccount.jdNickname = userInfo.nickname || existingAccount.jdNickname;
-      existingAccount.jdAvatar = userInfo.avatar || existingAccount.jdAvatar;
-      existingAccount.status = JdAccountStatus.ACTIVE;
-      existingAccount.lastCheckAt = new Date();
-
-      return await this.jdAccountRepo.save(existingAccount);
-    }
-
-    // 创建新账号记录
-    const account = this.jdAccountRepo.create({
-      userId,
-      jdUid: userInfo.uid,
-      jdNickname: userInfo.nickname,
-      jdAvatar: userInfo.avatar,
-      cookies,
-      status: JdAccountStatus.ACTIVE,
-    });
-
-    return await this.jdAccountRepo.save(account);
   }
 
   /**
@@ -129,40 +132,46 @@ export class JdAccountService {
    * 返回总数、今日新增、在线用户数
    */
   async getLoggedInUsersStats() {
-    // 总用户数
-    const total = await this.jdAccountRepo.count();
+    return await useEntityManager(async (m) => {
+      const repository = m.getRepository(JdAccountEntity);
 
-    // 今日新增（今天 00:00:00 之后创建的）
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+      // 总用户数
+      const total = await repository.count();
 
-    const todayNew = await this.jdAccountRepo.count({
-      where: {
-        createdAt: MoreThanOrEqual(today),
-      },
+      // 今日新增（今天 00:00:00 之后创建的）
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const todayNew = await repository.count({
+        where: {
+          createdAt: MoreThanOrEqual(today),
+        },
+      });
+
+      // 在线用户数（状态为 ACTIVE 的账号）
+      const online = await repository.count({
+        where: {
+          status: JdAccountStatus.ACTIVE,
+        },
+      });
+
+      return {
+        total,
+        todayNew,
+        online,
+      };
     });
-
-    // 在线用户数（状态为 ACTIVE 的账号）
-    const online = await this.jdAccountRepo.count({
-      where: {
-        status: JdAccountStatus.ACTIVE,
-      },
-    });
-
-    return {
-      total,
-      todayNew,
-      online,
-    };
   }
 
   /**
    * 更新账号状态
    */
   async updateAccountStatus(accountId: number, status: JdAccountStatus) {
-    await this.jdAccountRepo.update(accountId, {
-      status,
-      lastCheckAt: new Date(),
+    await useEntityManager(async (m) => {
+      await m.getRepository(JdAccountEntity).update(accountId, {
+        status,
+        lastCheckAt: new Date(),
+      });
     });
   }
 
@@ -170,8 +179,10 @@ export class JdAccountService {
    * 根据ID获取账号信息（包含敏感信息）
    */
   async getAccountById(accountId: number): Promise<JdAccountEntity | null> {
-    return await this.jdAccountRepo.findOne({
-      where: { id: accountId },
+    return await useEntityManager(async (m) => {
+      return await m.getRepository(JdAccountEntity).findOne({
+        where: { id: accountId },
+      });
     });
   }
 }

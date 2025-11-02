@@ -1,5 +1,6 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { Logger } from '@nestjs/common';
+import { root } from '@pro/core';
 import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 import { CleanTaskInput } from './dto/clean-task.input';
 import { AnalyzeTaskInput } from './dto/analyze-task.input';
@@ -19,7 +20,9 @@ import { TaskPriority } from '@pro/types';
 export class TasksResolver {
   private readonly logger = new Logger(TasksResolver.name);
 
-  constructor(private readonly rabbitMQService: RabbitMQService) {}
+  private get mq() {
+    return root.get(RabbitMQService);
+  }
 
   @Mutation(() => TaskResult, { description: '手动触发数据清洗任务' })
   async triggerCleanTask(
@@ -35,7 +38,7 @@ export class TasksResolver {
       createdAt: new Date().toISOString(),
     };
 
-    const success = await this.rabbitMQService.publishCleanTask(event);
+    const success = await this.mq.publishCleanTask(event);
 
     if (success) {
       return {
@@ -71,7 +74,7 @@ export class TasksResolver {
       createdAt: new Date().toISOString(),
     };
 
-    const success = await this.rabbitMQService.publishAnalyzeTask(event);
+    const success = await this.mq.publishAnalyzeTask(event);
 
     if (success) {
       return {
@@ -111,7 +114,7 @@ export class TasksResolver {
       createdAt: new Date().toISOString(),
     };
 
-    const success = await this.rabbitMQService.publishAggregateTask(event);
+    const success = await this.mq.publishAggregateTask(event);
 
     if (success) {
       return {

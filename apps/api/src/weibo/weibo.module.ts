@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   WeiboAccountEntity,
@@ -8,7 +8,6 @@ import {
   WeiboPostEntity,
   WeiboInteractionEntity,
 } from '@pro/entities';
-import { WeiboModule as CoreWeiboModule } from '@pro/weibo';
 import { WeiboAccountService } from './weibo-account.service';
 import { WeiboAuthService } from './weibo-auth.service';
 import { WeiboHealthCheckService } from './weibo-health-check.service';
@@ -16,8 +15,8 @@ import { WeiboHealthCheckScheduler } from './weibo-health-check.scheduler';
 import { WeiboSearchTaskService } from './weibo-search-task.service';
 import { WeiboAccountResolver } from './weibo-account.resolver';
 import { WeiboSearchTaskResolver } from './weibo-search-task.resolver';
-import { ScreensModule } from '../screens/screens.module';
 import { AuthModule } from '../auth/auth.module';
+import { ScreensModule } from '../screens/screens.module';
 import { WeiboAuthResolver } from './weibo-auth.resolver';
 import { WeiboRabbitMQConfigService } from './weibo-rabbitmq-config.service';
 import { WeiboTaskStatusConsumer } from './weibo-task-status.consumer';
@@ -29,8 +28,6 @@ import { WeiboCommentDataService } from './weibo-comment-data.service';
 import { WeiboPostDataService } from './weibo-post-data.service';
 import { WeiboInteractionDataService } from './weibo-interaction-data.service';
 import { WeiboDataResolver } from './weibo-data.resolver';
-import { RedisClient } from '@pro/redis';
-import { redisConfigFactory } from '../config';
 import { ConfigService } from '@nestjs/config';
 
 /**
@@ -47,9 +44,8 @@ import { ConfigService } from '@nestjs/config';
       WeiboPostEntity,
       WeiboInteractionEntity,
     ]),
-    forwardRef(() => ScreensModule),
-    AuthModule,
-    CoreWeiboModule,
+    ScreensModule,
+    AuthModule
   ],
   controllers: [],
   providers: [
@@ -71,13 +67,6 @@ import { ConfigService } from '@nestjs/config';
     WeiboDataResolver,
     WeiboTaskStatusConsumer,
     WeiboTaskStatusResolver,
-    {
-      provide: RedisClient,
-      useFactory: (configService: ConfigService) => {
-        return new RedisClient(redisConfigFactory(configService));
-      },
-      inject: [ConfigService],
-    },
   ],
   exports: [
     TypeOrmModule,

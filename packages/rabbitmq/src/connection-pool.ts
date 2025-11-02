@@ -23,6 +23,8 @@ export class ConnectionPool {
   private healthCheckTimer: NodeJS.Timeout | null = null;
   private eventListeners: Map<string, ((event: ConnectionEvent) => void)[]> =
     new Map();
+  private reconnectAttempts: number = 0;
+  private reconnectStartedAt: number = 0;
 
   constructor(
     private readonly config: RabbitMQConfig,
@@ -49,12 +51,29 @@ export class ConnectionPool {
       this.setState(ConnectionState.CONNECTED);
       this.startHealthCheck();
 
+      const wasReconnecting = this.reconnectAttempts > 0;
+      const reconnectDuration = wasReconnecting
+        ? Date.now() - this.reconnectStartedAt
+        : 0;
+
       this.emitEvent({
         type: 'connected',
         state: this.state,
         timestamp: Date.now(),
+        metadata: wasReconnecting
+          ? {
+              reconnectAttempts: this.reconnectAttempts,
+              reconnectDurationMs: reconnectDuration,
+            }
+          : undefined,
       });
+
+      this.reconnectAttempts = 0;
+      this.reconnectStartedAt = 0;
     } catch (error) {
+      // 清理部分建立的连接
+      await this.cleanup();
+
       this.setState(ConnectionState.ERROR);
       this.emitEvent({
         type: 'error',
@@ -65,6 +84,21 @@ export class ConnectionPool {
 
       this.scheduleReconnect();
       throw error;
+    }
+  }
+
+  private async cleanup(): Promise<void> {
+    try {
+      if (this.channel) {
+        await this.channel.close().catch(() => {});
+        this.channel = null;
+      }
+      if (this.connection) {
+        await this.connection.close().catch(() => {});
+        this.connection = null;
+      }
+    } catch {
+      // 忽略清理错误
     }
   }
 
@@ -122,7 +156,10 @@ export class ConnectionPool {
     });
 
     this.channel.on('close', () => {
+      console.log('[ConnectionPool] Channel closed, triggering reconnection');
       this.channel = null;
+      // 当 channel 关闭时，触发重连以创建新的 channel
+      this.scheduleReconnect();
     });
   }
 
@@ -132,6 +169,11 @@ export class ConnectionPool {
     }
 
     this.setState(ConnectionState.RECONNECTING);
+
+    if (this.reconnectAttempts === 0) {
+      this.reconnectStartedAt = Date.now();
+    }
+    this.reconnectAttempts++;
 
     const reconnectDelay = 5000;
     this.reconnectTimer = setTimeout(async () => {
@@ -217,7 +259,20 @@ export class ConnectionPool {
       this.healthCheckTimer = null;
     }
 
+    this.reconnectAttempts = 0;
+    this.reconnectStartedAt = 0;
+
+    this.eventListeners.clear();
+
     try {
+      if (this.connection) {
+        this.connection.removeAllListeners();
+      }
+
+      if (this.channel) {
+        this.channel.removeAllListeners();
+      }
+
       if (this.channel) {
         await this.channel.close();
         this.channel = null;

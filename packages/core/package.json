@@ -1,0 +1,41 @@
+{
+  "name": "@pro/core",
+  "version": "1.0.0",
+  "description": "Lightweight dependency injection framework",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "pnpm run build:js && pnpm run build:types",
+    "build:js": "tsup",
+    "build:types": "tsc --project tsconfig.types.json",
+    "clean": "rimraf dist",
+    "dev": "tsup --watch",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "dependency-injection",
+    "di",
+    "injector"
+  ],
+  "license": "UNLICENSED",
+  "dependencies": {
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@pro/eslint-config": "workspace:*",
+    "@pro/prettier-config": "workspace:*",
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.0"
+  }
+}

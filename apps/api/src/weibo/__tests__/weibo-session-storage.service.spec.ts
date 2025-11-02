@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WeiboSessionStorage } from '../weibo-session-storage.service';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { RedisClient } from '@pro/redis';
 import { ConfigService } from '@nestjs/config';
 

@@ -5,7 +5,7 @@ import { CrawlerModule } from '../../src/crawler.module';
 import { WeiboCrawlerService } from '../../src/services/weibo-crawler.service';
 import { AccountManagerService } from '../../src/services/account-manager.service';
 import { CaptchaService } from '../../src/services/captcha.service';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { setTimeout } from 'timers/promises';
 
 describe('AccountExceptionHandlingTest', () => {

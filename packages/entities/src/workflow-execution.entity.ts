@@ -1,16 +1,18 @@
 import {
   Column,
   CreateDateColumn,
-  Entity,
   Index,
   JoinColumn,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import type { WorkflowExecutionMetrics } from '@pro/types';
-import { WorkflowExecutionStatus } from '@pro/types';
 import { WorkflowEntity } from './workflow.entity.js';
+import { WorkflowStateEntity } from './workflow-state.entity.js';
+import { Entity } from './decorator.js';
+import { type IAstStates } from '@pro/workflow-core'
 
 @Entity('workflow_execution')
 export class WorkflowExecutionEntity {
@@ -21,17 +23,12 @@ export class WorkflowExecutionEntity {
   @Column({ type: 'uuid', name: 'workflow_id' })
   workflowId!: string;
 
-  @Column({ type: 'integer' })
-  revision!: number;
-
   @Index()
   @Column({
-    type: 'enum',
-    enum: WorkflowExecutionStatus,
-    enumName: 'workflow_execution_status_enum',
-    default: WorkflowExecutionStatus.QUEUED,
+    type: 'varchar',
+    default: `pending`
   })
-  status!: WorkflowExecutionStatus;
+  status!: IAstStates;
 
   @Column({
     type: 'timestamptz',
@@ -69,4 +66,7 @@ export class WorkflowExecutionEntity {
   })
   @JoinColumn({ name: 'workflow_id' })
   workflow!: WorkflowEntity;
+
+  @OneToOne(() => WorkflowStateEntity, (state) => state.execution)
+  state!: WorkflowStateEntity;
 }

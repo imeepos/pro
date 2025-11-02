@@ -1,9 +1,3 @@
-// NestJS Module
-export { RabbitMQModule, type RabbitMQAsyncOptions } from './rabbitmq.module.js';
-
-// Decorators
-export { InjectRabbitMQ } from './decorators.js';
-
 // Core Services
 export { ConnectionPool } from './connection-pool.js';
 export { RabbitMQPublisher } from './publisher.service.js';
@@ -32,3 +26,16 @@ export type {
   ConnectionEvent,
   DlqConnectionStatus,
 } from './types.js';
+
+
+// Configuration & Tokens
+export * from './tokens.js'
+
+// RxJS Queue Manager - 双 Observable 架构
+export { useQueue } from './hooks.js'
+export type {
+  QueueManager,
+  QueueProducer,
+  MessageEnvelope,
+  RxConsumerOptions,
+} from './rx-types.js'

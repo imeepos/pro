@@ -11,6 +11,7 @@ import {
   HOURLY_STATS_TTL,
   HOURLY_STATS_CONFIG,
 } from './interfaces/hourly-stats.interface';
+import { root } from '@pro/core';
 
 /**
  * 小时统计服务
@@ -21,9 +22,11 @@ export class WeiboHourlyStatsService implements OnModuleInit {
   private readonly logger = new Logger(WeiboHourlyStatsService.name);
   private readonly STATS_KEY_PREFIX = 'weibo:hourly:stats';
   private readonly DEFAULT_TIMEZONE = 'Asia/Shanghai';
+  private readonly redisClient: RedisClient
 
-  constructor(private readonly redisClient: RedisClient) {
+  constructor() {
     this.logger.log('小时统计服务初始化');
+    this.redisClient = root.get(RedisClient)
   }
 
   async onModuleInit(): Promise<void> {

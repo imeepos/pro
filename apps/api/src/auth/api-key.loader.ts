@@ -1,16 +1,13 @@
 import DataLoader = require('dataloader');
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
-import { ApiKeyEntity } from '@pro/entities';
+import { In } from 'typeorm';
+import { ApiKeyEntity, useEntityManager } from '@pro/entities';
 import { ApiKeyService } from './api-key.service';
 import { ApiKeyResponseDto } from './dto/api-key.dto';
 
 @Injectable()
 export class ApiKeyLoader {
   constructor(
-    @InjectRepository(ApiKeyEntity)
-    private readonly apiKeyRepo: Repository<ApiKeyEntity>,
     private readonly apiKeyService: ApiKeyService,
   ) {}
 
@@ -22,17 +19,19 @@ export class ApiKeyLoader {
         return ids.map(() => null);
       }
 
-      const records = await this.apiKeyRepo.find({
-        where: {
-          id: In(ids as number[]),
-          userId,
-        },
+      return await useEntityManager(async (manager) => {
+        const records = await manager.find(ApiKeyEntity, {
+          where: {
+            id: In(ids as number[]),
+            userId,
+          },
+        });
+
+        const mapped = records.map((record) => this.apiKeyService.toResponse(record));
+        const lookup = new Map<number, ApiKeyResponseDto>(mapped.map((dto) => [dto.id, dto]));
+
+        return ids.map((id) => lookup.get(id) ?? null);
       });
-
-      const mapped = records.map((record) => this.apiKeyService.toResponse(record));
-      const lookup = new Map<number, ApiKeyResponseDto>(mapped.map((dto) => [dto.id, dto]));
-
-      return ids.map((id) => lookup.get(id) ?? null);
     });
   }
 }

@@ -8,7 +8,7 @@ import { MessageQueueService } from '../../src/services/message-queue.service';
 import { RedisService } from '../../src/services/redis.service';
 import { ExternalApiService } from '../../src/services/external-api.service';
 import { HealthCheckService } from '../../src/services/health-check.service';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { setTimeout } from 'timers/promises';
 
 describe('ServiceDependencyFailureTest', () => {

@@ -2,7 +2,8 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
+import { connectMongoDB } from '@pro/mongodb';
 import { BrokerModule } from './broker.module';
 
 /**
@@ -22,6 +23,9 @@ async function bootstrap() {
   console.log('🚀 启动 Broker 服务 - 任务调度之心');
 
   try {
+    // 连接 MongoDB - 数据之源
+    await connectMongoDB();
+
     // 创建应用实例 - 从蓝图到现实
     const app = await NestFactory.create(BrokerModule);
 

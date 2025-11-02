@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { MetricsService } from './metrics.service';
 import { AlertManagerService } from './alert-manager.service';
 import {

@@ -1,13 +1,13 @@
-import type { LoggerModuleAsyncParams } from 'nestjs-pino';
+import type { LoggerOptions as PinoLoggerOptions } from 'pino';
 
-interface LoggerOptions {
+export interface LoggerOptions {
   serviceName: string;
   logLevel?: string;
   logDir?: string;
   enablePretty?: boolean;
 }
 
-export function createLoggerConfig(options: LoggerOptions): any {
+export function createLoggerConfig(options: LoggerOptions): PinoLoggerOptions {
   const { serviceName, logLevel, logDir = './logs', enablePretty = true } = options;
 
   const level = logLevel || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
@@ -51,30 +51,9 @@ export function createLoggerConfig(options: LoggerOptions): any {
     });
   }
 
-  const useMultipleTargets = targets.length > 1;
-
-  const baseConfig = {
+  return {
     name: serviceName,
     level,
-    transport: useMultipleTargets ? { targets } : targets[0],
-    timestamp: () => `,"time":"${new Date().toISOString()}"`,
-    serializers: {
-      req: (req: any) => ({
-        id: req.id,
-        method: req.method,
-        url: req.url,
-        remoteAddress: req.remoteAddress,
-        remotePort: req.remotePort,
-      }),
-      res: (res: any) => ({
-        statusCode: res.statusCode,
-      }),
-    },
-    ...(useMultipleTargets
-      ? {}
-      : { formatters: { level: (label: string) => ({ level: label }) } }
-    ),
+    transport: targets.length > 1 ? { targets } : targets[0],
   };
-
-  return { pinoHttp: baseConfig };
 }

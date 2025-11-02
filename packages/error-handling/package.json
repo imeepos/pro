@@ -15,10 +15,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.13",
+    "@pro/core": "workspace:*",
     "@pro/logger": "workspace:*",
-    "express": "^4.18.0",
-    "reflect-metadata": "^0.1.13"
+    "express": "^4.18.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.0",
@@ -32,6 +31,6 @@
     "format": ["esm"],
     "dts": true,
     "clean": true,
-    "external": ["@nestjs/common", "@pro/logger", "express"]
+    "external": ["@pro/core", "@pro/logger", "express"]
   }
 }

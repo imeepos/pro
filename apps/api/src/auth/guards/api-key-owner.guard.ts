@@ -6,9 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ApiKeyEntity } from '@pro/entities';
+import { ApiKeyEntity, useEntityManager } from '@pro/entities';
 import { resolveRequest } from '../../common/utils/context.utils';
 
 /**
@@ -17,11 +15,6 @@ import { resolveRequest } from '../../common/utils/context.utils';
  */
 @Injectable()
 export class ApiKeyOwnerGuard implements CanActivate {
-  constructor(
-    @InjectRepository(ApiKeyEntity)
-    private readonly apiKeyRepo: Repository<ApiKeyEntity>,
-  ) {}
-
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = resolveRequest(context);
     const gqlArgs = this.tryGetGraphqlArgs(context);
@@ -41,8 +34,10 @@ export class ApiKeyOwnerGuard implements CanActivate {
       return true;
     }
 
-    const apiKey = await this.apiKeyRepo.findOne({
-      where: { id: Number(apiKeyId) },
+    const apiKey = await useEntityManager(async (manager) => {
+      return await manager.findOne(ApiKeyEntity, {
+        where: { id: Number(apiKeyId) },
+      });
     });
 
     if (!apiKey) {

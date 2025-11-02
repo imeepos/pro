@@ -1,4 +1,3 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import type { QueueName } from '@pro/types';
 import { ConnectionPool } from './connection-pool.js';
 import { RabbitMQPublisher } from './publisher.service.js';
@@ -11,6 +10,7 @@ import type {
   ConnectionState,
   ConnectionEvent,
 } from './types.js';
+import { Injectable, OnDestroy, OnInit } from '@pro/core';
 
 /**
  * RabbitMQ 统一服务
@@ -25,9 +25,16 @@ import type {
  * - 自动管理资源生命周期
  * - 清晰的职责划分
  */
-@Injectable()
-export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
-  private connectionPool: ConnectionPool;
+@Injectable({
+  providedIn: 'root',
+  useFactory: () => {
+    return new RabbitMQService({ url: process.env.RABBITMQ_URL } as RabbitMQConfig)
+  },
+  deps: []
+})
+@OnInit()
+export class RabbitMQService implements OnDestroy {
+  public readonly connectionPool: ConnectionPool;
   private publisher: RabbitMQPublisher;
   private consumer: RabbitMQConsumer;
   private isInitialized = false;
@@ -38,16 +45,17 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     this.consumer = new RabbitMQConsumer(this.connectionPool);
   }
 
-  async onModuleInit(): Promise<void> {
+  async onInit(): Promise<void> {
     if (this.isInitialized) {
       return;
     }
 
     await this.connectionPool.connect();
+    console.log(`[RabbitMQService] connectionPool connect`)
     this.isInitialized = true;
   }
 
-  async onModuleDestroy(): Promise<void> {
+  async onDestroy(): Promise<void> {
     if (!this.isInitialized) {
       return;
     }

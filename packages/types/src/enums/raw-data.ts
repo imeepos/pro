@@ -13,6 +13,8 @@ export enum SourceType {
   WEIBO_NOTE_DETAIL = 'weibo_note_detail',
   WEIBO_CREATOR_PROFILE = 'weibo_creator_profile',
   WEIBO_COMMENTS = 'weibo_comments',
+  WEIBO_USER_INFO = 'weibo_user_info',
+  WEIBO_DETAIL = 'weibo_detail',
   JD = 'jd',
   CUSTOM = 'custom',
 }

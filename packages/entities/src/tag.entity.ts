@@ -1,5 +1,4 @@
 import {
-  Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
@@ -7,6 +6,7 @@ import {
   Index,
   OneToMany,
 } from 'typeorm';
+import { Entity } from './decorator.js';
 import { EventTagEntity } from './event-tag.entity.js';
 
 @Entity('tag')

@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { RabbitMQClient, RabbitMQConfig } from '@pro/rabbitmq';
 import { ConfigService } from '@nestjs/config';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { QUEUE_NAMES, AggregateTaskEvent } from '@pro/types';
 import { SubTaskMessage, TaskResultMessage, WEIBO_CRAWL_QUEUE } from '../weibo/interfaces/sub-task-message.interface';
 

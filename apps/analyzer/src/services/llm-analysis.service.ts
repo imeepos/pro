@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { LLMAnalysisResult, ModelProvider, AnalysisModelConfig, AnalysisCapability } from '@pro/entities';
 import OpenAI from 'openai';
 

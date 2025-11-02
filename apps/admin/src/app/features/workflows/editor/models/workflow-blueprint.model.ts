@@ -46,7 +46,6 @@ export interface WorkflowEditorState {
   slug: string;
   description: string | null;
   tags: string[];
-  revision: number | null;
   definitionVersion: number;
   nodes: WorkflowNodeDraft[];
   edges: WorkflowEdgeDraft[];

@@ -23,6 +23,7 @@ out/
 !vite-env.d.ts
 *.d.ts.map
 *.js
+!packages/eslint-config/*.js
 *.js.map
 *.tsbuildinfo
 !*.config.js

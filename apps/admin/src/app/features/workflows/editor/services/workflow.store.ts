@@ -13,7 +13,6 @@ export function createInitialState(): WorkflowEditorState {
     slug: randomSlug(),
     description: null,
     tags: [],
-    revision: null,
     definitionVersion: 1,
     nodes: [],
     edges: [],

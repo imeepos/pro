@@ -186,7 +186,6 @@ export class WorkflowEditorService {
       slug: workflow.slug,
       description: workflow.description ?? null,
       tags: workflow.tags ?? [],
-      revision: workflow.revision,
       definitionVersion: workflow.definition.version ?? 1,
       nodes,
       edges,

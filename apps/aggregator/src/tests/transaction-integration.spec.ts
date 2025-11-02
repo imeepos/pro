@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { HourlyStatsEntity, DailyStatsEntity } from '@pro/entities';
 import { TransactionService } from '../services/transaction.service';
 import { TransactionMetricsService } from '../services/transaction-metrics.service';

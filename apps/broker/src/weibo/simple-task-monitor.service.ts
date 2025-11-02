@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
-import { WeiboSearchTaskEntity } from '@pro/entities';
-import { PinoLogger } from '@pro/logger';
+import { Cron } from '@nestjs/schedule';
+import { LessThan } from 'typeorm';
+import { useEntityManager, WeiboSearchTaskEntity } from '@pro/entities';
+import { PinoLogger } from '@pro/logger-nestjs';
 
 /**
  * 简化的任务监控器 - 只做最基本的监控
@@ -17,8 +16,6 @@ import { PinoLogger } from '@pro/logger';
 export class SimpleTaskMonitor {
   constructor(
     private readonly logger: PinoLogger,
-    @InjectRepository(WeiboSearchTaskEntity)
-    private readonly taskRepository: Repository<WeiboSearchTaskEntity>,
   ) {
     this.logger.setContext(SimpleTaskMonitor.name);
   }
@@ -34,7 +31,6 @@ export class SimpleTaskMonitor {
     try {
       // 只检查长时间运行的任务，其他异常交给队列处理
       await this.checkLongRunningTasks();
-
       const duration = Date.now() - monitorStart;
       this.logger.debug(`[简化监控器] 检查完成，耗时 ${duration}ms`);
     } catch (error) {
@@ -52,12 +48,14 @@ export class SimpleTaskMonitor {
   private async checkLongRunningTasks(): Promise<void> {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
-    const longRunningTasks = await this.taskRepository.find({
-      where: {
-        enabled: true,
-        updatedAt: LessThan(twoHoursAgo),
-      },
-    });
+    const longRunningTasks = await useEntityManager(async m => {
+      return m.find(WeiboSearchTaskEntity, {
+        where: {
+          enabled: true,
+          updatedAt: LessThan(twoHoursAgo),
+        },
+      })
+    })
 
     if (longRunningTasks.length > 0) {
       this.logger.warn(`[简化监控器] 发现 ${longRunningTasks.length} 个长时间运行的任务`);

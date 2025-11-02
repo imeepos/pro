@@ -1,6 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model } from 'mongoose';
+import { Inject, Injectable } from '@pro/core';
+import { FilterQuery, type Model } from 'mongoose';
 import { RawDataSource, RawDataSourceDoc } from '../schemas/raw-data-source.schema.js';
 import { CreateRawDataSourceDto, ProcessingStatus, SourceType } from '@pro/types';
 import { calculateContentHash } from '../utils/hash.util.js';
@@ -10,20 +9,22 @@ import { calculateContentHash } from '../utils/hash.util.js';
  */
 @Injectable()
 export class RawDataSourceService {
-  private readonly logger = new Logger(RawDataSourceService.name);
-
-  constructor(
-    @InjectModel(RawDataSource.name)
-    private readonly rawDataSourceModel: Model<RawDataSourceDoc>,
-  ) {}
-
+  constructor(@Inject(RawDataSource) private model: Model<RawDataSourceDoc>) { }
   /**
    * 创建原始数据记录
    */
   async create(dto: CreateRawDataSourceDto): Promise<RawDataSourceDoc> {
     const contentHash = calculateContentHash(dto.rawContent);
 
-    const data = new this.rawDataSourceModel({
+    // 如果 contentHash 已存在就返回现有记录
+    const existing = await this.model.findOne({ contentHash }).exec();
+
+    if (existing) {
+      return existing as RawDataSourceDoc;
+    }
+
+    // contentHash 不存在，插入新记录
+    const data = new this.model({
       sourceType: dto.sourceType,
       sourceUrl: dto.sourceUrl,
       rawContent: dto.rawContent,
@@ -32,14 +33,14 @@ export class RawDataSourceService {
       status: ProcessingStatus.PENDING,
     });
 
-    return data.save();
+    return data.save() as Promise<RawDataSourceDoc>;
   }
 
   /**
    * 根据 ID 查询
    */
   async findById(id: string) {
-    return this.rawDataSourceModel.findById(id).exec();
+    return this.model.findById(id).exec();
   }
 
   /**
@@ -66,14 +67,14 @@ export class RawDataSourceService {
       criteria.$or = identifiers;
     }
 
-    return this.rawDataSourceModel.findOne(criteria).exec();
+    return this.model.findOne(criteria).exec();
   }
 
   /**
    * 查询待处理数据
    */
   async findPending(limit = 100) {
-    return this.rawDataSourceModel
+    return this.model
       .find({ status: ProcessingStatus.PENDING })
       .sort({ createdAt: 1 })
       .limit(limit)
@@ -84,7 +85,7 @@ export class RawDataSourceService {
    * 标记为处理中
    */
   async markProcessing(id: string) {
-    return this.rawDataSourceModel
+    return this.model
       .findByIdAndUpdate(
         id,
         { status: ProcessingStatus.PROCESSING },
@@ -97,7 +98,7 @@ export class RawDataSourceService {
    * 标记为已完成
    */
   async markCompleted(id: string) {
-    return this.rawDataSourceModel
+    return this.model
       .findByIdAndUpdate(
         id,
         {
@@ -113,7 +114,7 @@ export class RawDataSourceService {
    * 标记为失败
    */
   async markFailed(id: string, errorMessage: string) {
-    return this.rawDataSourceModel
+    return this.model
       .findByIdAndUpdate(
         id,
         {
@@ -131,14 +132,13 @@ export class RawDataSourceService {
    */
   async deleteOldCompleted(days = 30): Promise<number> {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    const result = await this.rawDataSourceModel
+    const result = await this.model
       .deleteMany({
         status: ProcessingStatus.COMPLETED,
         createdAt: { $lt: cutoffDate },
       })
       .exec();
 
-    this.logger.log(`Deleted ${result.deletedCount} old completed records`);
     return result.deletedCount || 0;
   }
 
@@ -146,7 +146,7 @@ export class RawDataSourceService {
    * 统计各状态数据量
    */
   async getStatistics(): Promise<Record<string, number>> {
-    const result = await this.rawDataSourceModel.aggregate([
+    const result = await this.model.aggregate([
       {
         $group: {
           _id: '$status',
@@ -154,7 +154,6 @@ export class RawDataSourceService {
         },
       },
     ]);
-
     return result.reduce((acc, item) => {
       acc[item._id] = item.count;
       return acc;
@@ -213,13 +212,13 @@ export class RawDataSourceService {
 
     const skip = (page - 1) * pageSize;
     const [items, total] = await Promise.all([
-      this.rawDataSourceModel
+      this.model
         .find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(pageSize)
         .exec(),
-      this.rawDataSourceModel.countDocuments(query).exec()
+      this.model.countDocuments(query).exec()
     ]);
 
     return {
@@ -237,7 +236,7 @@ export class RawDataSourceService {
    * 获取数据源类型统计
    */
   async getSourceTypeStatistics(): Promise<Record<string, number>> {
-    const result = await this.rawDataSourceModel.aggregate([
+    const result = await this.model.aggregate([
       {
         $group: {
           _id: '$sourceType',
@@ -308,23 +307,35 @@ export class RawDataSourceService {
       }
     );
 
-    return this.rawDataSourceModel.aggregate(pipeline);
+    return this.model.aggregate(pipeline);
   }
 
   /**
    * 批量重试失败的数据
    */
   async retryFailedData(limit: number = 50): Promise<number> {
-    const result = await this.rawDataSourceModel.updateMany(
-      { status: ProcessingStatus.FAILED },
+    // 先查询需要重试的数据 ID
+    const failedDocs = await this.model
+      .find({ status: ProcessingStatus.FAILED })
+      .select('_id')
+      .limit(limit)
+      .exec();
+
+    if (failedDocs.length === 0) {
+      return 0;
+    }
+
+    const ids = failedDocs.map(doc => doc._id);
+
+    // 批量更新这些文档
+    const result = await this.model.updateMany(
+      { _id: { $in: ids } },
       {
         status: ProcessingStatus.PENDING,
         $unset: { errorMessage: 1, processedAt: 1 }
-      },
-      { limit }
+      }
     );
 
-    this.logger.log(`Reset ${result.modifiedCount} failed records to pending`);
     return result.modifiedCount || 0;
   }
 

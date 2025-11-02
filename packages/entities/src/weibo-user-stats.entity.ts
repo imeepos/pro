@@ -1,30 +1,14 @@
 import {
   Column,
   CreateDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
   PrimaryGeneratedColumn,
-  RelationId,
 } from 'typeorm';
-import { WeiboUserEntity } from './weibo-user.entity.js';
+import { Entity } from './decorator.js';
 
 @Entity('weibo_user_stats')
-@Index(['user', 'snapshotTime'], { unique: true })
 export class WeiboUserStatsEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint', unsigned: true })
   id!: string;
-
-  @ManyToOne(() => WeiboUserEntity, (user) => user.statSnapshots, {
-    nullable: false,
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'user_id' })
-  user!: WeiboUserEntity;
-
-  @RelationId((stats: WeiboUserStatsEntity) => stats.user)
-  userId!: string;
 
   @Column({ type: 'timestamptz', name: 'snapshot_time' })
   snapshotTime!: Date;

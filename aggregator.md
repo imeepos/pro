@@ -1002,7 +1002,7 @@ export class RealtimeAggregationService {
       const location = post.author?.location || '未知';
       const existing = geoMap.get(location) || { count: 0, totalSentiment: 0, validSentiment: 0, posts: [] };
       existing.count++;
-      existing.posts.push(post.mblogId || post.id.toString());
+      existing.posts.push(post.mblogid || post.id.toString());
 
       if (post.analysisResult?.sentiment !== null) {
         existing.totalSentiment += post.analysisResult.sentiment;

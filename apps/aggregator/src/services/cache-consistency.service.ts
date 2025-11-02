@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Logger } from '@pro/logger';
+import { Logger } from '@pro/logger-nestjs';
 import { CacheService } from './cache.service';
 import { TransactionContext } from './transaction.service';
 

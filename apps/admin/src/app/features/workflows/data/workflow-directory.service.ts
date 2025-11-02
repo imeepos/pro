@@ -47,7 +47,6 @@ export class WorkflowDirectoryService {
       name: workflow.name,
       slug: workflow.slug,
       description: workflow.description ?? null,
-      revision: workflow.revision,
       tags: workflow.tags ?? [],
       createdAt: new Date(workflow.createdAt),
       updatedAt: new Date(workflow.updatedAt),

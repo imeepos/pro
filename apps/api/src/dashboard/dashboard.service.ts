@@ -1,104 +1,107 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ScreenPageEntity, EventEntity, WeiboAccountEntity, WeiboSearchTaskEntity, EventStatus } from '@pro/entities';
+import { ScreenPageEntity, EventEntity, WeiboAccountEntity, WeiboSearchTaskEntity, EventStatus, useEntityManager } from '@pro/entities';
 import { DashboardActivityType } from '@pro/types';
 import { DashboardStats, RecentActivity } from './dto/dashboard.dto';
 
 @Injectable()
 export class DashboardService {
-  constructor(
-    @InjectRepository(ScreenPageEntity)
-    private readonly screenRepository: Repository<ScreenPageEntity>,
-    @InjectRepository(EventEntity)
-    private readonly eventRepository: Repository<EventEntity>,
-    @InjectRepository(WeiboAccountEntity)
-    private readonly weiboAccountRepository: Repository<WeiboAccountEntity>,
-    @InjectRepository(WeiboSearchTaskEntity)
-    private readonly weiboSearchTaskRepository: Repository<WeiboSearchTaskEntity>,
-  ) {}
+  constructor() {}
 
   async getStats(userId: string): Promise<DashboardStats> {
-    const [totalScreens, totalEvents, totalWeiboAccounts, totalSearchTasks] = await Promise.all([
-      this.screenRepository.count({ where: { createdBy: userId } }),
-      this.eventRepository.count({ where: { createdBy: userId } }),
-      this.weiboAccountRepository.count({ where: { userId } }),
-      this.weiboSearchTaskRepository.count({ where: { userId } }),
-    ]);
+    return useEntityManager(async (m) => {
+      const screenRepository = m.getRepository(ScreenPageEntity);
+      const eventRepository = m.getRepository(EventEntity);
+      const weiboAccountRepository = m.getRepository(WeiboAccountEntity);
+      const weiboSearchTaskRepository = m.getRepository(WeiboSearchTaskEntity);
 
-    return {
-      totalScreens,
-      totalEvents,
-      totalWeiboAccounts,
-      totalSearchTasks,
-    };
+      const [totalScreens, totalEvents, totalWeiboAccounts, totalSearchTasks] = await Promise.all([
+        screenRepository.count({ where: { createdBy: userId } }),
+        eventRepository.count({ where: { createdBy: userId } }),
+        weiboAccountRepository.count({ where: { userId } }),
+        weiboSearchTaskRepository.count({ where: { userId } }),
+      ]);
+
+      return {
+        totalScreens,
+        totalEvents,
+        totalWeiboAccounts,
+        totalSearchTasks,
+      };
+    });
   }
 
   async getRecentActivities(userId: string): Promise<RecentActivity[]> {
-    const activities: RecentActivity[] = [];
+    return useEntityManager(async (m) => {
+      const activities: RecentActivity[] = [];
 
-    const [recentScreens, recentEvents, recentWeiboAccounts, recentTasks] = await Promise.all([
-      this.screenRepository.find({
-        where: { createdBy: userId },
-        order: { updatedAt: 'DESC' },
-        take: 3,
-      }),
-      this.eventRepository.find({
-        where: { createdBy: userId },
-        order: { updatedAt: 'DESC' },
-        take: 3,
-      }),
-      this.weiboAccountRepository.find({
-        where: { userId },
-        order: { updatedAt: 'DESC' },
-        take: 2,
-      }),
-      this.weiboSearchTaskRepository.find({
-        where: { userId },
-        order: { updatedAt: 'DESC' },
-        take: 2,
-      }),
-    ]);
+      const screenRepository = m.getRepository(ScreenPageEntity);
+      const eventRepository = m.getRepository(EventEntity);
+      const weiboAccountRepository = m.getRepository(WeiboAccountEntity);
+      const weiboSearchTaskRepository = m.getRepository(WeiboSearchTaskEntity);
+
+      const [recentScreens, recentEvents, recentWeiboAccounts, recentTasks] = await Promise.all([
+        screenRepository.find({
+          where: { createdBy: userId },
+          order: { updatedAt: 'DESC' },
+          take: 3,
+        }),
+        eventRepository.find({
+          where: { createdBy: userId },
+          order: { updatedAt: 'DESC' },
+          take: 3,
+        }),
+        weiboAccountRepository.find({
+          where: { userId },
+          order: { updatedAt: 'DESC' },
+          take: 2,
+        }),
+        weiboSearchTaskRepository.find({
+          where: { userId },
+          order: { updatedAt: 'DESC' },
+          take: 2,
+        }),
+      ]);
 
     recentScreens.forEach(screen => {
-      activities.push({
-        type: DashboardActivityType.Screen,
-        message: `${screen.status === 'published' ? '发布了' : '更新了'}大屏 "${screen.name}"`,
-        time: this.formatTime(screen.updatedAt),
-        entityId: screen.id,
+        activities.push({
+          type: DashboardActivityType.Screen,
+          message: `${screen.status === 'published' ? '发布了' : '更新了'}大屏 "${screen.name}"`,
+          time: this.formatTime(screen.updatedAt),
+          entityId: screen.id,
+        });
       });
-    });
 
-    recentEvents.forEach(event => {
-      activities.push({
-        type: DashboardActivityType.Event,
-        message: `${event.status === EventStatus.PUBLISHED ? '发布了' : '更新了'}事件 "${event.eventName}"`,
-        time: this.formatTime(event.updatedAt),
-        entityId: event.id,
+      recentEvents.forEach(event => {
+        activities.push({
+          type: DashboardActivityType.Event,
+          message: `${event.status === EventStatus.PUBLISHED ? '发布了' : '更新了'}事件 "${event.eventName}"`,
+          time: this.formatTime(event.updatedAt),
+          entityId: event.id,
+        });
       });
-    });
 
-    recentWeiboAccounts.forEach(account => {
-      activities.push({
-        type: DashboardActivityType.Weibo,
-        message: `更新了微博账号 "${account.weiboNickname || account.weiboUid}"`,
-        time: this.formatTime(account.updatedAt),
-        entityId: account.id.toString(),
+      recentWeiboAccounts.forEach(account => {
+        activities.push({
+          type: DashboardActivityType.Weibo,
+          message: `更新了微博账号 "${account.weiboNickname || account.weiboUid}"`,
+          time: this.formatTime(account.updatedAt),
+          entityId: account.id.toString(),
+        });
       });
-    });
 
-    recentTasks.forEach(task => {
-      activities.push({
-        type: DashboardActivityType.Task,
-        message: `${task.enabled ? '启用了' : '暂停了'}搜索任务 "${task.keyword}"`,
-        time: this.formatTime(task.updatedAt),
-        entityId: task.id.toString(),
+      recentTasks.forEach(task => {
+        activities.push({
+          type: DashboardActivityType.Task,
+          message: `${task.enabled ? '启用了' : '暂停了'}搜索任务 "${task.keyword}"`,
+          time: this.formatTime(task.updatedAt),
+          entityId: task.id.toString(),
+        });
       });
-    });
 
-    return activities
-      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-      .slice(0, 10);
+      return activities
+        .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+        .slice(0, 10);
+    });
   }
 
   private formatTime(date: Date): string {

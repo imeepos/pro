@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@pro/core';
 import { RawDataSourceService } from '@pro/mongodb';
 import {
   RawDataFilterDto,
@@ -10,6 +10,7 @@ import {
 } from './dto/raw-data.dto';
 import { ProcessingStatus, SourceType, SourcePlatform } from '@pro/types';
 import { TimeFormatter } from './models/raw-data.model';
+import { Inject, Logger, NotFoundException } from '@nestjs/common';
 
 /**
  * 原始数据业务服务 - 数字时代的数据编排艺术
@@ -25,7 +26,7 @@ export class RawDataService {
   private readonly logger = new Logger(RawDataService.name);
 
   constructor(
-    private readonly rawDataSourceService: RawDataSourceService,
+    @Inject(RawDataSourceService) private readonly rawDataSourceService: RawDataSourceService,
   ) {}
 
   /**

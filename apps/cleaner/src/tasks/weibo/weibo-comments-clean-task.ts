@@ -86,9 +86,9 @@ export class WeiboCommentsCleanTask extends WeiboBaseCleanTask {
     const storedComments = await helpers.weibo.saveComments(normalizedComments, userMap, post);
 
     return {
-      postIds: [post.id],
-      commentIds: [...storedComments.values()].map((comment) => comment.id),
-      userIds: [...userMap.values()].map((user) => user.id),
+      postIds: [String(post.id)],
+      commentIds: [...storedComments.values()].map((comment) => String(comment.id)),
+      userIds: [...userMap.values()].map((user) => String(user.id)),
     };
   }
 

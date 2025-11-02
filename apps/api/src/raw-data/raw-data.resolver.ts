@@ -12,7 +12,7 @@ import { SourceType } from '@pro/types';
 import { RawDataService } from './raw-data.service';
 import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { PinoLogger } from '@pro/logger';
+import { PinoLogger } from '@pro/logger-nestjs';
 
 /**
  * 原始数据 GraphQL 解析器

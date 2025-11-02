@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PinoLogger } from '@pro/logger';
+import { root } from '@pro/core';
+import { PinoLogger } from '@pro/logger-nestjs';
 import { RedisClient } from '@pro/redis';
-import { WeiboAccountEntity } from '@pro/entities';
+import { WeiboAccountEntity, useEntityManager } from '@pro/entities';
 import { WeiboAccountStatus } from '@pro/types';
 import {
   WeiboHealthCheckService as WeiboCoreHealthCheckService,
@@ -19,14 +18,13 @@ import {
 export class WeiboAccountHealthScheduler {
   private readonly healthKey = 'weibo:account:health';
   private readonly metricsKeyPrefix = 'weibo:account';
+  private readonly redis: RedisClient;
 
   constructor(
-    @InjectRepository(WeiboAccountEntity)
-    private readonly accountRepository: Repository<WeiboAccountEntity>,
-    private readonly redis: RedisClient,
     private readonly logger: PinoLogger,
     private readonly weiboHealthInspector: WeiboCoreHealthCheckService,
   ) {
+    this.redis = root.get(RedisClient);
     this.logger.setContext(WeiboAccountHealthScheduler.name);
   }
 
@@ -74,8 +72,10 @@ export class WeiboAccountHealthScheduler {
   async validateAccountCookies(): Promise<void> {
     const startedAt = Date.now();
 
-    const accounts = await this.accountRepository.find({
-      where: { status: WeiboAccountStatus.ACTIVE },
+    const accounts = await useEntityManager(async manager => {
+      return await manager.find(WeiboAccountEntity, {
+        where: { status: WeiboAccountStatus.ACTIVE },
+      });
     });
 
     if (accounts.length === 0) {

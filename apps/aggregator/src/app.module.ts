@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { LoggerModule, createLoggerConfig } from '@pro/logger';
+import { LoggerModule, createLoggerConfig } from '@pro/logger-nestjs';
 import { ConfigurationModule } from '@pro/configuration';
 import { ErrorHandlingModule } from '@pro/error-handling';
 import { HourlyStatsEntity, DailyStatsEntity } from '@pro/entities';
@@ -29,6 +29,7 @@ import { PrometheusAdapterService } from './services/prometheus-adapter.service'
 import { HealthCheckService } from './services/health-check.service';
 import { AlertManagerService } from './services/alert-manager.service';
 import { MonitoringInitializerService } from './services/monitoring-initializer.service';
+import { RedisClient } from '@pro/redis';
 
 @Module({
   imports: [
@@ -61,9 +62,7 @@ import { MonitoringInitializerService } from './services/monitoring-initializer.
     }),
 
     TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) =>
-        createDatabaseConfig(configService) as TypeOrmModuleOptions,
+      useFactory: () => createDatabaseConfig() as TypeOrmModuleOptions,
     }),
 
     ScheduleModule.forRoot(),
@@ -94,6 +93,7 @@ import { MonitoringInitializerService } from './services/monitoring-initializer.
     HealthCheckService,
     AlertManagerService,
     MonitoringInitializerService,
+    RedisClient,
   ],
 })
 export class AppModule {}

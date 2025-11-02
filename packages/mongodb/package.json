@@ -17,6 +17,7 @@
     "build": "tsup && tsc --project tsconfig.types.json",
     "build:js": "tsup",
     "build:types": "tsc --project tsconfig.types.json",
+    "main": "tsx src/main.ts",
     "clean": "rimraf dist",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
@@ -31,20 +32,14 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@nestjs/common": "^11.0.13",
-    "@nestjs/core": "^11.0.13",
-    "@nestjs/config": "^4.0.2",
-    "@nestjs/microservices": "^11.0.0",
-    "@nestjs/mongoose": "^11.0.3",
-    "@nestjs/platform-express": "^11.0.13",
-    "@nestjs/platform-socket.io": "^11.0.0",
-    "@nestjs/websockets": "^11.0.0",
+    "@pro/core": "workspace:*",
     "@pro/types": "workspace:*",
-    "mongoose": "^8.0.0"
+    "@typegoose/typegoose": "^12.0.0",
+    "dotenv": "^16.0.0",
+    "mongoose": "8.19.1"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
-    "@nestjs/testing": "^11.0.0",
     "@pro/eslint-config": "workspace:*",
     "@pro/prettier-config": "workspace:*",
     "@types/jest": "^29.5.2",
