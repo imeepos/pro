@@ -1,4 +1,3 @@
-import { TaskPriority } from './clean-events.js';
 
 /**
  * 微博用户信息爬取事件

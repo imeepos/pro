@@ -16,14 +16,15 @@ export const TOKEN_BLACKLIST_PREFIX = 'blacklist:';
 export class GraphqlWsAuthService {
   private readonly logger = new Logger(GraphqlWsAuthService.name);
   private readonly blacklistPrefix = TOKEN_BLACKLIST_PREFIX;
-  private readonly redisClient: RedisClient;
+
+  private get redis() {
+    return root.get(RedisClient);
+  }
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-  ) {
-    this.redisClient = root.get(RedisClient);
-  }
+  ) {}
 
   /**
    * 从 connection_init 消息中提取并验证 JWT Token
@@ -52,7 +53,7 @@ export class GraphqlWsAuthService {
         token,
         secret,
         jwtService: this.jwtService,
-        redisClient: this.redisClient,
+        redisClient: this.redis,
         blacklistKeyPrefix: this.blacklistPrefix,
       });
 

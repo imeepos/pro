@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { SelectQueryBuilder } from 'typeorm';
 import { PinoLogger } from '@pro/logger-nestjs';
 import { WeiboInteractionEntity, useEntityManager } from '@pro/entities';
 import {
@@ -31,48 +32,10 @@ export class WeiboInteractionDataService {
       const limit = pagination?.limit ?? 20;
 
       const qb = m.getRepository(WeiboInteractionEntity)
-        .createQueryBuilder('interaction')
-        .leftJoinAndSelect('interaction.post', 'post')
-        .leftJoinAndSelect('interaction.comment', 'comment');
+        .createQueryBuilder('interaction');
 
-      if (filter?.interactionType) {
-        qb.andWhere('interaction.interactionType = :interactionType', {
-          interactionType: filter.interactionType,
-        });
-      }
-
-      if (filter?.targetType) {
-        qb.andWhere('interaction.targetType = :targetType', {
-          targetType: filter.targetType,
-        });
-      }
-
-      if (filter?.userWeiboId) {
-        qb.andWhere('interaction.userWeiboId = :userWeiboId', {
-          userWeiboId: filter.userWeiboId,
-        });
-      }
-
-      if (filter?.targetWeiboId) {
-        qb.andWhere('interaction.targetWeiboId = :targetWeiboId', {
-          targetWeiboId: filter.targetWeiboId,
-        });
-      }
-
-      if (filter?.dateFrom || filter?.dateTo) {
-        const from = filter.dateFrom ?? new Date(0);
-        const to = filter.dateTo ?? new Date();
-        qb.andWhere('interaction.createdAt BETWEEN :from AND :to', { from, to });
-      }
-
-      const sortField = sort?.field ?? 'createdAt';
-      const sortOrder = sort?.order ?? 'DESC';
-      const allowedFields = ['createdAt', 'interactionType', 'targetType'];
-      const safeSortField = allowedFields.includes(sortField)
-        ? sortField
-        : 'createdAt';
-
-      qb.orderBy(`interaction.${safeSortField}`, sortOrder as 'ASC' | 'DESC');
+      this.applyFilters(qb, filter);
+      this.applySort(qb, sort);
 
       const offset = (page - 1) * limit;
       qb.skip(offset).take(limit);
@@ -87,6 +50,63 @@ export class WeiboInteractionDataService {
         pageSize: limit,
       });
     });
+  }
+
+  private applyFilters(
+    qb: SelectQueryBuilder<WeiboInteractionEntity>,
+    filter?: InteractionFilterDto,
+  ): void {
+    if (!filter) return;
+
+    if (filter.interactionType) {
+      qb.andWhere('interaction.interaction_type = :interactionType', {
+        interactionType: filter.interactionType,
+      });
+    }
+
+    if (filter.targetType) {
+      qb.andWhere('interaction.target_type = :targetType', {
+        targetType: filter.targetType,
+      });
+    }
+
+    if (filter.userWeiboId) {
+      qb.andWhere('interaction.user_weibo_id = :userWeiboId', {
+        userWeiboId: filter.userWeiboId,
+      });
+    }
+
+    if (filter.targetWeiboId) {
+      qb.andWhere('interaction.target_weibo_id = :targetWeiboId', {
+        targetWeiboId: filter.targetWeiboId,
+      });
+    }
+
+    if (filter.dateFrom) {
+      qb.andWhere('interaction.created_at >= :dateFrom', {
+        dateFrom: filter.dateFrom,
+      });
+    }
+
+    if (filter.dateTo) {
+      qb.andWhere('interaction.created_at <= :dateTo', {
+        dateTo: filter.dateTo,
+      });
+    }
+  }
+
+  private applySort(qb: SelectQueryBuilder<WeiboInteractionEntity>, sort?: SortDto): void {
+    const sortField = sort?.field ?? 'createdAt';
+    const sortOrder = sort?.order ?? 'DESC';
+
+    const columnMap: Record<string, string> = {
+      createdAt: 'created_at',
+      interactionType: 'interaction_type',
+      targetType: 'target_type',
+    };
+
+    const column = columnMap[sortField] ?? columnMap.createdAt;
+    qb.orderBy(`interaction.${column}`, sortOrder as 'ASC' | 'DESC');
   }
 
   async findInteractionById(id: string): Promise<WeiboInteractionEntity | null> {
@@ -110,39 +130,11 @@ export class WeiboInteractionDataService {
     return useEntityManager(async (m) => {
       const qb = m.getRepository(WeiboInteractionEntity)
         .createQueryBuilder('interaction')
-        .select('interaction.interactionType', 'type')
+        .select('interaction.interaction_type', 'type')
         .addSelect('COUNT(*)', 'count')
-        .groupBy('interaction.interactionType');
+        .groupBy('interaction.interaction_type');
 
-      if (filter?.interactionType) {
-        qb.andWhere('interaction.interactionType = :interactionType', {
-          interactionType: filter.interactionType,
-        });
-      }
-
-      if (filter?.targetType) {
-        qb.andWhere('interaction.targetType = :targetType', {
-          targetType: filter.targetType,
-        });
-      }
-
-      if (filter?.userWeiboId) {
-        qb.andWhere('interaction.userWeiboId = :userWeiboId', {
-          userWeiboId: filter.userWeiboId,
-        });
-      }
-
-      if (filter?.targetWeiboId) {
-        qb.andWhere('interaction.targetWeiboId = :targetWeiboId', {
-          targetWeiboId: filter.targetWeiboId,
-        });
-      }
-
-      if (filter?.dateFrom || filter?.dateTo) {
-        const from = filter.dateFrom ?? new Date(0);
-        const to = filter.dateTo ?? new Date();
-        qb.andWhere('interaction.createdAt BETWEEN :from AND :to', { from, to });
-      }
+      this.applyFilters(qb, filter);
 
       const results = await qb.getRawMany<{ type: string; count: string }>();
 

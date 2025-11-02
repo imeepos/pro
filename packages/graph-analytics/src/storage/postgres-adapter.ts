@@ -104,7 +104,7 @@ export class PostgresGraphSource {
 
     return this.manager.find(WeiboLikeEntity, {
       where,
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'ASC' } as any,
     })
   }
 
@@ -123,7 +123,7 @@ export class PostgresGraphSource {
 
     return this.manager.find(WeiboInteractionEntity, {
       where,
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'ASC' } as any,
       take: window.postLimit ? window.postLimit * 10 : undefined,
     })
   }
@@ -143,7 +143,7 @@ export class PostgresGraphSource {
 
     return this.manager.find(WeiboRepostEntity, {
       where,
-      order: { created_at: 'ASC' },
+      order: { created_at: 'ASC' } as any,
     })
   }
 
@@ -154,13 +154,13 @@ export class PostgresGraphSource {
     if (!postIds.length) {
       return this.manager.find(WeiboCommentEntity, {
         take: window.postLimit ? window.postLimit * 2 : 2000,
-        order: { id: 'DESC' },
+        order: { id: 'DESC' } as any,
       })
     }
 
     return this.manager.find(WeiboCommentEntity, {
       where: { rootid: In(postIds.map((id) => Number(id))) },
-      order: { id: 'DESC' },
+      order: { id: 'DESC' } as any,
     })
   }
 }

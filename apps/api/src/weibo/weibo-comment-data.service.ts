@@ -96,7 +96,9 @@ export class WeiboCommentDataService {
     if (!filter) return;
 
     if (filter.keyword) {
-      qb.andWhere('comment.text ILIKE :keyword', { keyword: `%${filter.keyword}%` });
+      qb.andWhere('(comment.text ILIKE :keyword OR comment.text_raw ILIKE :keyword)', {
+        keyword: `%${filter.keyword}%`
+      });
     }
 
     if (filter.authorNickname) {
@@ -106,17 +108,18 @@ export class WeiboCommentDataService {
     }
 
     if (filter.postId) {
-      qb.andWhere(`comment.more_info ->> 'post_weibo_id' = :postId`, {
-        postId: filter.postId,
-      });
+      qb.andWhere(
+        `(comment.more_info ->> 'post_weibo_id' = :postId OR comment.rootidstr = :postId)`,
+        { postId: filter.postId }
+      );
     }
 
     if (filter.dateFrom) {
-      qb.andWhere('comment.ingestedAt >= :dateFrom', { dateFrom: filter.dateFrom });
+      qb.andWhere('comment.ingested_at >= :dateFrom', { dateFrom: filter.dateFrom });
     }
 
     if (filter.dateTo) {
-      qb.andWhere('comment.ingestedAt <= :dateTo', { dateTo: filter.dateTo });
+      qb.andWhere('comment.ingested_at <= :dateTo', { dateTo: filter.dateTo });
     }
 
     if (filter.hasLikes) {
@@ -129,7 +132,7 @@ export class WeiboCommentDataService {
     const sortOrder = sort?.order ?? SortOrder.DESC;
 
     const columnMap: Record<string, string> = {
-      createdAt: 'ingestedAt',
+      createdAt: 'ingested_at',
       likeCounts: 'like_counts',
       floorNumber: 'floor_number',
     };

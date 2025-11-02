@@ -18,14 +18,15 @@ import { root } from '@pro/core';
 export class AuthService {
   private readonly TOKEN_BLACKLIST_PREFIX = 'blacklist:';
   private readonly REFRESH_TOKEN_PREFIX = 'refresh:';
-  private readonly redisClient: RedisClient;
+
+  private get redis() {
+    return root.get(RedisClient);
+  }
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {
-    this.redisClient = root.get(RedisClient);
-  }
+  ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
     return useEntityManager(async (m) => {
@@ -98,7 +99,7 @@ export class AuthService {
         throw new UnauthorizedException('Token 已失效');
       }
 
-      const storedToken = await this.redisClient.get<string>(
+      const storedToken = await this.redis.get<string>(
         `${this.REFRESH_TOKEN_PREFIX}${payload.userId}`,
       );
 
@@ -137,7 +138,7 @@ export class AuthService {
 
       await this.addTokenToBlacklist(accessToken, payload.exp);
 
-      await this.redisClient.del(
+      await this.redis.del(
         `${this.REFRESH_TOKEN_PREFIX}${payload.userId}`,
       );
     } catch (error) {
@@ -174,7 +175,7 @@ export class AuthService {
     } as any);
 
     const refreshTokenTTL = this.parseExpiration(getRefreshTokenExpiresIn(this.configService));
-    await this.redisClient.set(
+    await this.redis.set(
       `${this.REFRESH_TOKEN_PREFIX}${user.id}`,
       refreshToken,
       refreshTokenTTL,
@@ -207,12 +208,12 @@ export class AuthService {
     const ttl = exp - now;
 
     if (ttl > 0) {
-      await this.redisClient.set(`${this.TOKEN_BLACKLIST_PREFIX}${token}`, '1', ttl);
+      await this.redis.set(`${this.TOKEN_BLACKLIST_PREFIX}${token}`, '1', ttl);
     }
   }
 
   private async isTokenBlacklisted(token: string): Promise<boolean> {
-    return this.redisClient.exists(`${this.TOKEN_BLACKLIST_PREFIX}${token}`);
+    return this.redis.exists(`${this.TOKEN_BLACKLIST_PREFIX}${token}`);
   }
 
   private parseExpiration(expiration: string): number {

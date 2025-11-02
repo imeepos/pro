@@ -8,8 +8,11 @@ import { root } from '@pro/core';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  private readonly redisClient: RedisClient;
   private readonly TOKEN_BLACKLIST_PREFIX = 'blacklist:';
+
+  private get redis() {
+    return root.get(RedisClient);
+  }
 
   constructor(@Inject() private readonly config: ConfigService) {
     super({
@@ -22,7 +25,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: config.get('JWT_SECRET', 'your-jwt-secret-change-in-production'),
       passReqToCallback: true,
     });
-    this.redisClient = root.get(RedisClient);
   }
 
   async validate(req: any, payload: JwtPayload): Promise<JwtPayload> {
@@ -30,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ExtractJwt.fromAuthHeaderAsBearerToken()(req) || req.query?.token;
 
     if (token) {
-      const isBlacklisted = await this.redisClient.exists(
+      const isBlacklisted = await this.redis.exists(
         `${this.TOKEN_BLACKLIST_PREFIX}${token}`,
       );
 
