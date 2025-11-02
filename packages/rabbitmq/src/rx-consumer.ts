@@ -4,6 +4,36 @@ import type { ConnectionPool } from './connection-pool.js';
 import type { MessageEnvelope, RxConsumerOptions } from './rx-types.js';
 import type { MessageMetadata } from './types.js';
 import type * as amqp from 'amqplib';
+import { ConnectionState } from './types.js';
+
+/**
+ * 等待连接建立
+ */
+async function waitForConnection(
+    connectionPool: ConnectionPool,
+    timeout: number = 30000,
+): Promise<void> {
+    const startTime = Date.now();
+
+    while (!connectionPool.isConnected()) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed > timeout) {
+            throw new Error(
+                `RabbitMQ 连接超时 (${timeout}ms), 当前状态: ${connectionPool.getState()}`
+            );
+        }
+
+        const state = connectionPool.getState();
+        if (state === ConnectionState.ERROR || state === ConnectionState.CLOSED) {
+            throw new Error(
+                `RabbitMQ 连接不可用, 当前状态: ${state}`
+            );
+        }
+
+        // 等待 100ms 后重试
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+}
 
 /**
  * RxJS 队列消费者 - 将 RabbitMQ 消息流转换为 Observable
@@ -36,6 +66,9 @@ export function createRxConsumer<T>(
         // 启动消费者
         const startConsuming = async () => {
             try {
+                // 等待连接建立
+                await waitForConnection(connectionPool);
+
                 channel = connectionPool.getChannel();
 
                 // 确保队列存在
