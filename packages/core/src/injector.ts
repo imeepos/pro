@@ -51,4 +51,5 @@ export abstract class Injector {
   setParent(p: Injector): void {
     this.parent = p;
   }
+  abstract use(providers:  (Provider | Type<any>)[]): void;
 }

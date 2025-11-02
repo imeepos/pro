@@ -1,4 +1,4 @@
-import { Injector, InjectionTokenType } from './injector';
+import { Injector, InjectionTokenType, Type } from './injector';
 import { Provider } from './provider';
 
 /**
@@ -35,4 +35,6 @@ export class NullInjector extends Injector {
   async destroy(): Promise<void> {
     // NullInjector 无需销毁
   }
+
+  use(_providers: (Provider | Type<any>)[]): void {}
 }

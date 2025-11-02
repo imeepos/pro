@@ -14,6 +14,7 @@ export class WeiboAjaxStatusesShowAst extends Ast {
     mblogid: string;
 
     @Output()
+    @Input()
     uid: string;
 
     @Output()
@@ -53,7 +54,7 @@ export class WeiboAjaxStatusesShowAstVisitor {
                 'accept-language': 'zh-CN,zh;q=0.9',
                 'client-version': 'v2.47.129',
                 'priority': 'u=1, i',
-                'referer': 'https://weibo.com/2744950651/Qbug75SHT',
+                'referer': `https://weibo.com/${ast.uid}/${ast.mblogid}`,
                 'sec-ch-ua': '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
                 'sec-ch-ua-mobile': '?0',
                 'sec-ch-ua-platform': '"Windows"',

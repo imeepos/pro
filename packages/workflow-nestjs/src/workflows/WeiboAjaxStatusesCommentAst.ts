@@ -26,7 +26,7 @@ export class WeiboAjaxStatusesCommentAst extends Ast {
 
     // 默认
     @Input()
-    max_id: number | undefined;
+    max_id: number | undefined = undefined;
 
     @Input()
     count: number = 20;

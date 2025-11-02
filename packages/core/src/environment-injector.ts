@@ -535,6 +535,7 @@ export class EnvironmentInjector extends Injector {
     return hostInjector.get(token);
   }
 
+  use(_providers: (Provider | Type<any>)[]): void { }
   /**
    * 初始化注入器，调用所有标记 @OnInit() 的服务的 onModelInit() 方法
    *
