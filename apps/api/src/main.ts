@@ -3,14 +3,17 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from './common/pipes/validation.pipe';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
-import { ConfigService } from '@nestjs/config';
 import { GraphqlExceptionFilter } from './common/filters/graphql-exception.filter';
 import { Request, Response } from 'express';
+import { ConfigService } from '@nestjs/config';
+import { root } from '@pro/core';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const config = app.get(ConfigService);
+  // 将 NestJS 提供的服务桥接到 @pro/core 的 root injector
+  const configService = app.get(ConfigService);
+  root.set([{ provide: ConfigService, useValue: configService }]);
 
   app.useGlobalPipes(new ValidationPipe());
 
@@ -29,6 +32,6 @@ async function bootstrap() {
     origin: '*',
     credentials: true,
   });
-  await app.listen(config.get('PORT', 3000), '0.0.0.0');
+  await app.listen(configService.get('PORT', 3000), '0.0.0.0');
 }
 bootstrap();
