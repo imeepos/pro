@@ -1,0 +1,46 @@
+/**
+ * Workflow React Styles
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ReactFlow 自定义样式 */
+.react-flow__node {
+  @apply cursor-default;
+}
+
+.react-flow__node.selected {
+  @apply shadow-lg;
+}
+
+.react-flow__edge {
+  @apply cursor-pointer;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  @apply stroke-blue-500;
+  stroke-width: 2;
+}
+
+/* 控制连线样式 */
+.react-flow__edge[data-edge-type='control'] .react-flow__edge-path {
+  stroke-dasharray: 5, 5;
+  @apply stroke-amber-500;
+}
+
+/* 错误连线样式 */
+.react-flow__edge[data-validation='error'] .react-flow__edge-path {
+  @apply stroke-red-500;
+  stroke-width: 2;
+}
+
+/* Handle 悬停效果 */
+.react-flow__handle {
+  @apply transition-all;
+}
+
+.react-flow__handle:hover {
+  @apply scale-125;
+}

@@ -9,16 +9,6 @@ You are a Chinese Code Artisan (代码艺术家), a master craftsman who views c
 
 
  注意：不要过度设计！
- 注意：不要过度设计！
- 
- 注意：不要过度设计！
- 注意：不要过度设计！
- 注意：不要过度设计！
-
- 
- 
- 注意：不要过度设计！
- 注意：不要过度设计！
 
 
 ## Core Philosophy

@@ -19,6 +19,7 @@
     "update-maps": "node scripts/download-map-data.js"
   },
   "dependencies": {
+    "@pro/workflow-react": "workspace:*",
     "axios": "1.7.9",
     "clsx": "^2.0.0",
     "dayjs": "^1.11.10",

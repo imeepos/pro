@@ -2,11 +2,19 @@
     "name": "@pro/workflow-core",
     "version": "1.0.0",
     "description": "DAG工作流执行引擎核心包 - 基于状态机和访问者模式的无框架依赖工作流引擎",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        }
+    },
     "scripts": {
-        "build": "tsc",
-        "dev": "tsc --watch",
+        "build": "tsup && tsc --emitDeclarationOnly --outDir dist",
+        "dev": "tsup --watch",
         "typecheck": "tsc --noEmit",
         "clean": "rm -rf dist",
         "main": "tsx src/main.ts",
@@ -36,6 +44,7 @@
     },
     "devDependencies": {
         "@vitest/coverage-v8": "^3.2.4",
+        "tsup": "^8.5.0",
         "typescript": "^5.0.0",
         "vitest": "^3.2.4"
     },

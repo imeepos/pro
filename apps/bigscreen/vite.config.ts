@@ -113,7 +113,7 @@ export default defineConfig(({ command }) => {
 
     // 优化依赖预构建
     optimizeDeps: {
-      include: ['react', 'react-dom', 'react-router-dom', 'axios', 'dayjs', 'clsx', 'tailwind-merge', 'zustand', 'lucide-react'],
+      include: ['react', 'react-dom', 'react-router-dom', 'axios', 'dayjs', 'clsx', 'tailwind-merge', 'zustand', 'lucide-react', '@pro/workflow-react'],
       exclude: ['echarts', 'web-vitals'],
       esbuildOptions: {
         target: 'es2020',

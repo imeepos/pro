@@ -1,4 +1,3 @@
-import { NODE, INPUT, OUTPUT } from '@pro/workflow-core';
 import { root, type Type } from '@pro/core';
 import type { NodeBlueprint, Port } from '../types/canvas';
 
@@ -8,9 +7,9 @@ interface OutputMetadata {
 }
 
 export function generateBlueprintsFromWorkflowCore(): Record<string, NodeBlueprint> {
-  const nodeRegistry = root.get(NODE, []);
-  const inputMetadataList = root.get(INPUT, []);
-  const outputMetadataList = root.get(OUTPUT, []);
+  const nodeRegistry = root.get('NODE', []);
+  const inputMetadataList = root.get('INPUT', []);
+  const outputMetadataList = root.get('OUTPUT', []);
 
   const blueprints: Record<string, NodeBlueprint> = {};
 
